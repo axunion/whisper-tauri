@@ -101,6 +101,31 @@ Tauri 2 + SolidJS の基本構成とテスト環境を確立する。
 
 ---
 
+## 実装時の差異
+
+### Tailwind CSS v4 への変更
+
+計画書ではTailwind CSS v3を想定していたが、実装時にはTailwind CSS v4がインストールされた。v4では設定方法が変更されている：
+
+| 計画 | 実際の実装 |
+|------|------------|
+| `tailwind.config.js` を作成 | 不要（v4ではCSS-firstアプローチ） |
+| `@tailwind base/components/utilities` ディレクティブ | `@import "tailwindcss"` を使用 |
+| `tailwindcss` パッケージのみ | `@tailwindcss/postcss` パッケージも必要 |
+
+`postcss.config.js` は以下のように設定：
+
+```js
+export default {
+  plugins: {
+    "@tailwindcss/postcss": {},
+    autoprefixer: {},
+  },
+};
+```
+
+---
+
 ## 次のステップ
 
 [Step 2: 型システム構築](./step-02.md)
