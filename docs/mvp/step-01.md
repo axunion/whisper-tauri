@@ -12,6 +12,9 @@ Tauri 2 + SolidJS の基本構成とテスト環境を確立する。
 - Vitest + SolidJS Testing Library によるテスト環境をセットアップ
 - Tailwind CSS + Kobalte の設定
 - Tauriプラグインの有効化
+- リンター/フォーマッターの設定（Biome + Rust標準ツール）
+- Pre-commit hooks（lefthook）
+- TypeScript strict mode
 
 ---
 
@@ -35,6 +38,7 @@ Tauri 2 + SolidJS の基本構成とテスト環境を確立する。
 
 - `tailwindcss`, `postcss`, `autoprefixer` - スタイリング
 - `vitest`, `@solidjs/testing-library`, `jsdom` - テスト環境
+- `@biomejs/biome` - リンター/フォーマッター
 
 ### 3. 設定ファイル
 
@@ -43,6 +47,11 @@ Tauri 2 + SolidJS の基本構成とテスト環境を確立する。
 | `tailwind.config.js` | `./src/**/*.{ts,tsx}` をcontent対象に設定 |
 | `postcss.config.js` | Tailwind + Autoprefixer を設定 |
 | `vitest.config.ts` | jsdom環境、グローバル設定、セットアップファイル指定 |
+| `biome.json` | Biome リンター/フォーマッター設定 |
+| `lefthook.yml` | Pre-commit hooks 設定 |
+| `.editorconfig` | エディタ設定 |
+| `src-tauri/rustfmt.toml` | Rust フォーマッター設定 |
+| `src-tauri/.clippy.toml` | Clippy リンター設定 |
 
 ### 4. テストセットアップ
 
@@ -84,9 +93,14 @@ Tauri 2 + SolidJS の基本構成とテスト環境を確立する。
 | `tailwind.config.js` | 新規 | Tailwind設定 |
 | `postcss.config.js` | 新規 | PostCSS設定 |
 | `vitest.config.ts` | 新規 | Vitest設定 |
+| `biome.json` | 新規 | Biome設定 |
+| `lefthook.yml` | 新規 | Pre-commit hooks設定 |
+| `.editorconfig` | 新規 | エディタ設定 |
 | `src/test/setup.ts` | 新規 | テストセットアップ |
 | `src/index.css` | 編集 | Tailwindディレクティブ |
-| `src-tauri/Cargo.toml` | 編集 | 依存追加 |
+| `src-tauri/Cargo.toml` | 編集 | 依存追加、lint設定 |
+| `src-tauri/rustfmt.toml` | 新規 | rustfmt設定 |
+| `src-tauri/.clippy.toml` | 新規 | Clippy設定 |
 | `src-tauri/src/lib.rs` | 編集 | プラグイン登録 |
 | `src-tauri/capabilities/default.json` | 編集 | 権限追加 |
 
@@ -98,6 +112,8 @@ Tauri 2 + SolidJS の基本構成とテスト環境を確立する。
 - [ ] `pnpm test` が実行できる（空のテストスイート）
 - [ ] `cd src-tauri && cargo test` が実行できる
 - [ ] Tailwind CSSが適用されている
+- [ ] `pnpm lint` がエラーなく実行できる
+- [ ] `cargo clippy` がエラーなく実行できる
 
 ---
 
