@@ -6,7 +6,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Whisper Tauri - ローカル音声文字起こしデスクトップアプリケーション。音声データをサーバーに送信せず、Whisperモデルをローカル実行する。
 
-**Status**: 計画段階（実装前）。`docs/` にある実装計画に従って開発を進める。
+**Status**: Step 1 完了。Step 2（型システム構築）から再開。
+
+### Progress
+
+| Step | Status | Description |
+|------|--------|-------------|
+| Step 1 | **Done** | プロジェクト基盤セットアップ |
+| Step 2 | Pending | 型システム構築 |
+| Step 3 | Pending | モデル管理（Rust） |
+| Step 4 | Pending | whisper-rs統合 |
+| Step 5 | Pending | 状態管理プリミティブ |
+| Step 6 | Pending | 基本UIコンポーネント |
+| Step 7 | Pending | メインアプリ統合 |
+
+### Specification Changes (from original plan)
+
+1. **Model configuration**: tiny excluded, base bundled as default
+2. **Download URL**: Configurable for internal hosting
+3. **Code quality**: Biome, Clippy, lefthook, TypeScript strict mode added
 
 ## Tech Stack
 
