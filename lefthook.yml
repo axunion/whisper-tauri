@@ -1,0 +1,26 @@
+pre-commit:
+  parallel: true
+  commands:
+    frontend-lint:
+      glob: "*.{ts,tsx}"
+      run: pnpm lint
+    frontend-format:
+      glob: "*.{ts,tsx}"
+      run: pnpm format
+    rust-fmt:
+      glob: "*.rs"
+      root: "src-tauri/"
+      run: cargo fmt --check
+    rust-clippy:
+      glob: "*.rs"
+      root: "src-tauri/"
+      run: cargo clippy -- -D warnings
+
+pre-push:
+  parallel: true
+  commands:
+    frontend-test:
+      run: pnpm test:run
+    rust-test:
+      root: "src-tauri/"
+      run: cargo test

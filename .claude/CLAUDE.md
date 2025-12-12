@@ -30,9 +30,41 @@ pnpm test
 # Rust tests
 cd src-tauri && cargo test
 
+# Lint
+pnpm lint          # Frontend (Biome)
+cargo clippy       # Backend (Clippy)
+
+# Format
+pnpm format        # Frontend (Biome)
+cargo fmt          # Backend (rustfmt)
+
 # Build
 pnpm tauri build
+
+# Install git hooks (after clone)
+pnpm lefthook install
 ```
+
+## Code Quality
+
+### Pre-commit Hooks (lefthook)
+
+Automatically runs on commit:
+- `pnpm lint` - Frontend linting
+- `pnpm format` - Frontend formatting
+- `cargo fmt --check` - Rust formatting check
+- `cargo clippy` - Rust linting
+
+Automatically runs on push:
+- `pnpm test:run` - Frontend tests
+- `cargo test` - Rust tests
+
+### TypeScript Strict Mode
+
+Enabled with additional strict options:
+- `noUncheckedIndexedAccess` - Safer array/object access
+- `noImplicitOverride` - Explicit override keyword
+- `exactOptionalPropertyTypes` - Stricter optional properties
 
 ## Architecture
 

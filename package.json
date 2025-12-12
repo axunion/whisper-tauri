@@ -10,7 +10,10 @@
     "serve": "vite preview",
     "tauri": "tauri",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "lint": "biome check src/",
+    "lint:fix": "biome check --write src/",
+    "format": "biome format --write src/"
   },
   "license": "MIT",
   "dependencies": {
@@ -24,11 +27,13 @@
     "solid-js": "^1.9.3"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.3.8",
     "@solidjs/testing-library": "^0.8.10",
     "@tailwindcss/postcss": "^4.1.18",
     "@tauri-apps/cli": "^2",
     "autoprefixer": "^10.4.22",
     "jsdom": "^27.3.0",
+    "lefthook": "^2.0.11",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "typescript": "~5.6.2",
