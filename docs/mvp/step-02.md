@@ -48,13 +48,14 @@ Rust / TypeScript 間の型定義を統一する。
 
 | プロパティ | 型 | 説明 |
 |-----------|-----|------|
-| id | string | モデル識別子 (tiny, base, small, medium, large) |
+| id | string | モデル識別子 (base, small, medium, large) |
 | name | string | 表示名 |
 | size | string | サイズ表示 (例: "142MB") |
 | sizeBytes | number | バイト数 |
 | description | string | 説明文 |
-| downloaded | boolean | ダウンロード済みか |
-| path? | string | モデルファイルのパス（ダウンロード済みの場合） |
+| downloaded | boolean | ダウンロード済みか（バンドル含む） |
+| bundled | boolean | アプリにバンドルされているか |
+| path? | string | モデルファイルのパス（利用可能な場合） |
 
 #### TranscriptionProgress
 文字起こし進捗を表す型。

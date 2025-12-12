@@ -66,6 +66,26 @@ MVP実装は `docs/mvp/step-01.md` から `step-07.md` まで順番に進める�
 
 詳細は `docs/IMPLEMENTATION_PLAN.md` を参照。
 
+## Model Configuration
+
+| Model | Size | Bundled | Description |
+|-------|------|---------|-------------|
+| base | 142MB | **Yes** | Default model, bundled with app |
+| small | 466MB | No | Optional download |
+| medium | 1.5GB | No | Optional download |
+| large | 2.9GB | No | Optional download |
+
+**Note**: tiny model is excluded due to low quality.
+
+### Model Download URL
+
+Default: `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/`
+
+Custom URL can be specified for internal hosting. The download URL is constructed as:
+```
+{base_url}/ggml-{model_id}.bin
+```
+
 ## Type Definitions
 
 TypeScript型 (`src/types/`) と Rust型 (`src-tauri/src/*/types.rs`) は一致させる必要がある。
