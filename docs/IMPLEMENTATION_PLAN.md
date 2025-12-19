@@ -80,15 +80,21 @@ MVP完了後、必要に応じて実装する機能です。
 
 | 機能 | 説明 | 優先度 |
 |------|------|--------|
+| [ダッシュボード](./features/dashboard.md) | 初期画面・サイドバー型レイアウト | 推奨 |
 | [ファイル変換](./features/file-conversion.md) | 音声/動画ファイルをWAVに変換 | 推奨 |
 | [エクスポート](./features/export.md) | TXT/SRT/VTT形式で結果を保存 | 推奨 |
 | [エラーハンドリング](./features/error-handling.md) | 構造化されたエラー表示 | 推奨 |
 | [設定永続化](./features/settings.md) | アプリ設定の保存・復元 | 推奨 |
+| [履歴管理](./features/history.md) | 文字起こし履歴の保存・検索・削除 | 推奨 |
+| [プロダクトビルド](./features/build.md) | 各プラットフォーム向けビルド・署名 | 推奨 |
 | [多言語対応](./features/i18n.md) | 日本語/英語の切り替え | 任意 |
 | [トースト通知](./features/toast.md) | 操作結果のフィードバック | 任意 |
 | [キーボードショートカット](./features/keyboard-shortcuts.md) | パワーユーザー向け操作 | 任意 |
 | [アニメーション](./features/animations.md) | UIの視覚的強化 | 任意 |
 | [リアルタイム録音](./features/recording.md) | マイクから直接文字起こし | 任意 |
+| [テキスト処理](./features/text-processing.md) | ローカルSLMで校正・要約 | 任意 |
+| [履歴全文検索](./features/history-search.md) | 履歴の全文検索機能 | 任意 |
+| [開発メニュー](./features/dev-menu.md) | デバッグログ・状態確認・キャッシュクリア | 任意 |
 
 ---
 
