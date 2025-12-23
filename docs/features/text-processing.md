@@ -15,23 +15,61 @@
 
 ---
 
+## アーキテクチャ
+
+### サブプロセスアプローチ
+
+llama.cppのRustバインディングを直接統合するとクラッシュリスクがあるため、**llama-server**をサブプロセスとして起動し、HTTP APIで通信する。
+
+```
+┌─────────────────────┐       HTTP        ┌──────────────────────┐
+│   Tauri アプリ      │ ───────────────► │  llama-server        │
+│   (メインプロセス)   │                   │  (サブプロセス)       │
+│                     │ POST /completion  │                      │
+│  - サーバー起動     │ ◄─────────────── │  - モデルロード済み   │
+│  - HTTP通信        │      JSON         │  - 推論実行          │
+│  - 結果をUIに表示   │                   │                      │
+└─────────────────────┘                   └──────────────────────┘
+```
+
+### llama-serverとは
+
+- llama.cppプロジェクト公式のHTTPサーバー
+- OpenAI互換API（`/v1/chat/completions`等）を提供
+- ストリーミング対応（Server-Sent Events）
+- プラットフォーム別ビルド済みバイナリあり（5-20MB）
+
+### メリット
+
+- クラッシュ隔離（サーバーがクラッシュしてもアプリは継続）
+- メモリ管理（プロセス終了でOSが完全回収）
+- 実装の簡素化（HTTP通信のみ、バインディング不要）
+- 公式メンテナンス（llama.cppチームが更新）
+
+---
+
 ## モデル選定
 
-### 候補（GGUF形式、日本語対応）
+### 用途
 
-| モデル | サイズ | 特徴 |
-|--------|--------|------|
-| Qwen2 0.5B | ~400MB | 最軽量、日本語対応 |
-| TinyLlama 1.1B | ~600MB | Llama互換、軽量 |
-| Qwen2 1.5B | ~1GB | バランス型 |
-| Phi-3 Mini 3.8B | ~2GB | 高性能 |
+文字起こし結果の校正・要約が主な用途のため、高度な推論能力は不要。軽量かつ日本語対応を重視。
 
-**注**: 最終的なモデル選定は実装時に検証して決定。
+### 候補（GGUF Q4_K_M基準、日本語対応）
+
+| カテゴリ | モデル | サイズ | 特徴 |
+|----------|--------|--------|------|
+| 最軽量 | Qwen2.5-0.5B | ~400MB | 校正・要約の最小構成 |
+| 軽量 | Qwen2.5-1.5B | ~1GB | バランス型、128kコンテキスト |
+| 高品質 | Gemma-2-2B-JPN-IT | ~1.7GB | Google謹製日本語特化、最も安定 |
+
+**注**:
+- 最終的なモデル選定は実装時に検証して決定
+- SmolLM3等の軽量モデルは日本語非対応のため除外
 
 ### ダウンロード設定
 
-- デフォルトURL: HuggingFace
-- カスタムURL対応（社内ホスティング用）
+- **モデル**: HuggingFace（カスタムURL対応）
+- **llama-server**: GitHub Releases（カスタムURL対応）
 - Whisperモデルと同様の設定方式
 
 ---
@@ -75,6 +113,7 @@
 | モデル一覧 | 利用可能なモデル一覧を返す |
 | モデルパス | モデルファイルパスを正しく解決 |
 | ダウンロードURL | カスタムURL設定が反映される |
+| サーバーパス | llama-serverバイナリパスを正しく解決 |
 
 ---
 
@@ -82,21 +121,22 @@
 
 ### Backend (Rust)
 
-1. **テキスト処理モジュール** (`src-tauri/src/text-processing/`)
-   - llama.cppバインディングの統合
+1. **テキスト処理モジュール** (`src-tauri/src/text_processing/`)
+   - llama-server管理（起動・停止・ヘルスチェック）
    - モデル管理（ダウンロード、削除、一覧）
-   - 推論実行
+   - HTTP通信による推論リクエスト
 
 2. **Tauriコマンド**
    - `text:list_models` - 利用可能なモデル一覧
    - `text:download_model` - モデルダウンロード
    - `text:delete_model` - モデル削除
+   - `text:download_server` - llama-serverダウンロード
    - `text:proofread` - 校正実行
    - `text:summarize` - 要約実行
 
 3. **IPCイベント**
    - `text:download-progress` - ダウンロード進捗
-   - `text:inference-progress` - 推論進捗
+   - `text:inference-progress` - 推論進捗（ストリーミング）
 
 ### Frontend (TypeScript)
 
@@ -120,7 +160,14 @@
 
 | Crate | 用途 |
 |-------|------|
-| llama-cpp-rs または llama-cpp-2 | llama.cppバインディング |
+| reqwest | HTTP通信（llama-serverとのAPI通信） |
+| serde_json | JSON シリアライズ/デシリアライズ |
+
+### 外部バイナリ
+
+| バイナリ | 用途 | ダウンロード元 |
+|---------|------|---------------|
+| llama-server | LLM推論サーバー | GitHub Releases |
 
 ### 既存機能との連携
 
@@ -134,7 +181,7 @@
 
 | ファイル | 説明 |
 |----------|------|
-| `src-tauri/src/text-processing/` | テキスト処理モジュール（Rust） |
+| `src-tauri/src/text_processing/` | テキスト処理モジュール（Rust） |
 | `src/types/text-processing.ts` | 型定義 |
 | `src/primitives/createTextProcessing.ts` | SolidJS Primitive |
 | `src/components/text-processing/` | UIコンポーネント |
@@ -143,6 +190,8 @@
 
 ## 完了条件
 
+- [ ] llama-serverをダウンロードできる
+- [ ] llama-serverを起動・停止できる
 - [ ] モデルをダウンロードできる
 - [ ] ダウンロード済みモデルを一覧表示できる
 - [ ] モデルを削除できる
@@ -157,6 +206,8 @@
 
 ## 実装上の注意
 
-- llama.cppのビルドにはCMakeが必要（ビルド手順をドキュメント化）
+- llama-serverはアプリ起動時ではなく、初回使用時に起動（リソース節約）
+- アプリ終了時にllama-serverプロセスを確実に終了させる
 - GPU対応はオプション（初期実装はCPUのみでも可）
 - メモリ使用量に注意（軽量モデルを推奨）
+- ポート競合時のエラーハンドリング
