@@ -15,12 +15,28 @@
 | レイヤー | 技術 |
 |---------|------|
 | フロントエンド | **SolidJS** + TypeScript + Vite |
-| UIコンポーネント | **Kobalte** (Headless UI) + Tailwind CSS |
+| UIコンポーネント | **solid-ui** (Kobalte + Corvu ベース) + Tailwind CSS |
 | バックエンド | Rust + Tauri 2 |
 | 音声処理 | whisper-rs (whisper.cpp バインディング) |
 | 状態管理 | SolidJS Primitives (createSignal, createStore) |
 | 永続化 | tauri-plugin-store |
 | パッケージマネージャ | pnpm |
+
+### UI方針 (solid-ui)
+
+[solid-ui](https://www.solid-ui.com/) を使用し、デザインの統一性を保つ。
+
+| 項目 | 内容 |
+|------|------|
+| ライブラリ | solid-ui（shadcn/ui の SolidJS ポート） |
+| 方式 | コピー＆ペースト（npmパッケージではない） |
+| ベース | Kobalte + Corvu + Tailwind CSS |
+| 配置先 | `src/components/ui/` |
+
+**原則**:
+- solid-ui のデフォルトスタイルを可能な限り使用
+- カスタマイズは最小限に抑え、統一感を維持
+- 必要なコンポーネントのみをコピーして使用
 
 ---
 
@@ -146,9 +162,15 @@ MVP完了後、必要に応じて実装する機能です。
 whisper-tauri/
 ├── src/                              # フロントエンド (SolidJS)
 │   ├── components/
+│   │   ├── ui/                       # Kobalte + カスタムUI
 │   │   ├── transcription/            # 文字起こし関連
 │   │   ├── recording/                # 録音関連
-│   │   └── ui/                       # Kobalte + カスタムUI
+│   │   ├── layout/                   # レイアウト (Sidebar, AppLayout)
+│   │   ├── dashboard/                # ダッシュボード
+│   │   ├── history/                  # 履歴関連
+│   │   ├── text-processing/          # テキスト処理 (校正・要約)
+│   │   └── dev/                      # 開発メニュー (DEV only)
+│   ├── pages/                        # ページコンポーネント
 │   ├── primitives/                   # SolidJS状態管理
 │   ├── lib/                          # ユーティリティ
 │   ├── types/                        # 型定義
@@ -160,7 +182,10 @@ whisper-tauri/
 ├── src-tauri/                        # バックエンド (Rust)
 │   ├── src/
 │   │   ├── whisper/                  # 文字起こしモジュール
-│   │   └── recording/                # 録音モジュール
+│   │   ├── recording/                # 録音モジュール
+│   │   ├── converter/                # ファイル変換モジュール
+│   │   ├── history/                  # 履歴管理モジュール
+│   │   └── text_processing/          # テキスト処理モジュール
 │   └── Cargo.toml
 │
 └── docs/                             # ドキュメント
@@ -179,6 +204,7 @@ whisper-tauri/
 | パッケージ | 用途 |
 |-----------|------|
 | solid-js | UIフレームワーク |
+| @solidjs/router | ルーティング |
 | @tauri-apps/api | Tauri API |
 | @tauri-apps/plugin-dialog | ファイルダイアログ |
 | @tauri-apps/plugin-fs | ファイル操作 |
@@ -203,6 +229,9 @@ whisper-tauri/
 | reqwest | HTTPクライアント |
 | serde | シリアライズ |
 | thiserror | エラー型 |
+| cpal | オーディオキャプチャ |
+| rusqlite | SQLite操作 |
+| flate2 | gzip圧縮・展開 |
 
 ---
 
@@ -212,5 +241,8 @@ whisper-tauri/
 |-----------|------|------|
 | `whisper:progress` | Rust → TS | 文字起こし進捗 |
 | `whisper:result` | Rust → TS | 文字起こし結果 |
-| `model:download-progress` | Rust → TS | モデルDL進捗 |
+| `model:download-progress` | Rust → TS | Whisperモデル DL進捗 |
 | `recording:level` | Rust → TS | 録音音量 |
+| `text:download-progress` | Rust → TS | SLMモデル DL進捗 |
+| `text:inference-progress` | Rust → TS | テキスト処理進捗 |
+| `ffmpeg:download-progress` | Rust → TS | ffmpeg DL進捗 |

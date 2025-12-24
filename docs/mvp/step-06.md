@@ -2,15 +2,33 @@
 
 **Phase 1: MVP** | 必須
 
-Kobalteを使ったアクセシブルなUIコンポーネントと、文字起こし用コンポーネントを構築する。
+solid-ui を使ったUIコンポーネントと、文字起こし用コンポーネントを構築する。
 
 ---
 
 ## 目的
 
-- アクセシブルなUIコンポーネントの作成
+- solid-ui ベースのUIコンポーネントのセットアップ
 - 文字起こしワークフロー用コンポーネント
-- Kobalte + Tailwind CSSでのスタイリング
+- デザインの統一性を保つ
+
+---
+
+## UI方針
+
+[solid-ui](https://www.solid-ui.com/) を使用する。
+
+| 項目 | 内容 |
+|------|------|
+| ライブラリ | solid-ui（shadcn/ui の SolidJS ポート） |
+| 方式 | コピー＆ペースト（npmパッケージではない） |
+| ベース | Kobalte + Corvu + Tailwind CSS |
+| 配置先 | `src/components/ui/` |
+
+**原則**:
+- solid-ui のデフォルトスタイルを可能な限り使用
+- カスタマイズは最小限に抑え、統一感を維持
+- 必要なコンポーネントのみをコピーして使用
 
 ---
 
@@ -48,28 +66,24 @@ UIコンポーネントは視覚的確認が主だが、ロジックを含む部
 
 ### 1. 基本UIコンポーネント（src/components/ui/）
 
-#### Button
+solid-ui から必要なコンポーネントをコピーして使用する。
 
-Kobalteの `Button` をラップしたコンポーネント。
+#### solid-ui セットアップ
 
-| Props | 型 | 説明 |
-|-------|-----|------|
-| variant | `'primary' \| 'secondary' \| 'ghost' \| 'danger'` | スタイルバリアント |
-| size | `'sm' \| 'md' \| 'lg'` | サイズ |
-| disabled | `boolean` | 無効状態 |
-| loading | `boolean` | ローディング状態（スピナー表示） |
-| onClick | `() => void` | クリックハンドラ |
+1. [solid-ui Tauri ガイド](https://www.solid-ui.com/docs/installation/tauri) に従ってセットアップ
+2. 依存パッケージのインストール（Kobalte, Corvu, tailwind-merge, class-variance-authority 等）
+3. Tailwind CSS 設定の更新
 
-#### Progress
+#### 使用するコンポーネント（MVP）
 
-Kobalteの `Progress` をラップしたコンポーネント。
+| コンポーネント | 用途 |
+|--------------|------|
+| Button | アクション実行 |
+| Progress | 進捗表示 |
+| Card | コンテンツ区切り |
+| Badge | ステータス表示 |
 
-| Props | 型 | 説明 |
-|-------|-----|------|
-| value | `number` | 現在値 |
-| max | `number` | 最大値（デフォルト: 100） |
-| label | `string` | ラベル |
-| showValue | `boolean` | パーセント表示 |
+**注意**: solid-ui のデフォルトスタイルをそのまま使用し、カスタマイズは最小限に
 
 ### 2. 文字起こしコンポーネント（src/components/transcription/）
 
@@ -163,7 +177,8 @@ Kobalteの `Progress` をラップしたコンポーネント。
 
 ## 技術的注意点
 
-- Kobalteコンポーネントはアクセシビリティ対応済み
+- solid-ui コンポーネントはアクセシビリティ対応済み（Kobalte ベース）
+- solid-ui のデフォルトスタイルを維持し、統一感を保つ
 - `splitProps` でローカルpropsとその他を分離
 - Tailwind CSSのクラスは条件分岐で動的に適用
 - solid-icons からアイコンをインポート（FiUpload, FiFile, FiX, FiDownload, FiCheck, FiCopy, FiPlay）
