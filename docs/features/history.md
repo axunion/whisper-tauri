@@ -19,9 +19,9 @@
 ### 保存先
 
 OS標準のアプリデータフォルダを使用：
-- macOS: `~/Library/Application Support/com.whisper-tauri.app/`
-- Windows: `%APPDATA%/com.whisper-tauri.app/`
-- Linux: `~/.local/share/com.whisper-tauri.app/`
+- macOS: `~/Library/Application Support/com.whisper-tauri/`
+- Windows: `%APPDATA%/com.whisper-tauri/`
+- Linux: `~/.local/share/com.whisper-tauri/`
 
 ### 保存形式
 

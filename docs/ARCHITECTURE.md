@@ -7,31 +7,38 @@
 ## システム概要図
 
 ```
-+---------------------------------------------------------------------+
-|                       Whisper Tauri (SolidJS)                       |
-+---------------------------------------------------------------------+
-|  フロントエンド (SolidJS + TypeScript)                              |
-|  +-------------+ +---------------+ +------------------------+       |
-|  |   App.tsx   | |   Primitives  | |      Components       |       |
-|  |  (ルート)   | |createWhisper  | | FileSelector          |       |
-|  |             | |createSettings | | ProgressBar           |       |
-|  |             | |createRecording| | ResultViewer          |       |
-|  |             | |createToast    | | ModelSelector         |       |
-|  +-------------+ +---------------+ +------------------------+       |
-|                         |                                           |
-|              Tauri API Bridge (invoke/listen)                       |
-+---------------------------------------------------------------------+
-|  バックエンド (Rust + Tauri 2)                                      |
-|  +--------------------+ +---------------------+                     |
-|  |   whisper module   | |   recording module  |                     |
-|  | commands.rs        | | capture.rs          |                     |
-|  | process.rs         | | commands.rs         |                     |
-|  | types.rs           | | types.rs            |                     |
-|  | error.rs           | |                     |                     |
-|  +--------------------+ +---------------------+                     |
-|                         |                                           |
-|                    whisper-rs (whisper.cpp)                         |
-+---------------------------------------------------------------------+
++-------------------------------------------------------------------------+
+|                       Whisper Tauri (SolidJS)                           |
++-------------------------------------------------------------------------+
+|  フロントエンド (SolidJS + TypeScript)                                  |
+|  +-------------+ +------------------+ +-----------------------------+   |
+|  |   App.tsx   | |    Primitives    | |        Components          |   |
+|  | (ルーティング)| |createWhisper    | | layout/    (Sidebar等)     |   |
+|  |             | |createSettings   | | dashboard/ (QuickActions等) |   |
+|  |             | |createRecording  | | transcription/ (結果表示等) |   |
+|  |             | |createToast      | | history/   (履歴一覧等)     |   |
+|  |             | |createHistory    | | text-processing/ (校正等)   |   |
+|  |             | |createTextProc   | | dev/       (開発メニュー)   |   |
+|  |             | |createConverter  | | ui/        (Button等)       |   |
+|  +-------------+ +------------------+ +-----------------------------+   |
+|                         |                                               |
+|              Tauri API Bridge (invoke/listen)                           |
++-------------------------------------------------------------------------+
+|  バックエンド (Rust + Tauri 2)                                          |
+|  +----------------+ +----------------+ +----------------+               |
+|  | whisper module | |converter module| | history module |               |
+|  | commands.rs    | | ffmpeg.rs      | | db.rs          |               |
+|  | process.rs     | | downloader.rs  | | search.rs      |               |
+|  | types.rs       | | types.rs       | | types.rs       |               |
+|  +----------------+ +----------------+ +----------------+               |
+|  +----------------+ +------------------+                                |
+|  |recording module| |text_proc module |                                |
+|  | capture.rs     | | server.rs       |                                |
+|  | commands.rs    | | commands.rs     |                                |
+|  +----------------+ +------------------+                                |
+|                         |                                               |
+|      whisper-rs    /    cpal    /   rusqlite   /   llama-server        |
++-------------------------------------------------------------------------+
 ```
 
 ---
@@ -43,14 +50,24 @@
 ```
 src/
 ├── components/           # UIコンポーネント
-│   ├── ui/              # 基本UI (Kobalte)
+│   ├── ui/              # solid-ui ベースの共通UI
+│   ├── layout/          # レイアウト (Sidebar, AppLayout)
+│   ├── dashboard/       # ダッシュボード
 │   ├── transcription/   # 文字起こし関連
-│   └── recording/       # 録音関連
+│   ├── recording/       # 録音関連
+│   ├── history/         # 履歴関連
+│   ├── text-processing/ # テキスト処理 (校正・要約)
+│   └── dev/             # 開発メニュー (DEV only)
+├── pages/               # ページコンポーネント
 ├── primitives/          # 状態管理
 ├── lib/                 # ユーティリティ
 ├── types/               # 型定義
 └── i18n/                # 多言語対応
 ```
+
+**UIコンポーネント方針**:
+- [solid-ui](https://www.solid-ui.com/) のコンポーネントを `components/ui/` にコピーして使用
+- デフォルトスタイルを可能な限り維持し、統一感を保つ
 
 **責務:**
 - ユーザーインターフェース
@@ -82,17 +99,32 @@ src-tauri/src/
 │   ├── process.rs       # 文字起こし処理
 │   ├── types.rs         # 型定義
 │   └── error.rs         # エラー型
-└── recording/
-    ├── commands.rs      # 録音コマンド
-    ├── capture.rs       # 音声キャプチャ
+├── recording/
+│   ├── commands.rs      # 録音コマンド
+│   ├── capture.rs       # 音声キャプチャ
+│   └── types.rs         # 型定義
+├── converter/
+│   ├── commands.rs      # 変換コマンド
+│   ├── ffmpeg.rs        # ffmpeg連携
+│   ├── downloader.rs    # ffmpegダウンローダー
+│   └── types.rs         # 型定義
+├── history/
+│   ├── commands.rs      # 履歴コマンド
+│   ├── db.rs            # SQLite操作
+│   ├── search.rs        # FTS5全文検索
+│   └── types.rs         # 型定義
+└── text_processing/
+    ├── commands.rs      # テキスト処理コマンド
+    ├── server.rs        # llama-server管理
     └── types.rs         # 型定義
 ```
 
 **責務:**
 - ビジネスロジック
-- 外部ライブラリ (whisper-rs) との連携
+- 外部ライブラリ (whisper-rs, rusqlite等) との連携
 - ファイルI/O
 - 非同期タスク管理
+- サブプロセス管理 (llama-server)
 
 ---
 
@@ -229,7 +261,29 @@ interface RecordingState {
   selectedDevice: AudioDevice | null;
   isRecording: boolean;
   level: number;
-  recordedFile: string | null;
+  samples: Float32Array | null;
+}
+
+// createHistory - 履歴状態
+interface HistoryState {
+  entries: HistoryEntry[];
+  searchQuery: string;
+  isLoading: boolean;
+}
+
+// createTextProcessing - テキスト処理状態
+interface TextProcessingState {
+  models: TextModel[];
+  isServerRunning: boolean;
+  isProcessing: boolean;
+  result: ProofreadResult | SummaryResult | null;
+}
+
+// createFileConverter - ファイル変換状態
+interface ConverterState {
+  isConverting: boolean;
+  progress: number;
+  ffmpegAvailable: boolean;
 }
 ```
 
@@ -355,13 +409,26 @@ enum ErrorCategory {
 
 ### 検討中の機能
 
-1. **ストリーミング文字起こし** - リアルタイム処理
+1. **ストリーミング文字起こし** - リアルタイム処理（録音中に逐次文字起こし）
 2. **バッチ処理** - 複数ファイル一括処理
-3. **クラウド同期** - オプトイン方式
+3. **クラウド同期** - オプトイン方式での履歴同期
 4. **プラグインシステム** - カスタム後処理
 
 ### 拡張ポイント
 
 - `primitives/` - 新しい状態管理の追加
 - `components/` - 新しいUIの追加
+- `pages/` - 新しいページの追加
 - `src-tauri/src/` - 新しいRustモジュールの追加
+
+### 計画済みの機能
+
+詳細は [features/](./features/) を参照:
+
+- ダッシュボード・サイドバーレイアウト
+- ファイル変換（ffmpegによるMP3/MP4等の変換）
+- 履歴管理・全文検索
+- テキスト処理（ローカルSLMによる校正・要約）
+- リアルタイム録音
+- 多言語対応（i18n）
+- キーボードショートカット
