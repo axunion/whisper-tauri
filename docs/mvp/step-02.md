@@ -142,9 +142,9 @@ Rust / TypeScript 間の型定義を統一する。
 
 ## 完了条件
 
-- [ ] `pnpm test` で型テストが通る
-- [ ] `cargo test` でRust型テストが通る
-- [ ] TypeScriptとRustの型が対応している
+- [x] `pnpm test` で型テストが通る
+- [x] `cargo test` でRust型テストが通る
+- [x] TypeScriptとRustの型が対応している
 
 ---
 

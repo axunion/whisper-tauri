@@ -108,12 +108,12 @@ Tauri 2 + SolidJS の基本構成とテスト環境を確立する。
 
 ## 完了条件
 
-- [ ] `pnpm tauri dev` でウィンドウが表示される
-- [ ] `pnpm test` が実行できる（空のテストスイート）
-- [ ] `cd src-tauri && cargo test` が実行できる
-- [ ] Tailwind CSSが適用されている
-- [ ] `pnpm lint` がエラーなく実行できる
-- [ ] `cargo clippy` がエラーなく実行できる
+- [x] `pnpm tauri dev` でウィンドウが表示される
+- [x] `pnpm test` が実行できる（空のテストスイート）
+- [x] `cd src-tauri && cargo test` が実行できる
+- [x] Tailwind CSSが適用されている
+- [x] `pnpm lint` がエラーなく実行できる
+- [x] `cargo clippy` がエラーなく実行できる
 
 ---
 
