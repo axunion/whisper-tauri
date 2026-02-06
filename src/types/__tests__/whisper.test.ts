@@ -12,22 +12,27 @@ describe("Whisper Types", () => {
   describe("ModelInfo", () => {
     it("should have required properties", () => {
       const model: ModelInfo = {
-        id: "base",
-        name: "Base",
-        size: "142MB",
-        sizeBytes: 148897792,
-        description: "Base model for general use",
+        id: "large-v3-turbo",
+        name: "Large v3 Turbo",
+        size: "1.6GB",
+        sizeBytes: 1_739_587_584,
+        description:
+          "Recommended. High quality and fast, excellent Japanese accuracy",
         downloaded: true,
         bundled: false,
+        recommended: true,
       };
 
-      expect(model.id).toBe("base");
-      expect(model.name).toBe("Base");
-      expect(model.size).toBe("142MB");
-      expect(model.sizeBytes).toBe(148897792);
-      expect(model.description).toBe("Base model for general use");
+      expect(model.id).toBe("large-v3-turbo");
+      expect(model.name).toBe("Large v3 Turbo");
+      expect(model.size).toBe("1.6GB");
+      expect(model.sizeBytes).toBe(1_739_587_584);
+      expect(model.description).toBe(
+        "Recommended. High quality and fast, excellent Japanese accuracy",
+      );
       expect(model.downloaded).toBe(true);
       expect(model.bundled).toBe(false);
+      expect(model.recommended).toBe(true);
     });
 
     it("should allow optional path property", () => {
@@ -39,6 +44,7 @@ describe("Whisper Types", () => {
         description: "Small model",
         downloaded: true,
         bundled: false,
+        recommended: false,
         path: "/path/to/model.bin",
       };
 
@@ -52,6 +58,7 @@ describe("Whisper Types", () => {
         description: "Small model",
         downloaded: false,
         bundled: false,
+        recommended: false,
       };
 
       expect(modelWithoutPath.path).toBeUndefined();

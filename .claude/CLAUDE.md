@@ -12,7 +12,7 @@ MVP は Step 1〜7 の順で進める。詳細は `docs/IMPLEMENTATION_PLAN.md` 
 
 ### 仕様変更（当初計画からの変更点）
 
-1. **モデル構成**: tiny 除外、全モデルをダウンロード方式（バンドルなし）
+1. **モデル構成**: tiny/base 除外、Large v3 Turbo 推奨、全モデルをダウンロード方式（バンドルなし）
 2. **ダウンロードURL**: 社内ホスティング用にカスタマイズ可能（モデル、ffmpeg）
 3. **コード品質**: Biome, Clippy, lefthook, TypeScript strict mode 追加
 4. **ffmpeg**: 初回使用時にダウンロード（バンドルなし）、GPL版
@@ -133,13 +133,14 @@ MVP実装は `docs/mvp/step-01.md` から `step-07.md` まで順番に進める�
 
 | モデル | サイズ | デフォルト | 説明 |
 |--------|-------|-----------|------|
-| base | 142MB | **Yes** | 初回使用推奨 |
-| small | 466MB | No | 中程度の品質・速度 |
-| medium | 1.5GB | No | 高品質、処理時間長め |
-| large | 2.9GB | No | 最高品質、要高性能マシン |
+| large-v3-turbo | 1.6GB | **Yes** | 推奨。高品質かつ高速、日本語精度に優れる |
+| medium | 1.5GB | No | Turbo の動作が重い場合の代替 |
+| small | 466MB | No | 低スペックマシン向け、品質は控えめ |
 
 **注意**:
-- tiny は品質が低いため除外
+- tiny, base は日本語精度が低いため除外
+- large-v3-turbo は large-v3 の蒸留モデル（同等品質で大幅に高速）
+- small, medium は Turbo の動作が重い環境向けの選択肢
 - 全モデルがダウンロード方式（バンドルなし）
 
 ### ダウンロードURL

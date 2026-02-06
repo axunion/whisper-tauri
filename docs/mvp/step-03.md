@@ -28,10 +28,12 @@ Whisperモデルの一覧取得とダウンロード機能を実装する。
 | get_model_url | カスタムベースURLで正しいURLを生成する |
 | get_model_filename | `ggml-{id}.bin` 形式のファイル名を生成する |
 | get_model_list | 空でないリストを返す |
-| get_model_list | 全モデル（base, small, medium, large）が含まれる |
-| get_model_list | tinyモデルが含まれない |
-| get_model_list | baseモデルが default: true である |
+| get_model_list | 全モデル（large-v3-turbo, medium, small）が含まれる |
+| get_model_list | tiny, baseモデルが含まれない |
 | get_default_base_url | HuggingFaceのURLを返す |
+| get_recommended_model_id | RAM 16GB+で large-v3-turbo を返す |
+| get_recommended_model_id | RAM 8GB未満で small を返す |
+| get_recommended_model_id | RAM 8GB+/4コア未満で medium を返す |
 
 `src-tauri/src/whisper/commands.rs`:
 
@@ -53,23 +55,43 @@ Whisperモデルの一覧取得とダウンロード機能を実装する。
 
 | ID | 名前 | サイズ | デフォルト | 説明 |
 |----|------|--------|-----------|------|
-| base | Base | 142MB | **Yes** | バランス型。初回推奨モデル |
-| small | Small | 466MB | No | 中程度の品質と速度 |
-| medium | Medium | 1.5GB | No | 高品質。処理時間は長め |
-| large | Large | 2.9GB | No | 最高品質。要高性能マシン |
+| large-v3-turbo | Large v3 Turbo | 1.6GB | **Yes** | 推奨。高品質かつ高速。日本語精度に優れる |
+| medium | Medium | 1.5GB | No | Turbo の動作が重い場合の代替。品質と速度のバランス |
+| small | Small | 466MB | No | 低スペックマシン向け。品質は控えめ |
 
 **注意**:
-- tinyモデルは除外（品質が低いため）
+- tiny, base は日本語精度が低いため除外
+- large-v3-turbo は large-v3 の蒸留モデル（同等品質で大幅に高速）
+- small, medium は Large v3 Turbo の動作が重い環境向けの選択肢
 - 全モデルがダウンロード方式（バンドルなし）
+
+#### システム推奨ロジック
+
+`sysinfo` crate でシステム情報を取得し、`ModelInfo` に `recommended: true` をセットする。
+
+| 条件 | 推奨モデル | 理由 |
+|------|-----------|------|
+| RAM 16GB+ or Apple Silicon | large-v3-turbo | Metal 加速 / 十分なメモリ |
+| RAM 8GB+ かつ 4コア以上 | large-v3-turbo | 実用的な速度で動作 |
+| RAM 8GB+ かつ 4コア未満 | medium | CPU リソース不足の可能性 |
+| RAM 8GB 未満 | small | メモリ制約 |
+
+**判定に使う情報**:
+- `sysinfo::System::total_memory()` — 搭載 RAM
+- `sysinfo::System::cpus().len()` — CPU コア数
+- `std::env::consts::ARCH` — `aarch64` なら Apple Silicon と判定
+
+**注意**: 推奨はあくまで目安。ユーザーは自由に他のモデルを選択できる。
 
 #### 関数
 
 | 関数 | 説明 |
 |------|------|
-| `get_model_list()` | ModelInfo の Vec を返す |
+| `get_model_list()` | ModelInfo の Vec を返す（`recommended` はデフォルト判定） |
+| `get_model_list_with_recommendation()` | システム情報を元に `recommended` をセットした一覧を返す |
+| `get_recommended_model_id()` | システム情報から推奨モデルIDを返す |
 | `get_model_url(model_id, base_url)` | ダウンロードURLを生成（base_url + ファイル名） |
 | `get_model_filename(model_id)` | ファイル名 `ggml-{id}.bin` を生成 |
-| `is_default_model(model_id)` | デフォルト推奨モデルかどうかを返す |
 | `get_default_base_url()` | デフォルトのベースURL（HuggingFace）を返す |
 
 ### 2. Tauriコマンド
@@ -78,8 +100,9 @@ Whisperモデルの一覧取得とダウンロード機能を実装する。
 
 #### get_available_models
 - 戻り値: `Result<Vec<ModelInfo>, String>`
-- 処理: モデル一覧を取得し、各モデルのダウンロード状態を確認
+- 処理: モデル一覧を取得し、各モデルのダウンロード状態と推奨を確認
 - ダウンロード済みモデルは `downloaded: true`
+- システム情報に基づき推奨モデルに `recommended: true` をセット
 
 #### check_model_exists
 - 引数: `model_id: String`
@@ -130,9 +153,10 @@ Whisperモデルの一覧取得とダウンロード機能を実装する。
 ## 技術的注意点
 
 - ダウンロード中のネットワークエラーハンドリング
-- 大きなファイル（最大2.9GB）のストリーミング処理
+- 大きなファイル（最大1.6GB）のストリーミング処理
 - ダウンロード進捗の適切な頻度での通知（UIがフリーズしない程度）
 - 初回使用時にモデルが無い場合、ダウンロード確認ダイアログを表示
+- `sysinfo` crate を使用（RAM・CPU 取得）。Cargo.toml に追加が必要
 
 ### ダウンロードURL設定
 

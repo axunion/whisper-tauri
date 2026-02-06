@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelInfo {
-    /// Model identifier (e.g., "base", "small", "medium", "large")
+    /// Model identifier (e.g., "small", "medium", "large-v3-turbo")
     pub id: String,
     /// Display name
     pub name: String,
@@ -18,6 +18,8 @@ pub struct ModelInfo {
     pub downloaded: bool,
     /// Whether the model is bundled with the app
     pub bundled: bool,
+    /// Whether the model is recommended for this system
+    pub recommended: bool,
     /// Path to the model file (if downloaded)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<String>,
@@ -109,6 +111,7 @@ mod tests {
             description: "Base model".to_string(),
             downloaded: true,
             bundled: false,
+            recommended: false,
             path: Some("/path/to/model.bin".to_string()),
         };
 
@@ -127,6 +130,7 @@ mod tests {
             description: "Base model".to_string(),
             downloaded: false,
             bundled: false,
+            recommended: false,
             path: None,
         };
 

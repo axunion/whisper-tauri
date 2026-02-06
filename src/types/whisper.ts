@@ -2,7 +2,7 @@
  * Whisper model information.
  */
 export interface ModelInfo {
-  /** Model identifier (e.g., "base", "small", "medium", "large") */
+  /** Model identifier (e.g., "small", "medium", "large-v3-turbo") */
   id: string;
   /** Display name */
   name: string;
@@ -16,6 +16,8 @@ export interface ModelInfo {
   downloaded: boolean;
   /** Whether the model is bundled with the app */
   bundled: boolean;
+  /** Whether the model is recommended for this system */
+  recommended: boolean;
   /** Path to the model file (if downloaded) */
   path?: string;
 }
