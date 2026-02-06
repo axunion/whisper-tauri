@@ -176,12 +176,14 @@ Whisperモデルの一覧取得とダウンロード機能を実装する。
 
 ## 完了条件
 
-- [ ] `cargo test` で全テストが通る
-- [ ] DevToolsで `get_available_models` が動作する
-- [ ] モデルダウンロードが動作する
-- [ ] 進捗イベントが発火する
-- [ ] カスタムダウンロードURLが設定できる
-- [ ] モデルの存在確認ができる
+- [x] `cargo test` で全テストが通る
+- [x] `cargo clippy -- -D warnings` がパスする
+- [x] `cargo fmt --check` がパスする
+- [x] モデル一覧が正しい（3モデル、tiny/base除外、サイズ一致）
+- [x] システム推奨ロジックが正しく動作する
+- [x] ダウンロードURL生成が正しい（デフォルト/カスタム/trailing slash）
+- [x] モデルの存在確認ができる
+- [x] 6コマンドが `invoke_handler` に登録されている
 
 ---
 

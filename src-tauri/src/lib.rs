@@ -19,7 +19,15 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::default().build())
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            whisper::commands::get_available_models,
+            whisper::commands::check_model_exists,
+            whisper::commands::download_model,
+            whisper::commands::delete_model,
+            whisper::commands::get_model_download_url,
+            whisper::commands::set_model_download_url,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
