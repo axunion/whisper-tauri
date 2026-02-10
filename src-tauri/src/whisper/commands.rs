@@ -8,7 +8,8 @@ use tokio::io::AsyncWriteExt;
 
 use super::error::WhisperError;
 use super::models;
-use super::types::{DownloadProgress, ModelInfo};
+use super::process;
+use super::types::{DownloadProgress, ModelInfo, TranscriptionResult};
 
 /// Progress event throttle interval in milliseconds.
 const PROGRESS_THROTTLE_MS: u128 = 100;
@@ -256,6 +257,54 @@ pub async fn set_model_download_url(app: AppHandle, url: Option<String>) -> Resu
     }
 
     Ok(())
+}
+
+/// Transcribes a WAV audio file using the specified Whisper model.
+///
+/// Runs the transcription on a blocking thread to avoid blocking the
+/// async runtime. Emits `whisper:progress` events during processing.
+///
+/// # Errors
+///
+/// Returns an error if the audio file cannot be read, the model cannot
+/// be loaded, or the transcription fails.
+#[tauri::command]
+pub async fn transcribe_audio(
+    app: AppHandle,
+    audio_path: String,
+    model_path: String,
+) -> Result<TranscriptionResult, String> {
+    let task_id = uuid::Uuid::new_v4().to_string();
+    let token = process::TASK_MANAGER.create_task(&task_id);
+
+    // Load WAV file on current thread (I/O bound)
+    let path = PathBuf::from(&audio_path);
+    let samples = process::load_wav_file(&path).map_err::<String, _>(Into::into)?;
+
+    let task_id_clone = task_id.clone();
+
+    // Run transcription on a blocking thread (CPU bound)
+    let result = tokio::task::spawn_blocking(move || {
+        process::transcribe(&model_path, &samples, &task_id_clone, &token, &app)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
+    .map_err::<String, _>(Into::into)?;
+
+    process::TASK_MANAGER.remove_task(&task_id);
+
+    Ok(result)
+}
+
+/// Cancels an in-progress transcription task.
+///
+/// # Errors
+///
+/// This command does not produce errors but returns `false` if the
+/// task ID was not found.
+#[tauri::command]
+pub async fn cancel_transcription(task_id: String) -> Result<bool, String> {
+    Ok(process::TASK_MANAGER.cancel_task(&task_id))
 }
 
 #[cfg(test)]

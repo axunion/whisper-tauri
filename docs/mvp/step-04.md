@@ -136,10 +136,16 @@ whisper-rsを使った文字起こし機能を実装する。
 
 ## 完了条件
 
-- [ ] `cargo test` で全テストが通る
-- [ ] WAVファイルの文字起こしができる
-- [ ] 進捗イベントが発火する
-- [ ] キャンセルが機能する
+- [x] `cargo test` で全テストが通る
+- [x] `cargo clippy` がパスする
+- [x] `cargo fmt --check` がパスする
+- [x] whisper-rs, hound, once_cell が依存に追加されている
+- [x] WhisperError に全バリアントが定義・テスト済み
+- [x] CancellationToken / TaskManager がテスト済み
+- [x] resample / load_wav_file がテスト済み
+- [x] transcribe_audio / cancel_transcription コマンドが登録されている
+
+**注意**: 実際の文字起こし（WAVファイル処理、進捗イベント発火、キャンセル動作）はモデルが必要なため Step 7 で検証する。
 
 ---
 

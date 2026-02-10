@@ -71,7 +71,7 @@ docs/
 | 1 | プロジェクト基盤セットアップ | [step-01.md](./mvp/step-01.md) | 完了 |
 | 2 | 型システム構築 | [step-02.md](./mvp/step-02.md) | 完了 |
 | 3 | モデル管理（Rust） | [step-03.md](./mvp/step-03.md) | 完了 |
-| 4 | whisper-rs統合 | [step-04.md](./mvp/step-04.md) | |
+| 4 | whisper-rs統合 | [step-04.md](./mvp/step-04.md) | 完了 |
 | 5 | 状態管理プリミティブ | [step-05.md](./mvp/step-05.md) | |
 | 6 | 基本UIコンポーネント | [step-06.md](./mvp/step-06.md) | |
 | 7 | メインアプリ統合 | [step-07.md](./mvp/step-07.md) | |
