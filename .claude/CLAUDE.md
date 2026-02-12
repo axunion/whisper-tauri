@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Whisper Tauri - ローカル音声文字起こしデスクトップアプリケーション。音声データをサーバーに送信せず、Whisperモデルをローカル実行する。
 
-**Status**: Step 4 完了。Step 5（状態管理プリミティブ）から再開。
+**Status**: Step 5 完了。Step 6（基本UIコンポーネント）から再開。
 
 MVP は Step 1〜7 の順で進める。詳細は `docs/IMPLEMENTATION_PLAN.md` を参照。
 
