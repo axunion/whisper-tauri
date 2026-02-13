@@ -40,4 +40,5 @@ sysinfo = "0.37"
 whisper-rs = "0.15"
 hound = "3"
 once_cell = "1"
+tauri-plugin-clipboard-manager = "2"
 

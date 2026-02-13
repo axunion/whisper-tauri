@@ -1,4 +1,11 @@
+import "@testing-library/jest-dom/vitest";
 import { vi } from "vitest";
+
+// Mock @tauri-apps/plugin-clipboard-manager
+vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({
+  writeText: vi.fn(() => Promise.resolve()),
+  readText: vi.fn(() => Promise.resolve("")),
+}));
 
 // Mock @tauri-apps/api/core
 vi.mock("@tauri-apps/api/core", () => ({

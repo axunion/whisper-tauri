@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 import solid from "vite-plugin-solid";
 
@@ -13,12 +14,27 @@ export default defineConfig({
     deps: {
       optimizer: {
         web: {
-          include: ["solid-js"],
+          include: [
+            "solid-js",
+            "@kobalte/core",
+            "@kobalte/utils",
+            "class-variance-authority",
+            "clsx",
+            "tailwind-merge",
+          ],
         },
+      },
+    },
+    server: {
+      deps: {
+        inline: [/@kobalte/, /solid-icons/],
       },
     },
   },
   resolve: {
     conditions: ["development", "browser"],
+    alias: {
+      "~": path.resolve(__dirname, "./src"),
+    },
   },
 });
