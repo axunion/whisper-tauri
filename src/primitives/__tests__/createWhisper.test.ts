@@ -144,6 +144,71 @@ describe("createWhisper", () => {
       });
     });
 
+    it("should auto-select recommended downloaded model", async () => {
+      const models = [
+        mockModel({
+          id: "small",
+          name: "Small",
+          downloaded: true,
+          recommended: false,
+        }),
+        mockModel({
+          id: "large-v3-turbo",
+          name: "Large v3 Turbo",
+          downloaded: true,
+          recommended: true,
+        }),
+      ];
+      vi.mocked(invoke).mockResolvedValueOnce(models);
+
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        await whisper.loadModels();
+
+        expect(whisper.selectedModel()?.id).toBe("large-v3-turbo");
+        dispose();
+      });
+    });
+
+    it("should auto-select first downloaded model if no recommended", async () => {
+      const models = [
+        mockModel({
+          id: "small",
+          name: "Small",
+          downloaded: true,
+          recommended: false,
+        }),
+        mockModel({
+          id: "medium",
+          name: "Medium",
+          downloaded: false,
+          recommended: false,
+        }),
+      ];
+      vi.mocked(invoke).mockResolvedValueOnce(models);
+
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        await whisper.loadModels();
+
+        expect(whisper.selectedModel()?.id).toBe("small");
+        dispose();
+      });
+    });
+
+    it("should not auto-select if no models are downloaded", async () => {
+      const models = [mockModel({ id: "small", downloaded: false })];
+      vi.mocked(invoke).mockResolvedValueOnce(models);
+
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        await whisper.loadModels();
+
+        expect(whisper.selectedModel()).toBeNull();
+        dispose();
+      });
+    });
+
     it("should set error on failure", async () => {
       vi.mocked(invoke).mockRejectedValueOnce(
         new Error("Failed to load models"),
@@ -210,10 +275,51 @@ describe("createWhisper", () => {
         await whisper.downloadModel("large-v3-turbo");
 
         expect(invoke).toHaveBeenCalledWith("download_model", {
-          model_id: "large-v3-turbo",
+          modelId: "large-v3-turbo",
         });
         expect(invoke).toHaveBeenCalledWith("get_available_models");
         expect(whisper.models()).toEqual(models);
+        dispose();
+      });
+    });
+
+    it("should auto-select model after download if none selected", async () => {
+      const downloadedModel = mockModel({
+        id: "large-v3-turbo",
+        downloaded: true,
+      });
+      vi.mocked(invoke)
+        .mockResolvedValueOnce(undefined) // download_model
+        .mockResolvedValueOnce([downloadedModel]); // get_available_models
+
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        expect(whisper.selectedModel()).toBeNull();
+
+        await whisper.downloadModel("large-v3-turbo");
+
+        expect(whisper.selectedModel()).toEqual(downloadedModel);
+        dispose();
+      });
+    });
+
+    it("should not auto-select if a model is already selected", async () => {
+      const existingModel = mockModel({ id: "small", name: "Small" });
+      const downloadedModel = mockModel({
+        id: "large-v3-turbo",
+        downloaded: true,
+      });
+      vi.mocked(invoke)
+        .mockResolvedValueOnce(undefined) // download_model
+        .mockResolvedValueOnce([existingModel, downloadedModel]); // get_available_models
+
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        whisper.selectModel(existingModel);
+
+        await whisper.downloadModel("large-v3-turbo");
+
+        expect(whisper.selectedModel()).toEqual(existingModel);
         dispose();
       });
     });
@@ -288,8 +394,8 @@ describe("createWhisper", () => {
         await whisper.startTranscription();
 
         expect(invoke).toHaveBeenCalledWith("transcribe_audio", {
-          audio_path: mockFile.path,
-          model_path: model.path,
+          audioPath: mockFile.path,
+          modelPath: model.path,
         });
         expect(whisper.result()).toEqual(mockResult);
         dispose();
@@ -357,7 +463,7 @@ describe("createWhisper", () => {
         await whisper.cancelTranscription();
 
         expect(invoke).toHaveBeenCalledWith("cancel_transcription", {
-          task_id: "task-456",
+          taskId: "task-456",
         });
         dispose();
       });

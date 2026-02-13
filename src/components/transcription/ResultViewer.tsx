@@ -21,9 +21,13 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
   const [copied, setCopied] = createSignal(false);
 
   async function handleCopy() {
-    await writeText(props.result.text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await writeText(props.result.text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      console.error("Failed to copy text:", e);
+    }
   }
 
   return (

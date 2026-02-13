@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Whisper Tauri - ローカル音声文字起こしデスクトップアプリケーション。音声データをサーバーに送信せず、Whisperモデルをローカル実行する。
 
-**Status**: Step 6 完了。Step 7（メインアプリ統合）から再開。
+**Status**: Step 7 完了（MVP実装完了）。手動動作確認も全項目クリア。
 
 MVP は Step 1〜7 の順で進める。詳細は `docs/IMPLEMENTATION_PLAN.md` を参照。
 
@@ -164,6 +164,27 @@ ffmpeg は初回使用時にダウンロード（GPL版）。アプリにはバ�
 | macOS | 自前ホスト推奨（evermeet.cx は不安定な場合あり） |
 
 カスタムURLは設定画面で指定可能（社内サーバーからの配布等）。
+
+## 既知の問題・ワークアラウンド
+
+### whisper-rs 0.15.1: `set_abort_callback_safe` の UB バグ
+
+**影響**: `set_abort_callback_safe` に直接クロージャを渡すと、FFI トランポリン関数の型不一致により未定義動作が発生し、文字起こしがエラー -6（"failed to encode"）で失敗する。
+
+**原因**: トランポリンが `trampoline::<F>`（具象クロージャ型）でモノモーフされるが、実際の `user_data` は `Box<dyn FnMut() -> bool>` であるため、メモリ読み違えが起きる。同ライブラリの `set_progress_callback_safe` では `trampoline::<Box<dyn FnMut(i32)>>` と正しく実装されている。
+
+**ワークアラウンド** (`src-tauri/src/whisper/process.rs`):
+
+```rust
+// NG: trampoline::<ConcreteClosureType> と Box<dyn> の不一致で UB
+params.set_abort_callback_safe(move || token.is_cancelled());
+
+// OK: F = Box<dyn FnMut() -> bool> にすることでトランポリンの型が一致
+let abort_fn: Box<dyn FnMut() -> bool> = Box::new(move || token.is_cancelled());
+params.set_abort_callback_safe(abort_fn);
+```
+
+**解消条件**: whisper-rs の修正版リリース後にワークアラウンドを除去可能。
 
 ## 型定義
 

@@ -54,8 +54,18 @@ export function createWhisper() {
     try {
       const result = await invoke<ModelInfo[]>("get_available_models");
       setModels(result);
+      autoSelectModel();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  function autoSelectModel(): void {
+    if (selectedModel()) return;
+    const downloaded = models().filter((m) => m.downloaded);
+    const pick = downloaded.find((m) => m.recommended) ?? downloaded[0];
+    if (pick) {
+      setSelectedModel(pick);
     }
   }
 
@@ -68,7 +78,7 @@ export function createWhisper() {
     if (isDownloading()) return;
     setIsDownloading(true);
     try {
-      await invoke("download_model", { model_id: modelId });
+      await invoke("download_model", { modelId });
       await loadModels();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -88,8 +98,8 @@ export function createWhisper() {
       const transcriptionResult = await invoke<TranscriptionResult>(
         "transcribe_audio",
         {
-          audio_path: currentFile.path,
-          model_path: currentModel.path,
+          audioPath: currentFile.path,
+          modelPath: currentModel.path,
         },
       );
       setResult(transcriptionResult);
@@ -103,7 +113,7 @@ export function createWhisper() {
   async function cancelTranscription(): Promise<void> {
     const taskId = currentTaskId();
     if (!taskId) return;
-    await invoke("cancel_transcription", { task_id: taskId });
+    await invoke("cancel_transcription", { taskId });
   }
 
   function reset(): void {

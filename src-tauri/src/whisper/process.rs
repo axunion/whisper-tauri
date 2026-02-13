@@ -276,14 +276,19 @@ pub fn transcribe(
         );
     });
 
-    // Abort callback for cancellation
+    // Abort callback for cancellation.
+    // WORKAROUND: whisper-rs 0.15.1 set_abort_callback_safe has a bug where the
+    // trampoline is monomorphized as trampoline::<F> (concrete type) but the actual
+    // user_data is Box<dyn FnMut() -> bool>. By pre-boxing the closure so that
+    // F = Box<dyn FnMut() -> bool>, the trampoline type matches the data layout.
     let token_cb = Arc::clone(token);
-    params.set_abort_callback_safe(move || token_cb.is_cancelled());
+    let abort_fn: Box<dyn FnMut() -> bool> = Box::new(move || token_cb.is_cancelled());
+    params.set_abort_callback_safe(abort_fn);
 
     // Run transcription
     let result = state.full(params, samples);
 
-    // Check cancellation before inspecting errors
+    // Check cancellation after transcription completes
     if token.is_cancelled() {
         return Err(WhisperError::Cancelled);
     }
