@@ -72,16 +72,16 @@ docs/
 | 2 | 型システム構築 | [step-02.md](./mvp/step-02.md) | 完了 |
 | 3 | モデル管理（Rust） | [step-03.md](./mvp/step-03.md) | 完了 |
 | 4 | whisper-rs統合 | [step-04.md](./mvp/step-04.md) | 完了 |
-| 5 | 状態管理プリミティブ | [step-05.md](./mvp/step-05.md) | |
-| 6 | 基本UIコンポーネント | [step-06.md](./mvp/step-06.md) | |
-| 7 | メインアプリ統合 | [step-07.md](./mvp/step-07.md) | |
+| 5 | 状態管理プリミティブ | [step-05.md](./mvp/step-05.md) | 完了 |
+| 6 | 基本UIコンポーネント | [step-06.md](./mvp/step-06.md) | 完了 |
+| 7 | メインアプリ統合 | [step-07.md](./mvp/step-07.md) | 完了 |
 
 ### MVP完了条件
 
-- [ ] `pnpm tauri dev` でアプリが起動する
-- [ ] WAVファイルを選択できる
-- [ ] モデルをダウンロードできる
-- [ ] 文字起こしが実行され、結果が表示される
+- [x] `pnpm tauri dev` でアプリが起動する
+- [x] WAVファイルを選択できる
+- [x] モデルをダウンロードできる
+- [x] 文字起こしが実行され、結果が表示される
 
 ---
 

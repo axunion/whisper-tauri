@@ -6,21 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Whisper Tauri - ローカル音声文字起こしデスクトップアプリケーション。音声データをサーバーに送信せず、Whisperモデルをローカル実行する。
 
-**Status**: Step 7 完了（MVP実装完了）。手動動作確認も全項目クリア。
-
-MVP は Step 1〜7 の順で進める。詳細は `docs/IMPLEMENTATION_PLAN.md` を参照。
-
-### 仕様変更（当初計画からの変更点）
-
-1. **モデル構成**: tiny/base 除外、Large v3 Turbo 推奨、全モデルをダウンロード方式（バンドルなし）
-2. **ダウンロードURL**: 社内ホスティング用にカスタマイズ可能（モデル、ffmpeg）
-3. **コード品質**: Biome, Clippy, lefthook, TypeScript strict mode 追加
-4. **ffmpeg**: 初回使用時にダウンロード（バンドルなし）、GPL版
-5. **UI**: solid-ui 採用（デフォルトスタイルで統一）
+**Status**: MVP完了。追加機能の実装フェーズ。
 
 ## Tech Stack
 
-- **Frontend**: SolidJS + TypeScript + Vite + Tailwind CSS
+- **Frontend**: SolidJS + TypeScript + Vite + Tailwind CSS v4
 - **UI Components**: solid-ui (Kobalte + Corvu ベース、shadcn/ui ポート)
 - **Backend**: Rust + Tauri 2
 - **Audio Processing**: whisper-rs (whisper.cpp bindings)
@@ -87,28 +77,28 @@ pnpm lefthook install
 
 ### Frontend (src/)
 
-- `components/ui/` - solid-ui ベースの共通UIコンポーネント
-- `components/layout/` - レイアウト (Sidebar, AppLayout)
-- `components/dashboard/` - ダッシュボード
-- `components/transcription/` - 文字起こし関連
-- `components/recording/` - 録音関連
-- `components/history/` - 履歴関連
-- `components/text-processing/` - テキスト処理 (校正・要約)
-- `components/dev/` - 開発メニュー (DEV only)
-- `pages/` - ページコンポーネント
-- `primitives/` - SolidJS 状態管理 (createWhisper, createSettings 等)
-- `lib/` - ユーティリティ (export, errors)
-- `types/` - TypeScript 型定義
-- `i18n/` - 多言語対応
-- `styles/` - スタイル定義
+```
+src/
+├── components/
+│   ├── ui/              # solid-ui ベースの共通UIコンポーネント (Button, Progress, Card, Badge)
+│   └── transcription/   # 文字起こし関連 (FileSelector, ModelSelector, TranscriptionProgress, ResultViewer)
+├── primitives/          # SolidJS 状態管理 (createWhisper)
+├── lib/                 # ユーティリティ (utils.ts - cn())
+├── types/               # TypeScript 型定義 (whisper.ts)
+└── test/                # テストセットアップ
+```
 
 ### Backend (src-tauri/src/)
 
-- `whisper/` - 文字起こしモジュール (commands.rs, process.rs, types.rs, error.rs)
-- `recording/` - 録音モジュール (capture.rs, commands.rs, types.rs)
-- `converter/` - ファイル変換モジュール (ffmpeg.rs, downloader.rs, types.rs)
-- `history/` - 履歴モジュール (db.rs, search.rs, types.rs)
-- `text_processing/` - テキスト処理モジュール (server.rs, commands.rs, types.rs)
+```
+src-tauri/src/
+└── whisper/             # 文字起こしモジュール
+    ├── commands.rs      # Tauri コマンド
+    ├── process.rs       # whisper-rs 実行ロジック
+    ├── models.rs        # モデル管理
+    ├── types.rs         # 型定義
+    └── error.rs         # エラー型
+```
 
 ### IPC イベント (Rust → TypeScript)
 
@@ -117,17 +107,13 @@ pnpm lefthook install
 | `whisper:progress` | 文字起こし進捗 |
 | `whisper:result` | 文字起こし結果 |
 | `model:download-progress` | Whisperモデル DL進捗 |
-| `recording:level` | 録音音量 |
-| `text:download-progress` | SLMモデル DL進捗 |
-| `text:inference-progress` | テキスト処理進捗 |
-| `ffmpeg:download-progress` | ffmpeg DL進捗 |
 
 ## 実装計画
 
-MVP実装は `docs/mvp/step-01.md` から `step-07.md` まで順番に進める。
-追加機能は `docs/features/` を参照（順不同）。
+MVP（Step 1〜7）は完了済み。詳細は `docs/IMPLEMENTATION_PLAN.md` を参照。
 
-詳細は `docs/IMPLEMENTATION_PLAN.md` を参照。
+追加機能は `docs/features/` を参照（順不同）。推奨機能:
+- ダッシュボード、ファイル変換、エクスポート、エラーハンドリング、設定永続化、履歴管理、プロダクトビルド
 
 ## モデル設定
 
@@ -136,12 +122,6 @@ MVP実装は `docs/mvp/step-01.md` から `step-07.md` まで順番に進める�
 | large-v3-turbo | 1.6GB | **Yes** | 推奨。高品質かつ高速、日本語精度に優れる |
 | medium | 1.5GB | No | Turbo の動作が重い場合の代替 |
 | small | 466MB | No | 低スペックマシン向け、品質は控えめ |
-
-**注意**:
-- tiny, base は日本語精度が低いため除外
-- large-v3-turbo は large-v3 の蒸留モデル（同等品質で大幅に高速）
-- small, medium は Turbo の動作が重い環境向けの選択肢
-- 全モデルがダウンロード方式（バンドルなし）
 
 ### ダウンロードURL
 
@@ -152,26 +132,11 @@ MVP実装は `docs/mvp/step-01.md` から `step-07.md` まで順番に進める�
 {base_url}/ggml-{model_id}.bin
 ```
 
-## ffmpeg 設定
-
-ffmpeg は初回使用時にダウンロード（GPL版）。アプリにはバンドルしない。
-
-### ダウンロードURL
-
-| プラットフォーム | デフォルトURL |
-|----------------|--------------|
-| Windows | `https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/` |
-| macOS | 自前ホスト推奨（evermeet.cx は不安定な場合あり） |
-
-カスタムURLは設定画面で指定可能（社内サーバーからの配布等）。
-
 ## 既知の問題・ワークアラウンド
 
 ### whisper-rs 0.15.1: `set_abort_callback_safe` の UB バグ
 
-**影響**: `set_abort_callback_safe` に直接クロージャを渡すと、FFI トランポリン関数の型不一致により未定義動作が発生し、文字起こしがエラー -6（"failed to encode"）で失敗する。
-
-**原因**: トランポリンが `trampoline::<F>`（具象クロージャ型）でモノモーフされるが、実際の `user_data` は `Box<dyn FnMut() -> bool>` であるため、メモリ読み違えが起きる。同ライブラリの `set_progress_callback_safe` では `trampoline::<Box<dyn FnMut(i32)>>` と正しく実装されている。
+`set_abort_callback_safe` に直接クロージャを渡すと、FFI トランポリン関数の型不一致により未定義動作が発生する。
 
 **ワークアラウンド** (`src-tauri/src/whisper/process.rs`):
 
@@ -201,27 +166,13 @@ TDD（テスト駆動開発）アプローチを採用する。
 2. **フルスタック**: TypeScript (Vitest) と Rust (cargo test) の両方でテストを書く
 3. **完了条件**: 全テストがパスしなければ実装完了とみなさない
 
-### 開発フロー
-
-```
-1. 計画書のテスト要件を確認
-2. テストファイルを作成（この時点では失敗する）
-3. 実装を行う
-4. テストがパスすることを確認
-5. 完了条件をチェック
-```
-
 ### 例外
 
-- Step 1（プロジェクト基盤セットアップ）はテスト環境構築そのものなのでTDD対象外
 - UIコンポーネントの視覚的確認はテストより手動確認を優先する場合がある
 
 ## ワークフロールール
 
-1. **実装完了時**: ユーザー確認 → ドキュメント更新（計画書の完了条件チェック、Status更新） → コミット
-   - **完了条件の原則**: 各ステップの完了条件は「そのステップ内で実際に検証できるもの」のみ記載する。アプリ起動や統合テストが必要な項目は、該当する後続ステップ（例: Step 7）の完了条件に含める
-   - 完了条件は全てチェック済みの状態にする。チェックできない項目は条件から外す
-   - 他ステップのドキュメントとフォーマットを統一する
+1. **実装完了時**: ユーザー確認 → ドキュメント更新 → コミット
 2. **コミット**: 勝手にしない。英語で記述
 3. **計画との乖離**: 計画書通りに実装できない場合、該当計画書に追記
 4. **TDD遵守**: テスト可能な実装では先にテストを書く
