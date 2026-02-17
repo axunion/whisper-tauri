@@ -48,8 +48,16 @@ cargo fmt          # バックエンド (rustfmt)
 # ビルド
 pnpm tauri build
 
+# 型チェック
+pnpm typecheck     # TypeScript (tsc --noEmit)
+
 # Git hooks インストール（clone後）
 pnpm lefthook install
+
+# 検証（スラッシュコマンド）
+/verify frontend   # フロントエンドのみ (fe も可)
+/verify backend    # バックエンドのみ (be も可)
+/verify all        # 全チェック（デフォルト）
 ```
 
 ## コード品質
