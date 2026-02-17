@@ -1,134 +1,20 @@
-import { FiRefreshCw, FiX } from "solid-icons/fi";
-import { onMount, Show } from "solid-js";
-import {
-  FileSelector,
-  ModelSelector,
-  ResultViewer,
-  TranscriptionProgress,
-} from "~/components/transcription";
-import { Button } from "~/components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
-import { createWhisper } from "~/primitives/createWhisper";
+import { Route, Router } from "@solidjs/router";
+import { lazy } from "solid-js";
+import { Dashboard } from "~/components/dashboard";
+import { AppLayout } from "~/components/layout";
+
+const Transcription = lazy(() => import("~/pages/Transcription"));
+const Settings = lazy(() => import("~/pages/Settings"));
+const DevMenu = lazy(() => import("~/pages/DevMenu"));
 
 function App() {
-  const whisper = createWhisper();
-
-  onMount(() => {
-    whisper.loadModels();
-  });
-
-  const canStart = () =>
-    whisper.file() !== null &&
-    whisper.selectedModel() !== null &&
-    !whisper.isProcessing();
-
   return (
-    <div class="flex min-h-screen flex-col bg-background">
-      <header class="border-b bg-background px-6 py-4">
-        <h1 class="text-xl font-bold">Whisper Tauri</h1>
-      </header>
-
-      <main class="mx-auto w-full max-w-3xl flex-1 space-y-6 p-6">
-        <Show when={whisper.error()}>
-          {(error) => (
-            <div class="flex items-center justify-between rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              <span>{error()}</span>
-              <button
-                type="button"
-                class="ml-2 shrink-0 text-destructive hover:text-destructive/80"
-                onClick={() => whisper.clearError()}
-              >
-                <FiX class="size-4" />
-              </button>
-            </div>
-          )}
-        </Show>
-
-        <Card class="rounded-2xl shadow-sm">
-          <CardHeader>
-            <CardTitle>Audio File</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FileSelector
-              file={whisper.file()}
-              onFileSelect={(file) => whisper.setFile(file)}
-              onFileClear={() => whisper.setFile(null)}
-              disabled={whisper.isProcessing()}
-            />
-          </CardContent>
-        </Card>
-
-        <Card class="rounded-2xl shadow-sm">
-          <CardHeader>
-            <CardTitle>Model</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ModelSelector
-              models={whisper.models()}
-              selectedModel={whisper.selectedModel()}
-              downloadProgress={whisper.downloadProgress()}
-              isDownloading={whisper.isDownloading()}
-              onSelectModel={(model) => whisper.selectModel(model)}
-              onDownloadModel={(modelId) => whisper.downloadModel(modelId)}
-            />
-          </CardContent>
-        </Card>
-
-        <Show when={whisper.isProcessing()}>
-          <Card class="rounded-2xl shadow-sm">
-            <CardHeader>
-              <CardTitle>Transcribing...</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TranscriptionProgress
-                progress={whisper.progress()}
-                onCancel={() => whisper.cancelTranscription()}
-              />
-            </CardContent>
-          </Card>
-        </Show>
-
-        <Show when={!whisper.result() && !whisper.isProcessing()}>
-          <Button
-            class="w-full"
-            size="lg"
-            disabled={!canStart()}
-            onClick={() => whisper.startTranscription()}
-          >
-            Start Transcription
-          </Button>
-        </Show>
-
-        <Show when={whisper.result()}>
-          {(result) => (
-            <Card class="rounded-2xl shadow-sm">
-              <CardHeader>
-                <CardTitle>Result</CardTitle>
-              </CardHeader>
-              <CardContent class="space-y-4">
-                <ResultViewer result={result()} />
-                <div class="flex gap-3">
-                  <Button variant="outline" onClick={() => whisper.reset()}>
-                    New File
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => whisper.startTranscription()}
-                  >
-                    <FiRefreshCw class="size-4" />
-                    Re-run
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </Show>
-      </main>
-
-      <footer class="border-t px-6 py-3 text-center text-xs text-muted-foreground">
-        v0.1.0
-      </footer>
-    </div>
+    <Router root={AppLayout}>
+      <Route path="/" component={Dashboard} />
+      <Route path="/transcription" component={Transcription} />
+      <Route path="/settings" component={Settings} />
+      <Route path="/dev" component={DevMenu} />
+    </Router>
   );
 }
 

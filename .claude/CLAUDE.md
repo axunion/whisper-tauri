@@ -80,13 +80,27 @@ pnpm lefthook install
 ```
 src/
 ├── components/
-│   ├── ui/              # solid-ui ベースの共通UIコンポーネント (Button, Progress, Card, Badge)
+│   ├── ui/              # solid-ui ベースの共通UIコンポーネント (Button, Progress, Card, Badge, Sidebar)
+│   ├── layout/          # レイアウト (AppSidebar, AppLayout)
+│   ├── dashboard/       # ダッシュボード (Dashboard, QuickActions, RecentHistory, ModelStatus)
 │   └── transcription/   # 文字起こし関連 (FileSelector, ModelSelector, TranscriptionProgress, ResultViewer)
+├── pages/               # ページコンポーネント (Transcription, Settings, DevMenu)
 ├── primitives/          # SolidJS 状態管理 (createWhisper)
 ├── lib/                 # ユーティリティ (utils.ts - cn())
 ├── types/               # TypeScript 型定義 (whisper.ts)
 └── test/                # テストセットアップ
 ```
+
+### ルーティング (@solidjs/router)
+
+| パス | コンポーネント | 説明 |
+|------|--------------|------|
+| `/` | Dashboard | ダッシュボード（初期画面） |
+| `/transcription` | Transcription | 文字起こし画面 |
+| `/settings` | Settings | 設定画面（プレースホルダー） |
+| `/dev` | DevMenu | 開発メニュー（DEVのみ） |
+
+`AppLayout` が全ページ共通のサイドバーレイアウトを提供。サイドバーは `collapsible="icon"` でアイコンのみに折りたたみ可能。
 
 ### Backend (src-tauri/src/)
 
@@ -112,8 +126,13 @@ src-tauri/src/
 
 MVP（Step 1〜7）は完了済み。詳細は `docs/IMPLEMENTATION_PLAN.md` を参照。
 
-追加機能は `docs/features/` を参照（順不同）。推奨機能:
-- ダッシュボード、ファイル変換、エクスポート、エラーハンドリング、設定永続化、履歴管理、プロダクトビルド
+追加機能は `docs/features/` を参照（順不同）。
+
+完了済み:
+- ダッシュボード（サイドバーレイアウト + ルーティング）
+
+推奨（未実装）:
+- ファイル変換、エクスポート、エラーハンドリング、設定永続化、履歴管理、プロダクトビルド
 
 ## モデル設定
 

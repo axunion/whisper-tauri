@@ -16,6 +16,7 @@ export default defineConfig({
         web: {
           include: [
             "solid-js",
+            "@solidjs/router",
             "@kobalte/core",
             "@kobalte/utils",
             "class-variance-authority",
@@ -27,7 +28,7 @@ export default defineConfig({
     },
     server: {
       deps: {
-        inline: [/@kobalte/, /solid-icons/],
+        inline: [/@kobalte/, /@corvu/, /@solidjs\/router/, /solid-icons/, /solid-presence/, /solid-prevent-scroll/],
       },
     },
   },
