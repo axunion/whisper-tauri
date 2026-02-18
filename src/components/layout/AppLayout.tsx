@@ -1,8 +1,19 @@
 import type { RouteSectionProps } from "@solidjs/router";
+import { onMount } from "solid-js";
 import { SidebarProvider } from "~/components/ui/sidebar";
+import { createSettings } from "~/primitives/createSettings";
+import { applyTheme } from "~/primitives/createTheme";
 import { AppSidebar } from "./AppSidebar";
 
 export function AppLayout(props: RouteSectionProps) {
+  const settings = createSettings();
+
+  onMount(() => {
+    settings.load();
+  });
+
+  applyTheme(settings.theme);
+
   return (
     <SidebarProvider>
       <AppSidebar />

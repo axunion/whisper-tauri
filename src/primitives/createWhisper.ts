@@ -87,6 +87,19 @@ export function createWhisper() {
     }
   }
 
+  async function deleteModel(modelId: string): Promise<void> {
+    try {
+      await invoke("delete_model", { modelId });
+      const wasSelected = selectedModel()?.id === modelId;
+      if (wasSelected) {
+        setSelectedModel(null);
+      }
+      await loadModels();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
   async function startTranscription(): Promise<void> {
     const currentFile = file();
     const currentModel = selectedModel();
@@ -143,6 +156,7 @@ export function createWhisper() {
     selectModel,
     setFile,
     downloadModel,
+    deleteModel,
     startTranscription,
     cancelTranscription,
     reset,

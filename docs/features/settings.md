@@ -1,8 +1,8 @@
 # 設定永続化
 
-**カテゴリ**: 基本機能強化 | **優先度**: 推奨
+**カテゴリ**: 基本機能強化 | **優先度**: **完了**
 
-設定の永続化を行うプリミティブを実装する。
+設定の永続化を行うプリミティブと設定画面UIを実装する。
 
 ---
 
@@ -78,7 +78,29 @@
 
 - ストアパス: `settings.json`
 - キー: `app_settings`
-- `@tauri-apps/plugin-store` の `Store` クラスを使用
+- `@tauri-apps/plugin-store` の `LazyStore` クラスを使用
+
+---
+
+### 4. テーマ適用
+
+`src/primitives/createTheme.ts`:
+
+- `applyThemeToDOM(theme)`: `<html>` に `dark` クラスと `data-kb-theme` を設定
+- `applyTheme(accessor)`: リアクティブラッパー。`system` 選択時は `prefers-color-scheme` 変化もリッスン
+- `AppLayout` で起動時に適用、`Settings` でテーマ変更時に即反映
+
+---
+
+## 設定画面 UI
+
+`src/pages/Settings.tsx` に以下の構成で実装:
+
+- **一般設定**: 言語 / 出力形式 / テーマ（Select コンポーネント）
+- **モデル管理**: モデル一覧表示、ダウンロード / 削除操作
+- **リセット**: デフォルト設定に戻す
+
+使用 solid-ui コンポーネント: Select, Label, Separator, AlertDialog
 
 ---
 
@@ -86,14 +108,22 @@
 
 | ファイル | 説明 |
 |---------|------|
-| `src/primitives/__tests__/createSettings.test.ts` | **テスト（先に作成）** |
 | `src/types/settings.ts` | 設定型定義 |
 | `src/primitives/createSettings.ts` | 設定プリミティブ |
+| `src/primitives/createTheme.ts` | テーマ適用プリミティブ |
+| `src/primitives/__tests__/createSettings.test.ts` | 設定テスト |
+| `src/primitives/__tests__/createTheme.test.ts` | テーマテスト |
+| `src/components/ui/Select.tsx` | solid-ui Select |
+| `src/components/ui/Label.tsx` | solid-ui Label |
+| `src/components/ui/Separator.tsx` | solid-ui Separator |
+| `src/components/ui/AlertDialog.tsx` | solid-ui AlertDialog |
+| `src/pages/Settings.tsx` | 設定画面 |
 
 ---
 
 ## 完了条件
 
-- [ ] `pnpm test` でテストが通る
-- [ ] 設定が保存される
-- [ ] アプリ再起動後も設定が保持される
+- [x] `pnpm test` でテストが通る
+- [x] 設定が保存される
+- [x] アプリ再起動後も設定が保持される
+- [x] 設定画面 UI が実装されている

@@ -34,10 +34,12 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
 
 // Mock @tauri-apps/plugin-store
 vi.mock("@tauri-apps/plugin-store", () => ({
-  Store: vi.fn().mockImplementation(() => ({
-    get: vi.fn(),
-    set: vi.fn(),
-    save: vi.fn(),
-    load: vi.fn(),
-  })),
+  // biome-ignore lint/complexity/useArrowFunction: regular function required for `new` constructor mock
+  LazyStore: vi.fn().mockImplementation(function () {
+    return {
+      get: vi.fn(),
+      set: vi.fn(),
+      save: vi.fn(),
+    };
+  }),
 }));

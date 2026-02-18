@@ -493,6 +493,93 @@ describe("createWhisper", () => {
     });
   });
 
+  describe("deleteModel", () => {
+    it("should invoke delete_model and reload models", async () => {
+      const models = [mockModel({ id: "small", downloaded: true })];
+      vi.mocked(invoke)
+        .mockResolvedValueOnce(undefined) // delete_model
+        .mockResolvedValueOnce(models); // get_available_models
+
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        await whisper.deleteModel("large-v3-turbo");
+
+        expect(invoke).toHaveBeenCalledWith("delete_model", {
+          modelId: "large-v3-turbo",
+        });
+        expect(invoke).toHaveBeenCalledWith("get_available_models");
+        expect(whisper.models()).toEqual(models);
+        dispose();
+      });
+    });
+
+    it("should clear selectedModel and auto-select if deleted model was selected", async () => {
+      const turboModel = mockModel({
+        id: "large-v3-turbo",
+        downloaded: true,
+        recommended: true,
+      });
+      const smallModel = mockModel({
+        id: "small",
+        name: "Small",
+        downloaded: true,
+        recommended: false,
+      });
+
+      vi.mocked(invoke)
+        .mockResolvedValueOnce(undefined) // delete_model
+        .mockResolvedValueOnce([smallModel]); // get_available_models (turbo removed)
+
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        whisper.selectModel(turboModel);
+        expect(whisper.selectedModel()?.id).toBe("large-v3-turbo");
+
+        await whisper.deleteModel("large-v3-turbo");
+
+        // Should have auto-selected the remaining model
+        expect(whisper.selectedModel()?.id).toBe("small");
+        dispose();
+      });
+    });
+
+    it("should not affect selectedModel if a different model was deleted", async () => {
+      const turboModel = mockModel({
+        id: "large-v3-turbo",
+        downloaded: true,
+        recommended: true,
+      });
+
+      vi.mocked(invoke)
+        .mockResolvedValueOnce(undefined) // delete_model
+        .mockResolvedValueOnce([turboModel]); // get_available_models
+
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        whisper.selectModel(turboModel);
+
+        await whisper.deleteModel("small");
+
+        expect(whisper.selectedModel()?.id).toBe("large-v3-turbo");
+        dispose();
+      });
+    });
+
+    it("should set error on failure", async () => {
+      vi.mocked(invoke).mockRejectedValueOnce(
+        new Error("Failed to delete model"),
+      );
+
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        await whisper.deleteModel("large-v3-turbo");
+
+        expect(whisper.error()).toBe("Failed to delete model");
+        dispose();
+      });
+    });
+  });
+
   describe("clearError", () => {
     it("should set error to null", async () => {
       vi.mocked(invoke).mockRejectedValueOnce(new Error("Some error"));

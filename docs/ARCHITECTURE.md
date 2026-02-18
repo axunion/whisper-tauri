@@ -15,11 +15,12 @@
 |  |   App.tsx   | |    Primitives    | |        Components          |   |
 |  | (ルーティング)| |createWhisper    | | layout/    (Sidebar等)     |   |
 |  |             | |createSettings   | | dashboard/ (QuickActions等) |   |
-|  |             | |createRecording  | | transcription/ (結果表示等) |   |
-|  |             | |createToast      | | history/   (履歴一覧等)     |   |
-|  |             | |createHistory    | | text-processing/ (校正等)   |   |
-|  |             | |createTextProc   | | dev/       (開発メニュー)   |   |
-|  |             | |createConverter  | | ui/        (Button等)       |   |
+|  |             | |createTheme      | | transcription/ (結果表示等) |   |
+|  |             | |createRecording  | | history/   (履歴一覧等)     |   |
+|  |             | |createToast      | | text-processing/ (校正等)   |   |
+|  |             | |createHistory    | | dev/       (開発メニュー)   |   |
+|  |             | |createTextProc   | | ui/        (Button等)       |   |
+|  |             | |createConverter  |                               |   |
 |  +-------------+ +------------------+ +-----------------------------+   |
 |                         |                                               |
 |              Tauri API Bridge (invoke/listen)                           |
@@ -425,7 +426,11 @@ enum ErrorCategory {
 
 詳細は [features/](./features/) を参照:
 
+完了済み:
 - ダッシュボード・サイドバーレイアウト
+- 設定永続化・設定画面UI・テーマ適用
+
+未実装:
 - ファイル変換（ffmpegによるMP3/MP4等の変換）
 - 履歴管理・全文検索
 - テキスト処理（ローカルSLMによる校正・要約）

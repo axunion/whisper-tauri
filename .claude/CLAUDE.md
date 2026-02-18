@@ -88,14 +88,14 @@ pnpm lefthook install
 ```
 src/
 ├── components/
-│   ├── ui/              # solid-ui ベースの共通UIコンポーネント (Button, Progress, Card, Badge, Sidebar)
+│   ├── ui/              # solid-ui ベースの共通UIコンポーネント (Button, Progress, Card, Badge, Sidebar, Select, Label, Separator, AlertDialog)
 │   ├── layout/          # レイアウト (AppSidebar, AppLayout)
 │   ├── dashboard/       # ダッシュボード (Dashboard, QuickActions, RecentHistory, ModelStatus)
 │   └── transcription/   # 文字起こし関連 (FileSelector, ModelSelector, TranscriptionProgress, ResultViewer)
 ├── pages/               # ページコンポーネント (Transcription, Settings, DevMenu)
-├── primitives/          # SolidJS 状態管理 (createWhisper)
+├── primitives/          # SolidJS 状態管理 (createWhisper, createSettings, createTheme)
 ├── lib/                 # ユーティリティ (utils.ts - cn())
-├── types/               # TypeScript 型定義 (whisper.ts)
+├── types/               # TypeScript 型定義 (whisper.ts, settings.ts)
 └── test/                # テストセットアップ
 ```
 
@@ -105,7 +105,7 @@ src/
 |------|--------------|------|
 | `/` | Dashboard | ダッシュボード（初期画面） |
 | `/transcription` | Transcription | 文字起こし画面 |
-| `/settings` | Settings | 設定画面（プレースホルダー） |
+| `/settings` | Settings | 設定画面（一般設定・モデル管理） |
 | `/dev` | DevMenu | 開発メニュー（DEVのみ） |
 
 `AppLayout` が全ページ共通のサイドバーレイアウトを提供。サイドバーは `collapsible="icon"` でアイコンのみに折りたたみ可能。
@@ -138,9 +138,10 @@ MVP（Step 1〜7）は完了済み。詳細は `docs/IMPLEMENTATION_PLAN.md` を
 
 完了済み:
 - ダッシュボード（サイドバーレイアウト + ルーティング）
+- 設定永続化（設定プリミティブ + 設定画面UI + テーマ適用）
 
 推奨（未実装）:
-- ファイル変換、エクスポート、エラーハンドリング、設定永続化、履歴管理、プロダクトビルド
+- ファイル変換、エクスポート、エラーハンドリング、履歴管理、プロダクトビルド
 
 ## モデル設定
 

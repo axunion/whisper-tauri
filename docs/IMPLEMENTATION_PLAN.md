@@ -100,7 +100,7 @@ MVP完了後、必要に応じて実装する機能です。
 | [ファイル変換](./features/file-conversion.md) | 音声/動画ファイルをWAVに変換 | 推奨 |
 | [エクスポート](./features/export.md) | TXT/SRT/VTT形式で結果を保存 | 推奨 |
 | [エラーハンドリング](./features/error-handling.md) | 構造化されたエラー表示 | 推奨 |
-| [設定永続化](./features/settings.md) | アプリ設定の保存・復元 | 推奨 |
+| [設定永続化](./features/settings.md) | アプリ設定の保存・復元 | **完了** |
 | [履歴管理](./features/history.md) | 文字起こし履歴の保存・検索・削除 | 推奨 |
 | [プロダクトビルド](./features/build.md) | 各プラットフォーム向けビルド・署名 | 推奨 |
 | [多言語対応](./features/i18n.md) | 日本語/英語の切り替え | 任意 |
