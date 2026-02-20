@@ -1,0 +1,340 @@
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { createRoot } from "solid-js";
+import { describe, expect, it, vi } from "vitest";
+import type { FfmpegDownloadProgress } from "../../types";
+import { createFfmpegDownloader } from "../createFfmpegDownloader";
+
+describe("createFfmpegDownloader", () => {
+  describe("initial state", () => {
+    it("should have isBundled as false", () => {
+      createRoot((dispose) => {
+        const downloader = createFfmpegDownloader();
+        expect(downloader.isBundled()).toBe(false);
+        dispose();
+      });
+    });
+
+    it("should have isSystemAvailable as false", () => {
+      createRoot((dispose) => {
+        const downloader = createFfmpegDownloader();
+        expect(downloader.isSystemAvailable()).toBe(false);
+        dispose();
+      });
+    });
+
+    it("should have isDownloading as false", () => {
+      createRoot((dispose) => {
+        const downloader = createFfmpegDownloader();
+        expect(downloader.isDownloading()).toBe(false);
+        dispose();
+      });
+    });
+
+    it("should have null downloadProgress", () => {
+      createRoot((dispose) => {
+        const downloader = createFfmpegDownloader();
+        expect(downloader.downloadProgress()).toBeNull();
+        dispose();
+      });
+    });
+
+    it("should have null error", () => {
+      createRoot((dispose) => {
+        const downloader = createFfmpegDownloader();
+        expect(downloader.error()).toBeNull();
+        dispose();
+      });
+    });
+  });
+
+  describe("checkStatus", () => {
+    it("should set isBundled and isSystemAvailable when bundled", async () => {
+      vi.mocked(invoke)
+        .mockResolvedValueOnce(true) // check_ffmpeg_bundled
+        .mockResolvedValueOnce(true); // check_ffmpeg_available
+
+      await createRoot(async (dispose) => {
+        const downloader = createFfmpegDownloader();
+        await downloader.checkStatus();
+
+        expect(invoke).toHaveBeenCalledWith("check_ffmpeg_bundled");
+        expect(invoke).toHaveBeenCalledWith("check_ffmpeg_available");
+        expect(downloader.isBundled()).toBe(true);
+        // When bundled, isSystemAvailable should be false (bundled takes priority)
+        expect(downloader.isSystemAvailable()).toBe(false);
+        dispose();
+      });
+    });
+
+    it("should detect system ffmpeg when not bundled", async () => {
+      vi.mocked(invoke)
+        .mockResolvedValueOnce(false) // check_ffmpeg_bundled
+        .mockResolvedValueOnce(true); // check_ffmpeg_available
+
+      await createRoot(async (dispose) => {
+        const downloader = createFfmpegDownloader();
+        await downloader.checkStatus();
+
+        expect(downloader.isBundled()).toBe(false);
+        expect(downloader.isSystemAvailable()).toBe(true);
+        dispose();
+      });
+    });
+
+    it("should set both false when neither available", async () => {
+      vi.mocked(invoke)
+        .mockResolvedValueOnce(false) // check_ffmpeg_bundled
+        .mockResolvedValueOnce(false); // check_ffmpeg_available
+
+      await createRoot(async (dispose) => {
+        const downloader = createFfmpegDownloader();
+        await downloader.checkStatus();
+
+        expect(downloader.isBundled()).toBe(false);
+        expect(downloader.isSystemAvailable()).toBe(false);
+        dispose();
+      });
+    });
+
+    it("should set error on failure", async () => {
+      vi.mocked(invoke).mockRejectedValueOnce(new Error("Check failed"));
+
+      await createRoot(async (dispose) => {
+        const downloader = createFfmpegDownloader();
+        await downloader.checkStatus();
+
+        expect(downloader.error()).toBe("Check failed");
+        dispose();
+      });
+    });
+  });
+
+  describe("deleteBundled", () => {
+    it("should invoke delete_ffmpeg and re-check system availability", async () => {
+      vi.mocked(invoke)
+        .mockResolvedValueOnce(undefined) // delete_ffmpeg
+        .mockResolvedValueOnce(true); // check_ffmpeg_available
+
+      await createRoot(async (dispose) => {
+        const downloader = createFfmpegDownloader();
+        await downloader.deleteBundled();
+
+        expect(invoke).toHaveBeenCalledWith("delete_ffmpeg");
+        expect(invoke).toHaveBeenCalledWith("check_ffmpeg_available");
+        expect(downloader.isBundled()).toBe(false);
+        expect(downloader.isSystemAvailable()).toBe(true);
+        dispose();
+      });
+    });
+
+    it("should set isSystemAvailable false when no system ffmpeg", async () => {
+      vi.mocked(invoke)
+        .mockResolvedValueOnce(undefined) // delete_ffmpeg
+        .mockResolvedValueOnce(false); // check_ffmpeg_available
+
+      await createRoot(async (dispose) => {
+        const downloader = createFfmpegDownloader();
+        await downloader.deleteBundled();
+
+        expect(downloader.isBundled()).toBe(false);
+        expect(downloader.isSystemAvailable()).toBe(false);
+        dispose();
+      });
+    });
+
+    it("should set error on failure", async () => {
+      vi.mocked(invoke).mockRejectedValueOnce(new Error("Delete failed"));
+
+      await createRoot(async (dispose) => {
+        const downloader = createFfmpegDownloader();
+        await downloader.deleteBundled();
+
+        expect(downloader.error()).toBe("Delete failed");
+        dispose();
+      });
+    });
+  });
+
+  describe("download", () => {
+    it("should invoke download_ffmpeg and set isBundled", async () => {
+      vi.mocked(invoke).mockResolvedValueOnce("/path/to/ffmpeg");
+
+      await createRoot(async (dispose) => {
+        const downloader = createFfmpegDownloader();
+        await downloader.download();
+
+        expect(invoke).toHaveBeenCalledWith("download_ffmpeg");
+        expect(downloader.isBundled()).toBe(true);
+        expect(downloader.isSystemAvailable()).toBe(false);
+        dispose();
+      });
+    });
+
+    it("should manage isDownloading flag", async () => {
+      let resolveDownload: (value: string) => void = () => {};
+      const downloadPromise = new Promise<string>((resolve) => {
+        resolveDownload = resolve;
+      });
+      vi.mocked(invoke).mockReturnValueOnce(
+        downloadPromise as Promise<unknown>,
+      );
+
+      await createRoot(async (dispose) => {
+        const downloader = createFfmpegDownloader();
+
+        expect(downloader.isDownloading()).toBe(false);
+
+        const promise = downloader.download();
+
+        expect(downloader.isDownloading()).toBe(true);
+
+        resolveDownload("/path/to/ffmpeg");
+        await promise;
+
+        expect(downloader.isDownloading()).toBe(false);
+        dispose();
+      });
+    });
+
+    it("should set error on failure", async () => {
+      vi.mocked(invoke).mockRejectedValueOnce(new Error("Download failed"));
+
+      await createRoot(async (dispose) => {
+        const downloader = createFfmpegDownloader();
+        await downloader.download();
+
+        expect(downloader.error()).toBe("Download failed");
+        expect(downloader.isBundled()).toBe(false);
+        dispose();
+      });
+    });
+
+    it("should not start download if already downloading", async () => {
+      let resolveDownload: (value: string) => void = () => {};
+      const downloadPromise = new Promise<string>((resolve) => {
+        resolveDownload = resolve;
+      });
+      vi.mocked(invoke).mockReturnValueOnce(
+        downloadPromise as Promise<unknown>,
+      );
+
+      await createRoot(async (dispose) => {
+        const downloader = createFfmpegDownloader();
+
+        const callsBefore = vi.mocked(invoke).mock.calls.length;
+
+        const promise1 = downloader.download();
+        downloader.download(); // Should be ignored
+
+        // Only one new invoke call should have been made
+        expect(vi.mocked(invoke).mock.calls.length - callsBefore).toBe(1);
+
+        resolveDownload("/path/to/ffmpeg");
+        await promise1;
+        dispose();
+      });
+    });
+  });
+
+  describe("getDownloadUrl", () => {
+    it("should invoke get_ffmpeg_download_url", async () => {
+      vi.mocked(invoke).mockResolvedValueOnce("https://custom.url/ffmpeg");
+
+      await createRoot(async (dispose) => {
+        const downloader = createFfmpegDownloader();
+        const url = await downloader.getDownloadUrl();
+
+        expect(invoke).toHaveBeenCalledWith("get_ffmpeg_download_url");
+        expect(url).toBe("https://custom.url/ffmpeg");
+        dispose();
+      });
+    });
+  });
+
+  describe("setDownloadUrl", () => {
+    it("should invoke set_ffmpeg_download_url", async () => {
+      vi.mocked(invoke).mockResolvedValueOnce(undefined);
+
+      await createRoot(async (dispose) => {
+        const downloader = createFfmpegDownloader();
+        await downloader.setDownloadUrl("https://custom.url/ffmpeg");
+
+        expect(invoke).toHaveBeenCalledWith("set_ffmpeg_download_url", {
+          url: "https://custom.url/ffmpeg",
+        });
+        dispose();
+      });
+    });
+
+    it("should invoke with null to clear", async () => {
+      vi.mocked(invoke).mockResolvedValueOnce(undefined);
+
+      await createRoot(async (dispose) => {
+        const downloader = createFfmpegDownloader();
+        await downloader.setDownloadUrl(null);
+
+        expect(invoke).toHaveBeenCalledWith("set_ffmpeg_download_url", {
+          url: null,
+        });
+        dispose();
+      });
+    });
+  });
+
+  describe("event listeners", () => {
+    it("should update downloadProgress on ffmpeg:download-progress event", async () => {
+      let progressCallback: (event: {
+        payload: FfmpegDownloadProgress;
+      }) => void = () => {};
+      vi.mocked(listen).mockImplementation((event, handler) => {
+        if (event === "ffmpeg:download-progress") {
+          progressCallback = handler as unknown as typeof progressCallback;
+        }
+        return Promise.resolve(() => {});
+      });
+
+      await createRoot(async (dispose) => {
+        const downloader = createFfmpegDownloader();
+
+        const progressData: FfmpegDownloadProgress = {
+          downloadedBytes: 50_000_000,
+          totalBytes: 100_000_000,
+          progress: 50.0,
+        };
+
+        progressCallback({ payload: progressData });
+
+        expect(downloader.downloadProgress()).toEqual(progressData);
+        dispose();
+      });
+
+      vi.mocked(listen).mockImplementation(() => Promise.resolve(() => {}));
+    });
+
+    it("should unregister listener on dispose", async () => {
+      const unlistenFn = vi.fn();
+
+      vi.mocked(listen).mockImplementation((event: string) => {
+        if (event === "ffmpeg:download-progress") {
+          return Promise.resolve(unlistenFn);
+        }
+        return Promise.resolve(() => {});
+      });
+
+      await createRoot(async (dispose) => {
+        createFfmpegDownloader();
+
+        await Promise.resolve();
+
+        expect(unlistenFn).not.toHaveBeenCalled();
+
+        dispose();
+      });
+
+      expect(unlistenFn).toHaveBeenCalled();
+
+      vi.mocked(listen).mockImplementation(() => Promise.resolve(() => {}));
+    });
+  });
+});

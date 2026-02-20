@@ -1,5 +1,5 @@
 import { FiRefreshCw, FiX } from "solid-icons/fi";
-import { onMount, Show } from "solid-js";
+import { createSignal, onMount, Show } from "solid-js";
 import {
   FileSelector,
   ModelSelector,
@@ -8,32 +8,93 @@ import {
 } from "~/components/transcription";
 import { Button } from "~/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
+import { Progress } from "~/components/ui/Progress";
+import { createFileConverter } from "~/primitives/createFileConverter";
 import { createWhisper } from "~/primitives/createWhisper";
+
+/** File extensions that need conversion (non-WAV). */
+const WAV_EXTENSIONS = new Set(["wav"]);
+
+function getExtension(filename: string): string {
+  const parts = filename.split(".");
+  return (parts.length > 1 ? parts[parts.length - 1] : "")?.toLowerCase() ?? "";
+}
 
 export default function Transcription() {
   const whisper = createWhisper();
+  const converter = createFileConverter();
+
+  const [convertedPath, setConvertedPath] = createSignal<string | null>(null);
 
   onMount(() => {
     whisper.loadModels();
   });
 
+  const needsConversion = () => {
+    const f = whisper.file();
+    if (!f) return false;
+    const ext = getExtension(f.name);
+    return !WAV_EXTENSIONS.has(ext);
+  };
+
   const canStart = () =>
     whisper.file() !== null &&
     whisper.selectedModel() !== null &&
-    !whisper.isProcessing();
+    !whisper.isProcessing() &&
+    !converter.isConverting();
+
+  const combinedError = () => whisper.error() ?? converter.error();
+
+  function clearAllErrors() {
+    whisper.clearError();
+    converter.clearError();
+  }
+
+  async function handleStart() {
+    const currentFile = whisper.file();
+    if (!currentFile || !canStart()) return;
+
+    // Clean up previous converted file
+    const prevConverted = convertedPath();
+    if (prevConverted) {
+      await converter.cleanup(prevConverted);
+      setConvertedPath(null);
+    }
+
+    if (needsConversion()) {
+      // Convert file (Rust side resolves ffmpeg: bundled → system PATH)
+      const result = await converter.convert(currentFile.path);
+      if (!result) return;
+
+      setConvertedPath(result.outputPath);
+      await whisper.startTranscription(result.outputPath);
+    } else {
+      await whisper.startTranscription();
+    }
+  }
+
+  async function handleReset() {
+    // Cleanup converted file
+    const prev = convertedPath();
+    if (prev) {
+      await converter.cleanup(prev);
+      setConvertedPath(null);
+    }
+    whisper.reset();
+  }
 
   return (
     <div class="mx-auto w-full max-w-3xl space-y-6">
       <h1 class="text-2xl font-bold">Transcription</h1>
 
-      <Show when={whisper.error()}>
+      <Show when={combinedError()}>
         {(error) => (
           <div class="flex items-center justify-between rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive">
             <span>{error()}</span>
             <button
               type="button"
               class="ml-2 shrink-0 text-destructive hover:text-destructive/80"
-              onClick={() => whisper.clearError()}
+              onClick={clearAllErrors}
             >
               <FiX class="size-4" />
             </button>
@@ -50,7 +111,7 @@ export default function Transcription() {
             file={whisper.file()}
             onFileSelect={(file) => whisper.setFile(file)}
             onFileClear={() => whisper.setFile(null)}
-            disabled={whisper.isProcessing()}
+            disabled={whisper.isProcessing() || converter.isConverting()}
           />
         </CardContent>
       </Card>
@@ -71,6 +132,21 @@ export default function Transcription() {
         </CardContent>
       </Card>
 
+      {/* Conversion progress */}
+      <Show when={converter.isConverting()}>
+        <Card class="rounded-2xl shadow-sm">
+          <CardHeader>
+            <CardTitle>
+              {"\u30D5\u30A1\u30A4\u30EB\u3092\u5909\u63DB\u4E2D..."}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Progress indeterminate minValue={0} maxValue={100} />
+          </CardContent>
+        </Card>
+      </Show>
+
+      {/* Transcription progress */}
       <Show when={whisper.isProcessing()}>
         <Card class="rounded-2xl shadow-sm">
           <CardHeader>
@@ -85,12 +161,18 @@ export default function Transcription() {
         </Card>
       </Show>
 
-      <Show when={!whisper.result() && !whisper.isProcessing()}>
+      <Show
+        when={
+          !whisper.result() &&
+          !whisper.isProcessing() &&
+          !converter.isConverting()
+        }
+      >
         <Button
           class="w-full"
           size="lg"
           disabled={!canStart()}
-          onClick={() => whisper.startTranscription()}
+          onClick={handleStart}
         >
           Start Transcription
         </Button>
@@ -105,13 +187,10 @@ export default function Transcription() {
             <CardContent class="space-y-4">
               <ResultViewer result={result()} />
               <div class="flex gap-3">
-                <Button variant="outline" onClick={() => whisper.reset()}>
+                <Button variant="outline" onClick={handleReset}>
                   New File
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => whisper.startTranscription()}
-                >
+                <Button variant="outline" onClick={handleStart}>
                   <FiRefreshCw class="size-4" />
                   Re-run
                 </Button>

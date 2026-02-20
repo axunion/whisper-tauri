@@ -30,7 +30,7 @@ export function AppSidebar() {
       : location.pathname.startsWith(href);
 
   return (
-    <Sidebar as="nav" role="navigation" collapsible="icon">
+    <Sidebar role="navigation" collapsible="icon">
       <SidebarHeader>
         <div class="flex items-center group-data-[collapsible=icon]:justify-center">
           <Show when={sidebar.state() === "expanded"}>

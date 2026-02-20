@@ -1,3 +1,4 @@
+pub mod converter;
 pub mod whisper;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -30,6 +31,15 @@ pub fn run() {
             whisper::commands::set_model_download_url,
             whisper::commands::transcribe_audio,
             whisper::commands::cancel_transcription,
+            converter::commands::check_ffmpeg_available,
+            converter::commands::check_ffmpeg_bundled,
+            converter::commands::delete_ffmpeg,
+            converter::commands::download_ffmpeg,
+            converter::commands::get_ffmpeg_download_url,
+            converter::commands::set_ffmpeg_download_url,
+            converter::commands::convert_audio_file,
+            converter::commands::get_supported_formats,
+            converter::commands::cleanup_converted_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -93,9 +93,9 @@ src/
 │   ├── dashboard/       # ダッシュボード (Dashboard, QuickActions, RecentHistory, ModelStatus)
 │   └── transcription/   # 文字起こし関連 (FileSelector, ModelSelector, TranscriptionProgress, ResultViewer)
 ├── pages/               # ページコンポーネント (Transcription, Settings, DevMenu)
-├── primitives/          # SolidJS 状態管理 (createWhisper, createSettings, createTheme)
+├── primitives/          # SolidJS 状態管理 (createWhisper, createSettings, createTheme, createFfmpegDownloader, createFileConverter)
 ├── lib/                 # ユーティリティ (utils.ts - cn())
-├── types/               # TypeScript 型定義 (whisper.ts, settings.ts)
+├── types/               # TypeScript 型定義 (whisper.ts, settings.ts, converter.ts)
 └── test/                # テストセットアップ
 ```
 
@@ -105,7 +105,7 @@ src/
 |------|--------------|------|
 | `/` | Dashboard | ダッシュボード（初期画面） |
 | `/transcription` | Transcription | 文字起こし画面 |
-| `/settings` | Settings | 設定画面（一般設定・モデル管理） |
+| `/settings` | Settings | 設定画面（一般設定・モデル管理・ツール管理） |
 | `/dev` | DevMenu | 開発メニュー（DEVのみ） |
 
 `AppLayout` が全ページ共通のサイドバーレイアウトを提供。サイドバーは `collapsible="icon"` でアイコンのみに折りたたみ可能。
@@ -114,12 +114,19 @@ src/
 
 ```
 src-tauri/src/
-└── whisper/             # 文字起こしモジュール
-    ├── commands.rs      # Tauri コマンド
-    ├── process.rs       # whisper-rs 実行ロジック
-    ├── models.rs        # モデル管理
+├── whisper/             # 文字起こしモジュール
+│   ├── commands.rs      # Tauri コマンド
+│   ├── process.rs       # whisper-rs 実行ロジック
+│   ├── models.rs        # モデル管理
+│   ├── types.rs         # 型定義
+│   └── error.rs         # エラー型
+└── converter/           # ファイル変換モジュール
+    ├── commands.rs      # Tauri コマンド (check/download/convert/cleanup)
+    ├── ffmpeg.rs        # ffmpeg実行・引数構築
+    ├── downloader.rs    # ffmpegダウンロード・アーカイブ展開
     ├── types.rs         # 型定義
-    └── error.rs         # エラー型
+    ├── error.rs         # エラー型
+    └── mod.rs           # フォーマット判定
 ```
 
 ### IPC イベント (Rust → TypeScript)
@@ -129,6 +136,7 @@ src-tauri/src/
 | `whisper:progress` | 文字起こし進捗 |
 | `whisper:result` | 文字起こし結果 |
 | `model:download-progress` | Whisperモデル DL進捗 |
+| `ffmpeg:download-progress` | ffmpeg DL進捗 |
 
 ## 実装計画
 
@@ -139,9 +147,10 @@ MVP（Step 1〜7）は完了済み。詳細は `docs/IMPLEMENTATION_PLAN.md` を
 完了済み:
 - ダッシュボード（サイドバーレイアウト + ルーティング）
 - 設定永続化（設定プリミティブ + 設定画面UI + テーマ適用）
+- ファイル変換（ffmpegダウンロード + 音声/動画→WAV変換 + UI統合）
 
 推奨（未実装）:
-- ファイル変換、エクスポート、エラーハンドリング、履歴管理、プロダクトビルド
+- エクスポート、エラーハンドリング、履歴管理、プロダクトビルド
 
 ## モデル設定
 

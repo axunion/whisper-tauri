@@ -437,14 +437,12 @@ describe("createWhisper", () => {
       let progressCallback: (event: {
         payload: TranscriptionProgress;
       }) => void = () => {};
-      vi.mocked(listen).mockImplementation(
-        (event: string, handler: (event: unknown) => void) => {
-          if (event === "whisper:progress") {
-            progressCallback = handler as typeof progressCallback;
-          }
-          return Promise.resolve(() => {});
-        },
-      );
+      vi.mocked(listen).mockImplementation((event, handler) => {
+        if (event === "whisper:progress") {
+          progressCallback = handler as unknown as typeof progressCallback;
+        }
+        return Promise.resolve(() => {});
+      });
 
       vi.mocked(invoke).mockResolvedValue(undefined);
 
@@ -603,14 +601,12 @@ describe("createWhisper", () => {
       let progressCallback: (event: {
         payload: TranscriptionProgress;
       }) => void = () => {};
-      vi.mocked(listen).mockImplementation(
-        (event: string, handler: (event: unknown) => void) => {
-          if (event === "whisper:progress") {
-            progressCallback = handler as typeof progressCallback;
-          }
-          return Promise.resolve(() => {});
-        },
-      );
+      vi.mocked(listen).mockImplementation((event, handler) => {
+        if (event === "whisper:progress") {
+          progressCallback = handler as unknown as typeof progressCallback;
+        }
+        return Promise.resolve(() => {});
+      });
 
       await createRoot(async (dispose) => {
         const whisper = createWhisper();
@@ -634,14 +630,12 @@ describe("createWhisper", () => {
     it("should update downloadProgress on model:download-progress event", async () => {
       let downloadCallback: (event: { payload: DownloadProgress }) => void =
         () => {};
-      vi.mocked(listen).mockImplementation(
-        (event: string, handler: (event: unknown) => void) => {
-          if (event === "model:download-progress") {
-            downloadCallback = handler as typeof downloadCallback;
-          }
-          return Promise.resolve(() => {});
-        },
-      );
+      vi.mocked(listen).mockImplementation((event, handler) => {
+        if (event === "model:download-progress") {
+          downloadCallback = handler as unknown as typeof downloadCallback;
+        }
+        return Promise.resolve(() => {});
+      });
 
       await createRoot(async (dispose) => {
         const whisper = createWhisper();

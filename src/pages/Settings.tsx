@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "~/components/ui/Select";
 import { Separator } from "~/components/ui/Separator";
+import { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
 import { createSettings } from "~/primitives/createSettings";
 import { applyTheme } from "~/primitives/createTheme";
 import { createWhisper } from "~/primitives/createWhisper";
@@ -52,6 +53,7 @@ type OptionItem = { value: string; label: string };
 export default function Settings() {
   const settings = createSettings();
   const whisper = createWhisper();
+  const ffmpeg = createFfmpegDownloader();
   const [deletingModelId, setDeletingModelId] = createSignal<string | null>(
     null,
   );
@@ -61,6 +63,7 @@ export default function Settings() {
   onMount(() => {
     settings.load();
     whisper.loadModels();
+    ffmpeg.checkStatus();
   });
 
   function findOption<T extends readonly OptionItem[]>(
@@ -314,6 +317,72 @@ export default function Settings() {
               }
             </p>
           </Show>
+        </CardContent>
+      </Card>
+
+      {/* FFmpeg */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{"\u30C4\u30FC\u30EB\u7BA1\u7406"}</CardTitle>
+          <CardDescription>
+            {
+              "\u97F3\u58F0/\u52D5\u753B\u5909\u63DB\u306B\u5FC5\u8981\u306A\u30C4\u30FC\u30EB\u306E\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9\u3068\u524A\u9664"
+            }
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div class="flex items-center justify-between rounded-lg border p-4">
+            <div class="flex items-center gap-2">
+              <span class="font-medium">FFmpeg</span>
+              <Show when={ffmpeg.isSystemAvailable()}>
+                <Badge variant="secondary">
+                  {
+                    "\u30B7\u30B9\u30C6\u30E0\u306B\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB\u6E08\u307F"
+                  }
+                </Badge>
+              </Show>
+            </div>
+            <Show
+              when={!ffmpeg.isBundled()}
+              fallback={
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  class="w-28"
+                  onClick={async () => {
+                    await ffmpeg.deleteBundled();
+                  }}
+                >
+                  {"\u524A\u9664"}
+                </Button>
+              }
+            >
+              <Show
+                when={ffmpeg.isDownloading()}
+                fallback={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    class="w-28"
+                    onClick={() => ffmpeg.download()}
+                  >
+                    {"\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9"}
+                  </Button>
+                }
+              >
+                <div class="w-32 space-y-1">
+                  <Progress
+                    value={ffmpeg.downloadProgress()?.progress ?? 0}
+                    minValue={0}
+                    maxValue={100}
+                  />
+                  <p class="text-center text-xs text-muted-foreground">
+                    {Math.round(ffmpeg.downloadProgress()?.progress ?? 0)}%
+                  </p>
+                </div>
+              </Show>
+            </Show>
+          </div>
         </CardContent>
       </Card>
 

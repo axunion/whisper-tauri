@@ -1,3 +1,8 @@
+export type {
+  ConversionResult,
+  FfmpegDownloadProgress,
+  SupportedFormat,
+} from "./converter";
 export type { AppSettings } from "./settings";
 export { DEFAULT_SETTINGS } from "./settings";
 export type {

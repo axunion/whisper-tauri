@@ -12,7 +12,21 @@ interface FileSelectorProps {
   disabled?: boolean;
 }
 
-const AUDIO_EXTENSIONS = ["wav", "mp3", "m4a", "flac", "ogg"];
+const AUDIO_EXTENSIONS = [
+  "wav",
+  "mp3",
+  "m4a",
+  "flac",
+  "ogg",
+  "aac",
+  "wma",
+  "opus",
+  "mp4",
+  "mov",
+  "webm",
+  "avi",
+  "mkv",
+];
 
 const FileSelector: Component<FileSelectorProps> = (props) => {
   async function handleClick() {
@@ -29,7 +43,7 @@ const FileSelector: Component<FileSelectorProps> = (props) => {
     });
 
     if (selected) {
-      const path = typeof selected === "string" ? selected : selected.path;
+      const path = selected;
       const name = path.split("/").pop() ?? path.split("\\").pop() ?? path;
       props.onFileSelect({
         path,
@@ -51,7 +65,9 @@ const FileSelector: Component<FileSelectorProps> = (props) => {
         >
           <FiUpload class="size-8" />
           <span class="text-sm font-medium">Click to select an audio file</span>
-          <span class="text-xs">WAV, MP3, M4A, FLAC, OGG</span>
+          <span class="text-xs">
+            WAV, MP3, M4A, FLAC, OGG, AAC, MP4, MOV, etc.
+          </span>
         </button>
       }
     >

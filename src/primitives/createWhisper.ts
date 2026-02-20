@@ -100,7 +100,7 @@ export function createWhisper() {
     }
   }
 
-  async function startTranscription(): Promise<void> {
+  async function startTranscription(overrideAudioPath?: string): Promise<void> {
     const currentFile = file();
     const currentModel = selectedModel();
     if (!currentFile || !currentModel) return;
@@ -111,7 +111,7 @@ export function createWhisper() {
       const transcriptionResult = await invoke<TranscriptionResult>(
         "transcribe_audio",
         {
-          audioPath: currentFile.path,
+          audioPath: overrideAudioPath ?? currentFile.path,
           modelPath: currentModel.path,
         },
       );
