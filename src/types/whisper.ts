@@ -18,6 +18,8 @@ export interface ModelInfo {
   bundled: boolean;
   /** Whether the model is recommended for this system */
   recommended: boolean;
+  /** Estimated processing speed for this hardware */
+  speedNote: string;
   /** Path to the model file (if downloaded) */
   path?: string;
 }

@@ -21,6 +21,7 @@ describe("Whisper Types", () => {
         downloaded: true,
         bundled: false,
         recommended: true,
+        speedNote: "~5-15s/min",
       };
 
       expect(model.id).toBe("large-v3-turbo");
@@ -33,6 +34,7 @@ describe("Whisper Types", () => {
       expect(model.downloaded).toBe(true);
       expect(model.bundled).toBe(false);
       expect(model.recommended).toBe(true);
+      expect(model.speedNote).toBe("~5-15s/min");
     });
 
     it("should allow optional path property", () => {
@@ -45,6 +47,7 @@ describe("Whisper Types", () => {
         downloaded: true,
         bundled: false,
         recommended: false,
+        speedNote: "~2-5s/min",
         path: "/path/to/model.bin",
       };
 
@@ -59,6 +62,7 @@ describe("Whisper Types", () => {
         downloaded: false,
         bundled: false,
         recommended: false,
+        speedNote: "",
       };
 
       expect(modelWithoutPath.path).toBeUndefined();

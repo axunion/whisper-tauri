@@ -42,6 +42,21 @@ pub fn is_valid_model_id(model_id: &str) -> bool {
     VALID_MODEL_IDS.contains(&model_id)
 }
 
+/// Returns the estimated processing speed note for a model on the given architecture.
+///
+/// Returns an empty string for unknown model/architecture combinations.
+#[must_use]
+pub fn get_speed_note(model_id: &str, arch: &str) -> &'static str {
+    match (model_id, arch) {
+        ("large-v3-turbo", "aarch64") => "~5-15s/min",
+        ("medium", "aarch64") => "~5-18s/min",
+        ("small", "aarch64") => "~2-5s/min",
+        ("large-v3-turbo" | "medium", "x86_64") => "~30-90s/min",
+        ("small", "x86_64") => "~10-30s/min",
+        _ => "",
+    }
+}
+
 /// Returns the list of available models.
 ///
 /// All models have `downloaded`, `bundled`, and `recommended` set to `false`.
@@ -59,6 +74,7 @@ pub fn get_model_list() -> Vec<ModelInfo> {
             downloaded: false,
             bundled: false,
             recommended: false,
+            speed_note: String::new(),
             path: None,
         },
         ModelInfo {
@@ -71,6 +87,7 @@ pub fn get_model_list() -> Vec<ModelInfo> {
             downloaded: false,
             bundled: false,
             recommended: false,
+            speed_note: String::new(),
             path: None,
         },
         ModelInfo {
@@ -82,6 +99,7 @@ pub fn get_model_list() -> Vec<ModelInfo> {
             downloaded: false,
             bundled: false,
             recommended: false,
+            speed_note: String::new(),
             path: None,
         },
     ]
@@ -124,17 +142,20 @@ pub fn get_recommended_model_id() -> &'static str {
     recommend_model_id(total_memory, cpu_count, arch)
 }
 
-/// Returns the model list with system-aware recommendation.
+/// Returns the model list with system-aware recommendation and speed notes.
 ///
-/// Sets `recommended: true` on the model matching the system recommendation.
+/// Sets `recommended: true` on the model matching the system recommendation,
+/// and populates `speed_note` based on the current architecture.
 #[must_use]
 pub fn get_model_list_with_recommendation() -> Vec<ModelInfo> {
     let recommended_id = get_recommended_model_id();
+    let arch = std::env::consts::ARCH;
     let mut models = get_model_list();
     for model in &mut models {
         if model.id == recommended_id {
             model.recommended = true;
         }
+        model.speed_note = get_speed_note(&model.id, arch).to_string();
     }
     models
 }
@@ -288,6 +309,62 @@ mod tests {
     fn recommend_model_id_under_8gb_returns_small() {
         let ram_4gb = 4 * 1024 * 1024 * 1024;
         assert_eq!(recommend_model_id(ram_4gb, 8, "x86_64"), "small");
+    }
+
+    // --- get_speed_note ---
+
+    #[test]
+    fn get_speed_note_aarch64_large_v3_turbo() {
+        assert_eq!(get_speed_note("large-v3-turbo", "aarch64"), "~5-15s/min");
+    }
+
+    #[test]
+    fn get_speed_note_aarch64_medium() {
+        assert_eq!(get_speed_note("medium", "aarch64"), "~5-18s/min");
+    }
+
+    #[test]
+    fn get_speed_note_aarch64_small() {
+        assert_eq!(get_speed_note("small", "aarch64"), "~2-5s/min");
+    }
+
+    #[test]
+    fn get_speed_note_x86_64_large_v3_turbo() {
+        assert_eq!(get_speed_note("large-v3-turbo", "x86_64"), "~30-90s/min");
+    }
+
+    #[test]
+    fn get_speed_note_x86_64_medium() {
+        assert_eq!(get_speed_note("medium", "x86_64"), "~30-90s/min");
+    }
+
+    #[test]
+    fn get_speed_note_x86_64_small() {
+        assert_eq!(get_speed_note("small", "x86_64"), "~10-30s/min");
+    }
+
+    #[test]
+    fn get_speed_note_unknown_model() {
+        assert_eq!(get_speed_note("unknown", "aarch64"), "");
+    }
+
+    #[test]
+    fn get_speed_note_unknown_arch() {
+        assert_eq!(get_speed_note("small", "riscv64"), "");
+    }
+
+    // --- get_model_list speed_note ---
+
+    #[test]
+    fn get_model_list_speed_note_is_empty() {
+        let models = get_model_list();
+        for model in &models {
+            assert!(
+                model.speed_note.is_empty(),
+                "model {} should have empty speed_note",
+                model.id
+            );
+        }
     }
 
     // --- is_valid_model_id ---

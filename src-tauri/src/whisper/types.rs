@@ -20,6 +20,8 @@ pub struct ModelInfo {
     pub bundled: bool,
     /// Whether the model is recommended for this system
     pub recommended: bool,
+    /// Estimated processing speed for this hardware
+    pub speed_note: String,
     /// Path to the model file (if downloaded)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<String>,
@@ -112,11 +114,13 @@ mod tests {
             downloaded: true,
             bundled: false,
             recommended: false,
+            speed_note: "~5-15s/min".to_string(),
             path: Some("/path/to/model.bin".to_string()),
         };
 
         let json = serde_json::to_string(&model).expect("Failed to serialize");
         assert!(json.contains("\"sizeBytes\":148897792"));
+        assert!(json.contains("\"speedNote\":\"~5-15s/min\""));
         assert!(json.contains("\"path\":\"/path/to/model.bin\""));
     }
 
@@ -131,6 +135,7 @@ mod tests {
             downloaded: false,
             bundled: false,
             recommended: false,
+            speed_note: String::new(),
             path: None,
         };
 
