@@ -219,7 +219,12 @@ describe("createWhisper", () => {
         const whisper = createWhisper();
         await whisper.loadModels();
 
-        expect(whisper.error()).toBe("Failed to load models");
+        expect(whisper.error()).toEqual(
+          expect.objectContaining({
+            code: "UNKNOWN_ERROR",
+            details: "Failed to load models",
+          }),
+        );
         dispose();
       });
     });
@@ -573,7 +578,12 @@ describe("createWhisper", () => {
         const whisper = createWhisper();
         await whisper.deleteModel("large-v3-turbo");
 
-        expect(whisper.error()).toBe("Failed to delete model");
+        expect(whisper.error()).toEqual(
+          expect.objectContaining({
+            code: "UNKNOWN_ERROR",
+            details: "Failed to delete model",
+          }),
+        );
         dispose();
       });
     });
@@ -587,7 +597,9 @@ describe("createWhisper", () => {
         const whisper = createWhisper();
         await whisper.loadModels();
 
-        expect(whisper.error()).toBe("Some error");
+        expect(whisper.error()).toEqual(
+          expect.objectContaining({ code: "UNKNOWN_ERROR" }),
+        );
 
         whisper.clearError();
 

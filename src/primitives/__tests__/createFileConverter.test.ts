@@ -71,13 +71,20 @@ describe("createFileConverter", () => {
     });
 
     it("should set error on failure", async () => {
-      vi.mocked(invoke).mockRejectedValueOnce(new Error("Conversion failed"));
+      vi.mocked(invoke).mockRejectedValueOnce(
+        new Error("Conversion failed: exit code 1"),
+      );
 
       await createRoot(async (dispose) => {
         const converter = createFileConverter();
         const result = await converter.convert("/path/to/audio.mp3");
 
-        expect(converter.error()).toBe("Conversion failed");
+        expect(converter.error()).toEqual(
+          expect.objectContaining({
+            code: "TRANSCRIPTION_ERROR",
+            details: "Conversion failed: exit code 1",
+          }),
+        );
         expect(result).toBeNull();
         dispose();
       });
@@ -138,7 +145,9 @@ describe("createFileConverter", () => {
         const converter = createFileConverter();
         await converter.convert("/path/to/audio.mp3");
 
-        expect(converter.error()).toBe("Some error");
+        expect(converter.error()).toEqual(
+          expect.objectContaining({ code: "UNKNOWN_ERROR" }),
+        );
 
         converter.clearError();
 

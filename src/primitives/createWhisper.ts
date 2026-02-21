@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { createSignal, onCleanup } from "solid-js";
+import { parseError } from "../lib/errors";
 import type {
   DownloadProgress,
   FileInfo,
@@ -8,6 +9,7 @@ import type {
   TranscriptionProgress,
   TranscriptionResult,
 } from "../types";
+import type { AppError } from "../types/errors";
 
 export function createWhisper() {
   const [models, setModels] = createSignal<ModelInfo[]>([]);
@@ -23,7 +25,7 @@ export function createWhisper() {
   const [result, setResult] = createSignal<TranscriptionResult | null>(null);
   const [isProcessing, setIsProcessing] = createSignal(false);
   const [isDownloading, setIsDownloading] = createSignal(false);
-  const [error, setError] = createSignal<string | null>(null);
+  const [error, setError] = createSignal<AppError | null>(null);
 
   // Internal state for cancellation
   const [currentTaskId, setCurrentTaskId] = createSignal<string | null>(null);
@@ -56,7 +58,7 @@ export function createWhisper() {
       setModels(result);
       autoSelectModel();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(parseError(e));
     }
   }
 
@@ -81,7 +83,7 @@ export function createWhisper() {
       await invoke("download_model", { modelId });
       await loadModels();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(parseError(e));
     } finally {
       setIsDownloading(false);
     }
@@ -96,7 +98,7 @@ export function createWhisper() {
       }
       await loadModels();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(parseError(e));
     }
   }
 
@@ -117,7 +119,7 @@ export function createWhisper() {
       );
       setResult(transcriptionResult);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(parseError(e));
     } finally {
       setIsProcessing(false);
     }

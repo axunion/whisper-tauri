@@ -1,5 +1,6 @@
-import { FiRefreshCw, FiX } from "solid-icons/fi";
+import { FiRefreshCw } from "solid-icons/fi";
 import { createSignal, onMount, Show } from "solid-js";
+import { ErrorDisplay } from "~/components/ErrorDisplay";
 import {
   FileSelector,
   ModelSelector,
@@ -87,20 +88,11 @@ export default function Transcription() {
     <div class="mx-auto w-full max-w-3xl space-y-6">
       <h1 class="text-2xl font-bold">Transcription</h1>
 
-      <Show when={combinedError()}>
-        {(error) => (
-          <div class="flex items-center justify-between rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            <span>{error()}</span>
-            <button
-              type="button"
-              class="ml-2 shrink-0 text-destructive hover:text-destructive/80"
-              onClick={clearAllErrors}
-            >
-              <FiX class="size-4" />
-            </button>
-          </div>
-        )}
-      </Show>
+      <ErrorDisplay
+        error={combinedError()}
+        onDismiss={clearAllErrors}
+        onRetry={canStart() ? handleStart : undefined}
+      />
 
       <Card class="rounded-2xl shadow-sm">
         <CardHeader>

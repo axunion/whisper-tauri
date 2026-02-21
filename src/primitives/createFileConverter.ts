@@ -1,10 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { createSignal } from "solid-js";
+import { parseError } from "../lib/errors";
 import type { ConversionResult, SupportedFormat } from "../types";
+import type { AppError } from "../types/errors";
 
 export function createFileConverter() {
   const [isConverting, setIsConverting] = createSignal(false);
-  const [error, setError] = createSignal<string | null>(null);
+  const [error, setError] = createSignal<AppError | null>(null);
 
   async function convert(inputPath: string): Promise<ConversionResult | null> {
     setIsConverting(true);
@@ -15,7 +17,7 @@ export function createFileConverter() {
       });
       return result;
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(parseError(e));
       return null;
     } finally {
       setIsConverting(false);
@@ -26,7 +28,7 @@ export function createFileConverter() {
     try {
       return await invoke<SupportedFormat[]>("get_supported_formats");
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(parseError(e));
       return [];
     }
   }

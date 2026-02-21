@@ -1,6 +1,6 @@
 # エラーハンドリング強化
 
-**カテゴリ**: 基本機能強化 | **優先度**: 推奨
+**カテゴリ**: 基本機能強化 | **優先度**: 推奨 | **ステータス**: 完了
 
 構造化されたエラーハンドリングシステムを構築する。
 
@@ -10,37 +10,13 @@
 
 - エラーカテゴリの定義
 - ユーザーフレンドリーなエラーメッセージ
-- Rustエラー型とTypeScriptエラー型の統一
+- Rustエラー文字列のプレフィックスマッチングによるフロントエンド側分類
 
 ---
 
-## テスト要件
+## スコープ
 
-### TypeScript (Vitest)
-
-`src/lib/__tests__/errors.test.ts`:
-
-| テスト | 内容 |
-|-------|------|
-| getErrorCategory | FILE_* コードは 'file' カテゴリを返す |
-| getErrorCategory | MODEL_* コードは 'model' カテゴリを返す |
-| getErrorCategory | NETWORK_* コードは 'network' カテゴリを返す |
-| getErrorCategory | CANCELLED は 'cancelled' カテゴリを返す |
-| isRecoverable | MODEL_LOAD_ERROR は false を返す |
-| isRecoverable | その他は true を返す |
-| parseError | 文字列エラーを AppError に変換する |
-| parseError | オブジェクトエラーを AppError に変換する |
-| parseError | unknown エラーを UNKNOWN_ERROR に変換する |
-| getErrorMessage | 各コードに対応するメッセージを返す |
-
-`src/components/__tests__/ErrorDisplay.test.tsx`:
-
-| テスト | 内容 |
-|-------|------|
-| render | エラーメッセージが表示される |
-| render | 詳細がある場合は詳細も表示される |
-| onDismiss | 閉じるボタンでコールバックが呼ばれる |
-| onRetry | recoverable 時に再試行ボタンが表示される |
+全3プリミティブ（createWhisper, createFfmpegDownloader, createFileConverter）を対象に、`error` 状態を `string | null` から `AppError | null` に変更。Rust 側は変更なし。
 
 ---
 
@@ -48,43 +24,7 @@
 
 ### 1. エラー型定義
 
-`src/types/errors.ts` に以下を定義：
-
-#### ErrorCategory
-
-| カテゴリ | 説明 |
-|---------|------|
-| file | ファイル関連エラー |
-| model | モデル関連エラー |
-| process | 処理関連エラー |
-| network | ネットワーク関連エラー |
-| cancelled | キャンセル |
-| unknown | 不明なエラー |
-
-#### ErrorCode
-
-| コード | 説明 |
-|-------|------|
-| FILE_NOT_FOUND | ファイルが見つからない |
-| FILE_READ_ERROR | ファイル読み込みエラー |
-| UNSUPPORTED_FORMAT | サポートされていない形式 |
-| MODEL_NOT_FOUND | モデルが見つからない |
-| MODEL_LOAD_ERROR | モデル読み込みエラー |
-| MODEL_DOWNLOAD_ERROR | モデルダウンロードエラー |
-| TRANSCRIPTION_ERROR | 文字起こしエラー |
-| NETWORK_ERROR | ネットワークエラー |
-| CANCELLED | キャンセル |
-| UNKNOWN_ERROR | 不明なエラー |
-
-#### AppError
-
-| プロパティ | 型 | 説明 |
-|-----------|-----|------|
-| code | ErrorCode | エラーコード |
-| category | ErrorCategory | エラーカテゴリ |
-| message | string | ユーザー向けメッセージ |
-| details? | string | 詳細情報 |
-| recoverable | boolean | 復旧可能かどうか |
+`src/types/errors.ts` に ErrorCategory, ErrorCode, AppError を定義。
 
 ### 2. エラーユーティリティ
 
@@ -99,41 +39,42 @@
 
 ### 3. ErrorDisplayコンポーネント
 
-`src/components/ErrorDisplay.tsx` を作成：
+`src/components/ErrorDisplay.tsx`: カテゴリバッジ + メッセージ + 詳細 + 再試行/閉じるボタン
 
-| Props | 型 | 説明 |
-|-------|-----|------|
-| error | `AppError \| null` | エラー情報 |
-| onDismiss | `() => void` | 閉じるボタンクリック時 |
-| onRetry? | `() => void` | 再試行ボタンクリック時 |
+### 4. プリミティブ更新
 
-機能:
-- エラーメッセージと詳細の表示
-- 閉じるボタン
-- 復旧可能な場合は再試行ボタン
+3つのプリミティブの catch ブロックで `parseError()` を使用。
 
-### 4. createWhisperの更新
+### 5. UI更新
 
-- error状態の型を `string | null` から `AppError | null` に変更
-- catchブロックで `parseError()` を使用
+Transcription.tsx と Settings.tsx のエラー表示を ErrorDisplay に置換。
 
 ---
 
-## 作成ファイル
+## 作成・変更ファイル
 
-| ファイル | 説明 |
+| ファイル | 操作 |
 |---------|------|
-| `src/lib/__tests__/errors.test.ts` | **テスト（先に作成）** |
-| `src/components/__tests__/ErrorDisplay.test.tsx` | **テスト（先に作成）** |
-| `src/types/errors.ts` | エラー型定義 |
-| `src/lib/errors.ts` | エラーユーティリティ |
-| `src/components/ErrorDisplay.tsx` | エラー表示 |
+| `src/types/errors.ts` | NEW |
+| `src/types/index.ts` | MODIFY |
+| `src/lib/errors.ts` | NEW |
+| `src/lib/__tests__/errors.test.ts` | NEW |
+| `src/components/ErrorDisplay.tsx` | NEW |
+| `src/components/__tests__/ErrorDisplay.test.tsx` | NEW |
+| `src/primitives/createWhisper.ts` | MODIFY |
+| `src/primitives/createFfmpegDownloader.ts` | MODIFY |
+| `src/primitives/createFileConverter.ts` | MODIFY |
+| `src/primitives/__tests__/createWhisper.test.ts` | MODIFY |
+| `src/primitives/__tests__/createFfmpegDownloader.test.ts` | MODIFY |
+| `src/primitives/__tests__/createFileConverter.test.ts` | MODIFY |
+| `src/pages/Transcription.tsx` | MODIFY |
+| `src/pages/Settings.tsx` | MODIFY |
 
 ---
 
 ## 完了条件
 
-- [ ] `pnpm test` で全テストが通る
-- [ ] エラーが構造化された形式で表示される
-- [ ] ネットワークエラー時に適切なメッセージが出る
-- [ ] キャンセル時に適切なメッセージが出る
+- [x] `pnpm test` で全テストが通る
+- [x] エラーが構造化された形式で表示される
+- [x] ネットワークエラー時に適切なメッセージが出る
+- [x] キャンセル時に適切なメッセージが出る

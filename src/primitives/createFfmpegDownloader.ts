@@ -1,7 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { createSignal, onCleanup } from "solid-js";
+import { parseError } from "../lib/errors";
 import type { FfmpegDownloadProgress } from "../types";
+import type { AppError } from "../types/errors";
 
 export function createFfmpegDownloader() {
   const [isBundled, setIsBundled] = createSignal(false);
@@ -9,7 +11,7 @@ export function createFfmpegDownloader() {
   const [isDownloading, setIsDownloading] = createSignal(false);
   const [downloadProgress, setDownloadProgress] =
     createSignal<FfmpegDownloadProgress | null>(null);
-  const [error, setError] = createSignal<string | null>(null);
+  const [error, setError] = createSignal<AppError | null>(null);
 
   // Event listener with cleanup
   let unlistenProgress: (() => void) | undefined;
@@ -33,7 +35,7 @@ export function createFfmpegDownloader() {
       setIsBundled(bundled);
       setIsSystemAvailable(available && !bundled);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(parseError(e));
     }
   }
 
@@ -46,7 +48,7 @@ export function createFfmpegDownloader() {
       setIsBundled(true);
       setIsSystemAvailable(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(parseError(e));
     } finally {
       setIsDownloading(false);
     }
@@ -56,7 +58,7 @@ export function createFfmpegDownloader() {
     try {
       return await invoke<string | null>("get_ffmpeg_download_url");
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(parseError(e));
       return null;
     }
   }
@@ -65,7 +67,7 @@ export function createFfmpegDownloader() {
     try {
       await invoke("set_ffmpeg_download_url", { url });
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(parseError(e));
     }
   }
 
@@ -77,7 +79,7 @@ export function createFfmpegDownloader() {
       const available = await invoke<boolean>("check_ffmpeg_available");
       setIsSystemAvailable(available);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(parseError(e));
     }
   }
 

@@ -3,6 +3,8 @@ export type {
   FfmpegDownloadProgress,
   SupportedFormat,
 } from "./converter";
+export type { AppError } from "./errors";
+export { ErrorCategory, ErrorCode } from "./errors";
 export type { AppSettings } from "./settings";
 export { DEFAULT_SETTINGS } from "./settings";
 export type {

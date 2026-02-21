@@ -1,4 +1,5 @@
 import { createSignal, For, onMount, Show } from "solid-js";
+import { ErrorDisplay } from "~/components/ErrorDisplay";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -407,13 +408,10 @@ export default function Settings() {
       </Card>
 
       {/* Error display */}
-      <Show when={whisper.error()}>
-        <Card>
-          <CardContent class="pt-6">
-            <p class="text-sm text-destructive">{whisper.error()}</p>
-          </CardContent>
-        </Card>
-      </Show>
+      <ErrorDisplay
+        error={whisper.error()}
+        onDismiss={() => whisper.clearError()}
+      />
     </div>
   );
 }

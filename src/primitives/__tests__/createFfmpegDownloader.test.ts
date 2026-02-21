@@ -104,7 +104,12 @@ describe("createFfmpegDownloader", () => {
         const downloader = createFfmpegDownloader();
         await downloader.checkStatus();
 
-        expect(downloader.error()).toBe("Check failed");
+        expect(downloader.error()).toEqual(
+          expect.objectContaining({
+            code: "UNKNOWN_ERROR",
+            details: "Check failed",
+          }),
+        );
         dispose();
       });
     });
@@ -150,7 +155,12 @@ describe("createFfmpegDownloader", () => {
         const downloader = createFfmpegDownloader();
         await downloader.deleteBundled();
 
-        expect(downloader.error()).toBe("Delete failed");
+        expect(downloader.error()).toEqual(
+          expect.objectContaining({
+            code: "UNKNOWN_ERROR",
+            details: "Delete failed",
+          }),
+        );
         dispose();
       });
     });
@@ -204,7 +214,12 @@ describe("createFfmpegDownloader", () => {
         const downloader = createFfmpegDownloader();
         await downloader.download();
 
-        expect(downloader.error()).toBe("Download failed");
+        expect(downloader.error()).toEqual(
+          expect.objectContaining({
+            code: "UNKNOWN_ERROR",
+            details: "Download failed",
+          }),
+        );
         expect(downloader.isBundled()).toBe(false);
         dispose();
       });
