@@ -4,6 +4,7 @@ import { Dashboard } from "~/components/dashboard";
 import { AppLayout } from "~/components/layout";
 
 const Transcription = lazy(() => import("~/pages/Transcription"));
+const History = lazy(() => import("~/pages/History"));
 const Settings = lazy(() => import("~/pages/Settings"));
 const DevMenu = lazy(() => import("~/pages/DevMenu"));
 
@@ -12,6 +13,7 @@ function App() {
     <Router root={AppLayout}>
       <Route path="/" component={Dashboard} />
       <Route path="/transcription" component={Transcription} />
+      <Route path="/history" component={History} />
       <Route path="/settings" component={Settings} />
       <Route path="/dev" component={DevMenu} />
     </Router>

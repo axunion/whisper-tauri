@@ -1,4 +1,5 @@
 pub mod converter;
+pub mod history;
 pub mod whisper;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -40,6 +41,11 @@ pub fn run() {
             converter::commands::convert_audio_file,
             converter::commands::get_supported_formats,
             converter::commands::cleanup_converted_file,
+            history::commands::history_save,
+            history::commands::history_list,
+            history::commands::history_get,
+            history::commands::history_delete,
+            history::commands::history_delete_all,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

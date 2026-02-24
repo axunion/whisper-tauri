@@ -11,6 +11,7 @@ import { Button } from "~/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
 import { Progress } from "~/components/ui/Progress";
 import { createFileConverter } from "~/primitives/createFileConverter";
+import { createHistory } from "~/primitives/createHistory";
 import { createWhisper } from "~/primitives/createWhisper";
 
 /** File extensions that need conversion (non-WAV). */
@@ -24,6 +25,7 @@ function getExtension(filename: string): string {
 export default function Transcription() {
   const whisper = createWhisper();
   const converter = createFileConverter();
+  const history = createHistory();
 
   const [convertedPath, setConvertedPath] = createSignal<string | null>(null);
 
@@ -71,6 +73,20 @@ export default function Transcription() {
       await whisper.startTranscription(result.outputPath);
     } else {
       await whisper.startTranscription();
+    }
+
+    // Auto-save to history
+    const transcriptionResult = whisper.result();
+    const currentModel = whisper.selectedModel();
+    if (transcriptionResult && currentModel) {
+      history.saveEntry({
+        fileName: currentFile.name,
+        language: transcriptionResult.language,
+        modelId: currentModel.id,
+        duration: transcriptionResult.duration,
+        text: transcriptionResult.text,
+        segments: transcriptionResult.segments,
+      });
     }
   }
 

@@ -36,6 +36,9 @@ const PREFIX_MAP: readonly [string, ErrorCodeType][] = [
   ["HTTP error:", ErrorCode.NETWORK_ERROR],
   ["FFmpeg not found:", ErrorCode.FILE_NOT_FOUND],
   ["Transcription cancelled", ErrorCode.CANCELLED],
+  ["Database error:", ErrorCode.UNKNOWN_ERROR],
+  ["History not found:", ErrorCode.FILE_NOT_FOUND],
+  ["Compression error:", ErrorCode.UNKNOWN_ERROR],
 ];
 
 const MESSAGE_MAP: Record<ErrorCodeType, string> = {

@@ -1,5 +1,11 @@
 import { A, useLocation } from "@solidjs/router";
-import { FiBarChart2, FiFileText, FiSettings, FiTool } from "solid-icons/fi";
+import {
+  FiBarChart2,
+  FiClock,
+  FiFileText,
+  FiSettings,
+  FiTool,
+} from "solid-icons/fi";
 import { For, Show } from "solid-js";
 import {
   Sidebar,
@@ -16,6 +22,7 @@ import {
 const menuItems = [
   { title: "Dashboard", href: "/", icon: FiBarChart2 },
   { title: "Transcription", href: "/transcription", icon: FiFileText },
+  { title: "History", href: "/history", icon: FiClock },
   { title: "Settings", href: "/settings", icon: FiSettings },
 ];
 
