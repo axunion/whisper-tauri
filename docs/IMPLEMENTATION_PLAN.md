@@ -110,7 +110,7 @@ MVP完了後、必要に応じて実装する機能です。
 | [リアルタイム録音](./features/recording.md) | マイクから直接文字起こし | 任意 |
 | [テキスト処理](./features/text-processing.md) | ローカルSLMで校正・要約 | 任意 |
 | [履歴全文検索](./features/history-search.md) | 履歴の全文検索機能 | 任意 |
-| [開発メニュー](./features/dev-menu.md) | デバッグログ・状態確認・キャッシュクリア | 任意 |
+| [開発メニュー](./features/dev-menu.md) | デバッグログ・状態確認・キャッシュクリア | **完了** |
 
 ---
 

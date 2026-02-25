@@ -91,9 +91,10 @@ src/
 │   ├── ui/              # solid-ui ベースの共通UIコンポーネント (Button, Progress, Card, Badge, Sidebar, Select, Label, Separator, AlertDialog)
 │   ├── layout/          # レイアウト (AppSidebar, AppLayout)
 │   ├── dashboard/       # ダッシュボード (Dashboard, QuickActions, RecentHistory, ModelStatus)
+│   ├── dev/             # 開発メニュー (DebugLog, CacheClear, ModelManager)
 │   └── transcription/   # 文字起こし関連 (FileSelector, ModelSelector, TranscriptionProgress, ResultViewer)
 ├── pages/               # ページコンポーネント (Transcription, Settings, DevMenu)
-├── primitives/          # SolidJS 状態管理 (createWhisper, createSettings, createTheme, createFfmpegDownloader, createFileConverter)
+├── primitives/          # SolidJS 状態管理 (createWhisper, createSettings, createTheme, createFfmpegDownloader, createFileConverter, createDevLog)
 ├── lib/                 # ユーティリティ (utils.ts - cn(), errors.ts - parseError/getErrorMessage)
 ├── types/               # TypeScript 型定義 (whisper.ts, settings.ts, converter.ts, errors.ts)
 └── test/                # テストセットアップ
@@ -150,6 +151,7 @@ MVP（Step 1〜7）は完了済み。詳細は `docs/IMPLEMENTATION_PLAN.md` を
 - ファイル変換（ffmpegダウンロード + 音声/動画→WAV変換 + UI統合）
 - モデル速度情報（ハードウェア別の処理時間目安をダッシュボード・設定画面に表示）
 - エラーハンドリング強化（構造化エラー型 + ErrorDisplayコンポーネント + 全3プリミティブ対応）
+- 開発メニュー（キャッシュクリア + モデル管理 + デバッグログ）
 
 推奨（未実装）:
 - エクスポート、履歴管理、プロダクトビルド
