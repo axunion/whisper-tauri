@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "~/components/ui/Select";
 import { Separator } from "~/components/ui/Separator";
+import { toast } from "~/lib/toast";
 import { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
 import { createSettings } from "~/primitives/createSettings";
 import { applyTheme } from "~/primitives/createTheme";
@@ -78,6 +79,7 @@ export default function Settings() {
     setDeletingModelId(modelId);
     await whisper.deleteModel(modelId);
     setDeletingModelId(null);
+    toast.success("モデルを削除しました");
   }
 
   return (
@@ -355,6 +357,7 @@ export default function Settings() {
                   class="w-28"
                   onClick={async () => {
                     await ffmpeg.deleteBundled();
+                    toast.success("FFmpegを削除しました");
                   }}
                 >
                   {"\u524A\u9664"}
@@ -368,7 +371,10 @@ export default function Settings() {
                     variant="outline"
                     size="sm"
                     class="w-28"
-                    onClick={() => ffmpeg.download()}
+                    onClick={async () => {
+                      await ffmpeg.download();
+                      toast.success("FFmpegをダウンロードしました");
+                    }}
                   >
                     {"\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9"}
                   </Button>
@@ -401,7 +407,13 @@ export default function Settings() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button variant="outline" onClick={() => settings.reset()}>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              await settings.reset();
+              toast.success("設定をリセットしました");
+            }}
+          >
             {"\u30C7\u30D5\u30A9\u30EB\u30C8\u306B\u623B\u3059"}
           </Button>
         </CardContent>

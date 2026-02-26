@@ -14,6 +14,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "~/components/ui/Sheet";
+import { toast } from "~/lib/toast";
 import { createHistory } from "~/primitives/createHistory";
 import type { HistoryFilter as HistoryFilterType } from "~/types";
 
@@ -33,6 +34,7 @@ export default function History() {
     const ids = [...history.selectedIds()];
     if (ids.length > 0) {
       await history.deleteEntries(ids);
+      toast.success("履歴を削除しました");
     }
   }
 

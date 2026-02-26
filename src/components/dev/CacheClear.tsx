@@ -1,4 +1,5 @@
 import { createSignal, Show } from "solid-js";
+import { toast } from "~/lib/toast";
 import type { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
 import type { createHistory } from "~/primitives/createHistory";
 import type { createSettings } from "~/primitives/createSettings";
@@ -51,6 +52,7 @@ export function CacheClear(props: CacheClearProps) {
                 onClick={async () => {
                   await props.history.deleteAllEntries();
                   setHistoryOpen(false);
+                  toast.success("履歴をクリアしました");
                 }}
               >
                 Delete All
@@ -87,6 +89,7 @@ export function CacheClear(props: CacheClearProps) {
                 onClick={async () => {
                   await props.settings.reset();
                   setSettingsOpen(false);
+                  toast.success("設定をリセットしました");
                 }}
               >
                 Reset
@@ -124,6 +127,7 @@ export function CacheClear(props: CacheClearProps) {
                   onClick={async () => {
                     await props.ffmpeg.deleteBundled();
                     setFfmpegOpen(false);
+                    toast.success("FFmpegを削除しました");
                   }}
                 >
                   Delete

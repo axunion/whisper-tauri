@@ -1,4 +1,5 @@
 import { For, Show } from "solid-js";
+import { toast } from "~/lib/toast";
 import type { createDevLog, LogLevel } from "~/primitives/createDevLog";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
@@ -80,7 +81,14 @@ export function DebugLog(props: DebugLogProps) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => props.devLog.copyAll()}
+            onClick={async () => {
+              try {
+                await props.devLog.copyAll();
+                toast.success("ログをコピーしました");
+              } catch {
+                toast.error("コピーに失敗しました");
+              }
+            }}
           >
             Copy
           </Button>

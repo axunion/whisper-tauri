@@ -1,4 +1,5 @@
 import { createSignal, For, Show } from "solid-js";
+import { toast } from "~/lib/toast";
 import type { createWhisper } from "~/primitives/createWhisper";
 import {
   AlertDialog,
@@ -28,6 +29,7 @@ export function ModelManager(props: ModelManagerProps) {
     setDeletingModelId(modelId);
     await props.whisper.deleteModel(modelId);
     setDeletingModelId(null);
+    toast.success("モデルを削除しました");
   }
 
   async function handleDeleteAll() {
@@ -38,6 +40,7 @@ export function ModelManager(props: ModelManagerProps) {
     }
     setIsDeletingAll(false);
     setDeleteAllOpen(false);
+    toast.success("全モデルを削除しました");
   }
 
   return (

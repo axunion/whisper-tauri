@@ -104,7 +104,7 @@ MVP完了後、必要に応じて実装する機能です。
 | [履歴管理](./features/history.md) | 文字起こし履歴の保存・検索・削除 | 推奨 |
 | [プロダクトビルド](./features/build.md) | 各プラットフォーム向けビルド・署名 | 推奨 |
 | [多言語対応](./features/i18n.md) | 日本語/英語の切り替え | 任意 |
-| [トースト通知](./features/toast.md) | 操作結果のフィードバック | 任意 |
+| [トースト通知](./features/toast.md) | 操作結果のフィードバック | **完了** |
 | [キーボードショートカット](./features/keyboard-shortcuts.md) | パワーユーザー向け操作 | 任意 |
 | [アニメーション](./features/animations.md) | UIの視覚的強化 | 任意 |
 | [リアルタイム録音](./features/recording.md) | マイクから直接文字起こし | 任意 |

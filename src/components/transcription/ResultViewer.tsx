@@ -15,6 +15,7 @@ import {
 } from "~/components/ui/Select";
 import type { ExportFormat } from "~/lib/export";
 import { exportResult, getExtension } from "~/lib/export";
+import { toast } from "~/lib/toast";
 import { createSettings } from "~/primitives/createSettings";
 import type { TranscriptionResult } from "~/types";
 
@@ -49,8 +50,10 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
       await writeText(props.result.text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      toast.success("コピーしました");
     } catch (e) {
       console.error("Failed to copy text:", e);
+      toast.error("コピーに失敗しました");
     }
   }
 
@@ -64,8 +67,10 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
       if (!filePath) return;
       const content = exportResult(props.result, format());
       await writeTextFile(filePath, content);
+      toast.success("保存しました");
     } catch (e) {
       console.error("Failed to save file:", e);
+      toast.error("保存に失敗しました");
     }
   }
 

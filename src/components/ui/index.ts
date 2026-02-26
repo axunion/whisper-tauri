@@ -27,3 +27,12 @@ export {
   SidebarTrigger,
   useSidebar,
 } from "./sidebar";
+export {
+  showToast,
+  showToastPromise,
+  Toast,
+  ToastClose,
+  ToastDescription,
+  Toaster,
+  ToastTitle,
+} from "./toast";

@@ -10,6 +10,7 @@ import {
 import { Button } from "~/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
 import { Progress } from "~/components/ui/Progress";
+import { toast } from "~/lib/toast";
 import { createFileConverter } from "~/primitives/createFileConverter";
 import { createHistory } from "~/primitives/createHistory";
 import { createWhisper } from "~/primitives/createWhisper";
@@ -79,6 +80,7 @@ export default function Transcription() {
     const transcriptionResult = whisper.result();
     const currentModel = whisper.selectedModel();
     if (transcriptionResult && currentModel) {
+      toast.success("文字起こしが完了しました");
       history.saveEntry({
         fileName: currentFile.name,
         language: transcriptionResult.language,
