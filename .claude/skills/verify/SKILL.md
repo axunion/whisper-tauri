@@ -1,29 +1,13 @@
-# /verify - 検証スキル
-
-作業完了後の検証チェックを一括実行する。
-
-## Usage
-
-```
-/verify frontend   # フロントエンドのみ (fe も可)
-/verify backend    # バックエンドのみ (be も可)
-/verify all        # 全チェック
-/verify            # 引数なし → all と同じ
-```
-
-## Configuration
-
-```yaml
+---
+name: verify
+description: 作業完了後の検証チェックを一括実行する
+argument-hint: "[frontend|backend|all]"
 disable-model-invocation: true
-allowed-tools:
-  - Bash
-  - TaskCreate
-  - TaskUpdate
-  - TaskList
 user-invocable: true
-```
+allowed-tools: Bash, TaskCreate, TaskUpdate, TaskList
+---
 
-## Instructions
+# /verify - 検証スキル
 
 You are a verification runner. Execute checks based on the argument provided in `$ARGUMENTS`.
 

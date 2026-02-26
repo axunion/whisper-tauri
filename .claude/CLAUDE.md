@@ -54,10 +54,12 @@ pnpm typecheck     # TypeScript (tsc --noEmit)
 # Git hooks インストール（clone後）
 pnpm lefthook install
 
-# 検証（スラッシュコマンド）
-/verify frontend   # フロントエンドのみ (fe も可)
-/verify backend    # バックエンドのみ (be も可)
+# スラッシュコマンド
+/verify frontend   # フロントエンド検証 (fe も可)
+/verify backend    # バックエンド検証 (be も可)
 /verify all        # 全チェック（デフォルト）
+/refactor-fe <対象>  # フロントエンドリファクタリング
+/refactor-be <対象>  # バックエンドリファクタリング
 ```
 
 ## コード品質
@@ -88,15 +90,16 @@ pnpm lefthook install
 ```
 src/
 ├── components/
-│   ├── ui/              # solid-ui ベースの共通UIコンポーネント (Button, Progress, Card, Badge, Sidebar, Select, Label, Separator, AlertDialog)
-│   ├── layout/          # レイアウト (AppSidebar, AppLayout)
-│   ├── dashboard/       # ダッシュボード (Dashboard, QuickActions, RecentHistory, ModelStatus)
-│   ├── dev/             # 開発メニュー (DebugLog, CacheClear, ModelManager)
-│   └── transcription/   # 文字起こし関連 (FileSelector, ModelSelector, TranscriptionProgress, ResultViewer)
-├── pages/               # ページコンポーネント (Transcription, Settings, DevMenu)
-├── primitives/          # SolidJS 状態管理 (createWhisper, createSettings, createTheme, createFfmpegDownloader, createFileConverter, createDevLog)
-├── lib/                 # ユーティリティ (utils.ts - cn(), errors.ts - parseError/getErrorMessage)
-├── types/               # TypeScript 型定義 (whisper.ts, settings.ts, converter.ts, errors.ts)
+│   ├── ui/              # solid-ui ベースの共通UIコンポーネント
+│   ├── layout/          # レイアウト
+│   ├── dashboard/       # ダッシュボード
+│   ├── dev/             # 開発メニュー
+│   ├── history/         # 履歴管理
+│   └── transcription/   # 文字起こし関連
+├── pages/               # ページコンポーネント
+├── primitives/          # SolidJS 状態管理プリミティブ
+├── lib/                 # ユーティリティ関数
+├── types/               # TypeScript 型定義
 └── test/                # テストセットアップ
 ```
 
@@ -106,6 +109,7 @@ src/
 |------|--------------|------|
 | `/` | Dashboard | ダッシュボード（初期画面） |
 | `/transcription` | Transcription | 文字起こし画面 |
+| `/history` | History | 履歴管理画面 |
 | `/settings` | Settings | 設定画面（一般設定・モデル管理・ツール管理） |
 | `/dev` | DevMenu | 開発メニュー（DEVのみ） |
 
@@ -116,19 +120,11 @@ src/
 ```
 src-tauri/src/
 ├── whisper/             # 文字起こしモジュール
-│   ├── commands.rs      # Tauri コマンド
-│   ├── process.rs       # whisper-rs 実行ロジック
-│   ├── models.rs        # モデル管理
-│   ├── types.rs         # 型定義
-│   └── error.rs         # エラー型
-└── converter/           # ファイル変換モジュール
-    ├── commands.rs      # Tauri コマンド (check/download/convert/cleanup)
-    ├── ffmpeg.rs        # ffmpeg実行・引数構築
-    ├── downloader.rs    # ffmpegダウンロード・アーカイブ展開
-    ├── types.rs         # 型定義
-    ├── error.rs         # エラー型
-    └── mod.rs           # フォーマット判定
+├── converter/           # ファイル変換モジュール（ffmpeg）
+└── history/             # 履歴管理モジュール（SQLite）
 ```
+
+各モジュールは `commands.rs` / `types.rs` / `error.rs` / `mod.rs` の共通構成に従う。
 
 ### IPC イベント (Rust → TypeScript)
 
@@ -152,9 +148,12 @@ MVP（Step 1〜7）は完了済み。詳細は `docs/IMPLEMENTATION_PLAN.md` を
 - モデル速度情報（ハードウェア別の処理時間目安をダッシュボード・設定画面に表示）
 - エラーハンドリング強化（構造化エラー型 + ErrorDisplayコンポーネント + 全3プリミティブ対応）
 - 開発メニュー（キャッシュクリア + モデル管理 + デバッグログ）
+- エクスポート（TXT/SRT/VTT形式）
+- 履歴管理（SQLite永続化 + Sheet詳細表示）
+- トースト通知（操作結果フィードバック）
 
 推奨（未実装）:
-- エクスポート、履歴管理、プロダクトビルド
+- プロダクトビルド
 
 ## モデル設定
 
