@@ -9,6 +9,7 @@ import {
   AlertDialogTrigger,
 } from "~/components/ui/AlertDialog";
 import { Button } from "~/components/ui/Button";
+import { useI18n } from "~/i18n";
 
 interface HistoryActionsProps {
   selectedCount: number;
@@ -19,6 +20,7 @@ interface HistoryActionsProps {
 }
 
 const HistoryActions: Component<HistoryActionsProps> = (props) => {
+  const { t } = useI18n();
   const [deleteSelectedOpen, setDeleteSelectedOpen] = createSignal(false);
 
   const allSelected = () =>
@@ -35,7 +37,7 @@ const HistoryActions: Component<HistoryActionsProps> = (props) => {
         disabled={props.totalCount === 0}
       >
         <FiCheckSquare class="size-4" />
-        {allSelected() ? "Deselect All" : "Select All"}
+        {allSelected() ? t("history.deselectAll") : t("history.selectAll")}
       </Button>
 
       <Show when={props.selectedCount > 0}>
@@ -45,20 +47,19 @@ const HistoryActions: Component<HistoryActionsProps> = (props) => {
         >
           <AlertDialogTrigger as={Button} variant="destructive" size="sm">
             <FiTrash2 class="size-4" />
-            Delete ({props.selectedCount})
+            {t("history.deleteCount", { count: props.selectedCount })}
           </AlertDialogTrigger>
           <AlertDialogContent>
-            <AlertDialogTitle>Delete Selected</AlertDialogTitle>
+            <AlertDialogTitle>{t("history.deleteSelected")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {props.selectedCount} entries will be permanently deleted. This
-              action cannot be undone.
+              {t("history.deleteConfirmation", { count: props.selectedCount })}
             </AlertDialogDescription>
             <div class="flex justify-end gap-2">
               <Button
                 variant="outline"
                 onClick={() => setDeleteSelectedOpen(false)}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 variant="destructive"
@@ -67,7 +68,7 @@ const HistoryActions: Component<HistoryActionsProps> = (props) => {
                   setDeleteSelectedOpen(false);
                 }}
               >
-                Delete
+                {t("common.delete")}
               </Button>
             </div>
           </AlertDialogContent>

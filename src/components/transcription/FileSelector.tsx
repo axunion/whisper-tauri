@@ -3,6 +3,7 @@ import { FiFile, FiUpload, FiX } from "solid-icons/fi";
 import type { Component } from "solid-js";
 import { Show } from "solid-js";
 import { Button } from "~/components/ui/Button";
+import { useI18n } from "~/i18n";
 import type { FileInfo } from "~/types";
 
 interface FileSelectorProps {
@@ -29,6 +30,8 @@ const AUDIO_EXTENSIONS = [
 ];
 
 const FileSelector: Component<FileSelectorProps> = (props) => {
+  const { t } = useI18n();
+
   async function handleClick() {
     if (props.disabled) return;
 
@@ -36,7 +39,7 @@ const FileSelector: Component<FileSelectorProps> = (props) => {
       multiple: false,
       filters: [
         {
-          name: "Audio Files",
+          name: t("transcription.audioFilesFilter"),
           extensions: AUDIO_EXTENSIONS,
         },
       ],
@@ -64,10 +67,10 @@ const FileSelector: Component<FileSelectorProps> = (props) => {
           onClick={handleClick}
         >
           <FiUpload class="size-8" />
-          <span class="text-sm font-medium">Click to select an audio file</span>
-          <span class="text-xs">
-            WAV, MP3, M4A, FLAC, OGG, AAC, MP4, MOV, etc.
+          <span class="text-sm font-medium">
+            {t("transcription.selectAudioFile")}
           </span>
+          <span class="text-xs">{t("transcription.supportedFormats")}</span>
         </button>
       }
     >

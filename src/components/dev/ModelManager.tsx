@@ -1,4 +1,5 @@
 import { createSignal, For, Show } from "solid-js";
+import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
 import type { createWhisper } from "~/primitives/createWhisper";
 import {
@@ -16,6 +17,7 @@ interface ModelManagerProps {
 }
 
 export function ModelManager(props: ModelManagerProps) {
+  const { t } = useI18n();
   const [deletingModelId, setDeletingModelId] = createSignal<string | null>(
     null,
   );
@@ -29,7 +31,7 @@ export function ModelManager(props: ModelManagerProps) {
     setDeletingModelId(modelId);
     await props.whisper.deleteModel(modelId);
     setDeletingModelId(null);
-    toast.success("モデルを削除しました");
+    toast.success(t("dev.modelDeletedToast"));
   }
 
   async function handleDeleteAll() {
@@ -40,7 +42,7 @@ export function ModelManager(props: ModelManagerProps) {
     }
     setIsDeletingAll(false);
     setDeleteAllOpen(false);
-    toast.success("全モデルを削除しました");
+    toast.success(t("dev.allModelsDeletedToast"));
   }
 
   return (
@@ -48,7 +50,9 @@ export function ModelManager(props: ModelManagerProps) {
       <Show
         when={downloadedModels().length > 0}
         fallback={
-          <p class="text-sm text-muted-foreground">No downloaded models.</p>
+          <p class="text-sm text-muted-foreground">
+            {t("dev.noDownloadedModels")}
+          </p>
         }
       >
         <For each={downloadedModels()}>
@@ -58,7 +62,7 @@ export function ModelManager(props: ModelManagerProps) {
                 <span class="text-sm font-medium">{model.name}</span>
                 <Badge variant="secondary">{model.size}</Badge>
                 <Show when={model.recommended}>
-                  <Badge>Recommended</Badge>
+                  <Badge>{t("common.recommended")}</Badge>
                 </Show>
               </div>
               <AlertDialog>
@@ -68,22 +72,27 @@ export function ModelManager(props: ModelManagerProps) {
                   size="sm"
                   disabled={deletingModelId() === model.id}
                 >
-                  {deletingModelId() === model.id ? "Deleting..." : "Delete"}
+                  {deletingModelId() === model.id
+                    ? t("common.deleting")
+                    : t("common.delete")}
                 </AlertDialogTrigger>
                 <AlertDialogContent>
-                  <AlertDialogTitle>Delete Model</AlertDialogTitle>
+                  <AlertDialogTitle>{t("dev.deleteModel")}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    {`Delete ${model.name} (${model.size})? This action cannot be undone.`}
+                    {t("dev.deleteModelConfirmation", {
+                      name: model.name,
+                      size: model.size,
+                    })}
                   </AlertDialogDescription>
                   <div class="flex justify-end gap-2">
                     <AlertDialogTrigger as={Button} variant="outline">
-                      Cancel
+                      {t("common.cancel")}
                     </AlertDialogTrigger>
                     <Button
                       variant="destructive"
                       onClick={() => handleDeleteModel(model.id)}
                     >
-                      Delete
+                      {t("common.delete")}
                     </Button>
                   </div>
                 </AlertDialogContent>
@@ -100,19 +109,21 @@ export function ModelManager(props: ModelManagerProps) {
             class="w-full"
             disabled={isDeletingAll()}
           >
-            {isDeletingAll() ? "Deleting All..." : "Delete All Models"}
+            {isDeletingAll() ? t("dev.deletingAll") : t("dev.deleteAllModels")}
           </AlertDialogTrigger>
           <AlertDialogContent>
-            <AlertDialogTitle>Delete All Models</AlertDialogTitle>
+            <AlertDialogTitle>{t("dev.deleteAllModels")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {`Delete all ${downloadedModels().length} downloaded models? This action cannot be undone.`}
+              {t("dev.deleteAllModelsConfirmation", {
+                count: downloadedModels().length,
+              })}
             </AlertDialogDescription>
             <div class="flex justify-end gap-2">
               <AlertDialogTrigger as={Button} variant="outline">
-                Cancel
+                {t("common.cancel")}
               </AlertDialogTrigger>
               <Button variant="destructive" onClick={handleDeleteAll}>
-                Delete All
+                {t("dev.deleteAll")}
               </Button>
             </div>
           </AlertDialogContent>

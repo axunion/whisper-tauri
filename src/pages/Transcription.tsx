@@ -10,6 +10,7 @@ import {
 import { Button } from "~/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
 import { Progress } from "~/components/ui/Progress";
+import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
 import { createFileConverter } from "~/primitives/createFileConverter";
 import { createHistory } from "~/primitives/createHistory";
@@ -24,6 +25,7 @@ function getExtension(filename: string): string {
 }
 
 export default function Transcription() {
+  const { t } = useI18n();
   const whisper = createWhisper();
   const converter = createFileConverter();
   const history = createHistory();
@@ -80,7 +82,7 @@ export default function Transcription() {
     const transcriptionResult = whisper.result();
     const currentModel = whisper.selectedModel();
     if (transcriptionResult && currentModel) {
-      toast.success("文字起こしが完了しました");
+      toast.success(t("transcription.completedToast"));
       history.saveEntry({
         fileName: currentFile.name,
         language: transcriptionResult.language,
@@ -104,7 +106,7 @@ export default function Transcription() {
 
   return (
     <div class="mx-auto w-full max-w-3xl space-y-6">
-      <h1 class="text-2xl font-bold">Transcription</h1>
+      <h1 class="text-2xl font-bold">{t("transcription.title")}</h1>
 
       <ErrorDisplay
         error={combinedError()}
@@ -114,7 +116,7 @@ export default function Transcription() {
 
       <Card class="rounded-2xl shadow-sm">
         <CardHeader>
-          <CardTitle>Audio File</CardTitle>
+          <CardTitle>{t("transcription.audioFile")}</CardTitle>
         </CardHeader>
         <CardContent>
           <FileSelector
@@ -128,7 +130,7 @@ export default function Transcription() {
 
       <Card class="rounded-2xl shadow-sm">
         <CardHeader>
-          <CardTitle>Model</CardTitle>
+          <CardTitle>{t("transcription.model")}</CardTitle>
         </CardHeader>
         <CardContent>
           <ModelSelector
@@ -146,9 +148,7 @@ export default function Transcription() {
       <Show when={converter.isConverting()}>
         <Card class="rounded-2xl shadow-sm">
           <CardHeader>
-            <CardTitle>
-              {"\u30D5\u30A1\u30A4\u30EB\u3092\u5909\u63DB\u4E2D..."}
-            </CardTitle>
+            <CardTitle>{t("transcription.converting")}</CardTitle>
           </CardHeader>
           <CardContent>
             <Progress indeterminate minValue={0} maxValue={100} />
@@ -160,7 +160,7 @@ export default function Transcription() {
       <Show when={whisper.isProcessing()}>
         <Card class="rounded-2xl shadow-sm">
           <CardHeader>
-            <CardTitle>Transcribing...</CardTitle>
+            <CardTitle>{t("transcription.transcribing")}</CardTitle>
           </CardHeader>
           <CardContent>
             <TranscriptionProgress
@@ -184,7 +184,7 @@ export default function Transcription() {
           disabled={!canStart()}
           onClick={handleStart}
         >
-          Start Transcription
+          {t("transcription.startTranscription")}
         </Button>
       </Show>
 
@@ -198,11 +198,11 @@ export default function Transcription() {
               <ResultViewer result={result()} />
               <div class="flex gap-3">
                 <Button variant="outline" onClick={handleReset}>
-                  New File
+                  {t("transcription.newFile")}
                 </Button>
                 <Button variant="outline" onClick={handleStart}>
                   <FiRefreshCw class="size-4" />
-                  Re-run
+                  {t("transcription.rerun")}
                 </Button>
               </div>
             </CardContent>

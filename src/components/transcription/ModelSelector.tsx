@@ -4,6 +4,7 @@ import { For, Show } from "solid-js";
 import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
 import { Progress } from "~/components/ui/Progress";
+import { useI18n } from "~/i18n";
 import { cn } from "~/lib/utils";
 import type { DownloadProgress, ModelInfo } from "~/types";
 
@@ -17,6 +18,8 @@ interface ModelSelectorProps {
 }
 
 const ModelSelector: Component<ModelSelectorProps> = (props) => {
+  const { t } = useI18n();
+
   return (
     <div class="grid gap-3">
       <For each={props.models}>
@@ -46,7 +49,7 @@ const ModelSelector: Component<ModelSelectorProps> = (props) => {
                   <span class="text-sm font-medium">{model.name}</span>
                   <Badge variant="secondary">{model.size}</Badge>
                   <Show when={model.recommended}>
-                    <Badge variant="default">Recommended</Badge>
+                    <Badge variant="default">{t("common.recommended")}</Badge>
                   </Show>
                 </div>
                 <p class="mt-1 text-xs text-muted-foreground">
@@ -73,7 +76,7 @@ const ModelSelector: Component<ModelSelectorProps> = (props) => {
                         }}
                       >
                         <FiDownload class="size-4" />
-                        Download
+                        {t("common.download")}
                       </Button>
                     </Show>
                   }

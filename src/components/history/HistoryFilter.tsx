@@ -3,6 +3,7 @@ import type { Component } from "solid-js";
 import { Show } from "solid-js";
 import { Button } from "~/components/ui/Button";
 import { Label } from "~/components/ui/Label";
+import { useI18n } from "~/i18n";
 import type { HistoryFilter as HistoryFilterType } from "~/types";
 
 interface HistoryFilterProps {
@@ -11,6 +12,7 @@ interface HistoryFilterProps {
 }
 
 const HistoryFilter: Component<HistoryFilterProps> = (props) => {
+  const { t } = useI18n();
   const hasFilter = () => props.filter.dateFrom || props.filter.dateTo;
 
   function buildFilter(
@@ -27,7 +29,7 @@ const HistoryFilter: Component<HistoryFilterProps> = (props) => {
   return (
     <div class="flex flex-wrap items-end gap-3">
       <div class="flex flex-col gap-1">
-        <Label class="text-xs">From</Label>
+        <Label class="text-xs">{t("history.from")}</Label>
         <input
           type="date"
           class="h-9 rounded-md border border-input bg-background px-3 text-sm"
@@ -40,7 +42,7 @@ const HistoryFilter: Component<HistoryFilterProps> = (props) => {
         />
       </div>
       <div class="flex flex-col gap-1">
-        <Label class="text-xs">To</Label>
+        <Label class="text-xs">{t("history.to")}</Label>
         <input
           type="date"
           class="h-9 rounded-md border border-input bg-background px-3 text-sm"
@@ -57,7 +59,7 @@ const HistoryFilter: Component<HistoryFilterProps> = (props) => {
           onClick={() => props.onFilterChange({})}
         >
           <FiX class="size-4" />
-          Clear
+          {t("common.clear")}
         </Button>
       </Show>
     </div>

@@ -98,12 +98,12 @@ MVP完了後、必要に応じて実装する機能です。
 |------|------|--------|
 | [ダッシュボード](./features/dashboard.md) | 初期画面・サイドバー型レイアウト | **完了** |
 | [ファイル変換](./features/file-conversion.md) | 音声/動画ファイルをWAVに変換 | **完了** |
-| [エクスポート](./features/export.md) | TXT/SRT/VTT形式で結果を保存 | 推奨 |
+| [エクスポート](./features/export.md) | TXT/SRT/VTT形式で結果を保存 | **完了** |
 | [エラーハンドリング](./features/error-handling.md) | 構造化されたエラー表示 | **完了** |
 | [設定永続化](./features/settings.md) | アプリ設定の保存・復元 | **完了** |
-| [履歴管理](./features/history.md) | 文字起こし履歴の保存・検索・削除 | 推奨 |
+| [履歴管理](./features/history.md) | 文字起こし履歴の保存・検索・削除 | **完了** |
 | [プロダクトビルド](./features/build.md) | 各プラットフォーム向けビルド・署名 | 推奨 |
-| [多言語対応](./features/i18n.md) | 日本語/英語の切り替え | 任意 |
+| [多言語対応](./features/i18n.md) | 日本語/英語の切り替え | **完了** |
 | [トースト通知](./features/toast.md) | 操作結果のフィードバック | **完了** |
 | [キーボードショートカット](./features/keyboard-shortcuts.md) | パワーユーザー向け操作 | 任意 |
 | [アニメーション](./features/animations.md) | UIの視覚的強化 | 任意 |

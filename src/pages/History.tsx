@@ -14,11 +14,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "~/components/ui/Sheet";
+import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
 import { createHistory } from "~/primitives/createHistory";
 import type { HistoryFilter as HistoryFilterType } from "~/types";
 
 export default function History() {
+  const { t } = useI18n();
   const history = createHistory();
 
   onMount(() => {
@@ -34,13 +36,13 @@ export default function History() {
     const ids = [...history.selectedIds()];
     if (ids.length > 0) {
       await history.deleteEntries(ids);
-      toast.success("履歴を削除しました");
+      toast.success(t("history.deletedToast"));
     }
   }
 
   return (
     <div class="mx-auto w-full max-w-3xl space-y-6">
-      <h1 class="text-2xl font-bold">History</h1>
+      <h1 class="text-2xl font-bold">{t("history.title")}</h1>
 
       <ErrorDisplay
         error={history.error()}
@@ -50,7 +52,7 @@ export default function History() {
       <Card class="rounded-2xl shadow-sm">
         <CardHeader>
           <CardTitle class="flex items-center justify-between">
-            <span>Transcription History</span>
+            <span>{t("history.transcriptionHistory")}</span>
           </CardTitle>
         </CardHeader>
         <CardContent class="space-y-4">
@@ -84,8 +86,10 @@ export default function History() {
       >
         <SheetContent>
           <SheetHeader>
-            <SheetTitle>Detail</SheetTitle>
-            <SheetDescription>Transcription detail view</SheetDescription>
+            <SheetTitle>{t("history.detail")}</SheetTitle>
+            <SheetDescription>
+              {t("history.detailDescription")}
+            </SheetDescription>
           </SheetHeader>
           <Show when={history.selectedEntry()} keyed>
             {(entry) => <HistoryDetail entry={entry} />}

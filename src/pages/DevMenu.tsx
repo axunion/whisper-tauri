@@ -2,6 +2,7 @@ import { onMount, Show } from "solid-js";
 import { CacheClear, DebugLog, ModelManager } from "~/components/dev";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
+import { useI18n } from "~/i18n";
 import { createDevLog } from "~/primitives/createDevLog";
 import { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
 import { createHistory } from "~/primitives/createHistory";
@@ -9,6 +10,7 @@ import { createSettings } from "~/primitives/createSettings";
 import { createWhisper } from "~/primitives/createWhisper";
 
 function DevMenuContent() {
+  const { t } = useI18n();
   const devLog = createDevLog();
   const settings = createSettings();
   const whisper = createWhisper();
@@ -24,12 +26,12 @@ function DevMenuContent() {
 
   return (
     <div class="mx-auto w-full max-w-3xl space-y-6">
-      <h1 class="text-2xl font-bold">Dev Menu</h1>
+      <h1 class="text-2xl font-bold">{t("dev.title")}</h1>
 
       {/* Cache Clear */}
       <Card>
         <CardHeader>
-          <CardTitle>Cache Clear</CardTitle>
+          <CardTitle>{t("dev.cachesClear")}</CardTitle>
         </CardHeader>
         <CardContent>
           <CacheClear history={history} settings={settings} ffmpeg={ffmpeg} />
@@ -39,7 +41,7 @@ function DevMenuContent() {
       {/* Model Manager */}
       <Card>
         <CardHeader>
-          <CardTitle>Model Manager</CardTitle>
+          <CardTitle>{t("dev.modelManager")}</CardTitle>
         </CardHeader>
         <CardContent>
           <ModelManager whisper={whisper} />
@@ -49,7 +51,7 @@ function DevMenuContent() {
       {/* Debug Log */}
       <Card>
         <CardHeader>
-          <CardTitle>Debug Log</CardTitle>
+          <CardTitle>{t("dev.debugLog")}</CardTitle>
         </CardHeader>
         <CardContent>
           <DebugLog devLog={devLog} />
@@ -70,14 +72,13 @@ function DevMenuContent() {
 }
 
 export default function DevMenu() {
+  const { t } = useI18n();
   return (
     <Show
       when={import.meta.env.DEV}
       fallback={
         <div class="mx-auto w-full max-w-3xl">
-          <p class="text-muted-foreground">
-            This page is only available in development mode.
-          </p>
+          <p class="text-muted-foreground">{t("dev.devOnlyMessage")}</p>
         </div>
       }
     >

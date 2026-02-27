@@ -1,11 +1,12 @@
 import { MemoryRouter, Route } from "@solidjs/router";
-import { render, screen } from "@solidjs/testing-library";
+import { screen } from "@solidjs/testing-library";
 import { describe, expect, it } from "vitest";
 import { SidebarProvider } from "~/components/ui/sidebar";
+import { renderWithI18n } from "~/test/helpers";
 import { AppSidebar } from "../AppSidebar";
 
 function renderWithRouter() {
-  return render(() => (
+  return renderWithI18n(() => (
     <MemoryRouter>
       <Route
         path="/"
@@ -27,23 +28,23 @@ describe("AppSidebar", () => {
 
   it("shows Dashboard menu item", () => {
     renderWithRouter();
-    expect(screen.getByText("Dashboard")).toBeInTheDocument();
+    expect(screen.getByText("ダッシュボード")).toBeInTheDocument();
   });
 
   it("shows Transcription menu item", () => {
     renderWithRouter();
-    expect(screen.getByText("Transcription")).toBeInTheDocument();
+    expect(screen.getByText("文字起こし")).toBeInTheDocument();
   });
 
   it("shows Settings menu item", () => {
     renderWithRouter();
-    expect(screen.getByText("Settings")).toBeInTheDocument();
+    expect(screen.getByText("設定")).toBeInTheDocument();
   });
 
   it("shows Dev menu item in DEV mode", () => {
     renderWithRouter();
     // import.meta.env.DEV is true in test environment
-    expect(screen.getByText("Dev")).toBeInTheDocument();
+    expect(screen.getByText("開発")).toBeInTheDocument();
   });
 
   it("shows toggle sidebar button", () => {

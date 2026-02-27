@@ -1,7 +1,8 @@
-import { render, screen } from "@solidjs/testing-library";
+import { screen } from "@solidjs/testing-library";
 import { invoke } from "@tauri-apps/api/core";
 import { describe, expect, it, vi } from "vitest";
 import DevMenu from "~/pages/DevMenu";
+import { renderWithI18n } from "~/test/helpers";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(() => Promise.resolve([])),
@@ -9,46 +10,46 @@ vi.mock("@tauri-apps/api/core", () => ({
 
 describe("DevMenu", () => {
   it("shows Debug Log section", () => {
-    render(() => <DevMenu />);
-    expect(screen.getByText("Debug Log")).toBeInTheDocument();
+    renderWithI18n(() => <DevMenu />);
+    expect(screen.getByText("デバッグログ")).toBeInTheDocument();
   });
 
   it("shows Cache Clear section", () => {
-    render(() => <DevMenu />);
-    expect(screen.getByText("Cache Clear")).toBeInTheDocument();
+    renderWithI18n(() => <DevMenu />);
+    expect(screen.getByText("キャッシュクリア")).toBeInTheDocument();
   });
 
   it("shows Model Manager section", () => {
-    render(() => <DevMenu />);
-    expect(screen.getByText("Model Manager")).toBeInTheDocument();
+    renderWithI18n(() => <DevMenu />);
+    expect(screen.getByText("モデル管理")).toBeInTheDocument();
   });
 
   it("shows Clear and Copy buttons in Debug Log", () => {
-    render(() => <DevMenu />);
+    renderWithI18n(() => <DevMenu />);
     expect(
-      screen.getByText("Clear", { selector: "button" }),
+      screen.getByText("クリア", { selector: "button" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Copy", { selector: "button" }),
+      screen.getByText("コピー", { selector: "button" }),
     ).toBeInTheDocument();
   });
 
   it("shows Clear History button", () => {
-    render(() => <DevMenu />);
+    renderWithI18n(() => <DevMenu />);
     expect(
-      screen.getByText("Clear History", { selector: "button" }),
+      screen.getByText("履歴クリア", { selector: "button" }),
     ).toBeInTheDocument();
   });
 
   it("shows Reset Settings button", () => {
-    render(() => <DevMenu />);
+    renderWithI18n(() => <DevMenu />);
     expect(
-      screen.getByText("Reset Settings", { selector: "button" }),
+      screen.getByText("設定リセット", { selector: "button" }),
     ).toBeInTheDocument();
   });
 
   it("calls loadModels and loadEntries on mount", () => {
-    render(() => <DevMenu />);
+    renderWithI18n(() => <DevMenu />);
     expect(invoke).toHaveBeenCalledWith("get_available_models");
     expect(invoke).toHaveBeenCalledWith("history_list", expect.anything());
   });
@@ -60,9 +61,9 @@ describe("DevMenu in production", () => {
     const originalDEV = env.DEV;
     env.DEV = false;
 
-    render(() => <DevMenu />);
+    renderWithI18n(() => <DevMenu />);
     expect(
-      screen.getByText("This page is only available in development mode."),
+      screen.getByText("このページは開発モードでのみ表示されます。"),
     ).toBeInTheDocument();
 
     env.DEV = originalDEV;

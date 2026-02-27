@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "~/components/ui/Select";
 import { Separator } from "~/components/ui/Separator";
+import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
 import { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
 import { createSettings } from "~/primitives/createSettings";
@@ -33,32 +34,33 @@ import { applyTheme } from "~/primitives/createTheme";
 import { createWhisper } from "~/primitives/createWhisper";
 import type { AppSettings } from "~/types";
 
-const LANGUAGE_OPTIONS = [
-  { value: "ja", label: "\u65E5\u672C\u8A9E" },
-  { value: "en", label: "English" },
-] as const;
-
-const OUTPUT_FORMAT_OPTIONS = [
-  { value: "txt", label: "\u30C6\u30AD\u30B9\u30C8 (.txt)" },
-  { value: "srt", label: "SRT (.srt)" },
-  { value: "vtt", label: "VTT (.vtt)" },
-] as const;
-
-const THEME_OPTIONS = [
-  { value: "light", label: "\u30E9\u30A4\u30C8" },
-  { value: "dark", label: "\u30C0\u30FC\u30AF" },
-  { value: "system", label: "\u30B7\u30B9\u30C6\u30E0" },
-] as const;
-
 type OptionItem = { value: string; label: string };
 
 export default function Settings() {
+  const { t, setLocale } = useI18n();
   const settings = createSettings();
   const whisper = createWhisper();
   const ffmpeg = createFfmpegDownloader();
   const [deletingModelId, setDeletingModelId] = createSignal<string | null>(
     null,
   );
+
+  const languageOptions = () => [
+    { value: "ja", label: t("settings.languageJa") },
+    { value: "en", label: t("settings.languageEn") },
+  ];
+
+  const outputFormatOptions = () => [
+    { value: "txt", label: t("settings.outputFormatTxt") },
+    { value: "srt", label: t("settings.outputFormatSrt") },
+    { value: "vtt", label: t("settings.outputFormatVtt") },
+  ];
+
+  const themeOptions = () => [
+    { value: "light", label: t("settings.themeLight") },
+    { value: "dark", label: t("settings.themeDark") },
+    { value: "system", label: t("settings.themeSystem") },
+  ];
 
   applyTheme(settings.theme);
 
@@ -68,10 +70,7 @@ export default function Settings() {
     ffmpeg.checkStatus();
   });
 
-  function findOption<T extends readonly OptionItem[]>(
-    options: T,
-    value: string,
-  ): OptionItem | null {
+  function findOption(options: OptionItem[], value: string): OptionItem | null {
     return options.find((o) => o.value === value) ?? null;
   }
 
@@ -79,43 +78,39 @@ export default function Settings() {
     setDeletingModelId(modelId);
     await whisper.deleteModel(modelId);
     setDeletingModelId(null);
-    toast.success("モデルを削除しました");
+    toast.success(t("settings.modelDeletedToast"));
   }
 
   return (
     <div class="mx-auto w-full max-w-3xl space-y-6">
-      <h1 class="text-2xl font-bold">{"\u8A2D\u5B9A"}</h1>
+      <h1 class="text-2xl font-bold">{t("settings.title")}</h1>
 
       {/* General Settings */}
       <Card>
         <CardHeader>
-          <CardTitle>{"\u4E00\u822C\u8A2D\u5B9A"}</CardTitle>
-          <CardDescription>
-            {
-              "\u30A2\u30D7\u30EA\u306E\u57FA\u672C\u8A2D\u5B9A\u3092\u7BA1\u7406\u3057\u307E\u3059"
-            }
-          </CardDescription>
+          <CardTitle>{t("settings.general")}</CardTitle>
+          <CardDescription>{t("settings.generalDescription")}</CardDescription>
         </CardHeader>
         <CardContent class="space-y-6">
           {/* Language */}
           <div class="flex items-center justify-between">
             <div class="space-y-0.5">
-              <Label>{"\u8A00\u8A9E"}</Label>
+              <Label>{t("settings.language")}</Label>
               <p class="text-sm text-muted-foreground">
-                {"\u30A2\u30D7\u30EA\u306E\u8868\u793A\u8A00\u8A9E"}
+                {t("settings.languageDescription")}
               </p>
             </div>
             <Select<OptionItem>
               multiple={false}
-              value={findOption(LANGUAGE_OPTIONS, settings.language())}
+              value={findOption(languageOptions(), settings.language())}
               onChange={(val) => {
                 if (val) {
-                  settings.update({
-                    language: val.value as AppSettings["language"],
-                  });
+                  const lang = val.value as AppSettings["language"];
+                  settings.update({ language: lang });
+                  setLocale(lang);
                 }
               }}
-              options={[...LANGUAGE_OPTIONS]}
+              options={languageOptions()}
               optionValue="value"
               optionTextValue="label"
               itemComponent={(props) => (
@@ -138,16 +133,14 @@ export default function Settings() {
           {/* Output Format */}
           <div class="flex items-center justify-between">
             <div class="space-y-0.5">
-              <Label>{"\u51FA\u529B\u5F62\u5F0F"}</Label>
+              <Label>{t("settings.outputFormat")}</Label>
               <p class="text-sm text-muted-foreground">
-                {
-                  "\u30C7\u30D5\u30A9\u30EB\u30C8\u306E\u51FA\u529B\u30D5\u30A1\u30A4\u30EB\u5F62\u5F0F"
-                }
+                {t("settings.outputFormatDescription")}
               </p>
             </div>
             <Select<OptionItem>
               multiple={false}
-              value={findOption(OUTPUT_FORMAT_OPTIONS, settings.outputFormat())}
+              value={findOption(outputFormatOptions(), settings.outputFormat())}
               onChange={(val) => {
                 if (val) {
                   settings.update({
@@ -155,7 +148,7 @@ export default function Settings() {
                   });
                 }
               }}
-              options={[...OUTPUT_FORMAT_OPTIONS]}
+              options={outputFormatOptions()}
               optionValue="value"
               optionTextValue="label"
               itemComponent={(props) => (
@@ -178,14 +171,14 @@ export default function Settings() {
           {/* Theme */}
           <div class="flex items-center justify-between">
             <div class="space-y-0.5">
-              <Label>{"\u30C6\u30FC\u30DE"}</Label>
+              <Label>{t("settings.theme")}</Label>
               <p class="text-sm text-muted-foreground">
-                {"\u30A2\u30D7\u30EA\u306E\u5916\u89B3\u30C6\u30FC\u30DE"}
+                {t("settings.themeDescription")}
               </p>
             </div>
             <Select<OptionItem>
               multiple={false}
-              value={findOption(THEME_OPTIONS, settings.theme())}
+              value={findOption(themeOptions(), settings.theme())}
               onChange={(val) => {
                 if (val) {
                   settings.update({
@@ -193,7 +186,7 @@ export default function Settings() {
                   });
                 }
               }}
-              options={[...THEME_OPTIONS]}
+              options={themeOptions()}
               optionValue="value"
               optionTextValue="label"
               itemComponent={(props) => (
@@ -216,11 +209,9 @@ export default function Settings() {
       {/* Model Management */}
       <Card>
         <CardHeader>
-          <CardTitle>{"\u30E2\u30C7\u30EB\u7BA1\u7406"}</CardTitle>
+          <CardTitle>{t("settings.modelManagement")}</CardTitle>
           <CardDescription>
-            {
-              "Whisper\u30E2\u30C7\u30EB\u306E\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9\u3068\u524A\u9664"
-            }
+            {t("settings.modelManagementDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent class="space-y-4">
@@ -235,7 +226,7 @@ export default function Settings() {
                       <Badge variant="outline">{model.speedNote}</Badge>
                     </Show>
                     <Show when={model.recommended}>
-                      <Badge>Recommended</Badge>
+                      <Badge>{t("common.recommended")}</Badge>
                     </Show>
                   </div>
                   <p class="text-sm text-muted-foreground">
@@ -259,7 +250,7 @@ export default function Settings() {
                             onClick={() => whisper.downloadModel(model.id)}
                             disabled={whisper.isDownloading()}
                           >
-                            {"\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9"}
+                            {t("common.download")}
                           </Button>
                         }
                       >
@@ -288,25 +279,28 @@ export default function Settings() {
                         disabled={deletingModelId() === model.id}
                       >
                         {deletingModelId() === model.id
-                          ? "\u524A\u9664\u4E2D..."
-                          : "\u524A\u9664"}
+                          ? t("common.deleting")
+                          : t("common.delete")}
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogTitle>
-                          {"\u30E2\u30C7\u30EB\u306E\u524A\u9664"}
+                          {t("settings.deleteModel")}
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                          {`${model.name} (${model.size}) \u3092\u524A\u9664\u3057\u307E\u3059\u3002\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002`}
+                          {t("settings.deleteModelConfirmation", {
+                            name: model.name,
+                            size: model.size,
+                          })}
                         </AlertDialogDescription>
                         <div class="flex justify-end gap-2">
                           <AlertDialogTrigger as={Button} variant="outline">
-                            {"\u30AD\u30E3\u30F3\u30BB\u30EB"}
+                            {t("common.cancel")}
                           </AlertDialogTrigger>
                           <Button
                             variant="destructive"
                             onClick={() => handleDeleteModel(model.id)}
                           >
-                            {"\u524A\u9664"}
+                            {t("common.delete")}
                           </Button>
                         </div>
                       </AlertDialogContent>
@@ -318,9 +312,7 @@ export default function Settings() {
           </For>
           <Show when={whisper.models().length === 0}>
             <p class="text-sm text-muted-foreground">
-              {
-                "\u30E2\u30C7\u30EB\u60C5\u5831\u3092\u8AAD\u307F\u8FBC\u307F\u4E2D..."
-              }
+              {t("settings.loadingModels")}
             </p>
           </Show>
         </CardContent>
@@ -329,11 +321,9 @@ export default function Settings() {
       {/* FFmpeg */}
       <Card>
         <CardHeader>
-          <CardTitle>{"\u30C4\u30FC\u30EB\u7BA1\u7406"}</CardTitle>
+          <CardTitle>{t("settings.toolManagement")}</CardTitle>
           <CardDescription>
-            {
-              "\u97F3\u58F0/\u52D5\u753B\u5909\u63DB\u306B\u5FC5\u8981\u306A\u30C4\u30FC\u30EB\u306E\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9\u3068\u524A\u9664"
-            }
+            {t("settings.toolManagementDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -342,9 +332,7 @@ export default function Settings() {
               <span class="font-medium">FFmpeg</span>
               <Show when={ffmpeg.isSystemAvailable()}>
                 <Badge variant="secondary">
-                  {
-                    "\u30B7\u30B9\u30C6\u30E0\u306B\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB\u6E08\u307F"
-                  }
+                  {t("settings.systemInstalled")}
                 </Badge>
               </Show>
             </div>
@@ -357,10 +345,10 @@ export default function Settings() {
                   class="w-28"
                   onClick={async () => {
                     await ffmpeg.deleteBundled();
-                    toast.success("FFmpegを削除しました");
+                    toast.success(t("settings.ffmpegDeletedToast"));
                   }}
                 >
-                  {"\u524A\u9664"}
+                  {t("common.delete")}
                 </Button>
               }
             >
@@ -373,10 +361,10 @@ export default function Settings() {
                     class="w-28"
                     onClick={async () => {
                       await ffmpeg.download();
-                      toast.success("FFmpegをダウンロードしました");
+                      toast.success(t("settings.ffmpegDownloadedToast"));
                     }}
                   >
-                    {"\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9"}
+                    {t("common.download")}
                   </Button>
                 }
               >
@@ -399,22 +387,18 @@ export default function Settings() {
       {/* Reset */}
       <Card>
         <CardHeader>
-          <CardTitle>{"\u30EA\u30BB\u30C3\u30C8"}</CardTitle>
-          <CardDescription>
-            {
-              "\u8A2D\u5B9A\u3092\u30C7\u30D5\u30A9\u30EB\u30C8\u306B\u623B\u3057\u307E\u3059"
-            }
-          </CardDescription>
+          <CardTitle>{t("settings.resetTitle")}</CardTitle>
+          <CardDescription>{t("settings.resetDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Button
             variant="outline"
             onClick={async () => {
               await settings.reset();
-              toast.success("設定をリセットしました");
+              toast.success(t("settings.settingsResetToast"));
             }}
           >
-            {"\u30C7\u30D5\u30A9\u30EB\u30C8\u306B\u623B\u3059"}
+            {t("settings.resetToDefaults")}
           </Button>
         </CardContent>
       </Card>

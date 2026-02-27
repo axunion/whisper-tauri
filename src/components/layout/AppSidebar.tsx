@@ -18,19 +18,44 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "~/components/ui/sidebar";
+import type { DictionaryKey } from "~/i18n";
+import { useI18n } from "~/i18n";
 
 const menuItems = [
-  { title: "Dashboard", href: "/", icon: FiBarChart2 },
-  { title: "Transcription", href: "/transcription", icon: FiFileText },
-  { title: "History", href: "/history", icon: FiClock },
-  { title: "Settings", href: "/settings", icon: FiSettings },
+  {
+    titleKey: "nav.dashboard" as const satisfies DictionaryKey,
+    href: "/",
+    icon: FiBarChart2,
+  },
+  {
+    titleKey: "nav.transcription" as const satisfies DictionaryKey,
+    href: "/transcription",
+    icon: FiFileText,
+  },
+  {
+    titleKey: "nav.history" as const satisfies DictionaryKey,
+    href: "/history",
+    icon: FiClock,
+  },
+  {
+    titleKey: "nav.settings" as const satisfies DictionaryKey,
+    href: "/settings",
+    icon: FiSettings,
+  },
 ];
 
-const devMenuItems = [{ title: "Dev", href: "/dev", icon: FiTool }];
+const devMenuItems = [
+  {
+    titleKey: "nav.dev" as const satisfies DictionaryKey,
+    href: "/dev",
+    icon: FiTool,
+  },
+];
 
 export function AppSidebar() {
   const location = useLocation();
   const sidebar = useSidebar();
+  const { t } = useI18n();
   const isActive = (href: string) =>
     href === "/"
       ? location.pathname === "/"
@@ -60,7 +85,7 @@ export function AppSidebar() {
                     isActive={isActive(item.href)}
                   >
                     <item.icon class="size-4 shrink-0" />
-                    <span>{item.title}</span>
+                    <span>{t(item.titleKey)}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
@@ -81,7 +106,7 @@ export function AppSidebar() {
                       isActive={isActive(item.href)}
                     >
                       <item.icon class="size-4 shrink-0" />
-                      <span>{item.title}</span>
+                      <span>{t(item.titleKey)}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )}

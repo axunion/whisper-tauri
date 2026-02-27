@@ -98,6 +98,7 @@ src/
 │   └── transcription/   # 文字起こし関連
 ├── pages/               # ページコンポーネント
 ├── primitives/          # SolidJS 状態管理プリミティブ
+├── i18n/                # 多言語対応（辞書・Provider・useI18n）
 ├── lib/                 # ユーティリティ関数
 ├── types/               # TypeScript 型定義
 └── test/                # テストセットアップ
@@ -151,6 +152,7 @@ MVP（Step 1〜7）は完了済み。詳細は `docs/IMPLEMENTATION_PLAN.md` を
 - エクスポート（TXT/SRT/VTT形式）
 - 履歴管理（SQLite永続化 + Sheet詳細表示）
 - トースト通知（操作結果フィードバック）
+- 多言語対応（i18n — 日本語/英語切り替え、I18nProvider + useI18n パターン）
 
 推奨（未実装）:
 - プロダクトビルド

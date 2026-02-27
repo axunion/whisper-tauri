@@ -2,6 +2,7 @@ import type { Component } from "solid-js";
 import { Show } from "solid-js";
 import { Button } from "~/components/ui/Button";
 import { Progress } from "~/components/ui/Progress";
+import { useI18n } from "~/i18n";
 import type { TranscriptionProgress as TranscriptionProgressType } from "~/types";
 
 interface TranscriptionProgressProps {
@@ -19,6 +20,8 @@ function formatElapsedTime(ms: number): string {
 const TranscriptionProgress: Component<TranscriptionProgressProps> = (
   props,
 ) => {
+  const { t } = useI18n();
+
   return (
     <Show when={props.progress}>
       {(progress) => (
@@ -36,7 +39,7 @@ const TranscriptionProgress: Component<TranscriptionProgressProps> = (
             )}
           </Show>
           <Button variant="outline" size="sm" onClick={() => props.onCancel()}>
-            Cancel
+            {t("common.cancel")}
           </Button>
         </div>
       )}

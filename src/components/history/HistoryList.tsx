@@ -3,6 +3,7 @@ import type { Component } from "solid-js";
 import { For, Show } from "solid-js";
 import { Badge } from "~/components/ui/Badge";
 import { Checkbox } from "~/components/ui/Checkbox";
+import { useI18n } from "~/i18n";
 import type { HistoryMeta } from "~/types";
 
 interface HistoryListProps {
@@ -10,17 +11,6 @@ interface HistoryListProps {
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onViewEntry: (id: string) => void;
-}
-
-function formatDate(isoString: string): string {
-  const date = new Date(isoString);
-  return date.toLocaleDateString("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function formatDuration(ms: number): string {
@@ -31,13 +21,26 @@ function formatDuration(ms: number): string {
 }
 
 const HistoryList: Component<HistoryListProps> = (props) => {
+  const { t, locale } = useI18n();
+
+  function formatDate(isoString: string): string {
+    const date = new Date(isoString);
+    return date.toLocaleDateString(locale() === "ja" ? "ja-JP" : "en-US", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
   return (
     <Show
       when={props.entries.length > 0}
       fallback={
         <div class="flex flex-col items-center justify-center py-12 text-muted-foreground">
           <FiFileText class="mb-2 size-8" />
-          <p class="text-sm">No history entries found.</p>
+          <p class="text-sm">{t("history.noEntries")}</p>
         </div>
       }
     >

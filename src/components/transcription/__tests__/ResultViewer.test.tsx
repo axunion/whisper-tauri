@@ -1,5 +1,6 @@
-import { render, screen } from "@solidjs/testing-library";
+import { screen } from "@solidjs/testing-library";
 import { describe, expect, it } from "vitest";
+import { renderWithI18n } from "~/test/helpers";
 import type { TranscriptionResult } from "~/types";
 import { ResultViewer } from "../ResultViewer";
 
@@ -16,19 +17,19 @@ const mockResult: TranscriptionResult = {
 
 describe("ResultViewer", () => {
   it("renders the transcription text", () => {
-    render(() => <ResultViewer result={mockResult} />);
+    renderWithI18n(() => <ResultViewer result={mockResult} />);
     expect(
       screen.getByText("This is a test transcription result."),
     ).toBeInTheDocument();
   });
 
   it("displays the language", () => {
-    render(() => <ResultViewer result={mockResult} />);
+    renderWithI18n(() => <ResultViewer result={mockResult} />);
     expect(screen.getByText(/en/)).toBeInTheDocument();
   });
 
   it("displays the duration", () => {
-    render(() => <ResultViewer result={mockResult} />);
+    renderWithI18n(() => <ResultViewer result={mockResult} />);
     expect(screen.getByText(/0m 10s/)).toBeInTheDocument();
   });
 });

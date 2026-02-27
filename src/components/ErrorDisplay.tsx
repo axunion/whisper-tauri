@@ -1,15 +1,17 @@
 import { Show } from "solid-js";
+import type { DictionaryKey } from "~/i18n";
+import { useI18n } from "~/i18n";
 import type { AppError } from "~/types/errors";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  file: "ファイル",
-  model: "モデル",
-  process: "処理",
-  network: "ネットワーク",
-  cancelled: "キャンセル",
-  unknown: "エラー",
+const CATEGORY_KEYS: Record<string, DictionaryKey> = {
+  file: "errors.file",
+  model: "errors.model",
+  process: "errors.process",
+  network: "errors.network",
+  cancelled: "errors.cancelled",
+  unknown: "errors.unknown",
 };
 
 interface ErrorDisplayProps {
@@ -19,6 +21,8 @@ interface ErrorDisplayProps {
 }
 
 export function ErrorDisplay(props: ErrorDisplayProps) {
+  const { t } = useI18n();
+
   return (
     <Show when={props.error}>
       {(error) => (
@@ -29,7 +33,7 @@ export function ErrorDisplay(props: ErrorDisplayProps) {
                 variant="outline"
                 class="border-destructive text-destructive"
               >
-                {CATEGORY_LABELS[error().category] ?? "エラー"}
+                {t(CATEGORY_KEYS[error().category] ?? "errors.unknown")}
               </Badge>
               <span class="text-sm font-medium text-destructive">
                 {error().message}
@@ -41,18 +45,18 @@ export function ErrorDisplay(props: ErrorDisplayProps) {
                   variant="outline"
                   size="sm"
                   onClick={() => props.onRetry?.()}
-                  aria-label="再試行"
+                  aria-label={t("common.retry")}
                 >
-                  再試行
+                  {t("common.retry")}
                 </Button>
               </Show>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => props.onDismiss()}
-                aria-label="閉じる"
+                aria-label={t("common.close")}
               >
-                閉じる
+                {t("common.close")}
               </Button>
             </div>
           </div>

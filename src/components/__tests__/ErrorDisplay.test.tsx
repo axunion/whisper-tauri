@@ -1,10 +1,11 @@
-import { fireEvent, render, screen } from "@solidjs/testing-library";
+import { fireEvent, screen } from "@solidjs/testing-library";
 import { describe, expect, it, vi } from "vitest";
 import {
   getErrorCategory,
   getErrorMessage,
   isRecoverable,
 } from "../../lib/errors";
+import { renderWithI18n } from "../../test/helpers";
 import type { AppError } from "../../types/errors";
 import { ErrorCode } from "../../types/errors";
 import { ErrorDisplay } from "../ErrorDisplay";
@@ -23,29 +24,29 @@ describe("ErrorDisplay", () => {
   describe("render", () => {
     it("should display error message", () => {
       const error = makeError();
-      render(() => <ErrorDisplay error={error} onDismiss={() => {}} />);
+      renderWithI18n(() => <ErrorDisplay error={error} onDismiss={() => {}} />);
       expect(screen.getByText(error.message)).toBeInTheDocument();
     });
 
     it("should display details when present", () => {
       const details = "File not found: /path/to/file.wav";
       const error = makeError({ details });
-      render(() => <ErrorDisplay error={error} onDismiss={() => {}} />);
+      renderWithI18n(() => <ErrorDisplay error={error} onDismiss={() => {}} />);
       expect(screen.getByText(details)).toBeInTheDocument();
     });
 
     it("should not display details section when details is absent", () => {
       const error = makeError();
       delete error.details;
-      render(() => <ErrorDisplay error={error} onDismiss={() => {}} />);
+      renderWithI18n(() => <ErrorDisplay error={error} onDismiss={() => {}} />);
       expect(screen.queryByText("File not found:")).not.toBeInTheDocument();
     });
 
     it("should render nothing when error is null", () => {
-      const { container } = render(() => (
+      const { container } = renderWithI18n(() => (
         <ErrorDisplay error={null} onDismiss={() => {}} />
       ));
-      expect(container.innerHTML).toBe("");
+      expect(container.querySelector("[class*='rounded-lg']")).toBeNull();
     });
   });
 
@@ -53,7 +54,9 @@ describe("ErrorDisplay", () => {
     it("should call onDismiss when close button is clicked", () => {
       const onDismiss = vi.fn();
       const error = makeError();
-      render(() => <ErrorDisplay error={error} onDismiss={onDismiss} />);
+      renderWithI18n(() => (
+        <ErrorDisplay error={error} onDismiss={onDismiss} />
+      ));
       const closeButton = screen.getByRole("button", { name: "閉じる" });
       fireEvent.click(closeButton);
       expect(onDismiss).toHaveBeenCalledOnce();
@@ -64,7 +67,7 @@ describe("ErrorDisplay", () => {
     it("should show retry button when recoverable and onRetry provided", () => {
       const onRetry = vi.fn();
       const error = makeError({ recoverable: true });
-      render(() => (
+      renderWithI18n(() => (
         <ErrorDisplay error={error} onDismiss={() => {}} onRetry={onRetry} />
       ));
       const retryButton = screen.getByRole("button", { name: "再試行" });
@@ -74,7 +77,7 @@ describe("ErrorDisplay", () => {
     it("should call onRetry when retry button is clicked", () => {
       const onRetry = vi.fn();
       const error = makeError({ recoverable: true });
-      render(() => (
+      renderWithI18n(() => (
         <ErrorDisplay error={error} onDismiss={() => {}} onRetry={onRetry} />
       ));
       const retryButton = screen.getByRole("button", { name: "再試行" });
@@ -85,7 +88,7 @@ describe("ErrorDisplay", () => {
     it("should not show retry button when recoverable is false", () => {
       const onRetry = vi.fn();
       const error = makeError({ recoverable: false });
-      render(() => (
+      renderWithI18n(() => (
         <ErrorDisplay error={error} onDismiss={() => {}} onRetry={onRetry} />
       ));
       expect(
@@ -95,7 +98,7 @@ describe("ErrorDisplay", () => {
 
     it("should not show retry button when onRetry is not provided", () => {
       const error = makeError({ recoverable: true });
-      render(() => <ErrorDisplay error={error} onDismiss={() => {}} />);
+      renderWithI18n(() => <ErrorDisplay error={error} onDismiss={() => {}} />);
       expect(
         screen.queryByRole("button", { name: "再試行" }),
       ).not.toBeInTheDocument();

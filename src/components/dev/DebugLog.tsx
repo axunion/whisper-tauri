@@ -1,4 +1,5 @@
 import { For, Show } from "solid-js";
+import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
 import type { createDevLog, LogLevel } from "~/primitives/createDevLog";
 import { Badge } from "../ui/Badge";
@@ -33,6 +34,8 @@ interface DebugLogProps {
 }
 
 export function DebugLog(props: DebugLogProps) {
+  const { t } = useI18n();
+
   function currentOption(): OptionItem {
     const filter = props.devLog.levelFilter();
     return (
@@ -76,7 +79,7 @@ export function DebugLog(props: DebugLogProps) {
             size="sm"
             onClick={() => props.devLog.clear()}
           >
-            Clear
+            {t("common.clear")}
           </Button>
           <Button
             variant="outline"
@@ -84,20 +87,20 @@ export function DebugLog(props: DebugLogProps) {
             onClick={async () => {
               try {
                 await props.devLog.copyAll();
-                toast.success("ログをコピーしました");
+                toast.success(t("dev.logCopiedToast"));
               } catch {
-                toast.error("コピーに失敗しました");
+                toast.error(t("dev.logCopyFailedToast"));
               }
             }}
           >
-            Copy
+            {t("common.copy")}
           </Button>
         </div>
       </div>
       <div class="h-64 overflow-y-auto rounded-md border p-2 font-mono text-xs">
         <Show
           when={props.devLog.filteredLogs().length > 0}
-          fallback={<p class="text-muted-foreground">No logs captured yet.</p>}
+          fallback={<p class="text-muted-foreground">{t("dev.noLogs")}</p>}
         >
           <For each={props.devLog.filteredLogs()}>
             {(entry) => (

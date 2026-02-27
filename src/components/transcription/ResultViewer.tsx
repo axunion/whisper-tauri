@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/Select";
+import { useI18n } from "~/i18n";
 import type { ExportFormat } from "~/lib/export";
 import { exportResult, getExtension } from "~/lib/export";
 import { toast } from "~/lib/toast";
@@ -39,6 +40,7 @@ function formatDuration(ms: number): string {
 }
 
 const ResultViewer: Component<ResultViewerProps> = (props) => {
+  const { t } = useI18n();
   const [copied, setCopied] = createSignal(false);
   const settings = createSettings();
   const [format, setFormat] = createSignal<ExportFormat>(
@@ -50,10 +52,10 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
       await writeText(props.result.text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast.success("コピーしました");
+      toast.success(t("result.copiedToast"));
     } catch (e) {
       console.error("Failed to copy text:", e);
-      toast.error("コピーに失敗しました");
+      toast.error(t("result.copyFailedToast"));
     }
   }
 
@@ -67,10 +69,10 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
       if (!filePath) return;
       const content = exportResult(props.result, format());
       await writeTextFile(filePath, content);
-      toast.success("保存しました");
+      toast.success(t("result.savedToast"));
     } catch (e) {
       console.error("Failed to save file:", e);
-      toast.error("保存に失敗しました");
+      toast.error(t("result.saveFailedToast"));
     }
   }
 
@@ -92,8 +94,8 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
             <Show when={copied()} fallback={<FiCopy class="size-4" />}>
               <FiCheck class="size-4" />
             </Show>
-            <Show when={copied()} fallback="Copy">
-              Copied
+            <Show when={copied()} fallback={t("common.copy")}>
+              {t("common.copied")}
             </Show>
           </Button>
           <Select<OptionItem>
@@ -122,7 +124,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
           </Select>
           <Button variant="outline" size="sm" onClick={handleSave}>
             <FiDownload class="size-4" />
-            Save
+            {t("common.save")}
           </Button>
         </div>
       </div>

@@ -2,9 +2,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { createSignal, For, onMount, Show } from "solid-js";
 import { Badge } from "~/components/ui/Badge";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
+import { useI18n } from "~/i18n";
 import type { ModelInfo } from "~/types/whisper";
 
 export function ModelStatus() {
+  const { t } = useI18n();
   const [models, setModels] = createSignal<ModelInfo[]>([]);
   const [loading, setLoading] = createSignal(true);
 
@@ -22,19 +24,23 @@ export function ModelStatus() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Model Status</CardTitle>
+        <CardTitle>{t("dashboard.modelStatus")}</CardTitle>
       </CardHeader>
       <CardContent>
         <Show
           when={!loading()}
           fallback={
-            <p class="text-sm text-muted-foreground">Loading models...</p>
+            <p class="text-sm text-muted-foreground">
+              {t("dashboard.loadingModels")}
+            </p>
           }
         >
           <Show
             when={models().length > 0}
             fallback={
-              <p class="text-sm text-muted-foreground">No models available.</p>
+              <p class="text-sm text-muted-foreground">
+                {t("dashboard.noModels")}
+              </p>
             }
           >
             <div class="space-y-3">
@@ -48,11 +54,13 @@ export function ModelStatus() {
                         <Badge variant="outline">{model.speedNote}</Badge>
                       </Show>
                       <Show when={model.recommended}>
-                        <Badge>Recommended</Badge>
+                        <Badge>{t("common.recommended")}</Badge>
                       </Show>
                     </div>
                     <Badge variant={model.downloaded ? "default" : "outline"}>
-                      {model.downloaded ? "Downloaded" : "Not Downloaded"}
+                      {model.downloaded
+                        ? t("dashboard.downloaded")
+                        : t("dashboard.notDownloaded")}
                     </Badge>
                   </div>
                 )}
