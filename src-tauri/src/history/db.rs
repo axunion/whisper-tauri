@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::path::{Path, PathBuf};
 
 use rusqlite::Connection;
@@ -12,6 +13,7 @@ pub fn db_path(app_data_dir: &Path) -> PathBuf {
 }
 
 /// Initializes the history database, creating tables and indices if they don't exist.
+/// Also initializes the FTS5 index and migrates existing data if needed.
 ///
 /// # Errors
 ///
@@ -32,6 +34,15 @@ pub fn init_db(db_path: &Path) -> Result<(), HistoryError> {
         CREATE INDEX IF NOT EXISTS idx_history_created_at ON history(created_at);",
     )
     .map_err(|e| HistoryError::Database(e.to_string()))?;
+
+    // Initialize FTS5 index
+    super::search::init_fts(&conn)?;
+
+    // Migrate existing data if FTS table is empty but history has entries
+    if super::search::needs_fts_migration(&conn)? {
+        super::search::rebuild_fts_index(&conn)?;
+    }
+
     Ok(())
 }
 
@@ -98,7 +109,12 @@ pub fn save_entry(db_path: &Path, params: &HistorySaveParams) -> Result<String, 
     let segments_compressed = compress_text(&segments_json)?;
 
     let conn = Connection::open(db_path).map_err(|e| HistoryError::Database(e.to_string()))?;
-    conn.execute(
+
+    let tx = conn
+        .unchecked_transaction()
+        .map_err(|e| HistoryError::Database(e.to_string()))?;
+
+    tx.execute(
         "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         rusqlite::params![
@@ -113,6 +129,11 @@ pub fn save_entry(db_path: &Path, params: &HistorySaveParams) -> Result<String, 
         ],
     )
     .map_err(|e| HistoryError::Database(e.to_string()))?;
+
+    super::search::index_entry(&tx, &id, &params.text)?;
+
+    tx.commit()
+        .map_err(|e| HistoryError::Database(e.to_string()))?;
 
     Ok(id)
 }
@@ -147,6 +168,9 @@ pub fn list_entries(
         sql.push_str(&conditions.join(" AND "));
     }
     sql.push_str(" ORDER BY created_at DESC");
+    if let Some(limit) = filter.limit {
+        write!(sql, " LIMIT {limit}").ok();
+    }
 
     let params_refs: Vec<&dyn rusqlite::types::ToSql> =
         params_vec.iter().map(AsRef::as_ref).collect();
@@ -263,6 +287,15 @@ pub fn delete_entries(db_path: &Path, ids: &[String]) -> Result<u64, HistoryErro
 
     let conn = Connection::open(db_path).map_err(|e| HistoryError::Database(e.to_string()))?;
 
+    let tx = conn
+        .unchecked_transaction()
+        .map_err(|e| HistoryError::Database(e.to_string()))?;
+
+    // Delete FTS indices first
+    for id in ids {
+        super::search::delete_entry_index(&tx, id)?;
+    }
+
     let placeholders: Vec<String> = (1..=ids.len()).map(|i| format!("?{i}")).collect();
     let sql = format!(
         "DELETE FROM history WHERE id IN ({})",
@@ -274,8 +307,11 @@ pub fn delete_entries(db_path: &Path, ids: &[String]) -> Result<u64, HistoryErro
         .map(|id| id as &dyn rusqlite::types::ToSql)
         .collect();
 
-    let deleted = conn
+    let deleted = tx
         .execute(&sql, params.as_slice())
+        .map_err(|e| HistoryError::Database(e.to_string()))?;
+
+    tx.commit()
         .map_err(|e| HistoryError::Database(e.to_string()))?;
 
     Ok(deleted as u64)
@@ -289,8 +325,17 @@ pub fn delete_entries(db_path: &Path, ids: &[String]) -> Result<u64, HistoryErro
 pub fn delete_all_entries(db_path: &Path) -> Result<u64, HistoryError> {
     let conn = Connection::open(db_path).map_err(|e| HistoryError::Database(e.to_string()))?;
 
-    let deleted = conn
+    let tx = conn
+        .unchecked_transaction()
+        .map_err(|e| HistoryError::Database(e.to_string()))?;
+
+    super::search::delete_all_indices(&tx)?;
+
+    let deleted = tx
         .execute("DELETE FROM history", [])
+        .map_err(|e| HistoryError::Database(e.to_string()))?;
+
+    tx.commit()
         .map_err(|e| HistoryError::Database(e.to_string()))?;
 
     Ok(deleted as u64)
@@ -571,9 +616,175 @@ mod tests {
         let filter = HistoryFilter {
             date_from: Some("2026-01-01".to_string()),
             date_to: None,
+            limit: None,
         };
         let entries = list_entries(&path, &filter).expect("list filtered");
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].id, "new-entry");
+    }
+
+    #[test]
+    fn save_entry_indexes_for_fts_search() {
+        use crate::history::search;
+        use crate::history::types::HistorySearchParams;
+
+        let (_dir, path) = setup_db();
+        let mut params = sample_params();
+        params.text = "全文検索テスト用テキスト".to_string();
+        let _id = save_entry(&path, &params).expect("Failed to save");
+
+        // Search via FTS should find it
+        let conn = Connection::open(&path).expect("open");
+        let results = search::search_entries(
+            &conn,
+            &HistorySearchParams {
+                query: "全文検索".to_string(),
+                date_from: None,
+                date_to: None,
+                limit: None,
+            },
+        )
+        .expect("search");
+        assert_eq!(results.len(), 1);
+    }
+
+    #[test]
+    fn delete_entries_removes_fts_index() {
+        use crate::history::search;
+        use crate::history::types::HistorySearchParams;
+
+        let (_dir, path) = setup_db();
+        let mut params = sample_params();
+        params.text = "削除テスト用テキスト".to_string();
+        let id = save_entry(&path, &params).expect("Failed to save");
+
+        delete_entries(&path, &[id]).expect("delete");
+
+        let conn = Connection::open(&path).expect("open");
+        let results = search::search_entries(
+            &conn,
+            &HistorySearchParams {
+                query: "削除テスト".to_string(),
+                date_from: None,
+                date_to: None,
+                limit: None,
+            },
+        )
+        .expect("search");
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn delete_all_entries_clears_fts_index() {
+        use crate::history::search;
+        use crate::history::types::HistorySearchParams;
+
+        let (_dir, path) = setup_db();
+        let mut params = sample_params();
+        params.text = "全削除テスト".to_string();
+        save_entry(&path, &params).expect("save");
+
+        super::delete_all_entries(&path).expect("delete all");
+
+        let conn = Connection::open(&path).expect("open");
+        let results = search::search_entries(
+            &conn,
+            &HistorySearchParams {
+                query: "全削除".to_string(),
+                date_from: None,
+                date_to: None,
+                limit: None,
+            },
+        )
+        .expect("search");
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn init_db_migrates_existing_entries_to_fts() {
+        use crate::history::search;
+        use crate::history::types::HistorySearchParams;
+
+        let dir = TempDir::new().expect("create temp dir");
+        let path = dir.path().join("history.db");
+
+        // Create DB without FTS (simulating old schema)
+        let conn = Connection::open(&path).expect("open");
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS history (
+                id TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL,
+                file_name TEXT NOT NULL,
+                language TEXT NOT NULL,
+                model_id TEXT NOT NULL,
+                duration INTEGER NOT NULL,
+                text_compressed BLOB NOT NULL,
+                segments_compressed BLOB NOT NULL
+            );",
+        )
+        .expect("create table");
+
+        let text_compressed = compress_text("マイグレーション対象テキスト").expect("compress");
+        let segments_compressed = compress_text("[]").expect("compress");
+        conn.execute(
+            "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            rusqlite::params![
+                "migrate-entry",
+                "2026-02-20T10:00:00",
+                "test.wav",
+                "ja",
+                "large-v3-turbo",
+                60000_i64,
+                text_compressed,
+                segments_compressed,
+            ],
+        )
+        .expect("insert");
+        drop(conn);
+
+        // init_db should create FTS and migrate
+        init_db(&path).expect("init db with migration");
+
+        let conn = Connection::open(&path).expect("open");
+        let results = search::search_entries(
+            &conn,
+            &HistorySearchParams {
+                query: "マイグレーション".to_string(),
+                date_from: None,
+                date_to: None,
+                limit: None,
+            },
+        )
+        .expect("search");
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].id, "migrate-entry");
+    }
+
+    #[test]
+    fn list_entries_with_limit() {
+        let (_dir, path) = setup_db();
+        for _ in 0..5 {
+            save_entry(&path, &sample_params()).expect("save");
+        }
+
+        let filter = HistoryFilter {
+            date_from: None,
+            date_to: None,
+            limit: Some(3),
+        };
+        let entries = list_entries(&path, &filter).expect("list");
+        assert_eq!(entries.len(), 3);
+    }
+
+    #[test]
+    fn list_entries_without_limit_returns_all() {
+        let (_dir, path) = setup_db();
+        for _ in 0..5 {
+            save_entry(&path, &sample_params()).expect("save");
+        }
+
+        let entries = list_entries(&path, &HistoryFilter::default()).expect("list");
+        assert_eq!(entries.len(), 5);
     }
 }

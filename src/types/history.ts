@@ -78,4 +78,20 @@ export interface HistoryFilter {
   dateFrom?: string;
   /** End date (ISO 8601 date string, e.g. "2026-12-31") */
   dateTo?: string;
+  /** Maximum number of entries to return */
+  limit?: number;
+}
+
+/**
+ * Parameters for full-text search of history entries.
+ */
+export interface HistorySearchParams {
+  /** Search query (space-separated keywords for AND search) */
+  query: string;
+  /** Optional start date filter (ISO 8601 date string) */
+  dateFrom?: string;
+  /** Optional end date filter (ISO 8601 date string) */
+  dateTo?: string;
+  /** Maximum number of entries to return */
+  limit?: number;
 }

@@ -10,6 +10,7 @@ export type {
   HistoryFilter,
   HistoryMeta,
   HistorySaveParams,
+  HistorySearchParams,
   HistorySegment,
 } from "./history";
 export type { AppSettings } from "./settings";

@@ -64,6 +64,8 @@ export const ja: Dictionary = {
     from: "開始日",
     to: "終了日",
     modelLabel: "モデル:",
+    searchPlaceholder: "キーワードで検索",
+    searchNoResults: "検索結果が見つかりません。",
   },
   settings: {
     title: "設定",

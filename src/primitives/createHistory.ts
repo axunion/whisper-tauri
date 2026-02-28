@@ -6,8 +6,11 @@ import type {
   HistoryFilter,
   HistoryMeta,
   HistorySaveParams,
+  HistorySearchParams,
 } from "../types";
 import type { AppError } from "../types/errors";
+
+const DEFAULT_LIMIT = 200;
 
 export function createHistory() {
   const [entries, setEntries] = createSignal<HistoryMeta[]>([]);
@@ -18,14 +21,16 @@ export function createHistory() {
     new Set<string>(),
   );
   const [filter, setFilter] = createSignal<HistoryFilter>({});
+  const [searchQuery, setSearchQuery] = createSignal("");
   const [isLoading, setIsLoading] = createSignal(false);
+  const [isSearching, setIsSearching] = createSignal(false);
   const [error, setError] = createSignal<AppError | null>(null);
 
   async function loadEntries(): Promise<void> {
     setIsLoading(true);
     try {
       const result = await invoke<HistoryMeta[]>("history_list", {
-        filter: filter(),
+        filter: { ...filter(), limit: filter().limit ?? DEFAULT_LIMIT },
       });
       setEntries(result);
     } catch (e) {
@@ -33,6 +38,47 @@ export function createHistory() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function searchEntries(query: string): Promise<void> {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setSearchQuery("");
+      setIsSearching(false);
+      await loadEntries();
+      return;
+    }
+
+    setSearchQuery(trimmed);
+    setIsSearching(true);
+    setIsLoading(true);
+    try {
+      const currentFilter = filter();
+      const params: HistorySearchParams = {
+        query: trimmed,
+        ...(currentFilter.dateFrom ? { dateFrom: currentFilter.dateFrom } : {}),
+        ...(currentFilter.dateTo ? { dateTo: currentFilter.dateTo } : {}),
+        limit: currentFilter.limit ?? DEFAULT_LIMIT,
+      };
+      const result = await invoke<HistoryMeta[]>("history_search", { params });
+      // Discard stale results if query changed while awaiting
+      if (searchQuery() === trimmed) {
+        setEntries(result);
+      }
+    } catch (e) {
+      if (searchQuery() === trimmed) {
+        setError(parseError(e));
+      }
+    } finally {
+      if (searchQuery() === trimmed) {
+        setIsLoading(false);
+      }
+    }
+  }
+
+  function clearSearch(): void {
+    setSearchQuery("");
+    setIsSearching(false);
   }
 
   async function saveEntry(params: HistorySaveParams): Promise<string | null> {
@@ -58,7 +104,11 @@ export function createHistory() {
     try {
       await invoke("history_delete", { ids });
       setSelectedIds(new Set<string>());
-      await loadEntries();
+      if (isSearching()) {
+        await searchEntries(searchQuery());
+      } else {
+        await loadEntries();
+      }
     } catch (e) {
       setError(parseError(e));
     }
@@ -112,11 +162,15 @@ export function createHistory() {
     selectedEntry,
     selectedIds,
     filter,
+    searchQuery,
     isLoading,
+    isSearching,
     error,
 
     // Actions
     loadEntries,
+    searchEntries,
+    clearSearch,
     saveEntry,
     getEntry,
     deleteEntries,

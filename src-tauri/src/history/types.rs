@@ -82,6 +82,26 @@ pub struct HistoryFilter {
     /// End date (ISO 8601 date string, e.g. "2026-12-31")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date_to: Option<String>,
+    /// Maximum number of entries to return
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit: Option<u32>,
+}
+
+/// Parameters for full-text search of history entries.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct HistorySearchParams {
+    /// Search query (space-separated keywords for AND search)
+    pub query: String,
+    /// Optional start date filter (ISO 8601 date string)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub date_from: Option<String>,
+    /// Optional end date filter (ISO 8601 date string)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub date_to: Option<String>,
+    /// Maximum number of entries to return
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit: Option<u32>,
 }
 
 #[cfg(test)]

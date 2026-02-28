@@ -63,6 +63,8 @@ export interface Dictionary {
     from: string;
     to: string;
     modelLabel: string;
+    searchPlaceholder: string;
+    searchNoResults: string;
   };
   settings: {
     title: string;

@@ -95,6 +95,22 @@ describe("createHistory", () => {
         dispose();
       });
     });
+
+    it("should have empty searchQuery", () => {
+      createRoot((dispose) => {
+        const history = createHistory();
+        expect(history.searchQuery()).toBe("");
+        dispose();
+      });
+    });
+
+    it("should have isSearching as false", () => {
+      createRoot((dispose) => {
+        const history = createHistory();
+        expect(history.isSearching()).toBe(false);
+        dispose();
+      });
+    });
   });
 
   describe("loadEntries", () => {
@@ -106,7 +122,9 @@ describe("createHistory", () => {
         const history = createHistory();
         await history.loadEntries();
 
-        expect(invoke).toHaveBeenCalledWith("history_list", { filter: {} });
+        expect(invoke).toHaveBeenCalledWith("history_list", {
+          filter: { limit: 200 },
+        });
         expect(history.entries()).toEqual(entries);
         dispose();
       });
@@ -371,6 +389,140 @@ describe("createHistory", () => {
 
         history.clearSelectedEntry();
         expect(history.selectedEntry()).toBeNull();
+        dispose();
+      });
+    });
+  });
+
+  describe("searchEntries", () => {
+    it("should invoke history_search with query and set results", async () => {
+      const results = [mockMeta({ id: "search-result" })];
+      vi.mocked(invoke).mockResolvedValueOnce(results);
+
+      await createRoot(async (dispose) => {
+        const history = createHistory();
+        await history.searchEntries("会議");
+
+        expect(invoke).toHaveBeenCalledWith("history_search", {
+          params: { query: "会議", limit: 200 },
+        });
+        expect(history.entries()).toEqual(results);
+        expect(history.searchQuery()).toBe("会議");
+        expect(history.isSearching()).toBe(true);
+        dispose();
+      });
+    });
+
+    it("should include date filter in search params", async () => {
+      vi.mocked(invoke).mockResolvedValueOnce([]);
+
+      await createRoot(async (dispose) => {
+        const history = createHistory();
+        history.updateFilter({
+          dateFrom: "2026-01-01",
+          dateTo: "2026-12-31",
+        });
+        await history.searchEntries("テスト");
+
+        expect(invoke).toHaveBeenCalledWith("history_search", {
+          params: {
+            query: "テスト",
+            dateFrom: "2026-01-01",
+            dateTo: "2026-12-31",
+            limit: 200,
+          },
+        });
+        dispose();
+      });
+    });
+
+    it("should fallback to loadEntries for empty query", async () => {
+      vi.mocked(invoke).mockResolvedValueOnce([mockMeta()]);
+
+      await createRoot(async (dispose) => {
+        const history = createHistory();
+        await history.searchEntries("   ");
+
+        expect(invoke).toHaveBeenCalledWith("history_list", {
+          filter: { limit: 200 },
+        });
+        expect(history.searchQuery()).toBe("");
+        expect(history.isSearching()).toBe(false);
+        dispose();
+      });
+    });
+
+    it("should set isSearching flag", async () => {
+      vi.mocked(invoke).mockResolvedValueOnce([]);
+
+      await createRoot(async (dispose) => {
+        const history = createHistory();
+        expect(history.isSearching()).toBe(false);
+
+        await history.searchEntries("検索");
+        expect(history.isSearching()).toBe(true);
+        dispose();
+      });
+    });
+
+    it("should set error on failure", async () => {
+      vi.mocked(invoke).mockRejectedValueOnce(
+        new Error("Database error: search failed"),
+      );
+
+      await createRoot(async (dispose) => {
+        const history = createHistory();
+        await history.searchEntries("エラー");
+
+        expect(history.error()).toEqual(
+          expect.objectContaining({
+            details: "Database error: search failed",
+          }),
+        );
+        dispose();
+      });
+    });
+  });
+
+  describe("clearSearch", () => {
+    it("should reset searchQuery and isSearching", async () => {
+      vi.mocked(invoke).mockResolvedValueOnce([]);
+
+      await createRoot(async (dispose) => {
+        const history = createHistory();
+        await history.searchEntries("テスト");
+        expect(history.isSearching()).toBe(true);
+
+        history.clearSearch();
+        expect(history.searchQuery()).toBe("");
+        expect(history.isSearching()).toBe(false);
+        dispose();
+      });
+    });
+  });
+
+  describe("deleteEntries during search", () => {
+    it("should re-search after delete when in search mode", async () => {
+      const searchResults = [
+        mockMeta({ id: "result-1" }),
+        mockMeta({ id: "result-2" }),
+      ];
+      vi.mocked(invoke)
+        .mockResolvedValueOnce(searchResults) // initial search
+        .mockResolvedValueOnce(1) // delete
+        .mockResolvedValueOnce([mockMeta({ id: "result-2" })]); // re-search
+
+      await createRoot(async (dispose) => {
+        const history = createHistory();
+        await history.searchEntries("テスト");
+        expect(history.isSearching()).toBe(true);
+
+        await history.deleteEntries(["result-1"]);
+
+        // Should re-search, not reload
+        expect(invoke).toHaveBeenLastCalledWith("history_search", {
+          params: { query: "テスト", limit: 200 },
+        });
         dispose();
       });
     });

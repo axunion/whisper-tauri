@@ -4,7 +4,9 @@ use tauri::{AppHandle, Manager};
 
 use super::db;
 use super::error::HistoryError;
-use super::types::{HistoryEntry, HistoryFilter, HistoryMeta, HistorySaveParams};
+use super::types::{
+    HistoryEntry, HistoryFilter, HistoryMeta, HistorySaveParams, HistorySearchParams,
+};
 
 /// Resolves the app data directory from a Tauri `AppHandle`.
 fn resolve_app_data_dir(app: &AppHandle) -> Result<PathBuf, HistoryError> {
@@ -78,4 +80,20 @@ pub async fn history_delete(app: AppHandle, ids: Vec<String>) -> Result<u64, Str
 pub async fn history_delete_all(app: AppHandle) -> Result<u64, String> {
     let db_path = get_db_path(&app)?;
     db::delete_all_entries(&db_path).map_err(Into::into)
+}
+
+/// Searches history entries using full-text search.
+///
+/// # Errors
+///
+/// Returns an error if the database cannot be accessed or the search fails.
+#[tauri::command]
+pub async fn history_search(
+    app: AppHandle,
+    params: HistorySearchParams,
+) -> Result<Vec<HistoryMeta>, String> {
+    let db_path = get_db_path(&app)?;
+    let conn =
+        rusqlite::Connection::open(&db_path).map_err(|e| HistoryError::Database(e.to_string()))?;
+    super::search::search_entries(&conn, &params).map_err(Into::into)
 }

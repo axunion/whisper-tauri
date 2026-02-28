@@ -21,10 +21,11 @@ export function RecentHistory() {
   }
 
   onMount(() => {
+    history.updateFilter({ limit: 5 });
     history.loadEntries();
   });
 
-  const recentEntries = () => history.entries().slice(0, 5);
+  const recentEntries = () => history.entries();
 
   return (
     <Card>

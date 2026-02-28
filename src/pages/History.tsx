@@ -1,10 +1,11 @@
-import { onMount, Show } from "solid-js";
+import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
 import {
   HistoryActions,
   HistoryDetail,
   HistoryFilter,
   HistoryList,
+  SearchBar,
 } from "~/components/history";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
 import {
@@ -19,17 +20,63 @@ import { toast } from "~/lib/toast";
 import { createHistory } from "~/primitives/createHistory";
 import type { HistoryFilter as HistoryFilterType } from "~/types";
 
+const SEARCH_MIN_LENGTH = 3;
+const DEBOUNCE_MS = 300;
+
 export default function History() {
   const { t } = useI18n();
   const history = createHistory();
+  const [rawInput, setRawInput] = createSignal("");
+  const [isWaitingForSearch, setIsWaitingForSearch] = createSignal(false);
+  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
   onMount(() => {
     history.loadEntries();
   });
 
+  onCleanup(() => clearTimeout(debounceTimer));
+
+  function handleSearchInput(value: string): void {
+    setRawInput(value);
+    clearTimeout(debounceTimer);
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setIsWaitingForSearch(false);
+      history.clearSearch();
+      history.loadEntries();
+    } else if (trimmed.length >= SEARCH_MIN_LENGTH) {
+      if (!history.isSearching()) {
+        setIsWaitingForSearch(true);
+      }
+      debounceTimer = setTimeout(() => {
+        history.searchEntries(trimmed).finally(() => {
+          setIsWaitingForSearch(false);
+        });
+      }, DEBOUNCE_MS);
+    } else if (history.isSearching()) {
+      setIsWaitingForSearch(false);
+      history.clearSearch();
+    }
+  }
+
+  function handleClearSearch(): void {
+    setRawInput("");
+    setIsWaitingForSearch(false);
+    history.clearSearch();
+    history.loadEntries();
+  }
+
   async function handleFilterChange(filter: HistoryFilterType): Promise<void> {
     history.updateFilter(filter);
-    await history.loadEntries();
+    const trimmed = rawInput().trim();
+    if (trimmed.length >= SEARCH_MIN_LENGTH) {
+      setIsWaitingForSearch(true);
+      await history.searchEntries(trimmed);
+      setIsWaitingForSearch(false);
+    } else if (!trimmed) {
+      await history.loadEntries();
+    }
   }
 
   async function handleDeleteSelected(): Promise<void> {
@@ -39,6 +86,13 @@ export default function History() {
       toast.success(t("history.deletedToast"));
     }
   }
+
+  const shouldHideList = () => {
+    const len = rawInput().trim().length;
+    if (len === 0) return false;
+    if (len < SEARCH_MIN_LENGTH) return true;
+    return isWaitingForSearch();
+  };
 
   return (
     <div class="mx-auto w-full max-w-3xl space-y-6">
@@ -56,25 +110,38 @@ export default function History() {
           </CardTitle>
         </CardHeader>
         <CardContent class="space-y-4">
+          <SearchBar onInput={handleSearchInput} onClear={handleClearSearch} />
+
           <HistoryFilter
             filter={history.filter()}
             onFilterChange={handleFilterChange}
           />
 
-          <HistoryActions
-            selectedCount={history.selectedIds().size}
-            totalCount={history.entries().length}
-            onSelectAll={() => history.selectAll()}
-            onClearSelection={() => history.clearSelection()}
-            onDeleteSelected={handleDeleteSelected}
-          />
+          <Show when={!shouldHideList()}>
+            <HistoryActions
+              selectedCount={history.selectedIds().size}
+              totalCount={history.entries().length}
+              onSelectAll={() => history.selectAll()}
+              onClearSelection={() => history.clearSelection()}
+              onDeleteSelected={handleDeleteSelected}
+            />
 
-          <HistoryList
-            entries={history.entries()}
-            selectedIds={history.selectedIds()}
-            onToggleSelect={(id) => history.toggleSelect(id)}
-            onViewEntry={(id) => history.getEntry(id)}
-          />
+            <Show
+              when={!history.isSearching() || history.entries().length > 0}
+              fallback={
+                <div class="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <p class="text-sm">{t("history.searchNoResults")}</p>
+                </div>
+              }
+            >
+              <HistoryList
+                entries={history.entries()}
+                selectedIds={history.selectedIds()}
+                onToggleSelect={(id) => history.toggleSelect(id)}
+                onViewEntry={(id) => history.getEntry(id)}
+              />
+            </Show>
+          </Show>
         </CardContent>
       </Card>
 

@@ -64,6 +64,8 @@ export const en: Dictionary = {
     from: "From",
     to: "To",
     modelLabel: "Model:",
+    searchPlaceholder: "Search by keyword",
+    searchNoResults: "No search results found.",
   },
   settings: {
     title: "Settings",
