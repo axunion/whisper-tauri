@@ -1,6 +1,6 @@
 ---
 name: tdd-runner
-description: Runs and analyzes test results for both frontend (Vitest) and backend (cargo test). Use after implementing code to verify tests pass, or to diagnose test failures. Also use to validate that pre-commit/pre-push hooks will succeed.
+description: Runs and analyzes test results for both frontend (Vitest) and backend (cargo test). Use after implementing code to verify tests pass, or to diagnose test failures.
 tools: Bash, Read, Grep, Glob
 model: haiku
 ---
@@ -19,7 +19,7 @@ cd /Users/fujisaki_maki/dev/ubuntu/whisper-tauri && pnpm test:run
 cd /Users/fujisaki_maki/dev/ubuntu/whisper-tauri/src-tauri && cargo test
 ```
 
-### Lint/Format Checks (pre-commit hooks)
+### Lint/Format Checks
 ```bash
 cd /Users/fujisaki_maki/dev/ubuntu/whisper-tauri && pnpm lint
 cd /Users/fujisaki_maki/dev/ubuntu/whisper-tauri && pnpm format

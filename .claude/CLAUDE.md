@@ -51,9 +51,6 @@ pnpm tauri build
 # 型チェック
 pnpm typecheck     # TypeScript (tsc --noEmit)
 
-# Git hooks インストール（clone後）
-pnpm lefthook install
-
 # スラッシュコマンド
 /verify frontend   # フロントエンド検証 (fe も可)
 /verify backend    # バックエンド検証 (be も可)
@@ -65,17 +62,18 @@ pnpm lefthook install
 
 ## コード品質
 
-### Pre-commit Hooks (lefthook)
+### /verify スキル
 
-コミット時に自動実行:
-- `pnpm lint` - フロントエンド lint
-- `pnpm format` - フロントエンド format
-- `cargo fmt --check` - Rust format チェック
-- `cargo clippy` - Rust lint
+コミット前に `/verify all` を必ず実行する。フェーズ制で自動修正・並行実行を行い、全チェックを通過させる:
 
-プッシュ時に自動実行:
-- `pnpm test:run` - フロントエンドテスト
-- `cargo test` - Rust テスト
+| Phase | 内容 | 並行性 |
+|-------|------|--------|
+| 0: Auto-fix | `pnpm lint:fix` + `cargo fmt` | FE/BE 並行 |
+| 1: Static Analysis | `pnpm lint` + `pnpm typecheck` + `cargo fmt --check` + `cargo clippy` | 最大4並列 |
+| 2: Tests | `pnpm test:run` + `cargo test` | FE/BE 並行 |
+| 3: Build | `pnpm build` | - |
+
+エラー時は自動修正を試み、リトライする（詳細は `.claude/skills/verify/SKILL.md`）。
 
 ### TypeScript Strict Mode
 
@@ -225,7 +223,7 @@ TDD（テスト駆動開発）アプローチを採用する。
 
 ## ワークフロールール
 
-1. **実装完了時**: ユーザー確認 → ドキュメント更新 → コミット
+1. **実装完了時**: ユーザー確認 → `/verify` （変更範囲に応じて `fe`/`be`/`all` を選択）→ ドキュメント更新 → コミット
 2. **コミット**: 勝手にしない。英語で記述
 3. **計画との乖離**: 計画書通りに実装できない場合、該当計画書に追記
 4. **TDD遵守**: テスト可能な実装では先にテストを書く
