@@ -150,7 +150,7 @@ function showToast(props: {
     <Toast
       toastId={data.toastId}
       variant={props.variant}
-      duration={props.duration}
+      {...(props.duration !== undefined && { duration: props.duration })}
     >
       <div class="grid gap-1">
         {props.title && <ToastTitle>{props.title}</ToastTitle>}
@@ -181,7 +181,7 @@ function showToastPromise<T, U>(
     <Toast
       toastId={props.toastId}
       variant={variant[props.state]}
-      duration={options.duration}
+      {...(options.duration !== undefined && { duration: options.duration })}
     >
       <Switch>
         <Match when={props.state === "pending"}>{options.loading}</Match>
