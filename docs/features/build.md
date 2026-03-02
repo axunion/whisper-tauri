@@ -55,7 +55,7 @@ macOS では Metal アクセラレーションを有効にし、他プラット�
 | `ubuntu-22.04` | x86_64-unknown-linux-gnu | .deb, .AppImage |
 | `windows-latest` | x86_64-pc-windows-msvc | .msi, .exe |
 
-**whisper.cpp ビルド設定**: `GGML_NATIVE=OFF` を全プラットフォームで設定し、ランナー固有の CPU 命令セットへの最適化を無効化。配布バイナリの幅広い CPU 互換性を確保する。
+**whisper.cpp ビルド設定**: `SOURCE_DATE_EPOCH` 環境変数を設定し、ggml の `GGML_NATIVE` を OFF にする。ランナー固有の CPU 命令セット（`-mcpu=native`）への最適化を無効化し、配布バイナリの幅広い CPU 互換性を確保する。ローカルビルドではデフォルト（`GGML_NATIVE=ON`）のまま、開発者の CPU に最適化される。
 
 **コード署名**: GitHub Secrets 経由で設定可能。シークレット未設定時は署名なしビルド。
 
@@ -70,6 +70,10 @@ macOS では Metal アクセラレーションを有効にし、他プラット�
 ### workflow_dispatch の追加
 
 当初はタグ push のみをトリガーとしていたが、CI の動作確認を安全に行うため `workflow_dispatch` による手動実行を追加した。`build-only` モードではリリースを作成せずビルドのみを検証できる。
+
+### GGML_NATIVE の無効化方法
+
+当初 `GGML_NATIVE=OFF` 環境変数を直接設定する想定だったが、cmake-rs が環境変数を cmake defines に変換しないため機能しなかった。`CFLAGS=-mcpu=apple-m1` も cmake の `add_compile_options(-mcpu=native)` に上書きされ失敗。最終的に `SOURCE_DATE_EPOCH` を設定する方式を採用した。ggml の CMakeLists.txt がこの環境変数の存在を検知し、`GGML_NATIVE` のデフォルトを OFF にする。
 
 ---
 
@@ -87,6 +91,6 @@ macOS では Metal アクセラレーションを有効にし、他プラット�
 
 - [x] `pnpm tauri build` でローカルビルドが成功
 - [x] macOS向け .dmg が生成される
-- [ ] Windows向け .msi が生成される（CI で検証）
-- [ ] Linux向け .deb / .AppImage が生成される（CI で検証）
+- [x] Windows向け .msi が生成される（CI で検証済み）
+- [x] Linux向け .deb / .AppImage が生成される（CI で検証済み）
 - [x] GitHub Actions でリリースビルドが自動実行される

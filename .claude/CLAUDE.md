@@ -202,6 +202,20 @@ params.set_abort_callback_safe(abort_fn);
 
 **解消条件**: whisper-rs の修正版リリース後にワークアラウンドを除去可能。
 
+### CI ビルド: GGML_NATIVE と SOURCE_DATE_EPOCH
+
+whisper.cpp (ggml) はデフォルトで `GGML_NATIVE=ON` となり、`-mcpu=native` でビルドマシンの CPU に最適化する。CI ランナーでは新しい命令セット（i8mm 等）が有効化されコンパイルエラーになる場合がある。
+
+**ワークアラウンド** (`.github/workflows/release.yml`):
+
+`SOURCE_DATE_EPOCH` 環境変数を設定する。ggml の CMakeLists.txt がこの変数の存在を検知し、`GGML_NATIVE` のデフォルトを OFF にする。
+
+**注意**: 以下のアプローチは機能しない:
+- `GGML_NATIVE=OFF` 環境変数 — cmake-rs が環境変数を cmake defines に変換しない
+- `CFLAGS=-mcpu=apple-m1` — cmake の `add_compile_options(-mcpu=native)` が後から上書きする
+
+**ローカルビルド**: `GGML_NATIVE=ON`（デフォルト）のままで良い。開発者の CPU に最適化される。
+
 ## 型定義
 
 TypeScript型 (`src/types/`) と Rust型 (`src-tauri/src/*/types.rs`) は一致させる必要がある。
