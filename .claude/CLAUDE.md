@@ -152,9 +152,9 @@ MVP（Step 1〜7）は完了済み。詳細は `docs/IMPLEMENTATION_PLAN.md` を
 - 履歴管理（SQLite永続化 + Sheet詳細表示）
 - トースト通知（操作結果フィードバック）
 - 多言語対応（i18n — 日本語/英語切り替え、I18nProvider + useI18n パターン）
+- プロダクトビルド（プラットフォーム条件付きビルド + GitHub Actions リリースワークフロー）
 
-推奨（未実装）:
-- プロダクトビルド
+「推奨」の追加機能はすべて実装完了済み。「任意」機能は `docs/features/README.md` を参照。
 
 ## モデル設定
 
