@@ -22,9 +22,9 @@
 | 永続化 | tauri-plugin-store |
 | パッケージマネージャ | pnpm |
 
-### UI方針 (solid-ui)
+### UI方針 (solid-ui + グラスモーフィズム)
 
-[solid-ui](https://www.solid-ui.com/) を使用し、デザインの統一性を保つ。
+[solid-ui](https://www.solid-ui.com/) をベースに、グラスモーフィズムデザインを適用。
 
 | 項目 | 内容 |
 |------|------|
@@ -32,10 +32,12 @@
 | 方式 | コピー＆ペースト（npmパッケージではない） |
 | ベース | Kobalte + Corvu + Tailwind CSS |
 | 配置先 | `src/components/ui/` |
+| デザイン | パープル/バイオレット系 + グラスモーフィズム |
 
 **原則**:
-- solid-ui のデフォルトスタイルを可能な限り使用
-- カスタマイズは最小限に抑え、統一感を維持
+- solid-ui のコンポーネント構造を維持しつつ、グラスモーフィズム（半透明bg + backdrop-blur）を適用
+- カラーパレットはバイオレット系(OKLCH hue ~285)で統一
+- 背景はメッシュグラデーション（radial-gradient × 5 + conic-gradient）
 - 必要なコンポーネントのみをコピーして使用
 
 ---

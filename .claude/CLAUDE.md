@@ -18,13 +18,14 @@ Whisper Tauri - ローカル音声文字起こしデスクトップアプリケ�
 - **Persistence**: tauri-plugin-store
 - **Package Manager**: pnpm
 
-### UI方針 (solid-ui)
+### UI方針 (solid-ui + グラスモーフィズム)
 
-[solid-ui](https://www.solid-ui.com/) を使用し、デザインの統一性を保つ。
+[solid-ui](https://www.solid-ui.com/) をベースに、グラスモーフィズムデザインを適用。
 
 - **方式**: コピー＆ペースト（npmパッケージではない）
 - **ベース**: Kobalte + Corvu + Tailwind CSS
-- **原則**: solid-ui のデフォルトスタイルを可能な限り使用し、カスタマイズは最小限に
+- **デザイン**: パープル/バイオレット系アクセント + グラスモーフィズム（半透明 + backdrop-blur）
+- **レイヤー構造**: 背景(メッシュグラデーション) → サイドバー(blur-xl) → カード(blur-lg) → コンテンツ(不透明)
 - **参照**: https://www.solid-ui.com/docs
 
 ## 開発コマンド

@@ -4,7 +4,7 @@ import { toastVariants } from "../toast";
 describe("toastVariants", () => {
   it("applies default variant classes", () => {
     const classes = toastVariants({ variant: "default" });
-    expect(classes).toContain("bg-background");
+    expect(classes).toContain("bg-card/60");
     expect(classes).toContain("text-foreground");
   });
 
@@ -40,7 +40,7 @@ describe("toastVariants", () => {
 
   it("defaults to default variant when no variant specified", () => {
     const classes = toastVariants({});
-    expect(classes).toContain("bg-background");
+    expect(classes).toContain("bg-card/60");
     expect(classes).toContain("text-foreground");
   });
 
