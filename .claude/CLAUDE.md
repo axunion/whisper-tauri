@@ -99,6 +99,7 @@ src/
 ├── pages/               # ページコンポーネント
 ├── primitives/          # SolidJS 状態管理プリミティブ
 ├── i18n/                # 多言語対応（辞書・Provider・useI18n）
+├── styles/              # カスタムCSS（アニメーション等）
 ├── lib/                 # ユーティリティ関数
 ├── types/               # TypeScript 型定義
 └── test/                # テストセットアップ
@@ -154,6 +155,7 @@ MVP（Step 1〜7）は完了済み。詳細は `docs/IMPLEMENTATION_PLAN.md` を
 - トースト通知（操作結果フィードバック）
 - 多言語対応（i18n — 日本語/英語切り替え、I18nProvider + useI18n パターン）
 - プロダクトビルド（プラットフォーム条件付きビルド + GitHub Actions リリースワークフロー）
+- アニメーション（フェードイン + スピナー + プログレスストライプ + スクロールバー + UIバランス調整）
 
 「推奨」の追加機能はすべて実装完了済み。「任意」機能は `docs/features/README.md` を参照。
 

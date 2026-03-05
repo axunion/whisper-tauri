@@ -51,7 +51,7 @@ export function RecentHistory() {
               {(entry) => (
                 <A
                   href="/history"
-                  class="flex items-center justify-between py-2 text-sm hover:bg-muted/50"
+                  class="flex items-center justify-between rounded-md px-2 py-3 text-sm hover:bg-muted/50"
                 >
                   <div class="flex min-w-0 flex-1 items-center gap-2">
                     <span class="truncate font-medium">{entry.fileName}</span>

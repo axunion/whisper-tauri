@@ -82,7 +82,7 @@ export default function Settings() {
   }
 
   return (
-    <div class="mx-auto w-full max-w-3xl space-y-6">
+    <div class="animate-fade-in mx-auto w-full max-w-3xl space-y-6">
       <h1 class="text-2xl font-bold">{t("settings.title")}</h1>
 
       {/* General Settings */}
@@ -254,7 +254,7 @@ export default function Settings() {
                           </Button>
                         }
                       >
-                        <div class="w-32 space-y-1">
+                        <div class="w-28 space-y-1">
                           <Progress
                             value={whisper.downloadProgress()?.progress ?? 0}
                             minValue={0}
@@ -368,7 +368,7 @@ export default function Settings() {
                   </Button>
                 }
               >
-                <div class="w-32 space-y-1">
+                <div class="w-28 space-y-1">
                   <Progress
                     value={ffmpeg.downloadProgress()?.progress ?? 0}
                     minValue={0}

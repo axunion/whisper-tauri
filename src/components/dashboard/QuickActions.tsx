@@ -14,12 +14,16 @@ export function QuickActions() {
         <CardTitle>{t("dashboard.quickActions")}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div class="flex flex-wrap gap-3">
-          <Button onClick={() => navigate("/transcription")}>
+        <div class="grid grid-cols-2 gap-3">
+          <Button class="w-full" onClick={() => navigate("/transcription")}>
             <FiFileText class="size-4" />
             {t("nav.transcription")}
           </Button>
-          <Button variant="outline" onClick={() => navigate("/settings")}>
+          <Button
+            class="w-full"
+            variant="outline"
+            onClick={() => navigate("/settings")}
+          >
             <FiSettings class="size-4" />
             {t("nav.settings")}
           </Button>

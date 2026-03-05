@@ -62,7 +62,7 @@ const ModelSelector: Component<ModelSelectorProps> = (props) => {
                 </Show>
               </div>
 
-              <div class="shrink-0">
+              <div class="flex w-28 shrink-0 items-center justify-center">
                 <Show
                   when={model.downloaded}
                   fallback={
@@ -70,6 +70,7 @@ const ModelSelector: Component<ModelSelectorProps> = (props) => {
                       <Button
                         variant="outline"
                         size="sm"
+                        class="w-full"
                         onClick={(e: MouseEvent) => {
                           e.stopPropagation();
                           props.onDownloadModel(model.id);

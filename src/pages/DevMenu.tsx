@@ -25,7 +25,7 @@ function DevMenuContent() {
   });
 
   return (
-    <div class="mx-auto w-full max-w-3xl space-y-6">
+    <div class="animate-fade-in mx-auto w-full max-w-3xl space-y-6">
       <h1 class="text-2xl font-bold">{t("dev.title")}</h1>
 
       {/* Cache Clear */}
