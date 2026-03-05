@@ -59,9 +59,7 @@ Do NOT suggest adding new npm packages unless absolutely necessary. If a new dep
 - `components/layout/` - layout (Sidebar, AppLayout)
 - `components/dashboard/` - dashboard widgets
 - `components/transcription/` - transcription UI
-- `components/recording/` - recording controls
 - `components/history/` - history browser
-- `components/text-processing/` - text refinement
 - `components/dev/` - dev menu (DEV only)
 - `pages/` - page-level components
 - `primitives/` - SolidJS state management (createWhisper, createSettings, etc.)

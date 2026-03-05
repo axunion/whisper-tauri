@@ -4,7 +4,6 @@ description: フロントエンド（SolidJS/TypeScript）のリファクタリ�
 argument-hint: "<file or description>"
 disable-model-invocation: true
 user-invocable: true
-allowed-tools: Bash, Read, Edit, Write, Glob, Grep, Task
 ---
 
 # /refactor-fe — フロントエンドリファクタリング

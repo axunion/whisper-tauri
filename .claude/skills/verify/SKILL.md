@@ -4,7 +4,6 @@ description: 作業完了後の検証チェックを一括実行する（自動�
 argument-hint: "[frontend|backend|all]"
 disable-model-invocation: true
 user-invocable: true
-allowed-tools: Bash, TaskCreate, TaskUpdate, TaskList, Read, Edit, Glob, Grep
 ---
 
 # /verify - 検証スキル
