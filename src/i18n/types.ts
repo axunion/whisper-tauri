@@ -114,6 +114,23 @@ export interface Dictionary {
     savedToast: string;
     saveFailedToast: string;
   };
+  recording: {
+    title: string;
+    selectDevice: string;
+    defaultDevice: string;
+    startRecording: string;
+    stopRecording: string;
+    recording: string;
+    noDevices: string;
+    permissionDenied: string;
+    transcribeRecording: string;
+    discardRecording: string;
+    discardConfirmTitle: string;
+    discardConfirmDescription: string;
+    saveAsWav: string;
+    fileTab: string;
+    recordTab: string;
+  };
   dev: {
     title: string;
     cachesClear: string;

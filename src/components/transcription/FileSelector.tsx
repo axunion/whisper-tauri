@@ -62,7 +62,7 @@ const FileSelector: Component<FileSelectorProps> = (props) => {
       fallback={
         <button
           type="button"
-          class="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/25 p-8 text-muted-foreground transition-colors hover:border-muted-foreground/50 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          class="flex w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-muted-foreground/25 px-8 py-12 text-muted-foreground transition-colors hover:border-muted-foreground/50 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
           disabled={props.disabled}
           onClick={handleClick}
         >

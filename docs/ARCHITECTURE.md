@@ -102,7 +102,9 @@ src-tauri/src/
 │   └── error.rs         # エラー型
 ├── recording/
 │   ├── commands.rs      # 録音コマンド
-│   ├── capture.rs       # 音声キャプチャ
+│   ├── capture.rs       # 音声キャプチャ (RecordingManager)
+│   ├── sleep_guard.rs   # スリープ防止 (caffeinate, macOSのみ)
+│   ├── error.rs         # エラー型
 │   └── types.rs         # 型定義
 ├── converter/
 │   ├── commands.rs      # 変換コマンド
@@ -261,8 +263,9 @@ interface RecordingState {
   devices: AudioDevice[];
   selectedDevice: AudioDevice | null;
   isRecording: boolean;
-  level: number;
-  samples: Float32Array | null;
+  level: RecordingLevel | null;
+  tempFilePath: string | null;
+  duration: number;
 }
 
 // createHistory - 履歴状態
@@ -432,10 +435,15 @@ enum ErrorCategory {
 - ファイル変換（ffmpegによるMP3/MP4等のWAV変換）
 - モデル速度情報表示（ハードウェア別の処理時間目安）
 - エラーハンドリング強化（構造化エラー型・ErrorDisplayコンポーネント）
+- 履歴管理・全文検索
+- 多言語対応（i18n）
+- トースト通知
+- エクスポート（TXT/SRT/VTT）
+- 開発メニュー
+- プロダクトビルド（GitHub Actions）
+- アニメーション
+- リアルタイム録音（cpal + 一時WAV + タブUI）
 
 未実装:
-- 履歴管理・全文検索
 - テキスト処理（ローカルSLMによる校正・要約）
-- リアルタイム録音
-- 多言語対応（i18n）
 - ~~キーボードショートカット~~（不要と判断: 操作頻度が低くボタンUIで十分）

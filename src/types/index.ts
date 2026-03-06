@@ -13,6 +13,11 @@ export type {
   HistorySearchParams,
   HistorySegment,
 } from "./history";
+export type {
+  AudioDevice,
+  RecordingLevel,
+  RecordingStopResult,
+} from "./recording";
 export type { AppSettings } from "./settings";
 export { DEFAULT_SETTINGS } from "./settings";
 export type {

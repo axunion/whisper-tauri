@@ -123,7 +123,8 @@ src/
 src-tauri/src/
 ├── whisper/             # 文字起こしモジュール
 ├── converter/           # ファイル変換モジュール（ffmpeg）
-└── history/             # 履歴管理モジュール（SQLite）
+├── history/             # 履歴管理モジュール（SQLite）
+└── recording/           # リアルタイム録音モジュール（cpal）
 ```
 
 各モジュールは `commands.rs` / `types.rs` / `error.rs` / `mod.rs` の共通構成に従う。
@@ -136,6 +137,7 @@ src-tauri/src/
 | `whisper:result` | 文字起こし結果 |
 | `model:download-progress` | Whisperモデル DL進捗 |
 | `ffmpeg:download-progress` | ffmpeg DL進捗 |
+| `recording:level` | 録音レベル (50ms間隔) |
 
 ## 実装計画
 
@@ -156,6 +158,7 @@ MVP（Step 1〜7）は完了済み。詳細は `docs/IMPLEMENTATION_PLAN.md` を
 - 多言語対応（i18n — 日本語/英語切り替え、I18nProvider + useI18n パターン）
 - プロダクトビルド（プラットフォーム条件付きビルド + GitHub Actions リリースワークフロー）
 - アニメーション（フェードイン + スピナー + プログレスストライプ + スクロールバー + UIバランス調整）
+- リアルタイム録音（マイク録音 + レベルメーター + 一時WAV保存 + 文字起こし連携）
 
 「推奨」の追加機能はすべて実装完了済み。「任意」機能は `docs/features/README.md` を参照。
 

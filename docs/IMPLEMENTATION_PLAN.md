@@ -108,10 +108,10 @@ MVP完了後、必要に応じて実装する機能です。
 | [多言語対応](./features/i18n.md) | 日本語/英語の切り替え | **完了** |
 | [トースト通知](./features/toast.md) | 操作結果のフィードバック | **完了** |
 | ~~[キーボードショートカット](./features/keyboard-shortcuts.md)~~ | ~~パワーユーザー向け操作~~ | **不要** |
-| [アニメーション](./features/animations.md) | UIの視覚的強化 | 任意 |
-| [リアルタイム録音](./features/recording.md) | マイクから直接文字起こし | 任意 |
+| [アニメーション](./features/animations.md) | UIの視覚的強化 | **完了** |
+| [リアルタイム録音](./features/recording.md) | マイクから直接文字起こし | **完了** |
 | [テキスト処理](./features/text-processing.md) | ローカルSLMで校正・要約 | 任意 |
-| [履歴全文検索](./features/history-search.md) | 履歴の全文検索機能 | 任意 |
+| [履歴全文検索](./features/history-search.md) | 履歴の全文検索機能 | **完了** |
 | [開発メニュー](./features/dev-menu.md) | デバッグログ・状態確認・キャッシュクリア | **完了** |
 
 ---

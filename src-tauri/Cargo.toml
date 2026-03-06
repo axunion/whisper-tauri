@@ -43,6 +43,7 @@ tauri-plugin-clipboard-manager = "2"
 zip = "2"
 rusqlite = { version = "0.32", features = ["bundled-full"] }
 flate2 = "1"
+cpal = "0.15"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 whisper-rs = { version = "0.15", features = ["metal"] }

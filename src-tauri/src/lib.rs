@@ -1,5 +1,6 @@
 pub mod converter;
 pub mod history;
+pub mod recording;
 pub mod whisper;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -22,6 +23,9 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .manage(std::sync::Mutex::new(
+            recording::capture::RecordingManager::new(),
+        ))
         .invoke_handler(tauri::generate_handler![
             greet,
             whisper::commands::get_available_models,
@@ -47,6 +51,10 @@ pub fn run() {
             history::commands::history_delete,
             history::commands::history_delete_all,
             history::commands::history_search,
+            recording::commands::list_audio_devices,
+            recording::commands::start_recording,
+            recording::commands::stop_recording,
+            recording::commands::cleanup_recording,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
