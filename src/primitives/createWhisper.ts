@@ -25,6 +25,7 @@ export function createWhisper() {
   const [result, setResult] = createSignal<TranscriptionResult | null>(null);
   const [isProcessing, setIsProcessing] = createSignal(false);
   const [isDownloading, setIsDownloading] = createSignal(false);
+  const [language, setLanguage] = createSignal<string | null>(null);
   const [error, setError] = createSignal<AppError | null>(null);
 
   // Internal state for cancellation
@@ -115,6 +116,7 @@ export function createWhisper() {
         {
           audioPath: overrideAudioPath ?? currentFile.path,
           modelPath: currentModel.path,
+          language: language(),
         },
       );
       setResult(transcriptionResult);
@@ -146,6 +148,7 @@ export function createWhisper() {
     models,
     selectedModel,
     file,
+    language,
     progress,
     downloadProgress,
     result,
@@ -157,6 +160,7 @@ export function createWhisper() {
     loadModels,
     selectModel,
     setFile,
+    setLanguage,
     downloadModel,
     deleteModel,
     startTranscription,

@@ -273,6 +273,7 @@ pub async fn transcribe_audio(
     app: AppHandle,
     audio_path: String,
     model_path: String,
+    language: Option<String>,
 ) -> Result<TranscriptionResult, String> {
     let task_id = uuid::Uuid::new_v4().to_string();
     let token = process::TASK_MANAGER.create_task(&task_id);
@@ -285,7 +286,14 @@ pub async fn transcribe_audio(
 
     // Run transcription on a blocking thread (CPU bound)
     let result = tokio::task::spawn_blocking(move || {
-        process::transcribe(&model_path, &samples, &task_id_clone, &token, &app)
+        process::transcribe(
+            &model_path,
+            &samples,
+            &task_id_clone,
+            &token,
+            &app,
+            language.as_deref(),
+        )
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))?

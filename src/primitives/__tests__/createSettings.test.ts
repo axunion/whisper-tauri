@@ -42,6 +42,7 @@ describe("createSettings", () => {
         language: "en",
         outputFormat: "srt",
         theme: "dark",
+        whisperLanguage: "ja",
       };
 
       await createRoot(async (dispose) => {

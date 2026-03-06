@@ -237,6 +237,7 @@ pub fn transcribe(
     task_id: &str,
     token: &Arc<CancellationToken>,
     app: &AppHandle,
+    language: Option<&str>,
 ) -> Result<TranscriptionResult, WhisperError> {
     let start = Instant::now();
 
@@ -250,7 +251,7 @@ pub fn transcribe(
 
     // Configure parameters
     let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
-    params.set_language(Some("ja"));
+    params.set_language(language);
     params.set_print_progress(false);
     params.set_print_realtime(false);
     params.set_print_timestamps(false);

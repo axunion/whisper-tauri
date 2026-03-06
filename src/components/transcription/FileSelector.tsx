@@ -1,8 +1,13 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { FiFile, FiUpload, FiX } from "solid-icons/fi";
+import {
+  FiCheckCircle,
+  FiRefreshCw,
+  FiUpload,
+  FiXCircle,
+} from "solid-icons/fi";
 import type { Component } from "solid-js";
 import { Show } from "solid-js";
-import { Button } from "~/components/ui/Button";
+
 import { useI18n } from "~/i18n";
 import type { FileInfo } from "~/types";
 
@@ -62,32 +67,45 @@ const FileSelector: Component<FileSelectorProps> = (props) => {
       fallback={
         <button
           type="button"
-          class="flex w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-muted-foreground/25 px-8 py-12 text-muted-foreground transition-colors hover:border-muted-foreground/50 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          class="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-2.5 rounded-lg border-2 border-dashed border-muted-foreground/25 text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
           disabled={props.disabled}
           onClick={handleClick}
         >
-          <FiUpload class="size-8" />
+          <FiUpload class="size-7" />
           <span class="text-sm font-medium">
             {t("transcription.selectAudioFile")}
           </span>
-          <span class="text-xs">{t("transcription.supportedFormats")}</span>
+          <span class="text-sm text-muted-foreground">
+            {t("transcription.supportedFormats")}
+          </span>
         </button>
       }
     >
       {(file) => (
-        <div class="flex items-center gap-3 rounded-lg border bg-card p-4">
-          <FiFile class="size-8 shrink-0 text-muted-foreground" />
-          <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium">{file().name}</p>
+        <div class="flex h-full flex-col items-center justify-center gap-4">
+          <div class="flex items-start gap-4 px-6">
+            <FiCheckCircle class="mt-0.5 size-6 shrink-0 text-primary" />
+            <span class="min-w-0 break-all text-center text-lg font-medium">
+              {file().name}
+            </span>
+            <button
+              type="button"
+              class="mt-0.5 shrink-0 text-muted-foreground/40 transition-colors hover:text-destructive disabled:pointer-events-none disabled:opacity-50"
+              disabled={props.disabled}
+              onClick={() => props.onFileClear()}
+            >
+              <FiXCircle class="size-5" />
+            </button>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => props.onFileClear()}
+          <button
+            type="button"
+            class="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
             disabled={props.disabled}
+            onClick={handleClick}
           >
-            <FiX class="size-4" />
-          </Button>
+            <FiRefreshCw class="size-3.5" />
+            {t("transcription.changeFile")}
+          </button>
         </div>
       )}
     </Show>

@@ -402,6 +402,7 @@ describe("createWhisper", () => {
         expect(invoke).toHaveBeenCalledWith("transcribe_audio", {
           audioPath: mockFile.path,
           modelPath: model.path,
+          language: null,
         });
         expect(whisper.result()).toEqual(mockResult);
         dispose();

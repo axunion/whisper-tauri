@@ -27,7 +27,6 @@ interface RecordingPanelProps {
   onSelectDevice: (device: AudioDevice) => void;
   onStartRecording: () => void;
   onStopRecording: () => void;
-  onTranscribe: () => void;
   onDiscard: () => void;
 }
 
@@ -60,7 +59,7 @@ const RecordingPanel: Component<RecordingPanelProps> = (props) => {
   }
 
   return (
-    <div class="space-y-8">
+    <div class="flex h-full flex-col gap-3">
       {/* Device selector */}
       <Show
         when={props.devices.length > 0}
@@ -70,8 +69,8 @@ const RecordingPanel: Component<RecordingPanelProps> = (props) => {
           </p>
         }
       >
-        <div>
-          <span class="mb-2.5 block text-sm font-medium leading-none">
+        <div class="grid grid-cols-2 items-center gap-4">
+          <span class="text-right text-sm font-medium leading-none text-muted-foreground">
             {t("recording.selectDevice")}
           </span>
           <Select<AudioDevice>
@@ -110,13 +109,15 @@ const RecordingPanel: Component<RecordingPanelProps> = (props) => {
 
       {/* Recording controls - idle or recording */}
       <Show when={!hasRecording()}>
-        <div class="flex flex-col items-center gap-6 py-8">
+        <div class="relative flex flex-1 flex-col items-center justify-center">
           <Show when={props.isRecording}>
-            <AudioLevelMeter
-              level={props.level?.level ?? 0}
-              peakLevel={props.level?.peakLevel ?? 0}
-              class="w-full"
-            />
+            <div class="absolute inset-x-0 top-0">
+              <AudioLevelMeter
+                level={props.level?.level ?? 0}
+                peakLevel={props.level?.peakLevel ?? 0}
+                class="w-full"
+              />
+            </div>
           </Show>
 
           {/* Central mic button */}
@@ -125,33 +126,33 @@ const RecordingPanel: Component<RecordingPanelProps> = (props) => {
             fallback={
               <button
                 type="button"
-                class="flex size-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-105 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                class="flex size-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-105 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                 disabled={props.disabled || props.devices.length === 0}
                 onClick={props.onStartRecording}
               >
-                <FiMic class="size-7" />
+                <FiMic class="size-6" />
               </button>
             }
           >
             <button
               type="button"
-              class="flex size-20 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-lg transition-all hover:scale-105 hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              class="flex size-16 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-lg transition-all hover:scale-105 hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               onClick={props.onStopRecording}
             >
-              <FiSquare class="size-7" />
+              <FiSquare class="size-6" />
             </button>
           </Show>
 
-          {/* Status label */}
+          {/* Status label - below the button */}
           <Show
             when={props.isRecording}
             fallback={
-              <p class="text-sm text-muted-foreground">
+              <p class="mt-3 text-sm text-muted-foreground">
                 {t("recording.startRecording")}
               </p>
             }
           >
-            <div class="flex items-center gap-2 text-sm">
+            <div class="mt-3 flex items-center gap-2 text-sm">
               <FiDisc class="size-4 animate-pulse text-red-500" />
               <span class="text-muted-foreground">
                 {t("recording.recording")}
@@ -164,40 +165,27 @@ const RecordingPanel: Component<RecordingPanelProps> = (props) => {
         </div>
       </Show>
 
-      {/* Post-recording actions */}
+      {/* Post-recording summary */}
       <Show when={hasRecording()}>
-        <div class="space-y-6">
-          {/* Recording summary */}
-          <div class="flex items-center justify-center gap-3 rounded-lg border bg-muted/30 px-5 py-4">
-            <FiMic class="size-5 text-muted-foreground" />
-            <span class="text-sm text-muted-foreground">
+        <div class="flex flex-1 flex-col items-center justify-center gap-4">
+          <div class="flex items-center gap-4 rounded-xl border bg-muted/30 px-6 py-4">
+            <FiMic class="size-6 text-muted-foreground" />
+            <span class="text-base text-muted-foreground">
               {t("recording.title")}
             </span>
-            <span class="font-mono text-sm tabular-nums">
+            <span class="font-mono text-xl font-medium tabular-nums">
               {formatDuration(props.duration)}
             </span>
           </div>
-
-          {/* Actions: primary transcribe + secondary row */}
-          <div class="flex flex-col items-center gap-4">
-            <Button
-              size="lg"
-              class="px-10"
-              onClick={props.onTranscribe}
-              disabled={props.disabled}
-            >
-              {t("recording.transcribeRecording")}
+          <div class="flex gap-3">
+            <Button variant="ghost" size="sm" onClick={handleSaveWav}>
+              <FiDownload class="size-4" />
+              {t("recording.saveAsWav")}
             </Button>
-            <div class="flex gap-3">
-              <Button variant="ghost" size="sm" onClick={handleSaveWav}>
-                <FiDownload class="size-4" />
-                {t("recording.saveAsWav")}
-              </Button>
-              <Button variant="ghost" size="sm" onClick={props.onDiscard}>
-                <FiTrash2 class="size-4" />
-                {t("recording.discardRecording")}
-              </Button>
-            </div>
+            <Button variant="ghost" size="sm" onClick={props.onDiscard}>
+              <FiTrash2 class="size-4" />
+              {t("recording.discardRecording")}
+            </Button>
           </div>
         </div>
       </Show>

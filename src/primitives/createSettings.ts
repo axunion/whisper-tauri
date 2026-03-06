@@ -32,6 +32,7 @@ export function createSettings() {
   const language = () => settings().language;
   const theme = () => settings().theme;
   const outputFormat = () => settings().outputFormat;
+  const whisperLanguage = () => settings().whisperLanguage;
 
   return {
     settings,
@@ -39,6 +40,7 @@ export function createSettings() {
     language,
     theme,
     outputFormat,
+    whisperLanguage,
     load,
     update,
     reset,
