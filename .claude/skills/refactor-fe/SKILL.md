@@ -2,7 +2,6 @@
 name: refactor-fe
 description: フロントエンド（SolidJS/TypeScript）のリファクタリング
 argument-hint: "<file or description>"
-disable-model-invocation: true
 user-invocable: true
 ---
 

@@ -1,7 +1,6 @@
 ---
 name: i18n
 description: i18n辞書の品質チェックと改善（日本語表現の調整・翻訳の正確性・構造整合性）
-disable-model-invocation: true
 user-invocable: true
 ---
 

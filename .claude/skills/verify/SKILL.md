@@ -2,7 +2,6 @@
 name: verify
 description: 作業完了後の検証チェックを一括実行する（自動修正・並行実行対応）
 argument-hint: "[frontend|backend|all]"
-disable-model-invocation: true
 user-invocable: true
 ---
 

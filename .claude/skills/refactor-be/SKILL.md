@@ -2,7 +2,6 @@
 name: refactor-be
 description: バックエンド（Rust/Tauri 2）のリファクタリング
 argument-hint: "<file or description>"
-disable-model-invocation: true
 user-invocable: true
 ---
 

@@ -39,7 +39,7 @@ Do NOT suggest adding new crates unless absolutely necessary. If a new dependenc
 - Tests in `#[cfg(test)] mod tests` within each file
 
 ### Architecture
-- Backend modules: `whisper/`, `converter/`, `history/`
+- Backend modules: `whisper/`, `converter/`, `history/`, `recording/`
 - Each module has: `mod.rs`, `types.rs`, `commands.rs`, and domain-specific files
 - Tauri commands use `#[tauri::command]` attribute
 - Events emitted via Tauri event system (e.g., `whisper:progress`, `model:download-progress`)
