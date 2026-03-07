@@ -37,7 +37,7 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
   return (
     <div class="flex flex-1 flex-col gap-4 overflow-hidden">
       <div>
-        <h3 class="text-base font-semibold">{props.entry.fileName}</h3>
+        <div class="text-base font-semibold">{props.entry.fileName}</div>
         <p class="text-xs text-muted-foreground">
           {formatDate(props.entry.createdAt)} | {t("history.modelLabel")}{" "}
           {props.entry.modelId}

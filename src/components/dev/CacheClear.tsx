@@ -36,7 +36,12 @@ export function CacheClear(props: CacheClearProps) {
           </p>
         </div>
         <AlertDialog open={historyOpen()} onOpenChange={setHistoryOpen}>
-          <AlertDialogTrigger as={Button} variant="destructive" size="sm">
+          <AlertDialogTrigger
+            as={Button}
+            variant="destructive"
+            size="sm"
+            class="min-w-[8rem]"
+          >
             {t("dev.clearHistory")}
           </AlertDialogTrigger>
           <AlertDialogContent>
@@ -72,7 +77,12 @@ export function CacheClear(props: CacheClearProps) {
           </p>
         </div>
         <AlertDialog open={settingsOpen()} onOpenChange={setSettingsOpen}>
-          <AlertDialogTrigger as={Button} variant="destructive" size="sm">
+          <AlertDialogTrigger
+            as={Button}
+            variant="destructive"
+            size="sm"
+            class="min-w-[8rem]"
+          >
             {t("dev.resetSettings")}
           </AlertDialogTrigger>
           <AlertDialogContent>
@@ -109,7 +119,12 @@ export function CacheClear(props: CacheClearProps) {
             </p>
           </div>
           <AlertDialog open={ffmpegOpen()} onOpenChange={setFfmpegOpen}>
-            <AlertDialogTrigger as={Button} variant="destructive" size="sm">
+            <AlertDialogTrigger
+              as={Button}
+              variant="destructive"
+              size="sm"
+              class="min-w-[8rem]"
+            >
               {t("dev.deleteFfmpeg")}
             </AlertDialogTrigger>
             <AlertDialogContent>

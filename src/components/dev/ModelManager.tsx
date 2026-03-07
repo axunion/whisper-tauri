@@ -21,8 +21,6 @@ export function ModelManager(props: ModelManagerProps) {
   const [deletingModelId, setDeletingModelId] = createSignal<string | null>(
     null,
   );
-  const [isDeletingAll, setIsDeletingAll] = createSignal(false);
-  const [deleteAllOpen, setDeleteAllOpen] = createSignal(false);
 
   const downloadedModels = () =>
     props.whisper.models().filter((m) => m.downloaded);
@@ -32,17 +30,6 @@ export function ModelManager(props: ModelManagerProps) {
     await props.whisper.deleteModel(modelId);
     setDeletingModelId(null);
     toast.success(t("dev.modelDeletedToast"));
-  }
-
-  async function handleDeleteAll() {
-    setIsDeletingAll(true);
-    const models = downloadedModels();
-    for (const model of models) {
-      await props.whisper.deleteModel(model.id);
-    }
-    setIsDeletingAll(false);
-    setDeleteAllOpen(false);
-    toast.success(t("dev.allModelsDeletedToast"));
   }
 
   return (
@@ -70,6 +57,7 @@ export function ModelManager(props: ModelManagerProps) {
                   as={Button}
                   variant="destructive"
                   size="sm"
+                  class="min-w-[8rem]"
                   disabled={deletingModelId() === model.id}
                 >
                   {deletingModelId() === model.id
@@ -100,34 +88,6 @@ export function ModelManager(props: ModelManagerProps) {
             </div>
           )}
         </For>
-
-        <AlertDialog open={deleteAllOpen()} onOpenChange={setDeleteAllOpen}>
-          <AlertDialogTrigger
-            as={Button}
-            variant="destructive"
-            size="sm"
-            class="w-full"
-            disabled={isDeletingAll()}
-          >
-            {isDeletingAll() ? t("dev.deletingAll") : t("dev.deleteAllModels")}
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogTitle>{t("dev.deleteAllModels")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("dev.deleteAllModelsConfirmation", {
-                count: downloadedModels().length,
-              })}
-            </AlertDialogDescription>
-            <div class="flex justify-end gap-2">
-              <AlertDialogTrigger as={Button} variant="outline">
-                {t("common.cancel")}
-              </AlertDialogTrigger>
-              <Button variant="destructive" onClick={handleDeleteAll}>
-                {t("dev.deleteAll")}
-              </Button>
-            </div>
-          </AlertDialogContent>
-        </AlertDialog>
       </Show>
     </div>
   );

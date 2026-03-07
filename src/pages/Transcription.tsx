@@ -170,27 +170,33 @@ export default function Transcription() {
 
   return (
     <div class="animate-fade-in mx-auto w-full max-w-3xl space-y-8">
-      <h1 class="text-2xl font-bold">{t("transcription.title")}</h1>
-
       <ErrorDisplay
         error={combinedError()}
         onDismiss={clearAllErrors}
         onRetry={canStartFile() ? handleStartFile : undefined}
       />
 
-      <Card class="rounded-2xl shadow-sm">
-        <CardContent class="pt-6">
-          <Tabs value={activeTab()} onChange={setActiveTab}>
+      <Card class="h-[420px] rounded-2xl shadow-sm">
+        <CardContent class="flex h-full flex-col pt-6">
+          <Tabs
+            value={activeTab()}
+            onChange={setActiveTab}
+            class="flex flex-1 flex-col"
+          >
             <TabsList class="w-full">
-              <TabsTrigger value="file" class="flex-1">
+              <TabsTrigger
+                value="file"
+                class="flex-1"
+                disabled={recording.isRecording()}
+              >
                 {t("recording.fileTab")}
               </TabsTrigger>
               <TabsTrigger value="record" class="flex-1">
                 {t("recording.recordTab")}
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="file">
-              <div class="flex h-[176px] flex-col justify-center">
+            <TabsContent value="file" class="flex-1">
+              <div class="flex h-full flex-col justify-center">
                 <FileSelector
                   file={whisper.file()}
                   onFileSelect={(file) => whisper.setFile(file)}
@@ -199,14 +205,8 @@ export default function Transcription() {
                 />
               </div>
             </TabsContent>
-            <TabsContent value="record">
-              <div
-                class={
-                  recording.tempFilePath() !== null
-                    ? "flex h-[176px] flex-col"
-                    : "flex h-[280px] flex-col"
-                }
-              >
+            <TabsContent value="record" class="flex-1">
+              <div class="flex h-full flex-col">
                 <RecordingPanel
                   devices={recording.devices()}
                   selectedDevice={recording.selectedDevice()}

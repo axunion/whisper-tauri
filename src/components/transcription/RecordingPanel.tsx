@@ -60,50 +60,58 @@ const RecordingPanel: Component<RecordingPanelProps> = (props) => {
 
   return (
     <div class="flex h-full flex-col gap-3">
-      {/* Device selector */}
+      {/* No devices warning - only in idle state */}
       <Show
-        when={props.devices.length > 0}
-        fallback={
-          <p class="py-6 text-center text-sm text-muted-foreground">
-            {t("recording.noDevices")}
-          </p>
+        when={
+          props.devices.length === 0 && !props.isRecording && !hasRecording()
         }
       >
-        <div class="grid grid-cols-2 items-center gap-4">
-          <span class="text-right text-sm font-medium leading-none text-muted-foreground">
-            {t("recording.selectDevice")}
-          </span>
-          <Select<AudioDevice>
-            multiple={false}
-            options={props.devices}
-            optionValue="id"
-            optionTextValue="name"
-            value={props.selectedDevice}
-            onChange={(value) => {
-              if (value) props.onSelectDevice(value);
-            }}
-            disabled={props.isRecording || props.disabled || false}
-            disallowEmptySelection
-            itemComponent={(itemProps) => (
-              <SelectItem item={itemProps.item}>
-                {itemProps.item.rawValue.name}
-                <Show when={itemProps.item.rawValue.isDefault}>
-                  <span class="ml-1 text-xs text-muted-foreground">
-                    ({t("recording.defaultDevice")})
-                  </span>
-                </Show>
-              </SelectItem>
-            )}
-          >
-            <SelectTrigger>
-              <SelectValue<AudioDevice>>
-                {(state) =>
-                  state.selectedOption()?.name ?? t("recording.selectDevice")
-                }
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent />
-          </Select>
+        <p class="py-6 text-center text-sm text-muted-foreground">
+          {t("recording.noDevices")}
+        </p>
+      </Show>
+
+      {/* Device selector - invisible during recording/post-recording to preserve layout */}
+      <Show when={props.devices.length > 0}>
+        <div
+          class={props.isRecording || hasRecording() ? "invisible" : undefined}
+        >
+          <div class="grid grid-cols-2 items-center gap-4">
+            <span class="text-right text-sm font-medium leading-none text-muted-foreground">
+              {t("recording.selectDevice")}
+            </span>
+            <Select<AudioDevice>
+              multiple={false}
+              options={props.devices}
+              optionValue="id"
+              optionTextValue="name"
+              value={props.selectedDevice}
+              onChange={(value) => {
+                if (value) props.onSelectDevice(value);
+              }}
+              disabled={props.isRecording || props.disabled || false}
+              disallowEmptySelection
+              itemComponent={(itemProps) => (
+                <SelectItem item={itemProps.item}>
+                  {itemProps.item.rawValue.name}
+                  <Show when={itemProps.item.rawValue.isDefault}>
+                    <span class="ml-1 text-xs text-muted-foreground">
+                      ({t("recording.defaultDevice")})
+                    </span>
+                  </Show>
+                </SelectItem>
+              )}
+            >
+              <SelectTrigger>
+                <SelectValue<AudioDevice>>
+                  {(state) =>
+                    state.selectedOption()?.name ?? t("recording.selectDevice")
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent />
+            </Select>
+          </div>
         </div>
       </Show>
 

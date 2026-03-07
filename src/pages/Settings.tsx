@@ -83,8 +83,6 @@ export default function Settings() {
 
   return (
     <div class="animate-fade-in mx-auto w-full max-w-3xl space-y-6">
-      <h1 class="text-2xl font-bold">{t("settings.title")}</h1>
-
       {/* General Settings */}
       <Card>
         <CardHeader>
