@@ -1,5 +1,15 @@
 use serde::{Deserialize, Serialize};
 
+/// Sort order for history listing.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum HistorySortBy {
+    #[default]
+    Date,
+    Duration,
+    FileName,
+}
+
 /// A segment of transcribed text with timing information (for history storage).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -85,6 +95,9 @@ pub struct HistoryFilter {
     /// Maximum number of entries to return
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
+    /// Sort order
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sort_by: Option<HistorySortBy>,
 }
 
 /// Parameters for full-text search of history entries.
@@ -102,6 +115,9 @@ pub struct HistorySearchParams {
     /// Maximum number of entries to return
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
+    /// Sort order
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sort_by: Option<HistorySortBy>,
 }
 
 #[cfg(test)]
@@ -181,5 +197,37 @@ mod tests {
         let json = serde_json::to_string(&filter).expect("Failed to serialize");
         assert!(!json.contains("dateFrom"));
         assert!(!json.contains("dateTo"));
+        assert!(!json.contains("sortBy"));
+    }
+
+    #[test]
+    fn history_sort_by_serializes_to_camel_case() {
+        let json = serde_json::to_string(&HistorySortBy::Date).expect("serialize");
+        assert_eq!(json, "\"date\"");
+
+        let json = serde_json::to_string(&HistorySortBy::Duration).expect("serialize");
+        assert_eq!(json, "\"duration\"");
+
+        let json = serde_json::to_string(&HistorySortBy::FileName).expect("serialize");
+        assert_eq!(json, "\"fileName\"");
+    }
+
+    #[test]
+    fn history_sort_by_deserializes_from_camel_case() {
+        let sort: HistorySortBy = serde_json::from_str("\"date\"").expect("deserialize");
+        assert_eq!(sort, HistorySortBy::Date);
+
+        let sort: HistorySortBy = serde_json::from_str("\"fileName\"").expect("deserialize");
+        assert_eq!(sort, HistorySortBy::FileName);
+    }
+
+    #[test]
+    fn history_filter_with_sort_by() {
+        let filter = HistoryFilter {
+            sort_by: Some(HistorySortBy::Duration),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&filter).expect("serialize");
+        assert!(json.contains("\"sortBy\":\"duration\""));
     }
 }

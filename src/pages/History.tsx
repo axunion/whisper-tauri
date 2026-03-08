@@ -6,6 +6,7 @@ import {
   HistoryFilter,
   HistoryList,
   SearchBar,
+  SortSelect,
 } from "~/components/history";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
 import {
@@ -18,7 +19,10 @@ import {
 import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
 import { createHistory } from "~/primitives/createHistory";
-import type { HistoryFilter as HistoryFilterType } from "~/types";
+import type {
+  HistoryFilter as HistoryFilterType,
+  HistorySortBy,
+} from "~/types";
 
 const SEARCH_MIN_LENGTH = 3;
 const DEBOUNCE_MS = 300;
@@ -79,6 +83,10 @@ export default function History() {
     }
   }
 
+  function handleSortChange(sortBy: HistorySortBy): void {
+    handleFilterChange({ ...history.filter(), sortBy });
+  }
+
   async function handleDeleteSelected(): Promise<void> {
     const ids = [...history.selectedIds()];
     if (ids.length > 0) {
@@ -108,14 +116,22 @@ export default function History() {
           </CardTitle>
         </CardHeader>
         <CardContent class="space-y-4">
-          <SearchBar onInput={handleSearchInput} onClear={handleClearSearch} />
+          {/* Row 1: Search + Sort */}
+          <div class="flex items-center gap-2">
+            <div class="flex-1">
+              <SearchBar
+                onInput={handleSearchInput}
+                onClear={handleClearSearch}
+              />
+            </div>
+            <SortSelect
+              value={history.filter().sortBy ?? "date"}
+              onChange={handleSortChange}
+            />
+          </div>
 
-          <HistoryFilter
-            filter={history.filter()}
-            onFilterChange={handleFilterChange}
-          />
-
-          <Show when={!shouldHideList()}>
+          {/* Row 2: Selection actions (left) + Quick filter chips (right) */}
+          <div class="flex items-center">
             <HistoryActions
               selectedCount={history.selectedIds().size}
               totalCount={history.entries().length}
@@ -123,11 +139,20 @@ export default function History() {
               onClearSelection={() => history.clearSelection()}
               onDeleteSelected={handleDeleteSelected}
             />
+            <div class="ml-auto">
+              <HistoryFilter
+                filter={history.filter()}
+                onFilterChange={handleFilterChange}
+              />
+            </div>
+          </div>
 
+          {/* List */}
+          <Show when={!shouldHideList()}>
             <Show
               when={!history.isSearching() || history.entries().length > 0}
               fallback={
-                <div class="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <div class="flex min-h-48 flex-col items-center justify-center text-muted-foreground">
                   <p class="text-sm">{t("history.searchNoResults")}</p>
                 </div>
               }

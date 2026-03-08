@@ -113,7 +113,12 @@ pub fn search_entries(
         param_values.push(Box::new(format!("{to}T23:59:59")));
     }
 
-    sql.push_str(" ORDER BY h.created_at DESC");
+    write!(
+        sql,
+        " {}",
+        super::db::sort_clause(params.sort_by.as_ref(), "h.")
+    )
+    .ok();
     if let Some(limit) = params.limit {
         write!(sql, " LIMIT {limit}").ok();
     }
@@ -279,6 +284,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            sort_by: None,
         };
         let results = search_entries(&conn, &params).expect("search");
         assert_eq!(results.len(), 1);
@@ -301,6 +307,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            sort_by: None,
         };
         let results = search_entries(&conn, &params).expect("search");
         assert_eq!(results.len(), 1);
@@ -330,6 +337,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            sort_by: None,
         };
         let results = search_entries(&conn, &params).expect("search");
         assert_eq!(results.len(), 1);
@@ -352,6 +360,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            sort_by: None,
         };
         let results = search_entries(&conn, &params).expect("search");
         assert!(results.is_empty());
@@ -368,6 +377,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            sort_by: None,
         };
         let results = search_entries(&conn, &params).expect("search");
         assert!(results.is_empty());
@@ -385,6 +395,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            sort_by: None,
         };
         assert_eq!(search_entries(&conn, &params).expect("search").len(), 1);
 
@@ -408,6 +419,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            sort_by: None,
         };
         assert!(search_entries(&conn, &params).expect("search").is_empty());
     }
@@ -426,6 +438,7 @@ mod tests {
             date_from: Some("2026-01-01".to_string()),
             date_to: None,
             limit: None,
+            sort_by: None,
         };
         let results = search_entries(&conn, &params).expect("search");
         assert_eq!(results.len(), 1);
@@ -437,6 +450,7 @@ mod tests {
             date_from: None,
             date_to: Some("2025-12-31".to_string()),
             limit: None,
+            sort_by: None,
         };
         let results = search_entries(&conn, &params).expect("search");
         assert_eq!(results.len(), 1);
@@ -448,6 +462,7 @@ mod tests {
             date_from: Some("2026-01-01".to_string()),
             date_to: Some("2026-12-31".to_string()),
             limit: None,
+            sort_by: None,
         };
         let results = search_entries(&conn, &params).expect("search");
         assert_eq!(results.len(), 1);
@@ -474,6 +489,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            sort_by: None,
         };
         let results = search_entries(&conn, &params).expect("search");
         assert_eq!(results.len(), 1);
@@ -522,6 +538,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            sort_by: None,
         };
         let results = search_entries(&conn, &params).expect("search");
         assert_eq!(results.len(), 1);
@@ -567,6 +584,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: Some(3),
+            sort_by: None,
         };
         let results = search_entries(&conn, &params).expect("search");
         assert_eq!(results.len(), 3);
@@ -588,6 +606,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            sort_by: None,
         };
         let results = search_entries(&conn, &params).expect("search");
         assert_eq!(results.len(), 5);

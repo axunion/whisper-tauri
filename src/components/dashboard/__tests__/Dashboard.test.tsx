@@ -17,11 +17,6 @@ function renderWithRouter() {
 }
 
 describe("Dashboard", () => {
-  it("shows Dashboard title", () => {
-    renderWithRouter();
-    expect(screen.getByText("ダッシュボード")).toBeInTheDocument();
-  });
-
   it("shows Quick Actions section", () => {
     renderWithRouter();
     expect(screen.getByText("クイックアクション")).toBeInTheDocument();

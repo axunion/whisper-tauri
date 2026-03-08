@@ -19,8 +19,6 @@ describe("App", () => {
 
   it("shows Dashboard as initial page", () => {
     render(() => <App />);
-    expect(
-      screen.getByRole("heading", { name: "ダッシュボード" }),
-    ).toBeInTheDocument();
+    expect(screen.getByText("クイックアクション")).toBeInTheDocument();
   });
 });

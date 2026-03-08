@@ -12,6 +12,7 @@ export type {
   HistorySaveParams,
   HistorySearchParams,
   HistorySegment,
+  HistorySortBy,
 } from "./history";
 export type {
   AudioDevice,

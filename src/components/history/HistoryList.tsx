@@ -1,7 +1,6 @@
-import { FiFileText } from "solid-icons/fi";
-import type { Component } from "solid-js";
+import { FiFileText, FiMic, FiMusic, FiVideo } from "solid-icons/fi";
+import type { Component, JSX } from "solid-js";
 import { For, Show } from "solid-js";
-import { Badge } from "~/components/ui/Badge";
 import { Checkbox } from "~/components/ui/Checkbox";
 import { useI18n } from "~/i18n";
 import type { HistoryMeta } from "~/types";
@@ -18,6 +17,21 @@ function formatDuration(ms: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${String(minutes)}m ${String(seconds)}s`;
+}
+
+const VIDEO_EXTS = [".mp4", ".mov", ".avi", ".mkv", ".webm", ".flv"];
+
+function hasFileExtension(fileName: string): boolean {
+  return /\.\w+$/.test(fileName);
+}
+
+function getSourceIcon(fileName: string): JSX.Element {
+  // Recording entries have no file extension (e.g. "Recording", "録音")
+  if (!hasFileExtension(fileName)) return <FiMic class="size-4" />;
+  const lower = fileName.toLowerCase();
+  if (VIDEO_EXTS.some((ext) => lower.endsWith(ext)))
+    return <FiVideo class="size-4" />;
+  return <FiMusic class="size-4" />;
 }
 
 const HistoryList: Component<HistoryListProps> = (props) => {
@@ -38,13 +52,13 @@ const HistoryList: Component<HistoryListProps> = (props) => {
     <Show
       when={props.entries.length > 0}
       fallback={
-        <div class="flex flex-col items-center justify-center py-12 text-muted-foreground">
+        <div class="flex min-h-48 flex-col items-center justify-center text-muted-foreground">
           <FiFileText class="mb-2 size-8" />
           <p class="text-sm">{t("history.noEntries")}</p>
         </div>
       }
     >
-      <div class="divide-y">
+      <div class="min-h-48 divide-y">
         <For each={props.entries}>
           {(entry) => (
             <div class="flex items-start gap-3 px-2 py-3 hover:bg-muted/50">
@@ -52,6 +66,7 @@ const HistoryList: Component<HistoryListProps> = (props) => {
                 <Checkbox
                   checked={props.selectedIds.has(entry.id)}
                   onChange={() => props.onToggleSelect(entry.id)}
+                  colorScheme="neutral"
                 />
               </div>
               <button
@@ -60,12 +75,12 @@ const HistoryList: Component<HistoryListProps> = (props) => {
                 onClick={() => props.onViewEntry(entry.id)}
               >
                 <div class="flex items-center gap-2">
+                  <span class="shrink-0 text-muted-foreground">
+                    {getSourceIcon(entry.fileName)}
+                  </span>
                   <span class="truncate text-sm font-medium">
                     {entry.fileName}
                   </span>
-                  <Badge variant="secondary" class="shrink-0 text-xs">
-                    {entry.language}
-                  </Badge>
                 </div>
                 <p class="truncate text-xs text-muted-foreground">
                   {entry.textPreview}
@@ -73,7 +88,6 @@ const HistoryList: Component<HistoryListProps> = (props) => {
                 <div class="flex gap-3 text-xs text-muted-foreground">
                   <span>{formatDate(entry.createdAt)}</span>
                   <span>{formatDuration(entry.duration)}</span>
-                  <span>{entry.modelId}</span>
                 </div>
               </button>
             </div>

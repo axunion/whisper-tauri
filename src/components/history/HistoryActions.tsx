@@ -1,14 +1,14 @@
-import { FiCheckSquare, FiTrash2 } from "solid-icons/fi";
+import { FiTrash2 } from "solid-icons/fi";
 import type { Component } from "solid-js";
-import { createSignal, Show } from "solid-js";
+import { createSignal } from "solid-js";
 import {
   AlertDialog,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "~/components/ui/AlertDialog";
 import { Button } from "~/components/ui/Button";
+import { Checkbox } from "~/components/ui/Checkbox";
 import { useI18n } from "~/i18n";
 
 interface HistoryActionsProps {
@@ -25,55 +25,69 @@ const HistoryActions: Component<HistoryActionsProps> = (props) => {
 
   const allSelected = () =>
     props.totalCount > 0 && props.selectedCount === props.totalCount;
+  const hasSelection = () => props.selectedCount > 0;
 
   return (
-    <div class="flex items-center gap-2">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() =>
+    <div class="flex h-7 items-center gap-2.5">
+      <Checkbox
+        checked={allSelected()}
+        indeterminate={hasSelection() && !allSelected()}
+        onChange={() =>
           allSelected() ? props.onClearSelection() : props.onSelectAll()
         }
         disabled={props.totalCount === 0}
-      >
-        <FiCheckSquare class="size-4" />
-        {allSelected() ? t("history.deselectAll") : t("history.selectAll")}
-      </Button>
+        class="scale-110"
+      />
 
-      <Show when={props.selectedCount > 0}>
-        <AlertDialog
-          open={deleteSelectedOpen()}
-          onOpenChange={setDeleteSelectedOpen}
+      <div
+        class="flex items-center gap-1.5 transition-opacity duration-150"
+        classList={{
+          "opacity-0 pointer-events-none": !hasSelection(),
+          "opacity-100": hasSelection(),
+        }}
+        aria-hidden={!hasSelection()}
+      >
+        <span class="text-xs tabular-nums text-muted-foreground">
+          {props.selectedCount}
+        </span>
+        <button
+          type="button"
+          class="rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          onClick={() => setDeleteSelectedOpen(true)}
+          title={t("history.deleteCount", { count: props.selectedCount })}
         >
-          <AlertDialogTrigger as={Button} variant="destructive" size="sm">
-            <FiTrash2 class="size-4" />
-            {t("history.deleteCount", { count: props.selectedCount })}
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogTitle>{t("history.deleteSelected")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("history.deleteConfirmation", { count: props.selectedCount })}
-            </AlertDialogDescription>
-            <div class="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setDeleteSelectedOpen(false)}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  props.onDeleteSelected();
-                  setDeleteSelectedOpen(false);
-                }}
-              >
-                {t("common.delete")}
-              </Button>
-            </div>
-          </AlertDialogContent>
-        </AlertDialog>
-      </Show>
+          <FiTrash2 class="size-[18px]" />
+        </button>
+      </div>
+
+      <AlertDialog
+        open={deleteSelectedOpen()}
+        onOpenChange={setDeleteSelectedOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogTitle>{t("history.deleteSelected")}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("history.deleteConfirmation", { count: props.selectedCount })}
+          </AlertDialogDescription>
+          <div class="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteSelectedOpen(false)}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                props.onDeleteSelected();
+                setDeleteSelectedOpen(false);
+              }}
+            >
+              {t("common.delete")}
+            </Button>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

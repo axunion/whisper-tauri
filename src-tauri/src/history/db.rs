@@ -4,7 +4,21 @@ use std::path::{Path, PathBuf};
 use rusqlite::Connection;
 
 use super::error::HistoryError;
-use super::types::{HistoryEntry, HistoryFilter, HistoryMeta, HistorySaveParams, HistorySegment};
+use super::types::{
+    HistoryEntry, HistoryFilter, HistoryMeta, HistorySaveParams, HistorySegment, HistorySortBy,
+};
+
+/// Builds an ORDER BY clause based on the sort option.
+#[must_use]
+pub fn sort_clause(sort_by: Option<&HistorySortBy>, prefix: &str) -> String {
+    match sort_by {
+        Some(HistorySortBy::Duration) => format!("ORDER BY {prefix}duration DESC"),
+        Some(HistorySortBy::FileName) => {
+            format!("ORDER BY {prefix}file_name COLLATE NOCASE ASC")
+        }
+        Some(HistorySortBy::Date) | None => format!("ORDER BY {prefix}created_at DESC"),
+    }
+}
 
 /// Returns the path to the history database file.
 #[must_use]
@@ -167,7 +181,7 @@ pub fn list_entries(
         sql.push_str(" WHERE ");
         sql.push_str(&conditions.join(" AND "));
     }
-    sql.push_str(" ORDER BY created_at DESC");
+    write!(sql, " {}", sort_clause(filter.sort_by.as_ref(), "")).ok();
     if let Some(limit) = filter.limit {
         write!(sql, " LIMIT {limit}").ok();
     }
@@ -615,8 +629,7 @@ mod tests {
         // Filter for 2026 only
         let filter = HistoryFilter {
             date_from: Some("2026-01-01".to_string()),
-            date_to: None,
-            limit: None,
+            ..Default::default()
         };
         let entries = list_entries(&path, &filter).expect("list filtered");
         assert_eq!(entries.len(), 1);
@@ -642,6 +655,7 @@ mod tests {
                 date_from: None,
                 date_to: None,
                 limit: None,
+                sort_by: None,
             },
         )
         .expect("search");
@@ -668,6 +682,7 @@ mod tests {
                 date_from: None,
                 date_to: None,
                 limit: None,
+                sort_by: None,
             },
         )
         .expect("search");
@@ -694,6 +709,7 @@ mod tests {
                 date_from: None,
                 date_to: None,
                 limit: None,
+                sort_by: None,
             },
         )
         .expect("search");
@@ -754,6 +770,7 @@ mod tests {
                 date_from: None,
                 date_to: None,
                 limit: None,
+                sort_by: None,
             },
         )
         .expect("search");
@@ -769,9 +786,8 @@ mod tests {
         }
 
         let filter = HistoryFilter {
-            date_from: None,
-            date_to: None,
             limit: Some(3),
+            ..Default::default()
         };
         let entries = list_entries(&path, &filter).expect("list");
         assert_eq!(entries.len(), 3);
@@ -786,5 +802,85 @@ mod tests {
 
         let entries = list_entries(&path, &HistoryFilter::default()).expect("list");
         assert_eq!(entries.len(), 5);
+    }
+
+    #[test]
+    fn list_entries_sorted_by_duration() {
+        let (_dir, path) = setup_db();
+
+        let conn = Connection::open(&path).expect("open db");
+        let text_compressed = compress_text("test").expect("compress");
+        let segments_compressed = compress_text("[]").expect("compress");
+
+        for (id, duration) in [
+            ("short", 10000_i64),
+            ("long", 60000_i64),
+            ("mid", 30000_i64),
+        ] {
+            conn.execute(
+                "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                rusqlite::params![
+                    id,
+                    "2026-01-01T10:00:00",
+                    "test.wav",
+                    "ja",
+                    "small",
+                    duration,
+                    text_compressed,
+                    segments_compressed,
+                ],
+            )
+            .expect("insert");
+        }
+        drop(conn);
+
+        let filter = HistoryFilter {
+            sort_by: Some(HistorySortBy::Duration),
+            ..Default::default()
+        };
+        let entries = list_entries(&path, &filter).expect("list");
+        assert_eq!(entries.len(), 3);
+        assert_eq!(entries[0].id, "long");
+        assert_eq!(entries[1].id, "mid");
+        assert_eq!(entries[2].id, "short");
+    }
+
+    #[test]
+    fn list_entries_sorted_by_file_name() {
+        let (_dir, path) = setup_db();
+
+        let conn = Connection::open(&path).expect("open db");
+        let text_compressed = compress_text("test").expect("compress");
+        let segments_compressed = compress_text("[]").expect("compress");
+
+        for (id, file_name) in [("c", "charlie.wav"), ("a", "Alpha.wav"), ("b", "bravo.wav")] {
+            conn.execute(
+                "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                rusqlite::params![
+                    id,
+                    "2026-01-01T10:00:00",
+                    file_name,
+                    "ja",
+                    "small",
+                    30000_i64,
+                    text_compressed,
+                    segments_compressed,
+                ],
+            )
+            .expect("insert");
+        }
+        drop(conn);
+
+        let filter = HistoryFilter {
+            sort_by: Some(HistorySortBy::FileName),
+            ..Default::default()
+        };
+        let entries = list_entries(&path, &filter).expect("list");
+        assert_eq!(entries.len(), 3);
+        assert_eq!(entries[0].id, "a"); // Alpha (case-insensitive)
+        assert_eq!(entries[1].id, "b"); // bravo
+        assert_eq!(entries[2].id, "c"); // charlie
     }
 }

@@ -73,11 +73,16 @@ export const ja: Dictionary = {
     deleteConfirmation:
       "{count} 件の履歴が完全に削除されます。この操作は取り消せません。",
     deletedToast: "履歴を削除しました",
-    from: "開始日",
-    to: "終了日",
     modelLabel: "モデル:",
     searchPlaceholder: "キーワードで検索",
     searchNoResults: "検索結果が見つかりません。",
+    filterToday: "今日",
+    filterThisWeek: "今週",
+    filterThisMonth: "今月",
+    filterAll: "すべて",
+    sortDate: "日付順",
+    sortDuration: "期間順",
+    sortFileName: "ファイル名順",
   },
   settings: {
     title: "設定",

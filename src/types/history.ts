@@ -70,6 +70,9 @@ export interface HistorySaveParams {
   segments: HistorySegment[];
 }
 
+/** Sort order for history listing. */
+export type HistorySortBy = "date" | "duration" | "fileName";
+
 /**
  * Filter for listing history entries.
  */
@@ -80,6 +83,8 @@ export interface HistoryFilter {
   dateTo?: string;
   /** Maximum number of entries to return */
   limit?: number;
+  /** Sort order */
+  sortBy?: HistorySortBy;
 }
 
 /**
@@ -94,4 +99,6 @@ export interface HistorySearchParams {
   dateTo?: string;
   /** Maximum number of entries to return */
   limit?: number;
+  /** Sort order */
+  sortBy?: HistorySortBy;
 }

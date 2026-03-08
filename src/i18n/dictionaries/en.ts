@@ -72,11 +72,16 @@ export const en: Dictionary = {
     deleteConfirmation:
       "{count} entries will be permanently deleted. This action cannot be undone.",
     deletedToast: "History deleted",
-    from: "From",
-    to: "To",
     modelLabel: "Model:",
     searchPlaceholder: "Search by keyword",
     searchNoResults: "No search results found.",
+    filterToday: "Today",
+    filterThisWeek: "This Week",
+    filterThisMonth: "This Month",
+    filterAll: "All",
+    sortDate: "Date",
+    sortDuration: "Duration",
+    sortFileName: "File Name",
   },
   settings: {
     title: "Settings",

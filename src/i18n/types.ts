@@ -71,11 +71,16 @@ export interface Dictionary {
     deleteSelected: string;
     deleteConfirmation: string;
     deletedToast: string;
-    from: string;
-    to: string;
     modelLabel: string;
     searchPlaceholder: string;
     searchNoResults: string;
+    filterToday: string;
+    filterThisWeek: string;
+    filterThisMonth: string;
+    filterAll: string;
+    sortDate: string;
+    sortDuration: string;
+    sortFileName: string;
   };
   settings: {
     title: string;
