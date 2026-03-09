@@ -22,6 +22,14 @@ export type {
 export type { AppSettings } from "./settings";
 export { DEFAULT_SETTINGS } from "./settings";
 export type {
+  InferenceProgress,
+  ServerStatus,
+  SummaryLength,
+  SummaryOptions,
+  TextDownloadProgress,
+  TextModelInfo,
+} from "./text-processing";
+export type {
   DownloadProgress,
   FileInfo,
   ModelInfo,

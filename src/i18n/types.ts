@@ -14,6 +14,7 @@ export interface Dictionary {
     clear: string;
     recommended: string;
     deleting: string;
+    processing: string;
   };
   nav: {
     dashboard: string;
@@ -147,10 +148,42 @@ export interface Dictionary {
     fileTab: string;
     recordTab: string;
   };
+  textProcessing: {
+    proofread: string;
+    summarize: string;
+    proofreading: string;
+    summarizing: string;
+    proofreadResult: string;
+    summaryResult: string;
+    serverStarting: string;
+    serverNotReady: string;
+    downloadServerFirst: string;
+    downloadModelFirst: string;
+    modelManagement: string;
+    modelManagementDescription: string;
+    serverManagement: string;
+    serverManagementDescription: string;
+    deleteModel: string;
+    deleteModelConfirmation: string;
+    modelDeletedToast: string;
+    serverDownloadedToast: string;
+    modelDownloadedToast: string;
+    summaryLengthShort: string;
+    summaryLengthMedium: string;
+    summaryLengthLong: string;
+    bulletPoints: string;
+    copyResult: string;
+    replaceText: string;
+    proofreadCompletedToast: string;
+    summarizeCompletedToast: string;
+    cancelledToast: string;
+  };
   dev: {
     title: string;
     cachesClear: string;
-    modelManager: string;
+    audioModelManager: string;
+    textModelManager: string;
+    ffmpegManager: string;
     debugLog: string;
     devOnlyMessage: string;
     clearHistory: string;
@@ -177,6 +210,11 @@ export interface Dictionary {
     logCopyFailedToast: string;
     ffmpegDeletedToast: string;
     settingsResetToast: string;
+    llmTester: string;
+    llmTesterDescription: string;
+    inputPlaceholder: string;
+    send: string;
+    prerequisiteWarning: string;
   };
 }
 

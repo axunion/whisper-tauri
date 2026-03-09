@@ -4,6 +4,7 @@ import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { FiCheck, FiCopy, FiDownload } from "solid-icons/fi";
 import type { Component } from "solid-js";
 import { createSignal, Show } from "solid-js";
+import { ProofreadPanel, SummaryPanel } from "~/components/text-processing";
 import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
 import {
@@ -13,12 +14,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/Select";
+import { Separator } from "~/components/ui/Separator";
 import { useI18n } from "~/i18n";
 import type { ExportFormat } from "~/lib/export";
 import { exportResult, getExtension } from "~/lib/export";
 import { toast } from "~/lib/toast";
 import { createSettings } from "~/primitives/createSettings";
-import type { TranscriptionResult } from "~/types";
+import { createTextProcessing } from "~/primitives/createTextProcessing";
+import type { SummaryOptions, TranscriptionResult } from "~/types";
 
 interface ResultViewerProps {
   result: TranscriptionResult;
@@ -46,6 +49,9 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
   const [format, setFormat] = createSignal<ExportFormat>(
     settings.outputFormat(),
   );
+  const [showProofread, setShowProofread] = createSignal(false);
+  const [showSummary, setShowSummary] = createSignal(false);
+  const tp = createTextProcessing();
 
   async function handleCopy() {
     try {
@@ -131,6 +137,70 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
       <div class="max-h-80 overflow-y-auto rounded-lg border bg-muted/50 p-4">
         <p class="whitespace-pre-wrap text-sm">{props.result.text}</p>
       </div>
+
+      {/* Text Processing Actions */}
+      <div class="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setShowProofread(true);
+            setShowSummary(false);
+            tp.proofread(props.result.text).then((result) => {
+              if (result) {
+                toast.success(t("textProcessing.proofreadCompletedToast"));
+              }
+            });
+          }}
+          disabled={tp.isProcessing()}
+        >
+          {tp.isProcessing() && showProofread()
+            ? t("textProcessing.proofreading")
+            : t("textProcessing.proofread")}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setShowSummary(true);
+            setShowProofread(false);
+          }}
+          disabled={tp.isProcessing()}
+        >
+          {tp.isProcessing() && showSummary()
+            ? t("textProcessing.summarizing")
+            : t("textProcessing.summarize")}
+        </Button>
+      </div>
+
+      {/* Proofread Panel */}
+      <Show when={showProofread()}>
+        <Separator />
+        <ProofreadPanel
+          result={tp.proofreadResult()}
+          inferenceProgress={tp.inferenceProgress()}
+          isProcessing={tp.isProcessing()}
+          onCancel={() => tp.cancel()}
+        />
+      </Show>
+
+      {/* Summary Panel */}
+      <Show when={showSummary()}>
+        <Separator />
+        <SummaryPanel
+          result={tp.summaryResult()}
+          inferenceProgress={tp.inferenceProgress()}
+          isProcessing={tp.isProcessing()}
+          onCancel={() => tp.cancel()}
+          onSummarize={(options: SummaryOptions) => {
+            tp.summarize(props.result.text, options).then((result) => {
+              if (result) {
+                toast.success(t("textProcessing.summarizeCompletedToast"));
+              }
+            });
+          }}
+        />
+      </Show>
     </div>
   );
 };

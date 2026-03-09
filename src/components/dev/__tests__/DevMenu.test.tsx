@@ -19,9 +19,9 @@ describe("DevMenu", () => {
     expect(screen.getByText("キャッシュクリア")).toBeInTheDocument();
   });
 
-  it("shows Model Manager section", () => {
+  it("shows Audio Model Manager section", () => {
     renderWithI18n(() => <DevMenu />);
-    expect(screen.getByText("モデル管理")).toBeInTheDocument();
+    expect(screen.getByText("音声モデル管理")).toBeInTheDocument();
   });
 
   it("shows Clear and Copy buttons in Debug Log", () => {

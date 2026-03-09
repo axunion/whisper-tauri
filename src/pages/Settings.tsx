@@ -1,5 +1,6 @@
 import { createSignal, For, onMount, Show } from "solid-js";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
+import { TextModelManager } from "~/components/text-processing";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -315,6 +316,9 @@ export default function Settings() {
           </Show>
         </CardContent>
       </Card>
+
+      {/* Text Model Management */}
+      <TextModelManager />
 
       {/* FFmpeg */}
       <Card>

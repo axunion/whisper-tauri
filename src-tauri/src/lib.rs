@@ -1,6 +1,9 @@
+use tauri::Manager;
+
 pub mod converter;
 pub mod history;
 pub mod recording;
+pub mod text_processing;
 pub mod whisper;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -25,6 +28,9 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .manage(std::sync::Mutex::new(
             recording::capture::RecordingManager::new(),
+        ))
+        .manage(tokio::sync::Mutex::new(
+            text_processing::server::LlamaServerManager::new(),
         ))
         .invoke_handler(tauri::generate_handler![
             greet,
@@ -55,7 +61,34 @@ pub fn run() {
             recording::commands::start_recording,
             recording::commands::stop_recording,
             recording::commands::cleanup_recording,
+            text_processing::commands::text_processing_list_models,
+            text_processing::commands::text_processing_download_model,
+            text_processing::commands::text_processing_delete_model,
+            text_processing::commands::text_processing_download_server,
+            text_processing::commands::text_processing_check_server,
+            text_processing::commands::text_processing_server_status,
+            text_processing::commands::text_processing_chat,
+            text_processing::commands::text_processing_proofread,
+            text_processing::commands::text_processing_summarize,
+            text_processing::commands::text_processing_cancel,
+            text_processing::commands::get_text_processing_model_url,
+            text_processing::commands::set_text_processing_model_url,
+            text_processing::commands::get_text_processing_server_url,
+            text_processing::commands::set_text_processing_server_url,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            if let tauri::RunEvent::Exit = event {
+                if let Some(manager) = app_handle
+                    .try_state::<tokio::sync::Mutex<text_processing::server::LlamaServerManager>>()
+                {
+                    let rt = tokio::runtime::Handle::current();
+                    rt.block_on(async {
+                        let mut mgr = manager.lock().await;
+                        mgr.shutdown().await;
+                    });
+                }
+            }
+        });
 }
