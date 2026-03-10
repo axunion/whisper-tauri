@@ -23,27 +23,44 @@ const TranscriptionProgress: Component<TranscriptionProgressProps> = (
   const { t } = useI18n();
 
   return (
-    <Show when={props.progress}>
-      {(progress) => (
-        <div class="space-y-3">
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-muted-foreground">
-              {formatElapsedTime(progress().elapsedMs)}
-            </span>
-            <span class="font-medium">{Math.round(progress().progress)}%</span>
-          </div>
-          <Progress value={progress().progress} />
-          <Show when={progress().currentSegment}>
-            {(segment) => (
-              <p class="truncate text-xs text-muted-foreground">{segment()}</p>
-            )}
-          </Show>
-          <Button variant="outline" size="sm" onClick={() => props.onCancel()}>
-            {t("common.cancel")}
-          </Button>
-        </div>
-      )}
-    </Show>
+    <div class="space-y-3">
+      <Show
+        when={props.progress}
+        fallback={
+          <>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-muted-foreground">00:00</span>
+              <span class="font-medium">0%</span>
+            </div>
+            <Progress value={0} />
+          </>
+        }
+      >
+        {(progress) => (
+          <>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-muted-foreground">
+                {formatElapsedTime(progress().elapsedMs)}
+              </span>
+              <span class="font-medium">
+                {Math.round(progress().progress)}%
+              </span>
+            </div>
+            <Progress value={progress().progress} />
+            <Show when={progress().currentSegment}>
+              {(segment) => (
+                <p class="truncate text-xs text-muted-foreground">
+                  {segment()}
+                </p>
+              )}
+            </Show>
+          </>
+        )}
+      </Show>
+      <Button variant="outline" size="sm" onClick={() => props.onCancel()}>
+        {t("common.cancel")}
+      </Button>
+    </div>
   );
 };
 

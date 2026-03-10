@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { createSignal, onCleanup } from "solid-js";
+import { batch, createSignal, onCleanup } from "solid-js";
 import { parseError } from "../lib/errors";
 import type {
   DownloadProgress,
@@ -109,7 +109,11 @@ export function createWhisper() {
     if (!currentFile || !currentModel) return;
     if (isProcessing()) return;
 
-    setIsProcessing(true);
+    batch(() => {
+      setProgress(null);
+      setResult(null);
+      setIsProcessing(true);
+    });
     try {
       const transcriptionResult = await invoke<TranscriptionResult>(
         "transcribe_audio",

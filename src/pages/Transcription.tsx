@@ -1,5 +1,12 @@
-import { FiRefreshCw } from "solid-icons/fi";
-import { createMemo, createSignal, onMount, Show } from "solid-js";
+import { FiX } from "solid-icons/fi";
+import {
+  createMemo,
+  createSignal,
+  Match,
+  onMount,
+  Show,
+  Switch,
+} from "solid-js";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
 import {
   FileSelector,
@@ -8,7 +15,7 @@ import {
   TranscriptionProgress,
 } from "~/components/transcription";
 import { Button } from "~/components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
+import { Card, CardContent } from "~/components/ui/Card";
 import { Progress } from "~/components/ui/Progress";
 import {
   Select,
@@ -168,6 +175,15 @@ export default function Transcription() {
     whisper.reset();
   }
 
+  const viewState = createMemo(
+    (): "input" | "converting" | "processing" | "result" => {
+      if (whisper.result()) return "result";
+      if (whisper.isProcessing()) return "processing";
+      if (converter.isConverting()) return "converting";
+      return "input";
+    },
+  );
+
   return (
     <div class="animate-fade-in mx-auto w-full max-w-3xl space-y-8">
       <ErrorDisplay
@@ -176,221 +192,233 @@ export default function Transcription() {
         onRetry={canStartFile() ? handleStartFile : undefined}
       />
 
-      <Card class="h-[420px] rounded-2xl shadow-sm">
-        <CardContent class="flex h-full flex-col pt-6">
-          <Tabs
-            value={activeTab()}
-            onChange={setActiveTab}
-            class="flex flex-1 flex-col"
-          >
-            <TabsList class="w-full">
-              <TabsTrigger
-                value="file"
-                class="flex-1"
-                disabled={recording.isRecording()}
-              >
-                {t("recording.fileTab")}
-              </TabsTrigger>
-              <TabsTrigger value="record" class="flex-1">
-                {t("recording.recordTab")}
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="file" class="flex-1">
-              <div class="flex h-full flex-col justify-center">
-                <FileSelector
-                  file={whisper.file()}
-                  onFileSelect={(file) => whisper.setFile(file)}
-                  onFileClear={() => whisper.setFile(null)}
-                  disabled={whisper.isProcessing() || converter.isConverting()}
-                />
-              </div>
-            </TabsContent>
-            <TabsContent value="record" class="flex-1">
-              <div class="flex h-full flex-col">
-                <RecordingPanel
-                  devices={recording.devices()}
-                  selectedDevice={recording.selectedDevice()}
-                  isRecording={recording.isRecording()}
-                  level={recording.level()}
-                  duration={recording.duration()}
-                  tempFilePath={recording.tempFilePath()}
-                  disabled={whisper.isProcessing()}
-                  onSelectDevice={(d) => recording.selectDevice(d)}
-                  onStartRecording={() => recording.startRecording()}
-                  onStopRecording={() => recording.stopRecording()}
-                  onDiscard={handleDiscardRecording}
-                />
-              </div>
-            </TabsContent>
-          </Tabs>
-
-          <Show
-            when={
-              !whisper.result() &&
-              !whisper.isProcessing() &&
-              !converter.isConverting() &&
-              !recording.isRecording()
-            }
-          >
-            <Show
-              when={activeTab() === "file" || recording.tempFilePath() !== null}
-            >
-              <div class="mt-6 border-t border-border/30 pt-5">
-                <Show
-                  when={downloadedModels().length > 0}
-                  fallback={
-                    <p class="rounded-lg bg-muted/50 py-3 text-center text-sm text-muted-foreground">
-                      {t("transcription.noModelsWarning")}
-                    </p>
-                  }
+      <Card class="rounded-2xl shadow-sm">
+        <CardContent class="pt-6">
+          <Switch>
+            <Match when={viewState() === "input"}>
+              <div class="flex h-[372px] flex-col">
+                <Tabs
+                  value={activeTab()}
+                  onChange={setActiveTab}
+                  class="flex flex-1 flex-col"
                 >
-                  <div class="grid grid-cols-[2fr_2fr_3fr] gap-3">
-                    <div class="space-y-3">
-                      <span class="text-xs font-medium text-muted-foreground">
-                        {t("transcription.model")}
-                      </span>
-                      <Select<ModelInfo>
-                        multiple={false}
-                        options={downloadedModels()}
-                        optionValue="id"
-                        optionTextValue="name"
-                        value={whisper.selectedModel()}
-                        onChange={(value) => {
-                          if (value) whisper.selectModel(value);
-                        }}
-                        disallowEmptySelection
-                        itemComponent={(itemProps) => (
-                          <SelectItem item={itemProps.item}>
-                            {itemProps.item.rawValue.name}
-                          </SelectItem>
-                        )}
-                      >
-                        <SelectTrigger class="h-11 border-0 bg-muted/50">
-                          <SelectValue<ModelInfo>>
-                            {(state) =>
-                              state.selectedOption()?.name ??
-                              t("transcription.model")
-                            }
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent />
-                      </Select>
-                    </div>
-                    <div class="space-y-3">
-                      <span class="text-xs font-medium text-muted-foreground">
-                        {t("transcription.languageLabel")}
-                      </span>
-                      <Select<LanguageOption>
-                        multiple={false}
-                        options={languageOptions}
-                        optionValue="value"
-                        optionTextValue="label"
-                        value={
-                          languageOptions.find(
-                            (o) => o.value === (whisper.language() ?? "auto"),
-                          ) ??
-                          languageOptions[0] ??
-                          null
-                        }
-                        onChange={(value) => {
-                          if (value) {
-                            const lang =
-                              value.value === "auto" ? null : value.value;
-                            whisper.setLanguage(lang);
-                            settings.update({ whisperLanguage: lang });
-                          }
-                        }}
-                        disallowEmptySelection
-                        itemComponent={(itemProps) => (
-                          <SelectItem item={itemProps.item}>
-                            {itemProps.item.rawValue.label}
-                          </SelectItem>
-                        )}
-                      >
-                        <SelectTrigger class="h-11 border-0 bg-muted/50">
-                          <SelectValue<LanguageOption>>
-                            {(state) =>
-                              state.selectedOption()?.label ??
-                              t("transcription.languageAuto")
-                            }
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent />
-                      </Select>
-                    </div>
-                    <div class="flex items-end">
-                      <Button
-                        class="h-11 w-full"
+                  <TabsList class="w-full">
+                    <TabsTrigger
+                      value="file"
+                      class="flex-1"
+                      disabled={recording.isRecording()}
+                    >
+                      {t("recording.fileTab")}
+                    </TabsTrigger>
+                    <TabsTrigger value="record" class="flex-1">
+                      {t("recording.recordTab")}
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="file" class="flex-1">
+                    <div class="flex h-full flex-col justify-center">
+                      <FileSelector
+                        file={whisper.file()}
+                        onFileSelect={(file) => whisper.setFile(file)}
+                        onFileClear={() => whisper.setFile(null)}
                         disabled={
-                          activeTab() === "file"
-                            ? !canStartFile()
-                            : !canStartRecording()
+                          whisper.isProcessing() || converter.isConverting()
                         }
-                        onClick={
-                          activeTab() === "file"
-                            ? handleStartFile
-                            : handleStartRecording
+                      />
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="record" class="flex-1">
+                    <div class="flex h-full flex-col">
+                      <RecordingPanel
+                        devices={recording.devices()}
+                        selectedDevice={recording.selectedDevice()}
+                        isRecording={recording.isRecording()}
+                        level={recording.level()}
+                        duration={recording.duration()}
+                        tempFilePath={recording.tempFilePath()}
+                        disabled={whisper.isProcessing()}
+                        onSelectDevice={(d) => recording.selectDevice(d)}
+                        onStartRecording={() => recording.startRecording()}
+                        onStopRecording={() => recording.stopRecording()}
+                        onDiscard={handleDiscardRecording}
+                      />
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                <Show when={!recording.isRecording()}>
+                  <Show
+                    when={
+                      activeTab() === "file" ||
+                      recording.tempFilePath() !== null
+                    }
+                  >
+                    <div class="mt-6 border-t border-border/30 pt-5">
+                      <Show
+                        when={downloadedModels().length > 0}
+                        fallback={
+                          <p class="rounded-lg bg-muted/50 py-3 text-center text-sm text-muted-foreground">
+                            {t("transcription.noModelsWarning")}
+                          </p>
                         }
                       >
-                        {t("transcription.startTranscription")}
+                        <div class="grid grid-cols-[2fr_2fr_3fr] gap-3">
+                          <div class="space-y-3">
+                            <span class="text-xs font-medium text-muted-foreground">
+                              {t("transcription.model")}
+                            </span>
+                            <Select<ModelInfo>
+                              multiple={false}
+                              options={downloadedModels()}
+                              optionValue="id"
+                              optionTextValue="name"
+                              value={whisper.selectedModel()}
+                              onChange={(value) => {
+                                if (value) whisper.selectModel(value);
+                              }}
+                              disallowEmptySelection
+                              itemComponent={(itemProps) => (
+                                <SelectItem item={itemProps.item}>
+                                  {itemProps.item.rawValue.name}
+                                </SelectItem>
+                              )}
+                            >
+                              <SelectTrigger class="h-11 border-0 bg-muted/50">
+                                <SelectValue<ModelInfo>>
+                                  {(state) =>
+                                    state.selectedOption()?.name ??
+                                    t("transcription.model")
+                                  }
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent />
+                            </Select>
+                          </div>
+                          <div class="space-y-3">
+                            <span class="text-xs font-medium text-muted-foreground">
+                              {t("transcription.languageLabel")}
+                            </span>
+                            <Select<LanguageOption>
+                              multiple={false}
+                              options={languageOptions}
+                              optionValue="value"
+                              optionTextValue="label"
+                              value={
+                                languageOptions.find(
+                                  (o) =>
+                                    o.value === (whisper.language() ?? "auto"),
+                                ) ??
+                                languageOptions[0] ??
+                                null
+                              }
+                              onChange={(value) => {
+                                if (value) {
+                                  const lang =
+                                    value.value === "auto" ? null : value.value;
+                                  whisper.setLanguage(lang);
+                                  settings.update({ whisperLanguage: lang });
+                                }
+                              }}
+                              disallowEmptySelection
+                              itemComponent={(itemProps) => (
+                                <SelectItem item={itemProps.item}>
+                                  {itemProps.item.rawValue.label}
+                                </SelectItem>
+                              )}
+                            >
+                              <SelectTrigger class="h-11 border-0 bg-muted/50">
+                                <SelectValue<LanguageOption>>
+                                  {(state) =>
+                                    state.selectedOption()?.label ??
+                                    t("transcription.languageAuto")
+                                  }
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent />
+                            </Select>
+                          </div>
+                          <div class="flex items-end">
+                            <Button
+                              class="h-11 w-full"
+                              disabled={
+                                activeTab() === "file"
+                                  ? !canStartFile()
+                                  : !canStartRecording()
+                              }
+                              onClick={
+                                activeTab() === "file"
+                                  ? handleStartFile
+                                  : handleStartRecording
+                              }
+                            >
+                              {t("transcription.startTranscription")}
+                            </Button>
+                          </div>
+                        </div>
+                      </Show>
+                    </div>
+                  </Show>
+                </Show>
+              </div>
+            </Match>
+
+            <Match when={viewState() === "converting"}>
+              <div class="space-y-6 py-8">
+                <Show when={whisper.file()}>
+                  {(file) => (
+                    <p class="text-center text-sm text-muted-foreground">
+                      {file().name}
+                    </p>
+                  )}
+                </Show>
+                <Progress indeterminate minValue={0} maxValue={100} />
+                <p class="text-center text-sm font-medium">
+                  {t("transcription.converting")}
+                </p>
+              </div>
+            </Match>
+
+            <Match when={viewState() === "processing"}>
+              <div class="space-y-6 py-4">
+                <div class="flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Show when={whisper.file()}>
+                    {(file) => <span>{file().name}</span>}
+                  </Show>
+                  <Show when={whisper.language()}>
+                    {(lang) => (
+                      <>
+                        <span class="text-border">|</span>
+                        <span class="rounded-full bg-muted px-2 py-0.5 text-xs">
+                          {lang()}
+                        </span>
+                      </>
+                    )}
+                  </Show>
+                </div>
+                <TranscriptionProgress
+                  progress={whisper.progress()}
+                  onCancel={() => whisper.cancelTranscription()}
+                />
+              </div>
+            </Match>
+
+            <Match when={viewState() === "result"}>
+              <Show when={whisper.result()}>
+                {(result) => (
+                  <div class="space-y-6">
+                    <ResultViewer result={result()} />
+                    <div class="flex gap-3">
+                      <Button variant="outline" onClick={handleReset}>
+                        <FiX class="size-4" />
+                        {t("common.close")}
                       </Button>
                     </div>
                   </div>
-                </Show>
-              </div>
-            </Show>
-          </Show>
+                )}
+              </Show>
+            </Match>
+          </Switch>
         </CardContent>
       </Card>
-
-      <Show when={converter.isConverting()}>
-        <Card class="rounded-2xl shadow-sm">
-          <CardHeader>
-            <CardTitle>{t("transcription.converting")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Progress indeterminate minValue={0} maxValue={100} />
-          </CardContent>
-        </Card>
-      </Show>
-
-      <Show when={whisper.isProcessing()}>
-        <Card class="rounded-2xl shadow-sm">
-          <CardHeader>
-            <CardTitle>{t("transcription.transcribing")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TranscriptionProgress
-              progress={whisper.progress()}
-              onCancel={() => whisper.cancelTranscription()}
-            />
-          </CardContent>
-        </Card>
-      </Show>
-
-      <Show when={whisper.result()}>
-        {(result) => (
-          <Card class="rounded-2xl shadow-sm">
-            <CardHeader>
-              <CardTitle>Result</CardTitle>
-            </CardHeader>
-            <CardContent class="space-y-6">
-              <ResultViewer result={result()} />
-              <div class="flex gap-3">
-                <Button variant="outline" onClick={handleReset}>
-                  {t("transcription.newFile")}
-                </Button>
-                <Show when={activeTab() === "file"}>
-                  <Button variant="outline" onClick={handleStartFile}>
-                    <FiRefreshCw class="size-4" />
-                    {t("transcription.rerun")}
-                  </Button>
-                </Show>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </Show>
     </div>
   );
 }
