@@ -44,7 +44,7 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
         </p>
       </div>
       <div class="flex-1 overflow-y-auto">
-        <ResultViewer result={result()} />
+        <ResultViewer result={result()} fileName={props.entry.fileName} />
       </div>
     </div>
   );

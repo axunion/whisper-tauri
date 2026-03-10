@@ -90,7 +90,7 @@ function DevMenuContent() {
                     <Button
                       variant="outline"
                       size="sm"
-                      class="min-w-[8rem]"
+                      class="min-w-32"
                       onClick={async () => {
                         await ffmpeg.download();
                         toast.success(t("settings.ffmpegDownloadedToast"));
@@ -116,7 +116,7 @@ function DevMenuContent() {
               <Button
                 variant="destructive"
                 size="sm"
-                class="min-w-[8rem]"
+                class="min-w-32"
                 onClick={async () => {
                   await ffmpeg.deleteBundled();
                   toast.success(t("dev.ffmpegDeletedToast"));

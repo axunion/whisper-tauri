@@ -133,6 +133,13 @@ export const en: Dictionary = {
     copyFailedToast: "Failed to copy",
     savedToast: "Saved",
     saveFailedToast: "Failed to save",
+    exportTxt: "Plain Text",
+    exportSrt: "Subtitles (SRT)",
+    exportVtt: "Web Subtitles (VTT)",
+    textTab: "Text",
+    timelineTab: "Timeline",
+    proofreadTab: "Proofread",
+    summaryTab: "Summary",
   },
   recording: {
     title: "Recording",
@@ -165,6 +172,9 @@ export const en: Dictionary = {
       "To use text processing, please download llama-server from Settings.",
     downloadModelFirst:
       "To use text processing, please download a text model from Settings.",
+    aiSetupRequired: "AI Setup Required",
+    aiSetupDescription:
+      "To use AI features like proofreading and summarization, please download an AI language model from Settings.",
     modelManagement: "Text Model Management",
     modelManagementDescription:
       "Download and delete LLM models for text processing (proofread/summarize)",

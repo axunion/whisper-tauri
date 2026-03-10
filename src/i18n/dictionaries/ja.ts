@@ -134,6 +134,13 @@ export const ja: Dictionary = {
     copyFailedToast: "コピーに失敗しました",
     savedToast: "保存しました",
     saveFailedToast: "保存に失敗しました",
+    exportTxt: "テキスト形式",
+    exportSrt: "字幕形式 (SRT)",
+    exportVtt: "Web字幕形式 (VTT)",
+    textTab: "テキスト",
+    timelineTab: "タイムライン",
+    proofreadTab: "校正",
+    summaryTab: "要約",
   },
   recording: {
     title: "録音",
@@ -166,6 +173,9 @@ export const ja: Dictionary = {
       "テキスト処理を使用するには、設定画面でllama-serverをダウンロードしてください。",
     downloadModelFirst:
       "テキスト処理を使用するには、設定画面でテキストモデルをダウンロードしてください。",
+    aiSetupRequired: "AI機能の準備が必要です",
+    aiSetupDescription:
+      "校正・要約などのAI機能を使用するには、設定画面からAI用の言語モデルをダウンロードしてください。",
     modelManagement: "テキストモデル管理",
     modelManagementDescription:
       "テキスト処理（校正・要約）用のLLMモデルのダウンロードと削除",

@@ -130,6 +130,13 @@ export interface Dictionary {
     copyFailedToast: string;
     savedToast: string;
     saveFailedToast: string;
+    exportTxt: string;
+    exportSrt: string;
+    exportVtt: string;
+    textTab: string;
+    timelineTab: string;
+    proofreadTab: string;
+    summaryTab: string;
   };
   recording: {
     title: string;
@@ -159,6 +166,8 @@ export interface Dictionary {
     serverNotReady: string;
     downloadServerFirst: string;
     downloadModelFirst: string;
+    aiSetupRequired: string;
+    aiSetupDescription: string;
     modelManagement: string;
     modelManagementDescription: string;
     serverManagement: string;

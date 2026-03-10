@@ -1,4 +1,3 @@
-import { FiX } from "solid-icons/fi";
 import {
   createMemo,
   createSignal,
@@ -185,18 +184,36 @@ export default function Transcription() {
   );
 
   return (
-    <div class="animate-fade-in mx-auto w-full max-w-3xl space-y-8">
+    <div
+      class={
+        viewState() === "result"
+          ? "animate-fade-in mx-auto -mb-10 flex w-full max-w-3xl flex-1 flex-col gap-8"
+          : "animate-fade-in mx-auto w-full max-w-3xl space-y-8"
+      }
+    >
       <ErrorDisplay
         error={combinedError()}
         onDismiss={clearAllErrors}
         onRetry={canStartFile() ? handleStartFile : undefined}
       />
 
-      <Card class="rounded-2xl shadow-sm">
-        <CardContent class="pt-6">
+      <Card
+        class={
+          viewState() === "result"
+            ? "flex flex-1 flex-col rounded-2xl shadow-sm"
+            : "rounded-2xl shadow-sm"
+        }
+      >
+        <CardContent
+          class={
+            viewState() === "result"
+              ? "flex min-h-0 flex-1 flex-col pt-6"
+              : "pt-6"
+          }
+        >
           <Switch>
             <Match when={viewState() === "input"}>
-              <div class="flex h-[372px] flex-col">
+              <div class="flex h-93 flex-col">
                 <Tabs
                   value={activeTab()}
                   onChange={setActiveTab}
@@ -379,21 +396,13 @@ export default function Transcription() {
 
             <Match when={viewState() === "processing"}>
               <div class="space-y-6 py-4">
-                <div class="flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Show when={whisper.file()}>
-                    {(file) => <span>{file().name}</span>}
-                  </Show>
-                  <Show when={whisper.language()}>
-                    {(lang) => (
-                      <>
-                        <span class="text-border">|</span>
-                        <span class="rounded-full bg-muted px-2 py-0.5 text-xs">
-                          {lang()}
-                        </span>
-                      </>
-                    )}
-                  </Show>
-                </div>
+                <Show when={whisper.file()}>
+                  {(file) => (
+                    <p class="text-center text-sm text-muted-foreground">
+                      {file().name}
+                    </p>
+                  )}
+                </Show>
                 <TranscriptionProgress
                   progress={whisper.progress()}
                   onCancel={() => whisper.cancelTranscription()}
@@ -404,15 +413,11 @@ export default function Transcription() {
             <Match when={viewState() === "result"}>
               <Show when={whisper.result()}>
                 {(result) => (
-                  <div class="space-y-6">
-                    <ResultViewer result={result()} />
-                    <div class="flex gap-3">
-                      <Button variant="outline" onClick={handleReset}>
-                        <FiX class="size-4" />
-                        {t("common.close")}
-                      </Button>
-                    </div>
-                  </div>
+                  <ResultViewer
+                    result={result()}
+                    fileName={whisper.file()?.name ?? ""}
+                    onClose={handleReset}
+                  />
                 )}
               </Show>
             </Match>
