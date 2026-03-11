@@ -83,6 +83,9 @@ export const en: Dictionary = {
     sortDate: "Date",
     sortDuration: "Duration",
     sortFileName: "File Name",
+    select: "Select",
+    done: "Done",
+    selectedCount: "{count} selected",
   },
   settings: {
     title: "Settings",

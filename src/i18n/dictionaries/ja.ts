@@ -84,6 +84,9 @@ export const ja: Dictionary = {
     sortDate: "日付順",
     sortDuration: "期間順",
     sortFileName: "ファイル名順",
+    select: "選択",
+    done: "完了",
+    selectedCount: "{count}件選択中",
   },
   settings: {
     title: "設定",

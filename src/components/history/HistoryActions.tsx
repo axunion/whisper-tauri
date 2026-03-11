@@ -9,6 +9,7 @@ import {
 } from "~/components/ui/AlertDialog";
 import { Button } from "~/components/ui/Button";
 import { Checkbox } from "~/components/ui/Checkbox";
+import { useSidebar } from "~/components/ui/sidebar";
 import { useI18n } from "~/i18n";
 
 interface HistoryActionsProps {
@@ -16,48 +17,55 @@ interface HistoryActionsProps {
   totalCount: number;
   onSelectAll: () => void;
   onClearSelection: () => void;
-  onDeleteSelected: () => void;
+  onDeleteSelected: () => void | Promise<void>;
 }
 
 const HistoryActions: Component<HistoryActionsProps> = (props) => {
   const { t } = useI18n();
+  const sidebar = useSidebar();
   const [deleteSelectedOpen, setDeleteSelectedOpen] = createSignal(false);
 
   const allSelected = () =>
     props.totalCount > 0 && props.selectedCount === props.totalCount;
   const hasSelection = () => props.selectedCount > 0;
 
-  return (
-    <div class="flex h-7 items-center gap-2.5">
-      <Checkbox
-        checked={allSelected()}
-        indeterminate={hasSelection() && !allSelected()}
-        onChange={() =>
-          allSelected() ? props.onClearSelection() : props.onSelectAll()
-        }
-        disabled={props.totalCount === 0}
-        class="scale-110"
-      />
+  const sidebarOffset = () =>
+    sidebar.state() === "expanded"
+      ? "var(--sidebar-width)"
+      : "var(--sidebar-width-icon)";
 
+  return (
+    <>
       <div
-        class="flex items-center gap-1.5 transition-opacity duration-150"
-        classList={{
-          "opacity-0 pointer-events-none": !hasSelection(),
-          "opacity-100": hasSelection(),
-        }}
-        aria-hidden={!hasSelection()}
+        class="fixed bottom-6 right-0 z-40 flex justify-center transition-[left] duration-200 ease-linear"
+        style={{ left: sidebarOffset() }}
       >
-        <span class="text-xs tabular-nums text-muted-foreground">
-          {props.selectedCount}
-        </span>
-        <button
-          type="button"
-          class="rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-          onClick={() => setDeleteSelectedOpen(true)}
-          title={t("history.deleteCount", { count: props.selectedCount })}
-        >
-          <FiTrash2 class="size-[18px]" />
-        </button>
+        <div class="flex items-center gap-5 rounded-2xl border border-border/30 bg-card/30 px-10 py-2.5 shadow-2xl backdrop-blur-sm dark:bg-card/20 animate-slide-up">
+          <Checkbox
+            checked={allSelected()}
+            indeterminate={hasSelection() && !allSelected()}
+            onChange={() =>
+              allSelected() ? props.onClearSelection() : props.onSelectAll()
+            }
+            disabled={props.totalCount === 0}
+            class="scale-110"
+          />
+
+          <span class="text-sm tabular-nums text-muted-foreground">
+            {t("history.selectedCount", { count: props.selectedCount })}
+          </span>
+
+          <Button
+            variant="destructive"
+            size="sm"
+            class="px-4"
+            onClick={() => setDeleteSelectedOpen(true)}
+            disabled={!hasSelection()}
+          >
+            <FiTrash2 class="mr-1.5 size-3.5" />
+            {t("common.delete")}
+          </Button>
+        </div>
       </div>
 
       <AlertDialog
@@ -88,7 +96,7 @@ const HistoryActions: Component<HistoryActionsProps> = (props) => {
           </div>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 };
 

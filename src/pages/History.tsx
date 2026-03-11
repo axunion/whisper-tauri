@@ -8,7 +8,7 @@ import {
   SearchBar,
   SortSelect,
 } from "~/components/history";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
+import { Button } from "~/components/ui/Button";
 import {
   Sheet,
   SheetContent,
@@ -32,13 +32,34 @@ export default function History() {
   const history = createHistory();
   const [rawInput, setRawInput] = createSignal("");
   const [isWaitingForSearch, setIsWaitingForSearch] = createSignal(false);
+  const [selectionMode, setSelectionMode] = createSignal(false);
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function handleKeyDown(e: KeyboardEvent): void {
+    if (e.key === "Escape" && selectionMode()) {
+      exitSelectionMode();
+    }
+  }
 
   onMount(() => {
     history.loadEntries();
+    document.addEventListener("keydown", handleKeyDown);
   });
 
-  onCleanup(() => clearTimeout(debounceTimer));
+  onCleanup(() => {
+    clearTimeout(debounceTimer);
+    document.removeEventListener("keydown", handleKeyDown);
+  });
+
+  function exitSelectionMode(): void {
+    setSelectionMode(false);
+    history.clearSelection();
+  }
+
+  function enterSelectionMode(id: string): void {
+    setSelectionMode(true);
+    history.toggleSelect(id);
+  }
 
   function handleSearchInput(value: string): void {
     setRawInput(value);
@@ -92,6 +113,9 @@ export default function History() {
     if (ids.length > 0) {
       await history.deleteEntries(ids);
       toast.success(t("history.deletedToast"));
+      if (history.selectedIds().size === 0) {
+        setSelectionMode(false);
+      }
     }
   }
 
@@ -103,89 +127,87 @@ export default function History() {
   };
 
   return (
-    <div class="animate-fade-in mx-auto w-full max-w-3xl space-y-6">
-      <ErrorDisplay
-        error={history.error()}
-        onDismiss={() => history.clearError()}
-      />
+    <>
+      <div class="animate-fade-in mx-auto w-full max-w-3xl space-y-4">
+        <ErrorDisplay
+          error={history.error()}
+          onDismiss={() => history.clearError()}
+        />
 
-      <Card class="rounded-2xl shadow-sm">
-        <CardHeader>
-          <CardTitle class="flex items-center justify-between">
-            <span>{t("history.transcriptionHistory")}</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent class="space-y-4">
-          {/* Row 1: Search + Sort */}
-          <div class="flex items-center gap-2">
-            <div class="flex-1">
-              <SearchBar
-                onInput={handleSearchInput}
-                onClear={handleClearSearch}
-              />
-            </div>
-            <SortSelect
-              value={history.filter().sortBy ?? "date"}
-              onChange={handleSortChange}
+        {/* Toolbar: grid with fixed column tracks */}
+        <div class="grid grid-cols-[1fr_130px_130px_72px] items-center gap-2">
+          <SearchBar onInput={handleSearchInput} onClear={handleClearSearch} />
+          <HistoryFilter
+            filter={history.filter()}
+            onFilterChange={handleFilterChange}
+          />
+          <SortSelect
+            value={history.filter().sortBy ?? "date"}
+            onChange={handleSortChange}
+          />
+          <Button
+            variant={selectionMode() ? "default" : "outline"}
+            size="sm"
+            class="h-9"
+            onClick={() =>
+              selectionMode() ? exitSelectionMode() : setSelectionMode(true)
+            }
+          >
+            {t("history.select")}
+          </Button>
+        </div>
+
+        {/* List */}
+        <Show when={!shouldHideList()}>
+          <Show
+            when={!history.isSearching() || history.entries().length > 0}
+            fallback={
+              <div class="flex min-h-48 flex-col items-center justify-center text-muted-foreground">
+                <p class="text-sm">{t("history.searchNoResults")}</p>
+              </div>
+            }
+          >
+            <HistoryList
+              entries={history.entries()}
+              selectedIds={history.selectedIds()}
+              selectionMode={selectionMode()}
+              onToggleSelect={(id) => history.toggleSelect(id)}
+              onViewEntry={(id) => history.getEntry(id)}
+              onEnterSelectionMode={enterSelectionMode}
             />
-          </div>
+          </Show>
+        </Show>
 
-          {/* Row 2: Selection actions (left) + Quick filter chips (right) */}
-          <div class="flex items-center">
-            <HistoryActions
-              selectedCount={history.selectedIds().size}
-              totalCount={history.entries().length}
-              onSelectAll={() => history.selectAll()}
-              onClearSelection={() => history.clearSelection()}
-              onDeleteSelected={handleDeleteSelected}
-            />
-            <div class="ml-auto">
-              <HistoryFilter
-                filter={history.filter()}
-                onFilterChange={handleFilterChange}
-              />
-            </div>
-          </div>
-
-          {/* List */}
-          <Show when={!shouldHideList()}>
-            <Show
-              when={!history.isSearching() || history.entries().length > 0}
-              fallback={
-                <div class="flex min-h-48 flex-col items-center justify-center text-muted-foreground">
-                  <p class="text-sm">{t("history.searchNoResults")}</p>
-                </div>
-              }
-            >
-              <HistoryList
-                entries={history.entries()}
-                selectedIds={history.selectedIds()}
-                onToggleSelect={(id) => history.toggleSelect(id)}
-                onViewEntry={(id) => history.getEntry(id)}
-              />
+        <Sheet
+          open={!!history.selectedEntry()}
+          onOpenChange={(open) => {
+            if (!open) history.clearSelectedEntry();
+          }}
+        >
+          <SheetContent>
+            <SheetHeader>
+              <SheetTitle>{t("history.detail")}</SheetTitle>
+              <SheetDescription>
+                {t("history.detailDescription")}
+              </SheetDescription>
+            </SheetHeader>
+            <Show when={history.selectedEntry()} keyed>
+              {(entry) => <HistoryDetail entry={entry} />}
             </Show>
-          </Show>
-        </CardContent>
-      </Card>
+          </SheetContent>
+        </Sheet>
+      </div>
 
-      <Sheet
-        open={!!history.selectedEntry()}
-        onOpenChange={(open) => {
-          if (!open) history.clearSelectedEntry();
-        }}
-      >
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>{t("history.detail")}</SheetTitle>
-            <SheetDescription>
-              {t("history.detailDescription")}
-            </SheetDescription>
-          </SheetHeader>
-          <Show when={history.selectedEntry()} keyed>
-            {(entry) => <HistoryDetail entry={entry} />}
-          </Show>
-        </SheetContent>
-      </Sheet>
-    </div>
+      {/* Selection bar — outside content container, direct child of main */}
+      <Show when={selectionMode()}>
+        <HistoryActions
+          selectedCount={history.selectedIds().size}
+          totalCount={history.entries().length}
+          onSelectAll={() => history.selectAll()}
+          onClearSelection={() => history.clearSelection()}
+          onDeleteSelected={handleDeleteSelected}
+        />
+      </Show>
+    </>
   );
 }

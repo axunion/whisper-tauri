@@ -8,8 +8,10 @@ import type { HistoryMeta } from "~/types";
 interface HistoryListProps {
   entries: HistoryMeta[];
   selectedIds: Set<string>;
+  selectionMode: boolean;
   onToggleSelect: (id: string) => void;
   onViewEntry: (id: string) => void;
+  onEnterSelectionMode: (id: string) => void;
 }
 
 function formatDuration(ms: number): string {
@@ -48,6 +50,16 @@ const HistoryList: Component<HistoryListProps> = (props) => {
     });
   }
 
+  function handleClick(e: MouseEvent, entry: HistoryMeta): void {
+    if (props.selectionMode) {
+      props.onToggleSelect(entry.id);
+    } else if (e.metaKey || e.ctrlKey) {
+      props.onEnterSelectionMode(entry.id);
+    } else {
+      props.onViewEntry(entry.id);
+    }
+  }
+
   return (
     <Show
       when={props.entries.length > 0}
@@ -58,40 +70,54 @@ const HistoryList: Component<HistoryListProps> = (props) => {
         </div>
       }
     >
-      <div class="min-h-48 divide-y">
+      <div class="min-h-48 space-y-2">
         <For each={props.entries}>
-          {(entry) => (
-            <div class="flex items-start gap-3 px-2 py-3 hover:bg-muted/50">
-              <div class="pt-0.5">
-                <Checkbox
-                  checked={props.selectedIds.has(entry.id)}
-                  onChange={() => props.onToggleSelect(entry.id)}
-                  colorScheme="neutral"
-                />
+          {(entry) => {
+            const isSelected = () => props.selectedIds.has(entry.id);
+            return (
+              <div class="flex items-center">
+                <button
+                  type="button"
+                  class="group min-w-0 flex-1 rounded-lg border border-border/30 bg-card/45 px-5 py-4 text-left shadow-sm backdrop-blur-lg transition-all duration-300 hover:border-border/50 hover:shadow-md"
+                  classList={{
+                    "ring-2 ring-primary/50 bg-primary/5": isSelected(),
+                  }}
+                  onClick={(e) => handleClick(e, entry)}
+                >
+                  {/* Row 1: Icon + FileName */}
+                  <div class="flex items-center gap-2.5">
+                    <span class="shrink-0 text-muted-foreground">
+                      {getSourceIcon(entry.fileName)}
+                    </span>
+                    <span class="flex-1 truncate text-sm font-medium">
+                      {entry.fileName}
+                    </span>
+                  </div>
+                  {/* Row 2: Text preview */}
+                  <p class="mt-2.5 line-clamp-2 text-xs text-muted-foreground">
+                    {entry.textPreview}
+                  </p>
+                  {/* Row 3: Duration (left) + Date (right) */}
+                  <div class="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{formatDuration(entry.duration)}</span>
+                    <span>{formatDate(entry.createdAt)}</span>
+                  </div>
+                </button>
+                <div
+                  class="overflow-hidden transition-all duration-300 ease-in-out"
+                  classList={{
+                    "ml-3 w-6 opacity-100": props.selectionMode,
+                    "ml-0 w-0 opacity-0": !props.selectionMode,
+                  }}
+                >
+                  <Checkbox
+                    checked={isSelected()}
+                    onChange={() => props.onToggleSelect(entry.id)}
+                  />
+                </div>
               </div>
-              <button
-                type="button"
-                class="flex min-w-0 flex-1 cursor-pointer flex-col gap-1 text-left"
-                onClick={() => props.onViewEntry(entry.id)}
-              >
-                <div class="flex items-center gap-2">
-                  <span class="shrink-0 text-muted-foreground">
-                    {getSourceIcon(entry.fileName)}
-                  </span>
-                  <span class="truncate text-sm font-medium">
-                    {entry.fileName}
-                  </span>
-                </div>
-                <p class="truncate text-xs text-muted-foreground">
-                  {entry.textPreview}
-                </p>
-                <div class="flex gap-3 text-xs text-muted-foreground">
-                  <span>{formatDate(entry.createdAt)}</span>
-                  <span>{formatDuration(entry.duration)}</span>
-                </div>
-              </button>
-            </div>
-          )}
+            );
+          }}
         </For>
       </div>
     </Show>

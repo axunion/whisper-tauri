@@ -82,6 +82,9 @@ export interface Dictionary {
     sortDate: string;
     sortDuration: string;
     sortFileName: string;
+    select: string;
+    done: string;
+    selectedCount: string;
   };
   settings: {
     title: string;

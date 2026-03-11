@@ -1,11 +1,16 @@
 import type { Component } from "solid-js";
-import { For } from "solid-js";
-import { Button } from "~/components/ui/Button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/Select";
 import { useI18n } from "~/i18n";
 import type { DictionaryKey } from "~/i18n/types";
 import type { HistoryFilter as HistoryFilterType } from "~/types";
 
-type QuickFilterRange = "today" | "thisWeek" | "thisMonth" | "all";
+type QuickFilterRange = "all" | "today" | "thisWeek" | "thisMonth";
 
 interface HistoryFilterProps {
   filter: HistoryFilterType;
@@ -88,22 +93,26 @@ const HistoryFilter: Component<HistoryFilterProps> = (props) => {
   }
 
   return (
-    <div class="flex items-center gap-2">
-      <For each={RANGES}>
-        {(range) => {
-          const active = () => detectActiveRange(props.filter) === range;
-          return (
-            <Button
-              variant={active() ? "default" : "outline"}
-              class="h-7 w-[5.5rem] px-1 text-xs"
-              onClick={() => handleSelect(range)}
-            >
-              {t(RANGE_KEYS[range])}
-            </Button>
-          );
-        }}
-      </For>
-    </div>
+    <Select
+      value={detectActiveRange(props.filter)}
+      onChange={(v) => {
+        if (v) handleSelect(v);
+      }}
+      options={RANGES}
+      class="min-w-0"
+      itemComponent={(itemProps) => (
+        <SelectItem item={itemProps.item}>
+          {t(RANGE_KEYS[itemProps.item.rawValue])}
+        </SelectItem>
+      )}
+    >
+      <SelectTrigger class="h-9 w-full">
+        <SelectValue<QuickFilterRange>>
+          {(state) => t(RANGE_KEYS[state.selectedOption()])}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent />
+    </Select>
   );
 };
 

@@ -33,13 +33,14 @@ const SortSelect: Component<SortSelectProps> = (props) => {
         if (v) props.onChange(v);
       }}
       options={SORT_OPTIONS}
+      class="min-w-0"
       itemComponent={(itemProps) => (
         <SelectItem item={itemProps.item}>
           {t(SORT_KEYS[itemProps.item.rawValue])}
         </SelectItem>
       )}
     >
-      <SelectTrigger class="h-9 w-[130px]">
+      <SelectTrigger class="h-9 w-full">
         <SelectValue<HistorySortBy>>
           {(state) => t(SORT_KEYS[state.selectedOption()])}
         </SelectValue>
