@@ -83,8 +83,9 @@ pub fn run() {
                 if let Some(manager) = app_handle
                     .try_state::<tokio::sync::Mutex<text_processing::server::LlamaServerManager>>()
                 {
-                    let rt = tokio::runtime::Handle::current();
-                    rt.block_on(async {
+                    // Use Tauri's async runtime to ensure we operate on the same
+                    // runtime that owns the Mutex and Child process.
+                    tauri::async_runtime::block_on(async {
                         let mut mgr = manager.lock().await;
                         mgr.shutdown().await;
                     });

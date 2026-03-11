@@ -107,7 +107,7 @@ export const ja: Dictionary = {
     modelManagementDescription: "Whisper音声モデルのダウンロードと削除",
     deleteModel: "モデルの削除",
     deleteModelConfirmation:
-      "{name} ({size}) を削除します。この操作は取り消せません。",
+      "{name} ({size}) が削除されます。この操作は取り消せません。",
     modelDeletedToast: "モデルを削除しました",
     loadingModels: "モデル情報を読み込み中...",
     toolManagement: "ツール管理",
@@ -184,7 +184,7 @@ export const ja: Dictionary = {
       "テキスト処理に必要なllama-serverのダウンロード",
     deleteModel: "モデルの削除",
     deleteModelConfirmation:
-      "{name} ({size}) を削除します。この操作は取り消せません。",
+      "{name} ({size}) が削除されます。この操作は取り消せません。",
     modelDeletedToast: "テキストモデルを削除しました",
     serverDownloadedToast: "llama-serverをダウンロードしました",
     modelDownloadedToast: "テキストモデルをダウンロードしました",
@@ -223,11 +223,11 @@ export const ja: Dictionary = {
     noDownloadedModels: "ダウンロード済みモデルはありません。",
     deleteModel: "モデルの削除",
     deleteModelConfirmation:
-      "{name} ({size}) を削除しますか？この操作は取り消せません。",
+      "{name} ({size}) が削除されます。この操作は取り消せません。",
     deleteAllModels: "すべてのモデルを削除",
     deletingAll: "全削除中...",
     deleteAllModelsConfirmation:
-      "ダウンロード済みの {count} モデルをすべて削除しますか？この操作は取り消せません。",
+      "ダウンロード済みの {count} モデルがすべて削除されます。この操作は取り消せません。",
     modelDeletedToast: "モデルを削除しました",
     allModelsDeletedToast: "すべてのモデルを削除しました",
     noLogs: "ログはまだありません。",

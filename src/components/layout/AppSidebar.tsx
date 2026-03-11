@@ -10,6 +10,7 @@ import { For, Show } from "solid-js";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarHeader,
   SidebarMenu,
@@ -92,29 +93,28 @@ export function AppSidebar() {
             </For>
           </SidebarMenu>
         </SidebarGroup>
-
-        <Show when={import.meta.env.DEV}>
-          <hr class="mx-2 border-sidebar-border" />
-          <SidebarGroup>
-            <SidebarMenu>
-              <For each={devMenuItems}>
-                {(item) => (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      as={A}
-                      href={item.href}
-                      isActive={isActive(item.href)}
-                    >
-                      <item.icon class="size-4 shrink-0" />
-                      <span>{t(item.titleKey)}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
-              </For>
-            </SidebarMenu>
-          </SidebarGroup>
-        </Show>
       </SidebarContent>
+      <Show when={import.meta.env.DEV}>
+        <SidebarFooter class="border-t border-sidebar-border">
+          <SidebarMenu>
+            <For each={devMenuItems}>
+              {(item) => (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    as={A}
+                    href={item.href}
+                    isActive={isActive(item.href)}
+                    class="text-muted-foreground"
+                  >
+                    <item.icon class="size-4 shrink-0" />
+                    <span>{t(item.titleKey)}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+            </For>
+          </SidebarMenu>
+        </SidebarFooter>
+      </Show>
     </Sidebar>
   );
 }
