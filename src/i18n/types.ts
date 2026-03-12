@@ -190,6 +190,17 @@ export interface Dictionary {
     summarizeCompletedToast: string;
     cancelledToast: string;
   };
+  models: {
+    whisper: {
+      largeV3Turbo: { description: string };
+      medium: { description: string };
+      small: { description: string };
+    };
+    text: {
+      gemma3_4b: { description: string };
+      qwen35_4b: { description: string };
+    };
+  };
   dev: {
     title: string;
     cachesClear: string;

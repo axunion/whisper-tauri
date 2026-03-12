@@ -17,6 +17,7 @@ import {
 } from "~/components/ui/Card";
 import { Progress } from "~/components/ui/Progress";
 import { useI18n } from "~/i18n";
+import { getModelDescription } from "~/lib/modelDescription";
 import { toast } from "~/lib/toast";
 import { createTextProcessing } from "~/primitives/createTextProcessing";
 
@@ -69,7 +70,7 @@ export default function TextModelManager() {
                     <Badge variant="secondary">{model.size}</Badge>
                   </div>
                   <p class="text-sm text-muted-foreground">
-                    {model.description}
+                    {getModelDescription(t, model.id, model.description)}
                   </p>
                 </div>
                 <div class="flex items-center gap-2">

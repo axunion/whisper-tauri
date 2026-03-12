@@ -28,6 +28,7 @@ import {
 } from "~/components/ui/Select";
 import { Separator } from "~/components/ui/Separator";
 import { useI18n } from "~/i18n";
+import { getModelDescription } from "~/lib/modelDescription";
 import { toast } from "~/lib/toast";
 import { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
 import { createSettings } from "~/primitives/createSettings";
@@ -49,12 +50,6 @@ export default function Settings() {
   const languageOptions = () => [
     { value: "ja", label: t("settings.languageJa") },
     { value: "en", label: t("settings.languageEn") },
-  ];
-
-  const outputFormatOptions = () => [
-    { value: "txt", label: t("settings.outputFormatTxt") },
-    { value: "srt", label: t("settings.outputFormatSrt") },
-    { value: "vtt", label: t("settings.outputFormatVtt") },
   ];
 
   const themeOptions = () => [
@@ -129,44 +124,6 @@ export default function Settings() {
 
           <Separator />
 
-          {/* Output Format */}
-          <div class="flex items-center justify-between">
-            <div class="space-y-0.5">
-              <Label>{t("settings.outputFormat")}</Label>
-              <p class="text-sm text-muted-foreground">
-                {t("settings.outputFormatDescription")}
-              </p>
-            </div>
-            <Select<OptionItem>
-              multiple={false}
-              value={findOption(outputFormatOptions(), settings.outputFormat())}
-              onChange={(val) => {
-                if (val) {
-                  settings.update({
-                    outputFormat: val.value as AppSettings["outputFormat"],
-                  });
-                }
-              }}
-              options={outputFormatOptions()}
-              optionValue="value"
-              optionTextValue="label"
-              itemComponent={(props) => (
-                <SelectItem item={props.item}>
-                  {props.item.rawValue.label}
-                </SelectItem>
-              )}
-            >
-              <SelectTrigger class="w-48">
-                <SelectValue<OptionItem>>
-                  {(state) => state.selectedOption().label}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent />
-            </Select>
-          </div>
-
-          <Separator />
-
           {/* Theme */}
           <div class="flex items-center justify-between">
             <div class="space-y-0.5">
@@ -221,15 +178,12 @@ export default function Settings() {
                   <div class="flex items-center gap-2">
                     <span class="font-medium">{model.name}</span>
                     <Badge variant="secondary">{model.size}</Badge>
-                    <Show when={model.speedNote}>
-                      <Badge variant="outline">{model.speedNote}</Badge>
-                    </Show>
                     <Show when={model.recommended}>
                       <Badge>{t("common.recommended")}</Badge>
                     </Show>
                   </div>
                   <p class="text-sm text-muted-foreground">
-                    {model.description}
+                    {getModelDescription(t, model.id, model.description)}
                   </p>
                 </div>
                 <div class="flex items-center gap-2">

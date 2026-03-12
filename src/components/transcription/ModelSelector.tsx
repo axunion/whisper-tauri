@@ -5,6 +5,7 @@ import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
 import { Progress } from "~/components/ui/Progress";
 import { useI18n } from "~/i18n";
+import { getModelDescription } from "~/lib/modelDescription";
 import { cn } from "~/lib/utils";
 import type { DownloadProgress, ModelInfo } from "~/types";
 
@@ -53,7 +54,7 @@ const ModelSelector: Component<ModelSelectorProps> = (props) => {
                   </Show>
                 </div>
                 <p class="mt-1 text-xs text-muted-foreground">
-                  {model.description}
+                  {getModelDescription(t, model.id, model.description)}
                 </p>
                 <Show when={isDownloadingThis()}>
                   <div class="mt-2">

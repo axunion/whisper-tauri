@@ -174,22 +174,22 @@ export const en: Dictionary = {
     downloadServerFirst:
       "To use text processing, please download llama-server from Settings.",
     downloadModelFirst:
-      "To use text processing, please download a text model from Settings.",
+      "To use text processing, please download a language model from Settings.",
     aiSetupRequired: "AI Setup Required",
     aiSetupDescription:
       "To use AI features like proofreading and summarization, please download an AI language model from Settings.",
-    modelManagement: "Text Model Management",
+    modelManagement: "Language Model Management",
     modelManagementDescription:
-      "Download and delete LLM models for text processing (proofread/summarize)",
+      "Download and delete language models for AI features (proofread/summarize)",
     serverManagement: "Inference Server Management",
     serverManagementDescription:
       "Download llama-server required for text processing",
     deleteModel: "Delete Model",
     deleteModelConfirmation:
       "Delete {name} ({size}). This action cannot be undone.",
-    modelDeletedToast: "Text model deleted",
+    modelDeletedToast: "Language model deleted",
     serverDownloadedToast: "llama-server downloaded",
-    modelDownloadedToast: "Text model downloaded",
+    modelDownloadedToast: "Language model downloaded",
     summaryLengthShort: "Short",
     summaryLengthMedium: "Medium",
     summaryLengthLong: "Long",
@@ -200,11 +200,30 @@ export const en: Dictionary = {
     summarizeCompletedToast: "Summarization completed",
     cancelledToast: "Processing cancelled",
   },
+  models: {
+    whisper: {
+      largeV3Turbo: {
+        description: "High quality and fast. Excellent Japanese accuracy",
+      },
+      medium: { description: "Balanced quality and speed. Lighter than Turbo" },
+      small: { description: "Lightweight and fast. Moderate quality" },
+    },
+    text: {
+      gemma3_4b: {
+        description:
+          "By Google. Optimized for CJK languages including Japanese",
+      },
+      qwen35_4b: {
+        description:
+          "By Alibaba. Supports 201 languages with strong Japanese performance",
+      },
+    },
+  },
   dev: {
     title: "Dev Menu",
     cachesClear: "Cache Clear",
     audioModelManager: "Audio Model Manager",
-    textModelManager: "Text Model Manager",
+    textModelManager: "Language Model Manager",
     ffmpegManager: "FFmpeg Manager",
     debugLog: "Debug Log",
     devOnlyMessage: "This page is only available in development mode.",

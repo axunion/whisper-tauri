@@ -71,9 +71,6 @@ export function ModelStatus() {
                     <div class="flex items-center gap-2">
                       <span class="text-sm font-medium">{model.name}</span>
                       <Badge variant="secondary">{model.size}</Badge>
-                      <Show when={model.speedNote}>
-                        <Badge variant="outline">{model.speedNote}</Badge>
-                      </Show>
                       <Show when={model.recommended}>
                         <Badge>{t("common.recommended")}</Badge>
                       </Show>

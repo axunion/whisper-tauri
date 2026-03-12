@@ -175,22 +175,22 @@ export const ja: Dictionary = {
     downloadServerFirst:
       "テキスト処理を使用するには、設定画面でllama-serverをダウンロードしてください。",
     downloadModelFirst:
-      "テキスト処理を使用するには、設定画面でテキストモデルをダウンロードしてください。",
+      "テキスト処理を使用するには、設定画面で言語モデルをダウンロードしてください。",
     aiSetupRequired: "AI機能の準備が必要です",
     aiSetupDescription:
       "校正・要約などのAI機能を使用するには、設定画面からAI用の言語モデルをダウンロードしてください。",
-    modelManagement: "テキストモデル管理",
+    modelManagement: "言語モデル管理",
     modelManagementDescription:
-      "テキスト処理（校正・要約）用のLLMモデルのダウンロードと削除",
+      "校正・要約などのAI機能用の言語モデルのダウンロードと削除",
     serverManagement: "推論サーバー管理",
     serverManagementDescription:
       "テキスト処理に必要なllama-serverのダウンロード",
     deleteModel: "モデルの削除",
     deleteModelConfirmation:
       "{name} ({size}) が削除されます。この操作は取り消せません。",
-    modelDeletedToast: "テキストモデルを削除しました",
+    modelDeletedToast: "言語モデルを削除しました",
     serverDownloadedToast: "llama-serverをダウンロードしました",
-    modelDownloadedToast: "テキストモデルをダウンロードしました",
+    modelDownloadedToast: "言語モデルをダウンロードしました",
     summaryLengthShort: "短い",
     summaryLengthMedium: "中程度",
     summaryLengthLong: "長い",
@@ -201,11 +201,22 @@ export const ja: Dictionary = {
     summarizeCompletedToast: "要約が完了しました",
     cancelledToast: "処理をキャンセルしました",
   },
+  models: {
+    whisper: {
+      largeV3Turbo: { description: "高品質かつ高速。日本語の精度が高い" },
+      medium: { description: "品質と速度のバランス型。Turboより軽量" },
+      small: { description: "軽量で動作が速い。品質は控えめ" },
+    },
+    text: {
+      gemma3_4b: { description: "Google製。日本語を含むCJK言語に最適化" },
+      qwen35_4b: { description: "Alibaba製。201言語対応で日本語性能が高い" },
+    },
+  },
   dev: {
     title: "開発メニュー",
     cachesClear: "キャッシュクリア",
     audioModelManager: "音声モデル管理",
-    textModelManager: "テキストモデル管理",
+    textModelManager: "言語モデル管理",
     ffmpegManager: "FFmpeg管理",
     debugLog: "デバッグログ",
     devOnlyMessage: "このページは開発モードでのみ表示されます。",
