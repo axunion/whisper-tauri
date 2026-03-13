@@ -15,6 +15,7 @@ export interface Dictionary {
     recommended: string;
     deleting: string;
     processing: string;
+    done: string;
   };
   nav: {
     dashboard: string;
@@ -83,7 +84,6 @@ export interface Dictionary {
     sortDuration: string;
     sortFileName: string;
     select: string;
-    done: string;
     selectedCount: string;
   };
   settings: {

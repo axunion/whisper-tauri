@@ -20,7 +20,7 @@ export function AppLayout(props: RouteSectionProps) {
     <I18nProvider locale={settings.language()}>
       <SidebarProvider>
         <AppSidebar />
-        <main class="flex min-h-0 flex-1 flex-col overflow-y-auto p-6 pb-16">
+        <main class="main-scroll flex min-h-0 flex-1 flex-col p-6">
           {props.children}
         </main>
         <Toaster />

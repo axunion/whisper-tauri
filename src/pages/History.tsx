@@ -153,7 +153,7 @@ export default function History() {
               selectionMode() ? exitSelectionMode() : setSelectionMode(true)
             }
           >
-            {t("history.select")}
+            {selectionMode() ? t("common.done") : t("history.select")}
           </Button>
         </div>
 
@@ -198,16 +198,14 @@ export default function History() {
         </Sheet>
       </div>
 
-      {/* Selection bar — outside content container, direct child of main */}
-      <Show when={selectionMode()}>
-        <HistoryActions
-          selectedCount={history.selectedIds().size}
-          totalCount={history.entries().length}
-          onSelectAll={() => history.selectAll()}
-          onClearSelection={() => history.clearSelection()}
-          onDeleteSelected={handleDeleteSelected}
-        />
-      </Show>
+      <HistoryActions
+        visible={selectionMode()}
+        selectedCount={history.selectedIds().size}
+        totalCount={history.entries().length}
+        onSelectAll={() => history.selectAll()}
+        onClearSelection={() => history.clearSelection()}
+        onDeleteSelected={handleDeleteSelected}
+      />
     </>
   );
 }

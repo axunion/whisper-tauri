@@ -15,6 +15,7 @@ export const ja: Dictionary = {
     recommended: "推奨",
     deleting: "削除中...",
     processing: "処理中...",
+    done: "完了",
   },
   nav: {
     dashboard: "ダッシュボード",
@@ -85,7 +86,6 @@ export const ja: Dictionary = {
     sortDuration: "期間順",
     sortFileName: "ファイル名順",
     select: "選択",
-    done: "完了",
     selectedCount: "{count}件選択中",
   },
   settings: {

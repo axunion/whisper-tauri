@@ -1,7 +1,7 @@
 import { FiFileText, FiMic, FiMusic, FiVideo } from "solid-icons/fi";
 import type { Component, JSX } from "solid-js";
 import { For, Show } from "solid-js";
-import { Checkbox } from "~/components/ui/Checkbox";
+import { CheckIndicator } from "~/components/history/CheckIndicator";
 import { useI18n } from "~/i18n";
 import type { HistoryMeta } from "~/types";
 
@@ -75,47 +75,42 @@ const HistoryList: Component<HistoryListProps> = (props) => {
           {(entry) => {
             const isSelected = () => props.selectedIds.has(entry.id);
             return (
-              <div class="flex items-center">
-                <button
-                  type="button"
-                  class="group min-w-0 flex-1 rounded-lg border border-border/30 bg-card/45 px-5 py-4 text-left shadow-sm backdrop-blur-lg transition-all duration-300 hover:border-border/50 hover:shadow-md"
-                  classList={{
-                    "ring-2 ring-primary/50 bg-primary/5": isSelected(),
-                  }}
-                  onClick={(e) => handleClick(e, entry)}
-                >
-                  {/* Row 1: Icon + FileName */}
-                  <div class="flex items-center gap-2.5">
-                    <span class="shrink-0 text-muted-foreground">
-                      {getSourceIcon(entry.fileName)}
-                    </span>
-                    <span class="flex-1 truncate text-sm font-medium">
-                      {entry.fileName}
-                    </span>
-                  </div>
-                  {/* Row 2: Text preview */}
-                  <p class="mt-2.5 line-clamp-2 text-xs text-muted-foreground">
-                    {entry.textPreview}
-                  </p>
-                  {/* Row 3: Duration (left) + Date (right) */}
-                  <div class="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{formatDuration(entry.duration)}</span>
-                    <span>{formatDate(entry.createdAt)}</span>
-                  </div>
-                </button>
-                <div
-                  class="overflow-hidden transition-all duration-300 ease-in-out"
-                  classList={{
-                    "ml-3 w-6 opacity-100": props.selectionMode,
-                    "ml-0 w-0 opacity-0": !props.selectionMode,
-                  }}
-                >
-                  <Checkbox
-                    checked={isSelected()}
-                    onChange={() => props.onToggleSelect(entry.id)}
-                  />
+              <button
+                type="button"
+                class="group w-full min-w-0 rounded-lg border border-border/30 bg-card/45 px-5 py-4 text-left shadow-sm backdrop-blur-lg transition-all duration-300 hover:border-border/50 hover:shadow-md"
+                classList={{
+                  "ring-2 ring-primary/50 bg-primary/5": isSelected(),
+                }}
+                onClick={(e) => handleClick(e, entry)}
+              >
+                {/* Row 1: Icon + FileName + Check */}
+                <div class="flex items-center gap-2.5">
+                  <span class="shrink-0 text-muted-foreground">
+                    {getSourceIcon(entry.fileName)}
+                  </span>
+                  <span class="flex-1 truncate text-sm font-medium">
+                    {entry.fileName}
+                  </span>
+                  <span
+                    class="shrink-0 transition-opacity duration-200"
+                    classList={{
+                      "opacity-100": props.selectionMode,
+                      "opacity-0": !props.selectionMode,
+                    }}
+                  >
+                    <CheckIndicator checked={isSelected()} />
+                  </span>
                 </div>
-              </div>
+                {/* Row 2: Text preview */}
+                <p class="mt-2.5 line-clamp-2 text-xs text-muted-foreground">
+                  {entry.textPreview}
+                </p>
+                {/* Row 3: Duration (left) + Date (right) */}
+                <div class="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{formatDuration(entry.duration)}</span>
+                  <span>{formatDate(entry.createdAt)}</span>
+                </div>
+              </button>
             );
           }}
         </For>

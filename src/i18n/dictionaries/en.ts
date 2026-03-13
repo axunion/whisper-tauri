@@ -15,6 +15,7 @@ export const en: Dictionary = {
     recommended: "Recommended",
     deleting: "Deleting...",
     processing: "Processing...",
+    done: "Done",
   },
   nav: {
     dashboard: "Dashboard",
@@ -84,7 +85,6 @@ export const en: Dictionary = {
     sortDuration: "Duration",
     sortFileName: "File Name",
     select: "Select",
-    done: "Done",
     selectedCount: "{count} selected",
   },
   settings: {

@@ -95,7 +95,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <Show when={import.meta.env.DEV}>
-        <SidebarFooter class="border-t border-sidebar-border">
+        <SidebarFooter>
           <SidebarMenu>
             <For each={devMenuItems}>
               {(item) => (

@@ -8,11 +8,12 @@ import {
   AlertDialogTitle,
 } from "~/components/ui/AlertDialog";
 import { Button } from "~/components/ui/Button";
-import { Checkbox } from "~/components/ui/Checkbox";
+import { CheckIndicator } from "~/components/history/CheckIndicator";
 import { useSidebar } from "~/components/ui/sidebar";
 import { useI18n } from "~/i18n";
 
 interface HistoryActionsProps {
+  visible: boolean;
   selectedCount: number;
   totalCount: number;
   onSelectAll: () => void;
@@ -37,23 +38,36 @@ const HistoryActions: Component<HistoryActionsProps> = (props) => {
   return (
     <>
       <div
-        class="fixed bottom-6 right-0 z-40 flex justify-center transition-[left] duration-200 ease-linear"
+        class="pointer-events-none fixed bottom-3 right-0 z-40 flex justify-center transition-[opacity,transform,left] duration-200 ease-linear"
+        classList={{
+          "opacity-100 translate-y-0": props.visible,
+          "opacity-0 translate-y-full": !props.visible,
+        }}
         style={{ left: sidebarOffset() }}
       >
-        <div class="flex items-center gap-5 rounded-2xl border border-border/30 bg-card/30 px-10 py-2.5 shadow-2xl backdrop-blur-sm dark:bg-card/20 animate-slide-up">
-          <Checkbox
-            checked={allSelected()}
-            indeterminate={hasSelection() && !allSelected()}
-            onChange={() =>
-              allSelected() ? props.onClearSelection() : props.onSelectAll()
-            }
-            disabled={props.totalCount === 0}
-            class="scale-110"
-          />
-
-          <span class="text-sm tabular-nums text-muted-foreground">
-            {t("history.selectedCount", { count: props.selectedCount })}
-          </span>
+        <div class="pointer-events-auto flex items-center gap-8 rounded-2xl border border-border/30 bg-card/30 px-12 py-2 shadow-2xl backdrop-blur-sm dark:bg-card/20">
+          <div class="flex items-center gap-2.5">
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={allSelected() ? true : hasSelection() ? "mixed" : false}
+              class="flex scale-110 items-center justify-center disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() =>
+                allSelected()
+                  ? props.onClearSelection()
+                  : props.onSelectAll()
+              }
+              disabled={props.totalCount === 0}
+            >
+              <CheckIndicator
+                checked={allSelected()}
+                indeterminate={hasSelection() && !allSelected()}
+              />
+            </button>
+            <span class="text-sm tabular-nums text-muted-foreground">
+              {t("history.selectedCount", { count: props.selectedCount })}
+            </span>
+          </div>
 
           <Button
             variant="destructive"
