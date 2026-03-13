@@ -1,6 +1,7 @@
 use tauri::Manager;
 
 pub mod converter;
+pub mod download;
 pub mod history;
 pub mod recording;
 pub mod text_processing;

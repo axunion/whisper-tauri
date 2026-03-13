@@ -26,6 +26,12 @@ pub enum HistoryError {
     Serialization(String),
 }
 
+impl From<rusqlite::Error> for HistoryError {
+    fn from(err: rusqlite::Error) -> Self {
+        Self::Database(err.to_string())
+    }
+}
+
 impl From<HistoryError> for String {
     fn from(err: HistoryError) -> Self {
         err.to_string()
@@ -64,6 +70,13 @@ mod tests {
     fn error_display_serialization() {
         let err = HistoryError::Serialization("invalid JSON".to_string());
         assert_eq!(err.to_string(), "Serialization error: invalid JSON");
+    }
+
+    #[test]
+    fn error_from_rusqlite() {
+        let rusqlite_err = rusqlite::Error::QueryReturnedNoRows;
+        let err: HistoryError = rusqlite_err.into();
+        assert!(err.to_string().starts_with("Database error:"));
     }
 
     #[test]

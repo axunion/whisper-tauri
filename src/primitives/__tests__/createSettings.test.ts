@@ -1,8 +1,8 @@
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { createRoot } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
-import type { AppSettings } from "../../types";
-import { DEFAULT_SETTINGS } from "../../types";
+import type { AppSettings } from "~/types";
+import { DEFAULT_SETTINGS } from "~/types";
 import { createSettings } from "../createSettings";
 
 type MockStoreInstance = {

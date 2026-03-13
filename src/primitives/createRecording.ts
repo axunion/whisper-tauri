@@ -1,13 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { createSignal, onCleanup } from "solid-js";
-import { parseError } from "../lib/errors";
-import type {
-  AudioDevice,
-  RecordingLevel,
-  RecordingStopResult,
-} from "../types";
-import type { AppError } from "../types/errors";
+import { parseError } from "~/lib/errors";
+import type { AudioDevice, RecordingLevel, RecordingStopResult } from "~/types";
+import type { AppError } from "~/types/errors";
 
 export function createRecording() {
   const [devices, setDevices] = createSignal<AudioDevice[]>([]);

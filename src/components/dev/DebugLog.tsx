@@ -1,6 +1,7 @@
 import { For, Show } from "solid-js";
 import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
+import { cn } from "~/lib/utils";
 import type { createDevLog, LogLevel } from "~/primitives/createDevLog";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
@@ -107,13 +108,11 @@ export function DebugLog(props: DebugLogProps) {
               <div class="flex items-start gap-2 py-0.5">
                 <Badge
                   variant={LEVEL_VARIANT[entry.level]}
-                  class={
-                    entry.level === "ERROR"
-                      ? "bg-destructive text-destructive-foreground"
-                      : entry.level === "WARN"
-                        ? "bg-yellow-500 text-white"
-                        : ""
-                  }
+                  class={cn(
+                    entry.level === "ERROR" &&
+                      "bg-destructive text-destructive-foreground",
+                    entry.level === "WARN" && "bg-yellow-500 text-white",
+                  )}
                 >
                   {entry.level}
                 </Badge>

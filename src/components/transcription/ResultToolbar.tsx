@@ -6,6 +6,7 @@ import { Button } from "~/components/ui/Button";
 import type { DictionaryKey } from "~/i18n";
 import { useI18n } from "~/i18n";
 import type { ExportFormat } from "~/lib/export";
+import { cn } from "~/lib/utils";
 
 type ResultTab = "text" | "timeline" | "proofread" | "summary";
 
@@ -167,11 +168,11 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
                     {(opt) => (
                       <button
                         type="button"
-                        class={`${dropdownItemClass} ${
-                          format() === opt.value
-                            ? "bg-accent text-accent-foreground"
-                            : ""
-                        }`}
+                        class={cn(
+                          dropdownItemClass,
+                          format() === opt.value &&
+                            "bg-accent text-accent-foreground",
+                        )}
                         onClick={() => handleSaveWithFormat(opt.value)}
                       >
                         {t(opt.labelKey)}

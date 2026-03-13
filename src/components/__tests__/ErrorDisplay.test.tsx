@@ -1,13 +1,13 @@
 import { fireEvent, screen } from "@solidjs/testing-library";
 import { describe, expect, it, vi } from "vitest";
+import { renderWithI18n } from "~/test/helpers";
+import type { AppError } from "~/types/errors";
+import { ErrorCode } from "~/types/errors";
 import {
   getErrorCategory,
   getErrorMessage,
   isRecoverable,
 } from "../../lib/errors";
-import { renderWithI18n } from "../../test/helpers";
-import type { AppError } from "../../types/errors";
-import { ErrorCode } from "../../types/errors";
 import { ErrorDisplay } from "../ErrorDisplay";
 
 function makeError(overrides?: Partial<AppError>): AppError {

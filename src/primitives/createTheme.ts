@@ -1,6 +1,6 @@
 import type { Accessor } from "solid-js";
 import { createEffect, onCleanup } from "solid-js";
-import type { AppSettings } from "../types";
+import type { AppSettings } from "~/types";
 
 function resolveSystemTheme(): boolean {
   if (typeof window.matchMedia !== "function") return false;

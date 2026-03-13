@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { TranscriptionResult } from "../../types/whisper";
+import type { TranscriptionResult } from "~/types/whisper";
 import {
   exportResult,
   formatTimestamp,

@@ -1,9 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { createSignal, onCleanup } from "solid-js";
-import { parseError } from "../lib/errors";
-import type { FfmpegDownloadProgress } from "../types";
-import type { AppError } from "../types/errors";
+import { parseError } from "~/lib/errors";
+import type { FfmpegDownloadProgress } from "~/types";
+import type { AppError } from "~/types/errors";
 
 export function createFfmpegDownloader() {
   const [isBundled, setIsBundled] = createSignal(false);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ErrorCode } from "../../types/errors";
+import { ErrorCode } from "~/types/errors";
 import {
   getErrorCategory,
   getErrorMessage,

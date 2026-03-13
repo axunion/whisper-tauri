@@ -1,15 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { batch, createSignal, onCleanup } from "solid-js";
-import { parseError } from "../lib/errors";
+import { parseError } from "~/lib/errors";
 import type {
   DownloadProgress,
   FileInfo,
   ModelInfo,
   TranscriptionProgress,
   TranscriptionResult,
-} from "../types";
-import type { AppError } from "../types/errors";
+} from "~/types";
+import type { AppError } from "~/types/errors";
 
 export function createWhisper() {
   const [models, setModels] = createSignal<ModelInfo[]>([]);

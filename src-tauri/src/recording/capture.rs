@@ -394,6 +394,19 @@ fn select_input_config(
     Ok(best.with_max_sample_rate())
 }
 
+/// Stores mono samples and emits level if needed.
+fn store_and_emit(
+    mono: &[f32],
+    samples: &Arc<Mutex<Vec<f32>>>,
+    last_emit: &Arc<Mutex<Instant>>,
+    app: &AppHandle,
+) {
+    if let Ok(mut buf) = samples.lock() {
+        buf.extend_from_slice(mono);
+    }
+    emit_level_if_needed(mono, last_emit, app);
+}
+
 /// Processes f32 audio samples from the cpal callback.
 fn process_samples_f32(
     data: &[f32],
@@ -403,12 +416,7 @@ fn process_samples_f32(
     app: &AppHandle,
 ) {
     let mono = to_mono_f32(data, channels);
-
-    if let Ok(mut buf) = samples.lock() {
-        buf.extend_from_slice(&mono);
-    }
-
-    emit_level_if_needed(&mono, last_emit, app);
+    store_and_emit(&mono, samples, last_emit, app);
 }
 
 /// Processes i16 audio samples from the cpal callback.
@@ -425,12 +433,7 @@ fn process_samples_i16(
         .map(|&s| f32::from(s) / f32::from(i16::MAX))
         .collect();
     let mono = to_mono_f32(&float_data, channels);
-
-    if let Ok(mut buf) = samples.lock() {
-        buf.extend_from_slice(&mono);
-    }
-
-    emit_level_if_needed(&mono, last_emit, app);
+    store_and_emit(&mono, samples, last_emit, app);
 }
 
 /// Processes u16 audio samples from the cpal callback.
@@ -447,12 +450,7 @@ fn process_samples_u16(
         .map(|&s| (f32::from(s) / f32::from(u16::MAX)) * 2.0 - 1.0)
         .collect();
     let mono = to_mono_f32(&float_data, channels);
-
-    if let Ok(mut buf) = samples.lock() {
-        buf.extend_from_slice(&mono);
-    }
-
-    emit_level_if_needed(&mono, last_emit, app);
+    store_and_emit(&mono, samples, last_emit, app);
 }
 
 /// Converts interleaved multi-channel f32 audio to mono by averaging channels.
@@ -478,8 +476,13 @@ fn emit_level_if_needed(samples: &[f32], last_emit: &Arc<Mutex<Instant>>, app: &
         return;
     }
 
-    let should_emit = if let Ok(last) = last_emit.lock() {
-        last.elapsed().as_millis() >= LEVEL_EMIT_INTERVAL_MS
+    let should_emit = if let Ok(mut last) = last_emit.lock() {
+        if last.elapsed().as_millis() >= LEVEL_EMIT_INTERVAL_MS {
+            *last = Instant::now();
+            true
+        } else {
+            false
+        }
     } else {
         false
     };
@@ -493,10 +496,6 @@ fn emit_level_if_needed(samples: &[f32], last_emit: &Arc<Mutex<Instant>>, app: &
                 peak_level: peak,
             },
         );
-
-        if let Ok(mut last) = last_emit.lock() {
-            *last = Instant::now();
-        }
     }
 }
 

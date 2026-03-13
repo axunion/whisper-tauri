@@ -1,8 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { createSignal } from "solid-js";
-import { parseError } from "../lib/errors";
-import type { ConversionResult, SupportedFormat } from "../types";
-import type { AppError } from "../types/errors";
+import { parseError } from "~/lib/errors";
+import type { ConversionResult, SupportedFormat } from "~/types";
+import type { AppError } from "~/types/errors";
 
 export function createFileConverter() {
   const [isConverting, setIsConverting] = createSignal(false);

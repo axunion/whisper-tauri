@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { createRoot } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
-import type { ConversionResult, SupportedFormat } from "../../types";
+import type { ConversionResult, SupportedFormat } from "~/types";
 import { createFileConverter } from "../createFileConverter";
 
 describe("createFileConverter", () => {

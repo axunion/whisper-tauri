@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { createRoot } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
-import type { FfmpegDownloadProgress } from "../../types";
+import type { FfmpegDownloadProgress } from "~/types";
 import { createFfmpegDownloader } from "../createFfmpegDownloader";
 
 describe("createFfmpegDownloader", () => {

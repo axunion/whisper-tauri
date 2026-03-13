@@ -236,10 +236,6 @@ pub async fn download_ffmpeg<F>(
 where
     F: Fn(u64, u64, f64),
 {
-    use futures_util::StreamExt;
-    use std::time::Instant;
-    use tokio::io::AsyncWriteExt;
-
     let url = custom_url.unwrap_or(get_default_download_url());
     let format = if custom_url.is_some() {
         // Custom URL: guess format from extension
@@ -262,45 +258,9 @@ where
     };
     let archive_path = dir.join(format!("ffmpeg-download.{archive_ext}"));
 
-    let response = reqwest::get(url).await.map_err(ConverterError::from)?;
-
-    let status = response.status();
-    if !status.is_success() {
-        return Err(ConverterError::DownloadFailed(format!(
-            "HTTP {status} for {url}"
-        )));
-    }
-
-    let total_bytes = response.content_length().unwrap_or(0);
-    let mut stream = response.bytes_stream();
-    let mut file = tokio::fs::File::create(&archive_path)
+    crate::download::download_file(url, &archive_path, &on_progress)
         .await
         .map_err(ConverterError::from)?;
-    let mut downloaded_bytes: u64 = 0;
-    let mut last_emit = Instant::now();
-
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(ConverterError::from)?;
-        file.write_all(&chunk).await.map_err(ConverterError::from)?;
-        downloaded_bytes += chunk.len() as u64;
-
-        // Throttle progress callbacks to 100ms
-        if last_emit.elapsed().as_millis() >= 100 {
-            let progress = if total_bytes > 0 {
-                #[allow(clippy::cast_precision_loss)]
-                {
-                    (downloaded_bytes as f64 / total_bytes as f64) * 100.0
-                }
-            } else {
-                0.0
-            };
-            on_progress(downloaded_bytes, total_bytes, progress);
-            last_emit = Instant::now();
-        }
-    }
-
-    file.flush().await.map_err(ConverterError::from)?;
-    drop(file);
 
     // Extract ffmpeg binary from archive
     let final_path = get_ffmpeg_path(app_data_dir);
@@ -322,7 +282,7 @@ where
     }
 
     // Emit final 100% progress
-    on_progress(downloaded_bytes, total_bytes, 100.0);
+    on_progress(0, 0, 100.0);
 
     Ok(final_path)
 }

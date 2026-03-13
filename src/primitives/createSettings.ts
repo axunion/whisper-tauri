@@ -1,7 +1,7 @@
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { createSignal } from "solid-js";
-import type { AppSettings } from "../types";
-import { DEFAULT_SETTINGS } from "../types";
+import type { AppSettings } from "~/types";
+import { DEFAULT_SETTINGS } from "~/types";
 
 export function createSettings() {
   const store = new LazyStore("settings.json");

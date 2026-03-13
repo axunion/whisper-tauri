@@ -11,34 +11,22 @@ import {
   FileSelector,
   RecordingPanel,
   ResultViewer,
+  TranscriptionOptionsBar,
   TranscriptionProgress,
 } from "~/components/transcription";
-import { Button } from "~/components/ui/Button";
 import { Card, CardContent } from "~/components/ui/Card";
 import { Progress } from "~/components/ui/Progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/Select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/Tabs";
 import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
+import { cn } from "~/lib/utils";
 import { createFileConverter } from "~/primitives/createFileConverter";
 import { createHistory } from "~/primitives/createHistory";
 import { createRecording } from "~/primitives/createRecording";
 import { createSettings } from "~/primitives/createSettings";
 import { createWhisper } from "~/primitives/createWhisper";
-import type { ModelInfo } from "~/types";
 
 const WAV_EXTENSIONS = new Set(["wav"]);
-
-interface LanguageOption {
-  value: string;
-  label: string;
-}
 
 function getExtension(filename: string): string {
   const parts = filename.split(".");
@@ -47,17 +35,6 @@ function getExtension(filename: string): string {
 
 export default function Transcription() {
   const { t } = useI18n();
-
-  const languageOptions: LanguageOption[] = [
-    { value: "auto", label: t("transcription.languageAuto") },
-    { value: "ja", label: t("transcription.languageJa") },
-    { value: "en", label: t("transcription.languageEn") },
-    { value: "zh", label: t("transcription.languageZh") },
-    { value: "ko", label: t("transcription.languageKo") },
-    { value: "fr", label: t("transcription.languageFr") },
-    { value: "de", label: t("transcription.languageDe") },
-    { value: "es", label: t("transcription.languageEs") },
-  ];
 
   const whisper = createWhisper();
   const converter = createFileConverter();
@@ -185,11 +162,12 @@ export default function Transcription() {
 
   return (
     <div
-      class={
+      class={cn(
+        "animate-fade-in mx-auto w-full max-w-3xl",
         viewState() === "result"
-          ? "animate-fade-in mx-auto -mb-10 flex w-full max-w-3xl flex-1 flex-col gap-8"
-          : "animate-fade-in mx-auto w-full max-w-3xl space-y-8"
-      }
+          ? "-mb-10 flex flex-1 flex-col gap-8"
+          : "space-y-8",
+      )}
     >
       <ErrorDisplay
         error={combinedError()}
@@ -198,18 +176,16 @@ export default function Transcription() {
       />
 
       <Card
-        class={
-          viewState() === "result"
-            ? "flex flex-1 flex-col rounded-2xl shadow-sm"
-            : "rounded-2xl shadow-sm"
-        }
+        class={cn(
+          "rounded-2xl shadow-sm",
+          viewState() === "result" && "flex flex-1 flex-col",
+        )}
       >
         <CardContent
-          class={
-            viewState() === "result"
-              ? "flex min-h-0 flex-1 flex-col pt-6"
-              : "pt-6"
-          }
+          class={cn(
+            "pt-6",
+            viewState() === "result" && "flex min-h-0 flex-1 flex-col",
+          )}
         >
           <Switch>
             <Match when={viewState() === "input"}>
@@ -269,110 +245,26 @@ export default function Transcription() {
                       recording.tempFilePath() !== null
                     }
                   >
-                    <div class="mt-6 border-t border-border/30 pt-5">
-                      <Show
-                        when={downloadedModels().length > 0}
-                        fallback={
-                          <p class="rounded-lg bg-muted/50 py-3 text-center text-sm text-muted-foreground">
-                            {t("transcription.noModelsWarning")}
-                          </p>
-                        }
-                      >
-                        <div class="grid grid-cols-[2fr_2fr_3fr] gap-3">
-                          <div class="space-y-3">
-                            <span class="text-xs font-medium text-muted-foreground">
-                              {t("transcription.model")}
-                            </span>
-                            <Select<ModelInfo>
-                              multiple={false}
-                              options={downloadedModels()}
-                              optionValue="id"
-                              optionTextValue="name"
-                              value={whisper.selectedModel()}
-                              onChange={(value) => {
-                                if (value) whisper.selectModel(value);
-                              }}
-                              disallowEmptySelection
-                              itemComponent={(itemProps) => (
-                                <SelectItem item={itemProps.item}>
-                                  {itemProps.item.rawValue.name}
-                                </SelectItem>
-                              )}
-                            >
-                              <SelectTrigger class="h-11 border-0 bg-muted/50">
-                                <SelectValue<ModelInfo>>
-                                  {(state) =>
-                                    state.selectedOption()?.name ??
-                                    t("transcription.model")
-                                  }
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent />
-                            </Select>
-                          </div>
-                          <div class="space-y-3">
-                            <span class="text-xs font-medium text-muted-foreground">
-                              {t("transcription.languageLabel")}
-                            </span>
-                            <Select<LanguageOption>
-                              multiple={false}
-                              options={languageOptions}
-                              optionValue="value"
-                              optionTextValue="label"
-                              value={
-                                languageOptions.find(
-                                  (o) =>
-                                    o.value === (whisper.language() ?? "auto"),
-                                ) ??
-                                languageOptions[0] ??
-                                null
-                              }
-                              onChange={(value) => {
-                                if (value) {
-                                  const lang =
-                                    value.value === "auto" ? null : value.value;
-                                  whisper.setLanguage(lang);
-                                  settings.update({ whisperLanguage: lang });
-                                }
-                              }}
-                              disallowEmptySelection
-                              itemComponent={(itemProps) => (
-                                <SelectItem item={itemProps.item}>
-                                  {itemProps.item.rawValue.label}
-                                </SelectItem>
-                              )}
-                            >
-                              <SelectTrigger class="h-11 border-0 bg-muted/50">
-                                <SelectValue<LanguageOption>>
-                                  {(state) =>
-                                    state.selectedOption()?.label ??
-                                    t("transcription.languageAuto")
-                                  }
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent />
-                            </Select>
-                          </div>
-                          <div class="flex items-end">
-                            <Button
-                              class="h-11 w-full"
-                              disabled={
-                                activeTab() === "file"
-                                  ? !canStartFile()
-                                  : !canStartRecording()
-                              }
-                              onClick={
-                                activeTab() === "file"
-                                  ? handleStartFile
-                                  : handleStartRecording
-                              }
-                            >
-                              {t("transcription.startTranscription")}
-                            </Button>
-                          </div>
-                        </div>
-                      </Show>
-                    </div>
+                    <TranscriptionOptionsBar
+                      downloadedModels={downloadedModels()}
+                      selectedModel={whisper.selectedModel()}
+                      language={whisper.language()}
+                      canStart={
+                        activeTab() === "file"
+                          ? canStartFile()
+                          : canStartRecording()
+                      }
+                      onSelectModel={(model) => whisper.selectModel(model)}
+                      onLanguageChange={(lang) => {
+                        whisper.setLanguage(lang);
+                        settings.update({ whisperLanguage: lang });
+                      }}
+                      onStart={
+                        activeTab() === "file"
+                          ? handleStartFile
+                          : handleStartRecording
+                      }
+                    />
                   </Show>
                 </Show>
               </div>

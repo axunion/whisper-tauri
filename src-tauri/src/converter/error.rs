@@ -34,6 +34,12 @@ pub enum ConverterError {
     StoreError(String),
 }
 
+impl From<crate::download::DownloadError> for ConverterError {
+    fn from(err: crate::download::DownloadError) -> Self {
+        Self::DownloadFailed(err.to_string())
+    }
+}
+
 impl From<ConverterError> for String {
     fn from(err: ConverterError) -> Self {
         err.to_string()

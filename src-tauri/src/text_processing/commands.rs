@@ -1,19 +1,13 @@
 use std::path::{Path, PathBuf};
-use std::time::Instant;
 
-use futures_util::StreamExt;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_store::StoreExt;
-use tokio::io::AsyncWriteExt;
 
 use super::error::TextProcessingError;
 use super::inference;
 use super::models;
 use super::server::LlamaServerManager;
 use super::types::{ServerStatus, SummaryOptions, TextDownloadProgress, TextModelInfo};
-
-/// Progress event throttle interval in milliseconds.
-const PROGRESS_THROTTLE_MS: u128 = 100;
 
 /// Store filename for settings.
 const SETTINGS_STORE: &str = "settings.json";
@@ -79,55 +73,25 @@ pub async fn text_processing_download_model(
         .ok_or_else(|| TextProcessingError::ModelNotFound(model_id.clone()).to_string())?;
     let part_path = final_path.with_extension("gguf.part");
 
-    let response = reqwest::get(&url)
-        .await
-        .map_err(TextProcessingError::from)?;
-
-    let status = response.status();
-    if !status.is_success() {
-        return Err(TextProcessingError::DownloadFailed(format!("HTTP {status} for {url}")).into());
-    }
-
-    let total_bytes = response.content_length().unwrap_or(0);
-    let mut stream = response.bytes_stream();
-    let mut file = tokio::fs::File::create(&part_path)
-        .await
-        .map_err(TextProcessingError::from)?;
-    let mut downloaded_bytes: u64 = 0;
-    let mut last_emit = Instant::now();
-
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(TextProcessingError::from)?;
-        file.write_all(&chunk)
-            .await
-            .map_err(TextProcessingError::from)?;
-        downloaded_bytes += chunk.len() as u64;
-
-        if last_emit.elapsed().as_millis() >= PROGRESS_THROTTLE_MS {
-            let progress = if total_bytes > 0 {
-                #[allow(clippy::cast_precision_loss)]
-                {
-                    (downloaded_bytes as f64 / total_bytes as f64) * 100.0
-                }
-            } else {
-                0.0
-            };
-
-            let _ = app.emit(
+    let model_id_cb = model_id.clone();
+    let app_cb = app.clone();
+    crate::download::download_file(
+        &url,
+        &part_path,
+        move |downloaded_bytes, total_bytes, progress| {
+            let _ = app_cb.emit(
                 "text-processing:download-progress",
                 TextDownloadProgress {
-                    model_id: model_id.clone(),
+                    model_id: model_id_cb.clone(),
                     downloaded_bytes,
                     total_bytes,
                     progress,
                 },
             );
-            last_emit = Instant::now();
-        }
-    }
-
-    file.flush().await.map_err(TextProcessingError::from)?;
-    drop(file);
+        },
+    )
+    .await
+    .map_err(TextProcessingError::from)?;
 
     tokio::fs::rename(&part_path, &final_path)
         .await
@@ -137,8 +101,8 @@ pub async fn text_processing_download_model(
         "text-processing:download-progress",
         TextDownloadProgress {
             model_id,
-            downloaded_bytes,
-            total_bytes,
+            downloaded_bytes: 0,
+            total_bytes: 0,
             progress: 100.0,
         },
     );
@@ -496,39 +460,12 @@ async fn ensure_server_running(
 
 /// Downloads a file from a URL to a local path.
 async fn download_file(url: &str, output_path: &Path, app: &AppHandle) -> Result<(), String> {
-    let response = reqwest::get(url).await.map_err(TextProcessingError::from)?;
-
-    let status = response.status();
-    if !status.is_success() {
-        return Err(TextProcessingError::DownloadFailed(format!("HTTP {status} for {url}")).into());
-    }
-
-    let total_bytes = response.content_length().unwrap_or(0);
-    let mut stream = response.bytes_stream();
-    let mut file = tokio::fs::File::create(output_path)
-        .await
-        .map_err(TextProcessingError::from)?;
-    let mut downloaded_bytes: u64 = 0;
-    let mut last_emit = Instant::now();
-
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(TextProcessingError::from)?;
-        file.write_all(&chunk)
-            .await
-            .map_err(TextProcessingError::from)?;
-        downloaded_bytes += chunk.len() as u64;
-
-        if last_emit.elapsed().as_millis() >= PROGRESS_THROTTLE_MS {
-            let progress = if total_bytes > 0 {
-                #[allow(clippy::cast_precision_loss)]
-                {
-                    (downloaded_bytes as f64 / total_bytes as f64) * 100.0
-                }
-            } else {
-                0.0
-            };
-
-            let _ = app.emit(
+    let app_cb = app.clone();
+    crate::download::download_file(
+        url,
+        output_path,
+        move |downloaded_bytes, total_bytes, progress| {
+            let _ = app_cb.emit(
                 "text-processing:download-progress",
                 TextDownloadProgress {
                     model_id: "llama-server".to_string(),
@@ -537,12 +474,10 @@ async fn download_file(url: &str, output_path: &Path, app: &AppHandle) -> Result
                     progress,
                 },
             );
-            last_emit = Instant::now();
-        }
-    }
-
-    file.flush().await.map_err(TextProcessingError::from)?;
-    Ok(())
+        },
+    )
+    .await
+    .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())
 }
 
 /// Gets the custom server URL from settings store.

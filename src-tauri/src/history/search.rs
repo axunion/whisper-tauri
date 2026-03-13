@@ -20,8 +20,7 @@ pub fn init_fts(conn: &Connection) -> Result<(), HistoryError> {
             text,
             tokenize='trigram'
         );",
-    )
-    .map_err(|e| HistoryError::Database(e.to_string()))?;
+    )?;
     Ok(())
 }
 
@@ -34,8 +33,7 @@ pub fn index_entry(conn: &Connection, id: &str, text: &str) -> Result<(), Histor
     conn.execute(
         "INSERT INTO history_fts (history_id, text) VALUES (?1, ?2)",
         rusqlite::params![id, text],
-    )
-    .map_err(|e| HistoryError::Database(e.to_string()))?;
+    )?;
     Ok(())
 }
 
@@ -48,8 +46,7 @@ pub fn delete_entry_index(conn: &Connection, id: &str) -> Result<(), HistoryErro
     conn.execute(
         "DELETE FROM history_fts WHERE history_id = ?1",
         rusqlite::params![id],
-    )
-    .map_err(|e| HistoryError::Database(e.to_string()))?;
+    )?;
     Ok(())
 }
 
@@ -59,8 +56,7 @@ pub fn delete_entry_index(conn: &Connection, id: &str) -> Result<(), HistoryErro
 ///
 /// Returns `HistoryError::Database` if the index cannot be cleared.
 pub fn delete_all_indices(conn: &Connection) -> Result<(), HistoryError> {
-    conn.execute("DELETE FROM history_fts", [])
-        .map_err(|e| HistoryError::Database(e.to_string()))?;
+    conn.execute("DELETE FROM history_fts", [])?;
     Ok(())
 }
 
@@ -126,40 +122,13 @@ pub fn search_entries(
     let param_refs: Vec<&dyn rusqlite::types::ToSql> =
         param_values.iter().map(AsRef::as_ref).collect();
 
-    let mut stmt = conn
-        .prepare(&sql)
-        .map_err(|e| HistoryError::Database(e.to_string()))?;
+    let mut stmt = conn.prepare(&sql)?;
 
-    let rows = stmt
-        .query_map(param_refs.as_slice(), |row| {
-            let text_compressed: Vec<u8> = row.get(6)?;
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, String>(2)?,
-                row.get::<_, String>(3)?,
-                row.get::<_, String>(4)?,
-                row.get::<_, u64>(5)?,
-                text_compressed,
-            ))
-        })
-        .map_err(|e| HistoryError::Database(e.to_string()))?;
+    let rows = stmt.query_map(param_refs.as_slice(), super::db::meta_row_mapper)?;
 
     let mut entries = Vec::new();
     for row in rows {
-        let (id, created_at, file_name, language, model_id, duration, text_compressed) =
-            row.map_err(|e| HistoryError::Database(e.to_string()))?;
-        let text = super::db::decompress_text(&text_compressed)?;
-        let preview = super::db::text_preview(&text, 100);
-        entries.push(HistoryMeta {
-            id,
-            created_at,
-            file_name,
-            language,
-            model_id,
-            duration,
-            text_preview: preview,
-        });
+        entries.push(super::db::meta_from_row(row?)?);
     }
 
     Ok(entries)
@@ -177,18 +146,14 @@ pub fn rebuild_fts_index(conn: &Connection) -> Result<(), HistoryError> {
     delete_all_indices(conn)?;
 
     // Re-index all entries
-    let mut stmt = conn
-        .prepare("SELECT id, text_compressed FROM history")
-        .map_err(|e| HistoryError::Database(e.to_string()))?;
+    let mut stmt = conn.prepare("SELECT id, text_compressed FROM history")?;
 
-    let rows = stmt
-        .query_map([], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, Vec<u8>>(1)?))
-        })
-        .map_err(|e| HistoryError::Database(e.to_string()))?;
+    let rows = stmt.query_map([], |row| {
+        Ok((row.get::<_, String>(0)?, row.get::<_, Vec<u8>>(1)?))
+    })?;
 
     for row in rows {
-        let (id, text_compressed) = row.map_err(|e| HistoryError::Database(e.to_string()))?;
+        let (id, text_compressed) = row?;
         let text = super::db::decompress_text(&text_compressed)?;
         index_entry(conn, &id, &text)?;
     }
@@ -204,17 +169,15 @@ pub fn rebuild_fts_index(conn: &Connection) -> Result<(), HistoryError> {
 ///
 /// Returns `HistoryError::Database` if the query fails.
 pub fn needs_fts_migration(conn: &Connection) -> Result<bool, HistoryError> {
-    let history_count: u64 = conn
-        .query_row("SELECT COUNT(*) FROM history", [], |row| row.get(0))
-        .map_err(|e| HistoryError::Database(e.to_string()))?;
+    let history_count: u64 =
+        conn.query_row("SELECT COUNT(*) FROM history", [], |row| row.get(0))?;
 
     if history_count == 0 {
         return Ok(false);
     }
 
-    let fts_count: u64 = conn
-        .query_row("SELECT COUNT(*) FROM history_fts", [], |row| row.get(0))
-        .map_err(|e| HistoryError::Database(e.to_string()))?;
+    let fts_count: u64 =
+        conn.query_row("SELECT COUNT(*) FROM history_fts", [], |row| row.get(0))?;
 
     Ok(fts_count == 0)
 }

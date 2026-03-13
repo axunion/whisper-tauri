@@ -1,14 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import { createSignal } from "solid-js";
-import { parseError } from "../lib/errors";
+import { parseError } from "~/lib/errors";
 import type {
   HistoryEntry,
   HistoryFilter,
   HistoryMeta,
   HistorySaveParams,
   HistorySearchParams,
-} from "../types";
-import type { AppError } from "../types/errors";
+} from "~/types";
+import type { AppError } from "~/types/errors";
 
 const DEFAULT_LIMIT = 200;
 

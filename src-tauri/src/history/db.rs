@@ -8,6 +8,41 @@ use super::types::{
     HistoryEntry, HistoryFilter, HistoryMeta, HistorySaveParams, HistorySegment, HistorySortBy,
 };
 
+/// Row type returned by `meta_row_mapper`.
+pub type MetaRow = (String, String, String, String, String, u64, Vec<u8>);
+
+/// Extracts a `MetaRow` tuple from a rusqlite row.
+///
+/// Expects columns: id(0), created_at(1), file_name(2), language(3),
+/// model_id(4), duration(5), text_compressed(6).
+pub fn meta_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<MetaRow> {
+    Ok((
+        row.get::<_, String>(0)?,
+        row.get::<_, String>(1)?,
+        row.get::<_, String>(2)?,
+        row.get::<_, String>(3)?,
+        row.get::<_, String>(4)?,
+        row.get::<_, u64>(5)?,
+        row.get::<_, Vec<u8>>(6)?,
+    ))
+}
+
+/// Converts a `MetaRow` into a `HistoryMeta`, decompressing text for preview.
+pub fn meta_from_row(row: MetaRow) -> Result<HistoryMeta, HistoryError> {
+    let (id, created_at, file_name, language, model_id, duration, text_compressed) = row;
+    let text = decompress_text(&text_compressed)?;
+    let preview = text_preview(&text, 100);
+    Ok(HistoryMeta {
+        id,
+        created_at,
+        file_name,
+        language,
+        model_id,
+        duration,
+        text_preview: preview,
+    })
+}
+
 /// Builds an ORDER BY clause based on the sort option.
 #[must_use]
 pub fn sort_clause(sort_by: Option<&HistorySortBy>, prefix: &str) -> String {
@@ -33,7 +68,7 @@ pub fn db_path(app_data_dir: &Path) -> PathBuf {
 ///
 /// Returns `HistoryError::Database` if the database cannot be opened or initialized.
 pub fn init_db(db_path: &Path) -> Result<(), HistoryError> {
-    let conn = Connection::open(db_path).map_err(|e| HistoryError::Database(e.to_string()))?;
+    let conn = Connection::open(db_path)?;
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS history (
             id TEXT PRIMARY KEY,
@@ -46,8 +81,7 @@ pub fn init_db(db_path: &Path) -> Result<(), HistoryError> {
             segments_compressed BLOB NOT NULL
         );
         CREATE INDEX IF NOT EXISTS idx_history_created_at ON history(created_at);",
-    )
-    .map_err(|e| HistoryError::Database(e.to_string()))?;
+    )?;
 
     // Initialize FTS5 index
     super::search::init_fts(&conn)?;
@@ -122,11 +156,9 @@ pub fn save_entry(db_path: &Path, params: &HistorySaveParams) -> Result<String, 
         .map_err(|e| HistoryError::Serialization(e.to_string()))?;
     let segments_compressed = compress_text(&segments_json)?;
 
-    let conn = Connection::open(db_path).map_err(|e| HistoryError::Database(e.to_string()))?;
+    let conn = Connection::open(db_path)?;
 
-    let tx = conn
-        .unchecked_transaction()
-        .map_err(|e| HistoryError::Database(e.to_string()))?;
+    let tx = conn.unchecked_transaction()?;
 
     tx.execute(
         "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed)
@@ -142,12 +174,11 @@ pub fn save_entry(db_path: &Path, params: &HistorySaveParams) -> Result<String, 
             segments_compressed,
         ],
     )
-    .map_err(|e| HistoryError::Database(e.to_string()))?;
+    ?;
 
     super::search::index_entry(&tx, &id, &params.text)?;
 
-    tx.commit()
-        .map_err(|e| HistoryError::Database(e.to_string()))?;
+    tx.commit()?;
 
     Ok(id)
 }
@@ -161,7 +192,7 @@ pub fn list_entries(
     db_path: &Path,
     filter: &HistoryFilter,
 ) -> Result<Vec<HistoryMeta>, HistoryError> {
-    let conn = Connection::open(db_path).map_err(|e| HistoryError::Database(e.to_string()))?;
+    let conn = Connection::open(db_path)?;
 
     let mut sql =
         String::from("SELECT id, created_at, file_name, language, model_id, duration, text_compressed FROM history");
@@ -189,40 +220,13 @@ pub fn list_entries(
     let params_refs: Vec<&dyn rusqlite::types::ToSql> =
         params_vec.iter().map(AsRef::as_ref).collect();
 
-    let mut stmt = conn
-        .prepare(&sql)
-        .map_err(|e| HistoryError::Database(e.to_string()))?;
+    let mut stmt = conn.prepare(&sql)?;
 
-    let rows = stmt
-        .query_map(params_refs.as_slice(), |row| {
-            let text_compressed: Vec<u8> = row.get(6)?;
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, String>(2)?,
-                row.get::<_, String>(3)?,
-                row.get::<_, String>(4)?,
-                row.get::<_, u64>(5)?,
-                text_compressed,
-            ))
-        })
-        .map_err(|e| HistoryError::Database(e.to_string()))?;
+    let rows = stmt.query_map(params_refs.as_slice(), meta_row_mapper)?;
 
     let mut entries = Vec::new();
     for row in rows {
-        let (id, created_at, file_name, language, model_id, duration, text_compressed) =
-            row.map_err(|e| HistoryError::Database(e.to_string()))?;
-        let text = decompress_text(&text_compressed)?;
-        let preview = text_preview(&text, 100);
-        entries.push(HistoryMeta {
-            id,
-            created_at,
-            file_name,
-            language,
-            model_id,
-            duration,
-            text_preview: preview,
-        });
+        entries.push(meta_from_row(row?)?);
     }
 
     Ok(entries)
@@ -235,14 +239,14 @@ pub fn list_entries(
 /// Returns `HistoryError::NotFound` if no entry with the given ID exists.
 /// Returns `HistoryError::Database` if the query fails.
 pub fn get_entry(db_path: &Path, id: &str) -> Result<HistoryEntry, HistoryError> {
-    let conn = Connection::open(db_path).map_err(|e| HistoryError::Database(e.to_string()))?;
+    let conn = Connection::open(db_path)?;
 
     let mut stmt = conn
         .prepare(
             "SELECT id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed
              FROM history WHERE id = ?1",
         )
-        .map_err(|e| HistoryError::Database(e.to_string()))?;
+        ?;
 
     let entry = stmt
         .query_row(rusqlite::params![id], |row| {
@@ -299,11 +303,9 @@ pub fn delete_entries(db_path: &Path, ids: &[String]) -> Result<u64, HistoryErro
         return Ok(0);
     }
 
-    let conn = Connection::open(db_path).map_err(|e| HistoryError::Database(e.to_string()))?;
+    let conn = Connection::open(db_path)?;
 
-    let tx = conn
-        .unchecked_transaction()
-        .map_err(|e| HistoryError::Database(e.to_string()))?;
+    let tx = conn.unchecked_transaction()?;
 
     // Delete FTS indices first
     for id in ids {
@@ -321,12 +323,9 @@ pub fn delete_entries(db_path: &Path, ids: &[String]) -> Result<u64, HistoryErro
         .map(|id| id as &dyn rusqlite::types::ToSql)
         .collect();
 
-    let deleted = tx
-        .execute(&sql, params.as_slice())
-        .map_err(|e| HistoryError::Database(e.to_string()))?;
+    let deleted = tx.execute(&sql, params.as_slice())?;
 
-    tx.commit()
-        .map_err(|e| HistoryError::Database(e.to_string()))?;
+    tx.commit()?;
 
     Ok(deleted as u64)
 }
@@ -337,20 +336,15 @@ pub fn delete_entries(db_path: &Path, ids: &[String]) -> Result<u64, HistoryErro
 ///
 /// Returns `HistoryError::Database` if the delete operation fails.
 pub fn delete_all_entries(db_path: &Path) -> Result<u64, HistoryError> {
-    let conn = Connection::open(db_path).map_err(|e| HistoryError::Database(e.to_string()))?;
+    let conn = Connection::open(db_path)?;
 
-    let tx = conn
-        .unchecked_transaction()
-        .map_err(|e| HistoryError::Database(e.to_string()))?;
+    let tx = conn.unchecked_transaction()?;
 
     super::search::delete_all_indices(&tx)?;
 
-    let deleted = tx
-        .execute("DELETE FROM history", [])
-        .map_err(|e| HistoryError::Database(e.to_string()))?;
+    let deleted = tx.execute("DELETE FROM history", [])?;
 
-    tx.commit()
-        .map_err(|e| HistoryError::Database(e.to_string()))?;
+    tx.commit()?;
 
     Ok(deleted as u64)
 }

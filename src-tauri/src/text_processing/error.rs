@@ -46,6 +46,12 @@ pub enum TextProcessingError {
     JsonError(String),
 }
 
+impl From<crate::download::DownloadError> for TextProcessingError {
+    fn from(err: crate::download::DownloadError) -> Self {
+        Self::DownloadFailed(err.to_string())
+    }
+}
+
 impl From<TextProcessingError> for String {
     fn from(err: TextProcessingError) -> Self {
         err.to_string()
