@@ -1,4 +1,5 @@
 import { A } from "@solidjs/router";
+import { FiChevronRight } from "solid-icons/fi";
 import { For, onMount, Show } from "solid-js";
 import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
@@ -34,6 +35,7 @@ export function RecentHistory() {
         <Show when={history.entries().length > 0}>
           <Button as={A} href="/history" variant="ghost" size="sm">
             {t("dashboard.viewAll")}
+            <FiChevronRight />
           </Button>
         </Show>
       </CardHeader>

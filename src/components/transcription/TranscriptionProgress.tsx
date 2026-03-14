@@ -1,3 +1,4 @@
+import { FiX } from "solid-icons/fi";
 import type { Component } from "solid-js";
 import { Show } from "solid-js";
 import { Button } from "~/components/ui/Button";
@@ -58,6 +59,7 @@ const TranscriptionProgress: Component<TranscriptionProgressProps> = (
         )}
       </Show>
       <Button variant="outline" size="sm" onClick={() => props.onCancel()}>
+        <FiX />
         {t("common.cancel")}
       </Button>
     </div>

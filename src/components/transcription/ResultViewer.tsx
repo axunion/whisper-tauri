@@ -223,14 +223,14 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
           <div class="flex justify-end gap-2">
             <Button
               variant="outline"
-              class="w-28"
+              class="w-32"
               onClick={() => setShowPrereqDialog(false)}
             >
               <FiX class="size-4" />
               {t("common.close")}
             </Button>
             <Button
-              class="w-28"
+              class="w-32"
               onClick={() => {
                 setShowPrereqDialog(false);
                 navigate("/settings");

@@ -1,3 +1,4 @@
+import { FiSend, FiX } from "solid-icons/fi";
 import { createSignal, Show } from "solid-js";
 import { useI18n } from "~/i18n";
 import type { createTextProcessing } from "~/primitives/createTextProcessing";
@@ -78,6 +79,7 @@ export function LlmTester(props: LlmTesterProps) {
               class="shrink-0"
               onClick={() => props.textProcessing.cancel()}
             >
+              <FiX />
               {t("common.cancel")}
             </Button>
           }
@@ -88,6 +90,7 @@ export function LlmTester(props: LlmTesterProps) {
             onClick={handleSend}
             disabled={!canSend()}
           >
+            <FiSend />
             {t("dev.send")}
           </Button>
         </Show>

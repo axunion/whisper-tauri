@@ -1,3 +1,4 @@
+import { FiRotateCcw, FiTrash2, FiX } from "solid-icons/fi";
 import { createSignal, Show } from "solid-js";
 import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
@@ -42,6 +43,7 @@ export function CacheClear(props: CacheClearProps) {
             size="sm"
             class="min-w-[8rem]"
           >
+            <FiTrash2 />
             {t("dev.clearHistory")}
           </AlertDialogTrigger>
           <AlertDialogContent>
@@ -50,17 +52,20 @@ export function CacheClear(props: CacheClearProps) {
               {t("dev.clearHistoryConfirmation")}
             </AlertDialogDescription>
             <div class="flex justify-end gap-2">
-              <AlertDialogTrigger as={Button} variant="outline">
+              <AlertDialogTrigger as={Button} variant="outline" class="w-32">
+                <FiX />
                 {t("common.cancel")}
               </AlertDialogTrigger>
               <Button
                 variant="destructive"
+                class="w-32"
                 onClick={async () => {
                   await props.history.deleteAllEntries();
                   setHistoryOpen(false);
                   toast.success(t("dev.historyClearedToast"));
                 }}
               >
+                <FiTrash2 />
                 {t("dev.deleteAll")}
               </Button>
             </div>
@@ -83,6 +88,7 @@ export function CacheClear(props: CacheClearProps) {
             size="sm"
             class="min-w-[8rem]"
           >
+            <FiRotateCcw />
             {t("dev.resetSettings")}
           </AlertDialogTrigger>
           <AlertDialogContent>
@@ -91,17 +97,20 @@ export function CacheClear(props: CacheClearProps) {
               {t("dev.resetSettingsConfirmation")}
             </AlertDialogDescription>
             <div class="flex justify-end gap-2">
-              <AlertDialogTrigger as={Button} variant="outline">
+              <AlertDialogTrigger as={Button} variant="outline" class="w-32">
+                <FiX />
                 {t("common.cancel")}
               </AlertDialogTrigger>
               <Button
                 variant="destructive"
+                class="w-32"
                 onClick={async () => {
                   await props.settings.reset();
                   setSettingsOpen(false);
                   toast.success(t("dev.settingsResetToast"));
                 }}
               >
+                <FiRotateCcw />
                 {t("common.reset")}
               </Button>
             </div>
@@ -125,6 +134,7 @@ export function CacheClear(props: CacheClearProps) {
               size="sm"
               class="min-w-[8rem]"
             >
+              <FiTrash2 />
               {t("dev.deleteFfmpeg")}
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -133,17 +143,20 @@ export function CacheClear(props: CacheClearProps) {
                 {t("dev.deleteFfmpegConfirmation")}
               </AlertDialogDescription>
               <div class="flex justify-end gap-2">
-                <AlertDialogTrigger as={Button} variant="outline">
+                <AlertDialogTrigger as={Button} variant="outline" class="w-32">
+                  <FiX />
                   {t("common.cancel")}
                 </AlertDialogTrigger>
                 <Button
                   variant="destructive"
+                  class="w-32"
                   onClick={async () => {
                     await props.ffmpeg.deleteBundled();
                     setFfmpegOpen(false);
                     toast.success(t("dev.ffmpegDeletedToast"));
                   }}
                 >
+                  <FiTrash2 />
                   {t("common.delete")}
                 </Button>
               </div>

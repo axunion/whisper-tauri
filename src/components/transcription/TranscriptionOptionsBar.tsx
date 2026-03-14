@@ -1,3 +1,4 @@
+import { FiPlay } from "solid-icons/fi";
 import { Show } from "solid-js";
 import { Button } from "~/components/ui/Button";
 import {
@@ -126,6 +127,7 @@ export function TranscriptionOptionsBar(props: TranscriptionOptionsBarProps) {
               disabled={!props.canStart}
               onClick={props.onStart}
             >
+              <FiPlay />
               {t("transcription.startTranscription")}
             </Button>
           </div>

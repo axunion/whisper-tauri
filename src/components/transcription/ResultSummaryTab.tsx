@@ -1,3 +1,4 @@
+import { TbSparkles } from "solid-icons/tb";
 import type { Component } from "solid-js";
 import { createSignal, Show } from "solid-js";
 import { Button } from "~/components/ui/Button";
@@ -89,6 +90,7 @@ const ResultSummaryTab: Component<ResultSummaryTabProps> = (props) => {
               </label>
             </div>
             <Button size="sm" onClick={handleSummarize}>
+              <TbSparkles />
               {t("textProcessing.summarize")}
             </Button>
           </div>

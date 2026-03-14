@@ -1,6 +1,7 @@
-import { FiTrash2 } from "solid-icons/fi";
+import { FiTrash2, FiX } from "solid-icons/fi";
 import type { Component } from "solid-js";
-import { createSignal } from "solid-js";
+import { createMemo, createSignal } from "solid-js";
+import { CheckIndicator } from "~/components/history/CheckIndicator";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -8,7 +9,6 @@ import {
   AlertDialogTitle,
 } from "~/components/ui/AlertDialog";
 import { Button } from "~/components/ui/Button";
-import { CheckIndicator } from "~/components/history/CheckIndicator";
 import { useSidebar } from "~/components/ui/sidebar";
 import { useI18n } from "~/i18n";
 
@@ -29,6 +29,7 @@ const HistoryActions: Component<HistoryActionsProps> = (props) => {
   const allSelected = () =>
     props.totalCount > 0 && props.selectedCount === props.totalCount;
   const hasSelection = () => props.selectedCount > 0;
+  const indeterminate = createMemo(() => hasSelection() && !allSelected());
 
   const sidebarOffset = () =>
     sidebar.state() === "expanded"
@@ -47,23 +48,23 @@ const HistoryActions: Component<HistoryActionsProps> = (props) => {
       >
         <div class="pointer-events-auto flex items-center gap-8 rounded-2xl border border-border/30 bg-card/30 px-12 py-2 shadow-2xl backdrop-blur-sm dark:bg-card/20">
           <div class="flex items-center gap-2.5">
-            <button
-              type="button"
-              role="checkbox"
-              aria-checked={allSelected() ? true : hasSelection() ? "mixed" : false}
-              class="flex scale-110 items-center justify-center disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={() =>
-                allSelected()
-                  ? props.onClearSelection()
-                  : props.onSelectAll()
-              }
-              disabled={props.totalCount === 0}
-            >
-              <CheckIndicator
+            <label class="relative flex scale-110 items-center justify-center peer-disabled:cursor-not-allowed peer-disabled:opacity-50">
+              <input
+                type="checkbox"
                 checked={allSelected()}
-                indeterminate={hasSelection() && !allSelected()}
+                class="peer sr-only"
+                onChange={() =>
+                  allSelected() ? props.onClearSelection() : props.onSelectAll()
+                }
+                disabled={props.totalCount === 0}
               />
-            </button>
+              <span aria-hidden="true">
+                <CheckIndicator
+                  checked={allSelected()}
+                  indeterminate={indeterminate()}
+                />
+              </span>
+            </label>
             <span class="text-sm tabular-nums text-muted-foreground">
               {t("history.selectedCount", { count: props.selectedCount })}
             </span>
@@ -76,7 +77,7 @@ const HistoryActions: Component<HistoryActionsProps> = (props) => {
             onClick={() => setDeleteSelectedOpen(true)}
             disabled={!hasSelection()}
           >
-            <FiTrash2 class="mr-1.5 size-3.5" />
+            <FiTrash2 />
             {t("common.delete")}
           </Button>
         </div>
@@ -94,17 +95,21 @@ const HistoryActions: Component<HistoryActionsProps> = (props) => {
           <div class="flex justify-end gap-2">
             <Button
               variant="outline"
+              class="w-32"
               onClick={() => setDeleteSelectedOpen(false)}
             >
+              <FiX />
               {t("common.cancel")}
             </Button>
             <Button
               variant="destructive"
+              class="w-32"
               onClick={() => {
                 props.onDeleteSelected();
                 setDeleteSelectedOpen(false);
               }}
             >
+              <FiTrash2 />
               {t("common.delete")}
             </Button>
           </div>

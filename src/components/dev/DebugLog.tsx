@@ -1,3 +1,4 @@
+import { FiCopy, FiTrash2 } from "solid-icons/fi";
 import { For, Show } from "solid-js";
 import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
@@ -80,6 +81,7 @@ export function DebugLog(props: DebugLogProps) {
             size="sm"
             onClick={() => props.devLog.clear()}
           >
+            <FiTrash2 />
             {t("common.clear")}
           </Button>
           <Button
@@ -94,6 +96,7 @@ export function DebugLog(props: DebugLogProps) {
               }
             }}
           >
+            <FiCopy />
             {t("common.copy")}
           </Button>
         </div>

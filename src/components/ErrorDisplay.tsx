@@ -1,3 +1,4 @@
+import { FiRefreshCw, FiX } from "solid-icons/fi";
 import { Show } from "solid-js";
 import type { DictionaryKey } from "~/i18n";
 import { useI18n } from "~/i18n";
@@ -47,6 +48,7 @@ export function ErrorDisplay(props: ErrorDisplayProps) {
                   onClick={() => props.onRetry?.()}
                   aria-label={t("common.retry")}
                 >
+                  <FiRefreshCw />
                   {t("common.retry")}
                 </Button>
               </Show>
@@ -56,6 +58,7 @@ export function ErrorDisplay(props: ErrorDisplayProps) {
                 onClick={() => props.onDismiss()}
                 aria-label={t("common.close")}
               >
+                <FiX />
                 {t("common.close")}
               </Button>
             </div>

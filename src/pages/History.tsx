@@ -1,3 +1,4 @@
+import { FiCheck, FiCheckSquare } from "solid-icons/fi";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
 import {
@@ -153,6 +154,7 @@ export default function History() {
               selectionMode() ? exitSelectionMode() : setSelectionMode(true)
             }
           >
+            {selectionMode() ? <FiCheck /> : <FiCheckSquare />}
             {selectionMode() ? t("common.done") : t("history.select")}
           </Button>
         </div>

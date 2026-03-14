@@ -1,3 +1,4 @@
+import { FiTrash2, FiX } from "solid-icons/fi";
 import { createSignal, For, Show } from "solid-js";
 import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
@@ -60,6 +61,7 @@ export function ModelManager(props: ModelManagerProps) {
                   class="min-w-[8rem]"
                   disabled={deletingModelId() === model.id}
                 >
+                  <FiTrash2 />
                   {deletingModelId() === model.id
                     ? t("common.deleting")
                     : t("common.delete")}
@@ -73,13 +75,20 @@ export function ModelManager(props: ModelManagerProps) {
                     })}
                   </AlertDialogDescription>
                   <div class="flex justify-end gap-2">
-                    <AlertDialogTrigger as={Button} variant="outline">
+                    <AlertDialogTrigger
+                      as={Button}
+                      variant="outline"
+                      class="w-32"
+                    >
+                      <FiX />
                       {t("common.cancel")}
                     </AlertDialogTrigger>
                     <Button
                       variant="destructive"
+                      class="w-32"
                       onClick={() => handleDeleteModel(model.id)}
                     >
+                      <FiTrash2 />
                       {t("common.delete")}
                     </Button>
                   </div>

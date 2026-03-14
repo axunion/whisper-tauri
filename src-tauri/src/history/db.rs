@@ -11,10 +11,14 @@ use super::types::{
 /// Row type returned by `meta_row_mapper`.
 pub type MetaRow = (String, String, String, String, String, u64, Vec<u8>);
 
-/// Extracts a `MetaRow` tuple from a rusqlite row.
+/// Extracts a [`MetaRow`] tuple from a rusqlite row.
 ///
-/// Expects columns: id(0), created_at(1), file_name(2), language(3),
-/// model_id(4), duration(5), text_compressed(6).
+/// Expects columns: `id(0)`, `created_at(1)`, `file_name(2)`, `language(3)`,
+/// `model_id(4)`, `duration(5)`, `text_compressed(6)`.
+///
+/// # Errors
+///
+/// Returns an error if any column extraction fails.
 pub fn meta_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<MetaRow> {
     Ok((
         row.get::<_, String>(0)?,
@@ -27,7 +31,11 @@ pub fn meta_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<MetaRow> {
     ))
 }
 
-/// Converts a `MetaRow` into a `HistoryMeta`, decompressing text for preview.
+/// Converts a [`MetaRow`] into a [`HistoryMeta`], decompressing text for preview.
+///
+/// # Errors
+///
+/// Returns an error if text decompression fails.
 pub fn meta_from_row(row: MetaRow) -> Result<HistoryMeta, HistoryError> {
     let (id, created_at, file_name, language, model_id, duration, text_compressed) = row;
     let text = decompress_text(&text_compressed)?;

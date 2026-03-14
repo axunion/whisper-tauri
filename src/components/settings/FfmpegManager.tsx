@@ -1,3 +1,4 @@
+import { FiDownload, FiTrash2 } from "solid-icons/fi";
 import { onMount, Show } from "solid-js";
 import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
@@ -49,6 +50,7 @@ export default function FfmpegManager() {
                   toast.success(t("settings.ffmpegDeletedToast"));
                 }}
               >
+                <FiTrash2 />
                 {t("common.delete")}
               </Button>
             }
@@ -65,6 +67,7 @@ export default function FfmpegManager() {
                     toast.success(t("settings.ffmpegDownloadedToast"));
                   }}
                 >
+                  <FiDownload />
                   {t("common.download")}
                 </Button>
               }

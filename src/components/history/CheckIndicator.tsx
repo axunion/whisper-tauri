@@ -11,7 +11,8 @@ const CheckIndicator: Component<CheckIndicatorProps> = (props) => {
     <span
       class="flex size-4 shrink-0 items-center justify-center rounded-sm border border-primary ring-offset-background"
       classList={{
-        "bg-primary text-primary-foreground": props.checked || props.indeterminate,
+        "bg-primary text-primary-foreground":
+          props.checked || props.indeterminate,
       }}
     >
       <Show when={props.checked || props.indeterminate}>
