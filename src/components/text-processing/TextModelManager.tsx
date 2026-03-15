@@ -22,9 +22,14 @@ import { getModelDescription } from "~/lib/modelDescription";
 import { toast } from "~/lib/toast";
 import { createTextProcessing } from "~/primitives/createTextProcessing";
 
-export default function TextModelManager() {
+interface TextModelManagerProps {
+  devMode?: boolean;
+  textProcessing?: ReturnType<typeof createTextProcessing>;
+}
+
+export default function TextModelManager(props: TextModelManagerProps) {
   const { t } = useI18n();
-  const tp = createTextProcessing();
+  const tp = props.textProcessing ?? createTextProcessing();
   const [deletingModelId, setDeletingModelId] = createSignal<string | null>(
     null,
   );
@@ -42,13 +47,33 @@ export default function TextModelManager() {
   }
 
   async function handleDownloadModel(modelId: string) {
-    await tp.downloadModel(modelId);
-    toast.success(t("textProcessing.modelDownloadedToast"));
+    const ok = await tp.downloadModel(modelId);
+    if (ok) {
+      toast.success(t("textProcessing.modelDownloadedToast"));
+    } else {
+      const err = tp.error();
+      if (err) toast.error(err.message);
+    }
   }
 
   async function handleDownloadServer() {
-    await tp.downloadServer();
-    toast.success(t("textProcessing.serverDownloadedToast"));
+    const ok = await tp.downloadServer();
+    if (ok) {
+      toast.success(t("textProcessing.serverDownloadedToast"));
+    } else {
+      const err = tp.error();
+      if (err) toast.error(err.message);
+    }
+  }
+
+  async function handleDeleteServer() {
+    const ok = await tp.deleteServer();
+    if (ok) {
+      toast.success(t("textProcessing.serverDeletedToast"));
+    } else {
+      const err = tp.error();
+      if (err) toast.error(err.message);
+    }
   }
 
   return (
@@ -81,7 +106,7 @@ export default function TextModelManager() {
                       <Show
                         when={
                           tp.isDownloading() &&
-                          tp.downloadProgress()?.modelId === model.id
+                          tp.downloadingModelId() === model.id
                         }
                         fallback={
                           <Button
@@ -98,12 +123,18 @@ export default function TextModelManager() {
                       >
                         <div class="w-28 space-y-1">
                           <Progress
-                            value={tp.downloadProgress()?.progress ?? 0}
+                            value={
+                              tp.downloadPhase() === "server"
+                                ? 0
+                                : (tp.downloadProgress()?.progress ?? 0)
+                            }
                             minValue={0}
                             maxValue={100}
                           />
                           <p class="text-center text-xs text-muted-foreground">
-                            {Math.round(tp.downloadProgress()?.progress ?? 0)}%
+                            {tp.downloadPhase() === "server"
+                              ? t("textProcessing.settingUp")
+                              : `${Math.round(tp.downloadProgress()?.progress ?? 0)}%`}
                           </p>
                         </div>
                       </Show>
@@ -160,61 +191,71 @@ export default function TextModelManager() {
         </CardContent>
       </Card>
 
-      {/* Server Management */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("textProcessing.serverManagement")}</CardTitle>
-          <CardDescription>
-            {t("textProcessing.serverManagementDescription")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div class="flex items-center justify-between rounded-lg border p-4">
-            <div class="flex items-center gap-2">
-              <span class="font-medium">llama-server</span>
-              <Show when={tp.serverAvailable()}>
-                <Badge variant="secondary">{t("dashboard.downloaded")}</Badge>
+      {/* Server Management (dev mode only) */}
+      <Show when={props.devMode}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("textProcessing.serverManagement")}</CardTitle>
+            <CardDescription>
+              {t("textProcessing.serverManagementDescription")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div class="flex items-center justify-between rounded-lg border p-4">
+              <div class="flex items-center gap-2">
+                <span class="font-medium">llama-server</span>
+                <Show when={tp.serverAvailable()}>
+                  <Badge variant="secondary">{t("dashboard.downloaded")}</Badge>
+                </Show>
+              </div>
+              <Show
+                when={tp.serverAvailable()}
+                fallback={
+                  <Show
+                    when={
+                      tp.downloadPhase() === "server" &&
+                      !tp.downloadingModelId()
+                    }
+                    fallback={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        class="w-28"
+                        onClick={handleDownloadServer}
+                        disabled={tp.isDownloading()}
+                      >
+                        <FiDownload />
+                        {t("common.download")}
+                      </Button>
+                    }
+                  >
+                    <div class="w-28 space-y-1">
+                      <Progress
+                        value={tp.downloadProgress()?.progress ?? 0}
+                        minValue={0}
+                        maxValue={100}
+                      />
+                      <p class="text-center text-xs text-muted-foreground">
+                        {Math.round(tp.downloadProgress()?.progress ?? 0)}%
+                      </p>
+                    </div>
+                  </Show>
+                }
+              >
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  class="w-28"
+                  onClick={handleDeleteServer}
+                >
+                  <FiTrash2 />
+                  {t("common.delete")}
+                </Button>
               </Show>
             </div>
-            <Show
-              when={tp.serverAvailable()}
-              fallback={
-                <Show
-                  when={
-                    tp.isDownloading() &&
-                    tp.downloadProgress()?.modelId === "llama-server"
-                  }
-                  fallback={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      class="w-28"
-                      onClick={handleDownloadServer}
-                      disabled={tp.isDownloading()}
-                    >
-                      <FiDownload />
-                      {t("common.download")}
-                    </Button>
-                  }
-                >
-                  <div class="w-28 space-y-1">
-                    <Progress
-                      value={tp.downloadProgress()?.progress ?? 0}
-                      minValue={0}
-                      maxValue={100}
-                    />
-                    <p class="text-center text-xs text-muted-foreground">
-                      {Math.round(tp.downloadProgress()?.progress ?? 0)}%
-                    </p>
-                  </div>
-                </Show>
-              }
-            >
-              <Badge variant="outline">{t("dashboard.downloaded")}</Badge>
-            </Show>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </Show>
     </>
   );
 }

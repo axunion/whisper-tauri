@@ -189,6 +189,7 @@ export const en: Dictionary = {
       "Delete {name} ({size}). This action cannot be undone.",
     modelDeletedToast: "Language model deleted",
     serverDownloadedToast: "llama-server downloaded",
+    serverDeletedToast: "llama-server deleted",
     modelDownloadedToast: "Language model downloaded",
     summaryLengthShort: "Short",
     summaryLengthMedium: "Medium",
@@ -199,6 +200,7 @@ export const en: Dictionary = {
     proofreadCompletedToast: "Proofreading completed",
     summarizeCompletedToast: "Summarization completed",
     cancelledToast: "Processing cancelled",
+    settingUp: "Setting up...",
   },
   models: {
     whisper: {

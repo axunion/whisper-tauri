@@ -146,13 +146,26 @@ pub async fn text_processing_download_server(app: AppHandle) -> Result<String, S
     let bin_dir = app_data_dir.join("bin");
     std::fs::create_dir_all(&bin_dir).map_err(TextProcessingError::from)?;
 
-    let archive_path = bin_dir.join("llama-server-download.zip");
+    // Select archive filename and extraction method based on platform
+    let (archive_filename, use_tar_gz) = if cfg!(target_os = "windows") {
+        ("llama-server-download.zip", false)
+    } else {
+        ("llama-server-download.tar.gz", true)
+    };
+
+    let archive_path = bin_dir.join(archive_filename);
     download_file(url, &archive_path, &app).await?;
 
     let final_path = models::llama_server_path(&app_data_dir);
-    extract_llama_server_from_zip(&archive_path, &final_path)?;
+    let extract_result = if use_tar_gz {
+        extract_llama_server_from_tar_gz(&archive_path, &final_path)
+    } else {
+        extract_llama_server_from_zip(&archive_path, &final_path)
+    };
 
+    // Always clean up archive, even on extraction failure
     let _ = std::fs::remove_file(&archive_path);
+    extract_result?;
 
     #[cfg(unix)]
     {
@@ -165,6 +178,21 @@ pub async fn text_processing_download_server(app: AppHandle) -> Result<String, S
         .to_str()
         .map(std::string::ToString::to_string)
         .ok_or_else(|| TextProcessingError::PathError("Invalid path encoding".to_string()).into())
+}
+
+/// Deletes the llama-server binary.
+///
+/// # Errors
+///
+/// Returns an error string if the operation fails.
+#[tauri::command]
+pub async fn text_processing_delete_server(app: AppHandle) -> Result<(), String> {
+    let app_data_dir = resolve_app_data_dir(&app)?;
+    let path = models::llama_server_path(&app_data_dir);
+    if path.exists() {
+        std::fs::remove_file(&path).map_err(TextProcessingError::from)?;
+    }
+    Ok(())
 }
 
 /// Checks whether the llama-server binary exists.
@@ -491,18 +519,50 @@ fn get_custom_server_url(app: &AppHandle) -> Result<Option<String>, String> {
     Ok(value)
 }
 
+/// Target binary name for the current platform.
+const LLAMA_SERVER_BINARY_NAME: &str = if cfg!(target_os = "windows") {
+    "llama-server.exe"
+} else {
+    "llama-server"
+};
+
+/// Extracts the llama-server binary from a tar.gz archive.
+fn extract_llama_server_from_tar_gz(archive_path: &Path, output_path: &Path) -> Result<(), String> {
+    let file = std::fs::File::open(archive_path)
+        .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())?;
+    let decoder = flate2::read::GzDecoder::new(file);
+    let mut archive = tar::Archive::new(decoder);
+
+    for entry in archive
+        .entries()
+        .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())?
+    {
+        let mut entry =
+            entry.map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())?;
+        let path = entry
+            .path()
+            .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())?;
+        if path.file_name().map(|f| f.to_string_lossy()) == Some(LLAMA_SERVER_BINARY_NAME.into()) {
+            let mut out_file = std::fs::File::create(output_path)
+                .map_err(|e| TextProcessingError::Io(e).to_string())?;
+            std::io::copy(&mut entry, &mut out_file)
+                .map_err(|e| TextProcessingError::Io(e).to_string())?;
+            return Ok(());
+        }
+    }
+
+    Err(
+        TextProcessingError::DownloadFailed("llama-server binary not found in archive".to_string())
+            .to_string(),
+    )
+}
+
 /// Extracts the llama-server binary from a zip archive.
 fn extract_llama_server_from_zip(archive_path: &Path, output_path: &Path) -> Result<(), String> {
     let file = std::fs::File::open(archive_path)
         .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())?;
     let mut archive = zip::ZipArchive::new(file)
         .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())?;
-
-    let target_name = if cfg!(target_os = "windows") {
-        "llama-server.exe"
-    } else {
-        "llama-server"
-    };
 
     for i in 0..archive.len() {
         let mut entry = archive
@@ -514,7 +574,7 @@ fn extract_llama_server_from_zip(archive_path: &Path, output_path: &Path) -> Res
             .and_then(|p| p.file_name().map(|f| f.to_string_lossy().to_string()));
 
         if let Some(name) = entry_name {
-            if name == target_name && entry.is_file() {
+            if name == LLAMA_SERVER_BINARY_NAME && entry.is_file() {
                 let mut out_file = std::fs::File::create(output_path)
                     .map_err(|e| TextProcessingError::Io(e).to_string())?;
                 std::io::copy(&mut entry, &mut out_file)

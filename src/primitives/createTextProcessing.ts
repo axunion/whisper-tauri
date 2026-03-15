@@ -28,6 +28,12 @@ export function createTextProcessing() {
   const [isDownloading, setIsDownloading] = createSignal(false);
   const [isProcessing, setIsProcessing] = createSignal(false);
   const [serverAvailable, setServerAvailable] = createSignal(false);
+  const [downloadPhase, setDownloadPhase] = createSignal<
+    "idle" | "server" | "model"
+  >("idle");
+  const [downloadingModelId, setDownloadingModelId] = createSignal<
+    string | null
+  >(null);
   const [error, setError] = createSignal<AppError | null>(null);
 
   // Event listeners with cleanup
@@ -62,15 +68,28 @@ export function createTextProcessing() {
     }
   }
 
-  async function downloadModel(modelId: string): Promise<void> {
-    if (isDownloading()) return;
+  async function downloadModel(modelId: string): Promise<boolean> {
+    if (isDownloading()) return false;
     setIsDownloading(true);
+    setDownloadingModelId(modelId);
     try {
+      // Phase 1: サーバーが未ダウンロードなら自動取得
+      if (!serverAvailable()) {
+        setDownloadPhase("server");
+        await invoke("text_processing_download_server");
+        setServerAvailable(true);
+      }
+      // Phase 2: モデルダウンロード
+      setDownloadPhase("model");
       await invoke("text_processing_download_model", { modelId });
       await loadModels();
+      return true;
     } catch (e) {
       setError(parseError(e));
+      return false;
     } finally {
+      setDownloadPhase("idle");
+      setDownloadingModelId(null);
       setIsDownloading(false);
     }
   }
@@ -84,16 +103,31 @@ export function createTextProcessing() {
     }
   }
 
-  async function downloadServer(): Promise<void> {
-    if (isDownloading()) return;
+  async function downloadServer(): Promise<boolean> {
+    if (isDownloading()) return false;
     setIsDownloading(true);
+    setDownloadPhase("server");
     try {
       await invoke("text_processing_download_server");
       setServerAvailable(true);
+      return true;
     } catch (e) {
       setError(parseError(e));
+      return false;
     } finally {
+      setDownloadPhase("idle");
       setIsDownloading(false);
+    }
+  }
+
+  async function deleteServer(): Promise<boolean> {
+    try {
+      await invoke("text_processing_delete_server");
+      setServerAvailable(false);
+      return true;
+    } catch (e) {
+      setError(parseError(e));
+      return false;
     }
   }
 
@@ -208,6 +242,8 @@ export function createTextProcessing() {
     isDownloading,
     isProcessing,
     serverAvailable,
+    downloadPhase,
+    downloadingModelId,
     error,
 
     // Actions
@@ -216,6 +252,7 @@ export function createTextProcessing() {
     downloadModel,
     deleteModel,
     downloadServer,
+    deleteServer,
     checkServer,
     checkServerStatus,
     proofread,

@@ -179,6 +179,7 @@ export interface Dictionary {
     deleteModelConfirmation: string;
     modelDeletedToast: string;
     serverDownloadedToast: string;
+    serverDeletedToast: string;
     modelDownloadedToast: string;
     summaryLengthShort: string;
     summaryLengthMedium: string;
@@ -189,6 +190,7 @@ export interface Dictionary {
     proofreadCompletedToast: string;
     summarizeCompletedToast: string;
     cancelledToast: string;
+    settingUp: string;
   };
   models: {
     whisper: {

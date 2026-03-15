@@ -66,6 +66,7 @@ pub fn run() {
             text_processing::commands::text_processing_download_model,
             text_processing::commands::text_processing_delete_model,
             text_processing::commands::text_processing_download_server,
+            text_processing::commands::text_processing_delete_server,
             text_processing::commands::text_processing_check_server,
             text_processing::commands::text_processing_server_status,
             text_processing::commands::text_processing_chat,

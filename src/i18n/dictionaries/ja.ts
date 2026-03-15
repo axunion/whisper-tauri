@@ -190,6 +190,7 @@ export const ja: Dictionary = {
       "{name} ({size}) が削除されます。この操作は取り消せません。",
     modelDeletedToast: "言語モデルを削除しました",
     serverDownloadedToast: "llama-serverをダウンロードしました",
+    serverDeletedToast: "llama-serverを削除しました",
     modelDownloadedToast: "言語モデルをダウンロードしました",
     summaryLengthShort: "短い",
     summaryLengthMedium: "中程度",
@@ -200,6 +201,7 @@ export const ja: Dictionary = {
     proofreadCompletedToast: "校正が完了しました",
     summarizeCompletedToast: "要約が完了しました",
     cancelledToast: "処理をキャンセルしました",
+    settingUp: "セットアップ中...",
   },
   models: {
     whisper: {

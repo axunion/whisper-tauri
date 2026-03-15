@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use super::types::TextModelInfo;
 
 /// Pinned llama-server release version (verified to work).
-pub const LLAMA_SERVER_VERSION: &str = "b5040";
+pub const LLAMA_SERVER_VERSION: &str = "b8354";
 
 /// Valid text model IDs.
 const VALID_MODEL_IDS: [&str; 2] = ["gemma-3-4b", "qwen3.5-4b"];
@@ -79,31 +79,31 @@ pub fn get_default_server_url() -> &'static str {
         #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
         {
             format!(
-                "https://github.com/ggml-org/llama.cpp/releases/download/{version}/llama-{version}-bin-macos-arm64.zip"
+                "https://github.com/ggml-org/llama.cpp/releases/download/{version}/llama-{version}-bin-macos-arm64.tar.gz"
             )
         }
         #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
         {
             format!(
-                "https://github.com/ggml-org/llama.cpp/releases/download/{version}/llama-{version}-bin-macos-x64.zip"
+                "https://github.com/ggml-org/llama.cpp/releases/download/{version}/llama-{version}-bin-macos-x64.tar.gz"
             )
         }
         #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
         {
             format!(
-                "https://github.com/ggml-org/llama.cpp/releases/download/{version}/llama-{version}-bin-win-avx2-x64.zip"
+                "https://github.com/ggml-org/llama.cpp/releases/download/{version}/llama-{version}-bin-win-cpu-x64.zip"
             )
         }
         #[cfg(all(target_os = "windows", target_arch = "aarch64"))]
         {
             format!(
-                "https://github.com/ggml-org/llama.cpp/releases/download/{version}/llama-{version}-bin-win-arm64.zip"
+                "https://github.com/ggml-org/llama.cpp/releases/download/{version}/llama-{version}-bin-win-cpu-arm64.zip"
             )
         }
         #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
         {
             format!(
-                "https://github.com/ggml-org/llama.cpp/releases/download/{version}/llama-{version}-bin-ubuntu-x64.zip"
+                "https://github.com/ggml-org/llama.cpp/releases/download/{version}/llama-{version}-bin-ubuntu-x64.tar.gz"
             )
         }
         #[cfg(not(any(

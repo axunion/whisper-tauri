@@ -1,3 +1,4 @@
+import { FiDownload, FiTrash2 } from "solid-icons/fi";
 import { onMount, Show } from "solid-js";
 import {
   CacheClear,
@@ -34,8 +35,6 @@ function DevMenuContent() {
     whisper.loadModels();
     history.loadEntries();
     ffmpeg.checkStatus();
-    textProcessing.loadModels();
-    textProcessing.checkServer();
   });
 
   return (
@@ -61,7 +60,7 @@ function DevMenuContent() {
       </Card>
 
       {/* Text Model Management */}
-      <TextModelManager />
+      <TextModelManager devMode textProcessing={textProcessing} />
 
       {/* FFmpeg Manager */}
       <Card>
@@ -96,6 +95,7 @@ function DevMenuContent() {
                         toast.success(t("settings.ffmpegDownloadedToast"));
                       }}
                     >
+                      <FiDownload />
                       {t("common.download")}
                     </Button>
                   }
@@ -122,6 +122,7 @@ function DevMenuContent() {
                   toast.success(t("dev.ffmpegDeletedToast"));
                 }}
               >
+                <FiTrash2 />
                 {t("common.delete")}
               </Button>
             </Show>
