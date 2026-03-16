@@ -5,17 +5,9 @@ import {
   WhisperModelManager,
 } from "~/components/settings";
 import { TextModelManager } from "~/components/text-processing";
-import { Button } from "~/components/ui/Button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
 import { Separator } from "~/components/ui/Separator";
 import { useI18n } from "~/i18n";
-import { toast } from "~/lib/toast";
 import { createSettings } from "~/primitives/createSettings";
 import { applyTheme } from "~/primitives/createTheme";
 import type { AppSettings } from "~/types";
@@ -53,7 +45,6 @@ export default function Settings() {
       <Card>
         <CardHeader>
           <CardTitle>{t("settings.general")}</CardTitle>
-          <CardDescription>{t("settings.generalDescription")}</CardDescription>
         </CardHeader>
         <CardContent class="space-y-6">
           <SettingsSelect
@@ -92,25 +83,6 @@ export default function Settings() {
 
       {/* FFmpeg */}
       <FfmpegManager />
-
-      {/* Reset */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("settings.resetTitle")}</CardTitle>
-          <CardDescription>{t("settings.resetDescription")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button
-            variant="outline"
-            onClick={async () => {
-              await settings.reset();
-              toast.success(t("settings.settingsResetToast"));
-            }}
-          >
-            {t("settings.resetToDefaults")}
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }

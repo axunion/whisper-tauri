@@ -9,14 +9,9 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 describe("DevMenu", () => {
-  it("shows Debug Log section", () => {
+  it("shows Data Reset section", () => {
     renderWithI18n(() => <DevMenu />);
-    expect(screen.getByText("デバッグログ")).toBeInTheDocument();
-  });
-
-  it("shows Cache Clear section", () => {
-    renderWithI18n(() => <DevMenu />);
-    expect(screen.getByText("キャッシュクリア")).toBeInTheDocument();
+    expect(screen.getByText("データリセット")).toBeInTheDocument();
   });
 
   it("shows Audio Model Manager section", () => {
@@ -24,27 +19,10 @@ describe("DevMenu", () => {
     expect(screen.getByText("音声モデル管理")).toBeInTheDocument();
   });
 
-  it("shows Clear and Copy buttons in Debug Log", () => {
-    renderWithI18n(() => <DevMenu />);
-    expect(
-      screen.getByText("クリア", { selector: "button" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("コピー", { selector: "button" }),
-    ).toBeInTheDocument();
-  });
-
   it("shows Clear History button", () => {
     renderWithI18n(() => <DevMenu />);
     expect(
       screen.getByText("履歴クリア", { selector: "button" }),
-    ).toBeInTheDocument();
-  });
-
-  it("shows Reset Settings button", () => {
-    renderWithI18n(() => <DevMenu />);
-    expect(
-      screen.getByText("設定リセット", { selector: "button" }),
     ).toBeInTheDocument();
   });
 

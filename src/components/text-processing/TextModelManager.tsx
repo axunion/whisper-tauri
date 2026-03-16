@@ -9,13 +9,7 @@ import {
 } from "~/components/ui/AlertDialog";
 import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
 import { Progress } from "~/components/ui/Progress";
 import { useI18n } from "~/i18n";
 import { getModelDescription } from "~/lib/modelDescription";
@@ -82,9 +76,6 @@ export default function TextModelManager(props: TextModelManagerProps) {
       <Card>
         <CardHeader>
           <CardTitle>{t("textProcessing.modelManagement")}</CardTitle>
-          <CardDescription>
-            {t("textProcessing.modelManagementDescription")}
-          </CardDescription>
         </CardHeader>
         <CardContent class="space-y-4">
           <For each={tp.models()}>
@@ -196,9 +187,6 @@ export default function TextModelManager(props: TextModelManagerProps) {
         <Card>
           <CardHeader>
             <CardTitle>{t("textProcessing.serverManagement")}</CardTitle>
-            <CardDescription>
-              {t("textProcessing.serverManagementDescription")}
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <div class="flex items-center justify-between rounded-lg border p-4">

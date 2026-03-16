@@ -1,11 +1,6 @@
 import { FiDownload, FiTrash2 } from "solid-icons/fi";
 import { onMount, Show } from "solid-js";
-import {
-  CacheClear,
-  DebugLog,
-  LlmTester,
-  ModelManager,
-} from "~/components/dev";
+import { CacheClear, LlmTester, ModelManager } from "~/components/dev";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
 import { TextModelManager } from "~/components/text-processing";
 import { Badge } from "~/components/ui/Badge";
@@ -14,24 +9,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
 import { Progress } from "~/components/ui/Progress";
 import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
-import { createDevLog } from "~/primitives/createDevLog";
 import { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
 import { createHistory } from "~/primitives/createHistory";
-import { createSettings } from "~/primitives/createSettings";
 import { createTextProcessing } from "~/primitives/createTextProcessing";
 import { createWhisper } from "~/primitives/createWhisper";
 
 function DevMenuContent() {
   const { t } = useI18n();
-  const devLog = createDevLog();
-  const settings = createSettings();
   const whisper = createWhisper();
   const history = createHistory();
   const ffmpeg = createFfmpegDownloader();
   const textProcessing = createTextProcessing();
 
   onMount(() => {
-    settings.load();
     whisper.loadModels();
     history.loadEntries();
     ffmpeg.checkStatus();
@@ -39,20 +29,10 @@ function DevMenuContent() {
 
   return (
     <div class="animate-fade-in mx-auto w-full max-w-3xl space-y-6">
-      {/* Cache Clear */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("dev.cachesClear")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <CacheClear history={history} settings={settings} ffmpeg={ffmpeg} />
-        </CardContent>
-      </Card>
-
       {/* Audio Model Manager */}
       <Card>
         <CardHeader>
-          <CardTitle>{t("dev.audioModelManager")}</CardTitle>
+          <CardTitle>{t("settings.modelManagement")}</CardTitle>
         </CardHeader>
         <CardContent>
           <ModelManager whisper={whisper} />
@@ -65,12 +45,12 @@ function DevMenuContent() {
       {/* FFmpeg Manager */}
       <Card>
         <CardHeader>
-          <CardTitle>{t("dev.ffmpegManager")}</CardTitle>
+          <CardTitle>{t("settings.toolManagement")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div class="flex items-center justify-between rounded-lg border p-3">
+          <div class="flex items-center justify-between rounded-lg border p-4">
             <div class="flex items-center gap-2">
-              <span class="text-sm font-medium">FFmpeg</span>
+              <span class="font-medium">FFmpeg</span>
               <Show when={ffmpeg.isSystemAvailable()}>
                 <Badge variant="secondary">
                   {t("settings.systemInstalled")}
@@ -89,7 +69,7 @@ function DevMenuContent() {
                     <Button
                       variant="outline"
                       size="sm"
-                      class="min-w-32"
+                      class="w-28"
                       onClick={async () => {
                         await ffmpeg.download();
                         toast.success(t("settings.ffmpegDownloadedToast"));
@@ -116,7 +96,7 @@ function DevMenuContent() {
               <Button
                 variant="destructive"
                 size="sm"
-                class="min-w-32"
+                class="w-28"
                 onClick={async () => {
                   await ffmpeg.deleteBundled();
                   toast.success(t("dev.ffmpegDeletedToast"));
@@ -134,22 +114,19 @@ function DevMenuContent() {
       <Card>
         <CardHeader>
           <CardTitle>{t("dev.llmTester")}</CardTitle>
-          <p class="text-sm text-muted-foreground">
-            {t("dev.llmTesterDescription")}
-          </p>
         </CardHeader>
         <CardContent>
           <LlmTester textProcessing={textProcessing} />
         </CardContent>
       </Card>
 
-      {/* Debug Log */}
+      {/* Data Reset */}
       <Card>
         <CardHeader>
-          <CardTitle>{t("dev.debugLog")}</CardTitle>
+          <CardTitle>{t("dev.dataReset")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <DebugLog devLog={devLog} />
+          <CacheClear history={history} />
         </CardContent>
       </Card>
 

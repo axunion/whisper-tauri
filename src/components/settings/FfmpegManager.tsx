@@ -2,13 +2,7 @@ import { FiDownload, FiTrash2 } from "solid-icons/fi";
 import { onMount, Show } from "solid-js";
 import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
 import { Progress } from "~/components/ui/Progress";
 import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
@@ -26,9 +20,6 @@ export default function FfmpegManager() {
     <Card>
       <CardHeader>
         <CardTitle>{t("settings.toolManagement")}</CardTitle>
-        <CardDescription>
-          {t("settings.toolManagementDescription")}
-        </CardDescription>
       </CardHeader>
       <CardContent>
         <div class="flex items-center justify-between rounded-lg border p-4">

@@ -1,6 +1,7 @@
-import { FiTrash2, FiX } from "solid-icons/fi";
+import { FiDownload, FiTrash2, FiX } from "solid-icons/fi";
 import { createSignal, For, Show } from "solid-js";
 import { useI18n } from "~/i18n";
+import { getModelDescription } from "~/lib/modelDescription";
 import { toast } from "~/lib/toast";
 import type { createWhisper } from "~/primitives/createWhisper";
 import {
@@ -12,6 +13,7 @@ import {
 } from "../ui/AlertDialog";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
+import { Progress } from "../ui/Progress";
 
 interface ModelManagerProps {
   whisper: ReturnType<typeof createWhisper>;
@@ -23,80 +25,121 @@ export function ModelManager(props: ModelManagerProps) {
     null,
   );
 
-  const downloadedModels = () =>
-    props.whisper.models().filter((m) => m.downloaded);
-
   async function handleDeleteModel(modelId: string) {
     setDeletingModelId(modelId);
-    await props.whisper.deleteModel(modelId);
-    setDeletingModelId(null);
-    toast.success(t("dev.modelDeletedToast"));
+    try {
+      await props.whisper.deleteModel(modelId);
+      toast.success(t("dev.modelDeletedToast"));
+    } finally {
+      setDeletingModelId(null);
+    }
   }
 
   return (
-    <div class="space-y-3">
-      <Show
-        when={downloadedModels().length > 0}
-        fallback={
-          <p class="text-sm text-muted-foreground">
-            {t("dev.noDownloadedModels")}
-          </p>
-        }
-      >
-        <For each={downloadedModels()}>
-          {(model) => (
-            <div class="flex items-center justify-between rounded-lg border p-3">
+    <div class="space-y-4">
+      <For each={props.whisper.models()}>
+        {(model) => (
+          <div class="flex items-center justify-between rounded-lg border p-4">
+            <div class="space-y-1">
               <div class="flex items-center gap-2">
-                <span class="text-sm font-medium">{model.name}</span>
+                <span class="font-medium">{model.name}</span>
                 <Badge variant="secondary">{model.size}</Badge>
                 <Show when={model.recommended}>
                   <Badge>{t("common.recommended")}</Badge>
                 </Show>
               </div>
-              <AlertDialog>
-                <AlertDialogTrigger
-                  as={Button}
-                  variant="destructive"
-                  size="sm"
-                  class="min-w-[8rem]"
-                  disabled={deletingModelId() === model.id}
-                >
-                  <FiTrash2 />
-                  {deletingModelId() === model.id
-                    ? t("common.deleting")
-                    : t("common.delete")}
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogTitle>{t("dev.deleteModel")}</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {t("dev.deleteModelConfirmation", {
-                      name: model.name,
-                      size: model.size,
-                    })}
-                  </AlertDialogDescription>
-                  <div class="flex justify-end gap-2">
-                    <AlertDialogTrigger
-                      as={Button}
-                      variant="outline"
-                      class="w-32"
-                    >
-                      <FiX />
-                      {t("common.cancel")}
-                    </AlertDialogTrigger>
-                    <Button
-                      variant="destructive"
-                      class="w-32"
-                      onClick={() => handleDeleteModel(model.id)}
-                    >
-                      <FiTrash2 />
-                      {t("common.delete")}
-                    </Button>
-                  </div>
-                </AlertDialogContent>
-              </AlertDialog>
+              <p class="text-sm text-muted-foreground">
+                {getModelDescription(t, model.id, model.description)}
+              </p>
             </div>
-          )}
-        </For>
+            <div class="flex items-center gap-2">
+              <Show
+                when={model.downloaded}
+                fallback={
+                  <Show
+                    when={
+                      props.whisper.isDownloading() &&
+                      props.whisper.downloadProgress()?.modelId === model.id
+                    }
+                    fallback={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        class="w-28"
+                        onClick={() => props.whisper.downloadModel(model.id)}
+                        disabled={props.whisper.isDownloading()}
+                      >
+                        <FiDownload />
+                        {t("common.download")}
+                      </Button>
+                    }
+                  >
+                    <div class="w-28 space-y-1">
+                      <Progress
+                        value={props.whisper.downloadProgress()?.progress ?? 0}
+                        minValue={0}
+                        maxValue={100}
+                      />
+                      <p class="text-center text-xs text-muted-foreground">
+                        {Math.round(
+                          props.whisper.downloadProgress()?.progress ?? 0,
+                        )}
+                        %
+                      </p>
+                    </div>
+                  </Show>
+                }
+              >
+                <AlertDialog>
+                  <AlertDialogTrigger
+                    as={Button}
+                    variant="destructive"
+                    size="sm"
+                    class="w-28"
+                    disabled={deletingModelId() === model.id}
+                  >
+                    <FiTrash2 />
+                    {deletingModelId() === model.id
+                      ? t("common.deleting")
+                      : t("common.delete")}
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogTitle>{t("dev.deleteModel")}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t("dev.deleteModelConfirmation", {
+                        name: model.name,
+                        size: model.size,
+                      })}
+                    </AlertDialogDescription>
+                    <div class="flex justify-end gap-2">
+                      <AlertDialogTrigger
+                        as={Button}
+                        variant="outline"
+                        class="w-32"
+                      >
+                        <FiX />
+                        {t("common.cancel")}
+                      </AlertDialogTrigger>
+                      <Button
+                        variant="destructive"
+                        class="w-32"
+                        onClick={() => handleDeleteModel(model.id)}
+                      >
+                        <FiTrash2 />
+                        {t("common.delete")}
+                      </Button>
+                    </div>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </Show>
+            </div>
+          </div>
+        )}
+      </For>
+      <Show when={props.whisper.models().length === 0}>
+        <p class="text-sm text-muted-foreground">
+          {t("dev.noDownloadedModels")}
+        </p>
       </Show>
     </div>
   );

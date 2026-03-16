@@ -17,7 +17,6 @@ import { useI18n } from "~/i18n";
 import type { ExportFormat } from "~/lib/export";
 import { exportResult, getExtension } from "~/lib/export";
 import { toast } from "~/lib/toast";
-import { createSettings } from "~/primitives/createSettings";
 import { createTextProcessing } from "~/primitives/createTextProcessing";
 import type { SummaryOptions, TranscriptionResult } from "~/types";
 import { ResultProofreadTab } from "./ResultProofreadTab";
@@ -36,7 +35,6 @@ interface ResultViewerProps {
 const ResultViewer: Component<ResultViewerProps> = (props) => {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const settings = createSettings();
   const [activeTab, setActiveTab] = createSignal<ResultTab>("text");
   const [proofreadActivated, setProofreadActivated] = createSignal(false);
   const [summaryActivated, setSummaryActivated] = createSignal(false);
@@ -136,7 +134,6 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
       <ResultToolbar
         fileName={props.fileName}
         activeTab={activeTab()}
-        defaultFormat={settings.outputFormat()}
         onClose={props.onClose}
         onCopy={handleCopy}
         onSave={handleSave}

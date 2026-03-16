@@ -1,7 +1,6 @@
-import type { AppSettings } from "~/types/settings";
 import type { TranscriptionResult } from "~/types/whisper";
 
-export type ExportFormat = AppSettings["outputFormat"];
+export type ExportFormat = "txt" | "srt" | "vtt";
 
 export function formatTimestamp(ms: number, format: "srt" | "vtt"): string {
   const totalSeconds = Math.floor(ms / 1000);

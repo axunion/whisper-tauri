@@ -10,13 +10,7 @@ import {
 } from "~/components/ui/AlertDialog";
 import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
 import { Progress } from "~/components/ui/Progress";
 import { useI18n } from "~/i18n";
 import { getModelDescription } from "~/lib/modelDescription";
@@ -46,9 +40,6 @@ export default function WhisperModelManager() {
       <Card>
         <CardHeader>
           <CardTitle>{t("settings.modelManagement")}</CardTitle>
-          <CardDescription>
-            {t("settings.modelManagementDescription")}
-          </CardDescription>
         </CardHeader>
         <CardContent class="space-y-4">
           <For each={whisper.models()}>

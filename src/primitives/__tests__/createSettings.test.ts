@@ -40,7 +40,6 @@ describe("createSettings", () => {
     it("should load settings from store", async () => {
       const saved: AppSettings = {
         language: "en",
-        outputFormat: "srt",
         theme: "dark",
         whisperLanguage: "ja",
       };
@@ -140,41 +139,6 @@ describe("createSettings", () => {
     });
   });
 
-  describe("reset", () => {
-    it("should reset to default settings", async () => {
-      await createRoot(async (dispose) => {
-        const settings = createSettings();
-        const store = getLastStoreInstance();
-        store.set.mockResolvedValue(undefined);
-        store.save.mockResolvedValue(undefined);
-
-        await settings.update({ language: "en", theme: "dark" });
-        await settings.reset();
-
-        expect(settings.settings()).toEqual(DEFAULT_SETTINGS);
-        dispose();
-      });
-    });
-
-    it("should save defaults to store", async () => {
-      await createRoot(async (dispose) => {
-        const settings = createSettings();
-        const store = getLastStoreInstance();
-        store.set.mockResolvedValue(undefined);
-        store.save.mockResolvedValue(undefined);
-
-        await settings.reset();
-
-        expect(store.set).toHaveBeenCalledWith(
-          "app_settings",
-          DEFAULT_SETTINGS,
-        );
-        expect(store.save).toHaveBeenCalled();
-        dispose();
-      });
-    });
-  });
-
   describe("derived accessors", () => {
     it("should return language", () => {
       createRoot((dispose) => {
@@ -188,14 +152,6 @@ describe("createSettings", () => {
       createRoot((dispose) => {
         const settings = createSettings();
         expect(settings.theme()).toBe("system");
-        dispose();
-      });
-    });
-
-    it("should return outputFormat", () => {
-      createRoot((dispose) => {
-        const settings = createSettings();
-        expect(settings.outputFormat()).toBe("txt");
         dispose();
       });
     });

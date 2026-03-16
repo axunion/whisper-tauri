@@ -23,15 +23,8 @@ export function createSettings() {
     await store.save();
   }
 
-  async function reset(): Promise<void> {
-    setSettings({ ...DEFAULT_SETTINGS });
-    await store.set("app_settings", DEFAULT_SETTINGS);
-    await store.save();
-  }
-
   const language = () => settings().language;
   const theme = () => settings().theme;
-  const outputFormat = () => settings().outputFormat;
   const whisperLanguage = () => settings().whisperLanguage;
 
   return {
@@ -39,10 +32,8 @@ export function createSettings() {
     isLoaded,
     language,
     theme,
-    outputFormat,
     whisperLanguage,
     load,
     update,
-    reset,
   };
 }

@@ -19,7 +19,6 @@ const FORMAT_OPTIONS: { value: ExportFormat; labelKey: DictionaryKey }[] = [
 interface ResultToolbarProps {
   fileName: string;
   activeTab: ResultTab;
-  defaultFormat: ExportFormat;
   onClose?: (() => void) | undefined;
   onCopy: () => void;
   onSave: (format: ExportFormat) => void;
@@ -34,7 +33,7 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
   const [copied, setCopied] = createSignal(false);
   const [saveOpen, setSaveOpen] = createSignal(false);
   const [aiOpen, setAiOpen] = createSignal(false);
-  const [format, setFormat] = createSignal<ExportFormat>(props.defaultFormat);
+  const [format, setFormat] = createSignal<ExportFormat>("txt");
   let saveRef: HTMLDivElement | undefined;
   let aiRef: HTMLDivElement | undefined;
 
