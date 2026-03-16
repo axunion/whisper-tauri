@@ -73,6 +73,9 @@ export interface HistorySaveParams {
 /** Sort order for history listing. */
 export type HistorySortBy = "date" | "duration" | "fileName";
 
+/** Sort direction. */
+export type SortOrder = "asc" | "desc";
+
 /**
  * Filter for listing history entries.
  */
@@ -83,8 +86,10 @@ export interface HistoryFilter {
   dateTo?: string;
   /** Maximum number of entries to return */
   limit?: number;
-  /** Sort order */
+  /** Sort by field */
   sortBy?: HistorySortBy;
+  /** Sort direction */
+  sortOrder?: SortOrder;
 }
 
 /**
@@ -99,6 +104,8 @@ export interface HistorySearchParams {
   dateTo?: string;
   /** Maximum number of entries to return */
   limit?: number;
-  /** Sort order */
+  /** Sort by field */
   sortBy?: HistorySortBy;
+  /** Sort direction */
+  sortOrder?: SortOrder;
 }

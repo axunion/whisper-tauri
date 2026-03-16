@@ -1,16 +1,10 @@
-import type { Component } from "solid-js";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/Select";
+import { type Component, createMemo } from "solid-js";
+import { createToggleItems, ToggleGroup } from "~/components/ui/ToggleGroup";
 import { useI18n } from "~/i18n";
 import type { DictionaryKey } from "~/i18n/types";
 import type { HistoryFilter as HistoryFilterType } from "~/types";
 
-type QuickFilterRange = "all" | "today" | "thisWeek" | "thisMonth";
+type QuickFilterRange = "all" | "last7days" | "last30days";
 
 interface HistoryFilterProps {
   filter: HistoryFilterType;
@@ -29,22 +23,10 @@ export function computeDateRange(range: QuickFilterRange): {
   const now = new Date();
   const dateTo = formatDateISO(now);
 
-  if (range === "today") {
-    return { dateFrom: dateTo, dateTo };
-  }
-
-  if (range === "thisWeek") {
-    const day = now.getDay();
-    // Monday = 0 offset; Sunday (0) becomes 6
-    const mondayOffset = day === 0 ? 6 : day - 1;
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - mondayOffset);
-    return { dateFrom: formatDateISO(monday), dateTo };
-  }
-
-  // thisMonth
-  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  return { dateFrom: formatDateISO(firstOfMonth), dateTo };
+  const daysBack = range === "last7days" ? 6 : 29;
+  const from = new Date(now);
+  from.setDate(now.getDate() - daysBack);
+  return { dateFrom: formatDateISO(from), dateTo };
 }
 
 function formatDateISO(d: Date): string {
@@ -54,13 +36,16 @@ function formatDateISO(d: Date): string {
   return `${String(y)}-${m}-${day}`;
 }
 
-const RANGES: QuickFilterRange[] = ["all", "today", "thisWeek", "thisMonth"];
+const RANGES: readonly QuickFilterRange[] = [
+  "all",
+  "last7days",
+  "last30days",
+] as const;
 
 const RANGE_KEYS: Record<QuickFilterRange, DictionaryKey> = {
-  today: "history.filterToday",
-  thisWeek: "history.filterThisWeek",
-  thisMonth: "history.filterThisMonth",
   all: "history.filterAll",
+  last7days: "history.filterLast7days",
+  last30days: "history.filterLast30days",
 };
 
 function detectActiveRange(filter: HistoryFilterType): QuickFilterRange {
@@ -75,8 +60,10 @@ function detectActiveRange(filter: HistoryFilterType): QuickFilterRange {
 
 const HistoryFilter: Component<HistoryFilterProps> = (props) => {
   const { t } = useI18n();
+  const activeRange = createMemo(() => detectActiveRange(props.filter));
 
   function handleSelect(range: QuickFilterRange): void {
+    if (range === activeRange()) return;
     const { dateFrom, dateTo } = computeDateRange(range);
     const next: HistoryFilterType = { ...props.filter };
     if (dateFrom) {
@@ -93,26 +80,11 @@ const HistoryFilter: Component<HistoryFilterProps> = (props) => {
   }
 
   return (
-    <Select
-      value={detectActiveRange(props.filter)}
-      onChange={(v) => {
-        if (v) handleSelect(v);
-      }}
-      options={RANGES}
-      class="min-w-0"
-      itemComponent={(itemProps) => (
-        <SelectItem item={itemProps.item}>
-          {t(RANGE_KEYS[itemProps.item.rawValue])}
-        </SelectItem>
+    <ToggleGroup>
+      {createToggleItems(RANGES, activeRange, handleSelect, (range) =>
+        t(RANGE_KEYS[range]),
       )}
-    >
-      <SelectTrigger class="h-9 w-full">
-        <SelectValue<QuickFilterRange>>
-          {(state) => t(RANGE_KEYS[state.selectedOption()])}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent />
-    </Select>
+    </ToggleGroup>
   );
 };
 

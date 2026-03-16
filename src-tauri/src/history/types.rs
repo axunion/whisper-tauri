@@ -10,6 +10,15 @@ pub enum HistorySortBy {
     FileName,
 }
 
+/// Sort direction (ascending or descending).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum SortOrder {
+    Asc,
+    #[default]
+    Desc,
+}
+
 /// A segment of transcribed text with timing information (for history storage).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -95,9 +104,12 @@ pub struct HistoryFilter {
     /// Maximum number of entries to return
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
-    /// Sort order
+    /// Sort by field
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sort_by: Option<HistorySortBy>,
+    /// Sort direction
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sort_order: Option<SortOrder>,
 }
 
 /// Parameters for full-text search of history entries.
@@ -115,9 +127,12 @@ pub struct HistorySearchParams {
     /// Maximum number of entries to return
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
-    /// Sort order
+    /// Sort by field
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sort_by: Option<HistorySortBy>,
+    /// Sort direction
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sort_order: Option<SortOrder>,
 }
 
 #[cfg(test)]

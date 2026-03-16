@@ -72,13 +72,14 @@ export interface Dictionary {
     modelLabel: string;
     searchPlaceholder: string;
     searchNoResults: string;
-    filterToday: string;
-    filterThisWeek: string;
-    filterThisMonth: string;
+    filterLast7days: string;
+    filterLast30days: string;
     filterAll: string;
     sortDate: string;
-    sortDuration: string;
+    sortLength: string;
     sortFileName: string;
+    sortAsc: string;
+    sortDesc: string;
     select: string;
     selectedCount: string;
   };

@@ -6,6 +6,7 @@ use rusqlite::Connection;
 use super::error::HistoryError;
 use super::types::{
     HistoryEntry, HistoryFilter, HistoryMeta, HistorySaveParams, HistorySegment, HistorySortBy,
+    SortOrder,
 };
 
 /// Row type returned by `meta_row_mapper`.
@@ -51,15 +52,27 @@ pub fn meta_from_row(row: MetaRow) -> Result<HistoryMeta, HistoryError> {
     })
 }
 
-/// Builds an ORDER BY clause based on the sort option.
+/// Builds an ORDER BY clause based on the sort option and direction.
 #[must_use]
-pub fn sort_clause(sort_by: Option<&HistorySortBy>, prefix: &str) -> String {
+pub fn sort_clause(
+    sort_by: Option<&HistorySortBy>,
+    sort_order: Option<&SortOrder>,
+    prefix: &str,
+) -> String {
+    let dir = match sort_order {
+        Some(SortOrder::Asc) => "ASC",
+        Some(SortOrder::Desc) | None => "DESC",
+    };
     match sort_by {
-        Some(HistorySortBy::Duration) => format!("ORDER BY {prefix}duration DESC"),
+        Some(HistorySortBy::Duration) => format!("ORDER BY {prefix}duration {dir}"),
         Some(HistorySortBy::FileName) => {
-            format!("ORDER BY {prefix}file_name COLLATE NOCASE ASC")
+            let file_dir = match sort_order {
+                Some(SortOrder::Desc) => "DESC",
+                Some(SortOrder::Asc) | None => "ASC",
+            };
+            format!("ORDER BY {prefix}file_name COLLATE NOCASE {file_dir}")
         }
-        Some(HistorySortBy::Date) | None => format!("ORDER BY {prefix}created_at DESC"),
+        Some(HistorySortBy::Date) | None => format!("ORDER BY {prefix}created_at {dir}"),
     }
 }
 
@@ -220,7 +233,12 @@ pub fn list_entries(
         sql.push_str(" WHERE ");
         sql.push_str(&conditions.join(" AND "));
     }
-    write!(sql, " {}", sort_clause(filter.sort_by.as_ref(), "")).ok();
+    write!(
+        sql,
+        " {}",
+        sort_clause(filter.sort_by.as_ref(), filter.sort_order.as_ref(), "")
+    )
+    .ok();
     if let Some(limit) = filter.limit {
         write!(sql, " LIMIT {limit}").ok();
     }
@@ -658,6 +676,7 @@ mod tests {
                 date_to: None,
                 limit: None,
                 sort_by: None,
+                sort_order: None,
             },
         )
         .expect("search");
@@ -685,6 +704,7 @@ mod tests {
                 date_to: None,
                 limit: None,
                 sort_by: None,
+                sort_order: None,
             },
         )
         .expect("search");
@@ -712,6 +732,7 @@ mod tests {
                 date_to: None,
                 limit: None,
                 sort_by: None,
+                sort_order: None,
             },
         )
         .expect("search");
@@ -773,6 +794,7 @@ mod tests {
                 date_to: None,
                 limit: None,
                 sort_by: None,
+                sort_order: None,
             },
         )
         .expect("search");

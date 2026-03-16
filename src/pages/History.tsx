@@ -7,7 +7,7 @@ import {
   HistoryFilter,
   HistoryList,
   SearchBar,
-  SortSelect,
+  SortToggleGroup,
 } from "~/components/history";
 import { Button } from "~/components/ui/Button";
 import {
@@ -23,6 +23,7 @@ import { createHistory } from "~/primitives/createHistory";
 import type {
   HistoryFilter as HistoryFilterType,
   HistorySortBy,
+  SortOrder,
 } from "~/types";
 
 const SEARCH_MIN_LENGTH = 3;
@@ -105,8 +106,8 @@ export default function History() {
     }
   }
 
-  function handleSortChange(sortBy: HistorySortBy): void {
-    handleFilterChange({ ...history.filter(), sortBy });
+  function handleSortChange(sortBy: HistorySortBy, sortOrder: SortOrder): void {
+    handleFilterChange({ ...history.filter(), sortBy, sortOrder });
   }
 
   async function handleDeleteSelected(): Promise<void> {
@@ -135,17 +136,14 @@ export default function History() {
           onDismiss={() => history.clearError()}
         />
 
-        {/* Toolbar: grid with fixed column tracks */}
-        <div class="grid grid-cols-[1fr_130px_130px_72px] items-center gap-2">
-          <SearchBar onInput={handleSearchInput} onClear={handleClearSearch} />
-          <HistoryFilter
-            filter={history.filter()}
-            onFilterChange={handleFilterChange}
-          />
-          <SortSelect
-            value={history.filter().sortBy ?? "date"}
-            onChange={handleSortChange}
-          />
+        {/* Row 1: Search + Select */}
+        <div class="flex items-center gap-2">
+          <div class="flex-1">
+            <SearchBar
+              onInput={handleSearchInput}
+              onClear={handleClearSearch}
+            />
+          </div>
           <Button
             variant={selectionMode() ? "default" : "outline"}
             size="sm"
@@ -157,6 +155,19 @@ export default function History() {
             {selectionMode() ? <FiCheck /> : <FiCheckSquare />}
             {selectionMode() ? t("common.done") : t("history.select")}
           </Button>
+        </div>
+
+        {/* Row 2: Filter + Sort */}
+        <div class="flex items-center justify-between">
+          <HistoryFilter
+            filter={history.filter()}
+            onFilterChange={handleFilterChange}
+          />
+          <SortToggleGroup
+            sortBy={history.filter().sortBy ?? "date"}
+            sortOrder={history.filter().sortOrder ?? "desc"}
+            onChange={handleSortChange}
+          />
         </div>
 
         {/* List */}

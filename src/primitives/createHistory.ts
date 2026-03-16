@@ -60,6 +60,9 @@ export function createHistory() {
         ...(currentFilter.dateTo ? { dateTo: currentFilter.dateTo } : {}),
         limit: currentFilter.limit ?? DEFAULT_LIMIT,
         ...(currentFilter.sortBy ? { sortBy: currentFilter.sortBy } : {}),
+        ...(currentFilter.sortOrder
+          ? { sortOrder: currentFilter.sortOrder }
+          : {}),
       };
       const result = await invoke<HistoryMeta[]>("history_search", { params });
       // Discard stale results if query changed while awaiting
