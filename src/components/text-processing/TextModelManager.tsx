@@ -1,4 +1,4 @@
-import { FiDownload, FiTrash2, FiX } from "solid-icons/fi";
+import { FiCpu, FiDownload, FiServer, FiTrash2, FiX } from "solid-icons/fi";
 import { createSignal, For, onMount, Show } from "solid-js";
 import {
   AlertDialog,
@@ -9,7 +9,12 @@ import {
 } from "~/components/ui/AlertDialog";
 import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitleWithIcon,
+} from "~/components/ui/Card";
 import { Progress } from "~/components/ui/Progress";
 import { useI18n } from "~/i18n";
 import { getModelDescription } from "~/lib/modelDescription";
@@ -75,7 +80,9 @@ export default function TextModelManager(props: TextModelManagerProps) {
       {/* Text Model Management */}
       <Card>
         <CardHeader>
-          <CardTitle>{t("textProcessing.modelManagement")}</CardTitle>
+          <CardTitleWithIcon icon={() => <FiCpu class="size-4" />}>
+            {t("textProcessing.modelManagement")}
+          </CardTitleWithIcon>
         </CardHeader>
         <CardContent class="space-y-4">
           <For each={tp.models()}>
@@ -186,7 +193,9 @@ export default function TextModelManager(props: TextModelManagerProps) {
       <Show when={props.devMode}>
         <Card>
           <CardHeader>
-            <CardTitle>{t("textProcessing.serverManagement")}</CardTitle>
+            <CardTitleWithIcon icon={() => <FiServer class="size-4" />}>
+              {t("textProcessing.serverManagement")}
+            </CardTitleWithIcon>
           </CardHeader>
           <CardContent>
             <div class="flex items-center justify-between rounded-lg border p-4">

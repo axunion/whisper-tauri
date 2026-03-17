@@ -1,4 +1,4 @@
-import type { Component, ComponentProps } from "solid-js";
+import type { Component, ComponentProps, JSX } from "solid-js";
 import { splitProps } from "solid-js";
 
 import { cn } from "~/lib/utils";
@@ -55,11 +55,26 @@ const CardFooter: Component<ComponentProps<"div">> = (props) => {
   );
 };
 
+const CardTitleWithIcon: Component<
+  ComponentProps<"div"> & { icon: () => JSX.Element }
+> = (props) => {
+  const [local, others] = splitProps(props, ["icon", "children"]);
+  return (
+    <CardTitle class="flex items-center gap-3" {...others}>
+      <span class="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        {local.icon()}
+      </span>
+      {local.children}
+    </CardTitle>
+  );
+};
+
 export {
   Card,
   CardHeader,
   CardFooter,
   CardTitle,
+  CardTitleWithIcon,
   CardDescription,
   CardContent,
 };

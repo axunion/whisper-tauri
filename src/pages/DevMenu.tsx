@@ -1,11 +1,23 @@
-import { FiDownload, FiTrash2 } from "solid-icons/fi";
+import {
+  FiDownload,
+  FiMessageSquare,
+  FiMusic,
+  FiRefreshCw,
+  FiTool,
+  FiTrash2,
+} from "solid-icons/fi";
 import { onMount, Show } from "solid-js";
 import { CacheClear, LlmTester, ModelManager } from "~/components/dev";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
 import { TextModelManager } from "~/components/text-processing";
 import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitleWithIcon,
+} from "~/components/ui/Card";
 import { Progress } from "~/components/ui/Progress";
 import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
@@ -32,7 +44,9 @@ function DevMenuContent() {
       {/* Audio Model Manager */}
       <Card>
         <CardHeader>
-          <CardTitle>{t("settings.modelManagement")}</CardTitle>
+          <CardTitleWithIcon icon={() => <FiMusic class="size-4" />}>
+            {t("settings.modelManagement")}
+          </CardTitleWithIcon>
         </CardHeader>
         <CardContent>
           <ModelManager whisper={whisper} />
@@ -45,7 +59,9 @@ function DevMenuContent() {
       {/* FFmpeg Manager */}
       <Card>
         <CardHeader>
-          <CardTitle>{t("settings.toolManagement")}</CardTitle>
+          <CardTitleWithIcon icon={() => <FiTool class="size-4" />}>
+            {t("settings.toolManagement")}
+          </CardTitleWithIcon>
         </CardHeader>
         <CardContent>
           <div class="flex items-center justify-between rounded-lg border p-4">
@@ -113,7 +129,9 @@ function DevMenuContent() {
       {/* LLM Tester */}
       <Card>
         <CardHeader>
-          <CardTitle>{t("dev.llmTester")}</CardTitle>
+          <CardTitleWithIcon icon={() => <FiMessageSquare class="size-4" />}>
+            {t("dev.llmTester")}
+          </CardTitleWithIcon>
         </CardHeader>
         <CardContent>
           <LlmTester textProcessing={textProcessing} />
@@ -123,7 +141,9 @@ function DevMenuContent() {
       {/* Data Reset */}
       <Card>
         <CardHeader>
-          <CardTitle>{t("dev.dataReset")}</CardTitle>
+          <CardTitleWithIcon icon={() => <FiRefreshCw class="size-4" />}>
+            {t("dev.dataReset")}
+          </CardTitleWithIcon>
         </CardHeader>
         <CardContent>
           <CacheClear history={history} />

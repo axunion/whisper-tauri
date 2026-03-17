@@ -1,3 +1,4 @@
+import { FiSettings } from "solid-icons/fi";
 import { onMount } from "solid-js";
 import {
   FfmpegManager,
@@ -5,7 +6,12 @@ import {
   WhisperModelManager,
 } from "~/components/settings";
 import { TextModelManager } from "~/components/text-processing";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitleWithIcon,
+} from "~/components/ui/Card";
 import { Separator } from "~/components/ui/Separator";
 import { useI18n } from "~/i18n";
 import { createSettings } from "~/primitives/createSettings";
@@ -44,7 +50,9 @@ export default function Settings() {
       {/* General Settings */}
       <Card>
         <CardHeader>
-          <CardTitle>{t("settings.general")}</CardTitle>
+          <CardTitleWithIcon icon={() => <FiSettings class="size-4" />}>
+            {t("settings.general")}
+          </CardTitleWithIcon>
         </CardHeader>
         <CardContent class="space-y-6">
           <SettingsSelect
