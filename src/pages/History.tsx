@@ -10,13 +10,7 @@ import {
   SortToggleGroup,
 } from "~/components/history";
 import { Button } from "~/components/ui/Button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "~/components/ui/Sheet";
+import { Sheet, SheetContent, SheetTitle } from "~/components/ui/Sheet";
 import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
 import { createHistory } from "~/primitives/createHistory";
@@ -121,6 +115,10 @@ export default function History() {
     }
   }
 
+  async function handleRename(id: string, newFileName: string): Promise<void> {
+    await history.renameEntry(id, newFileName);
+  }
+
   const shouldHideList = () => {
     const len = rawInput().trim().length;
     if (len === 0) return false;
@@ -198,14 +196,15 @@ export default function History() {
           }}
         >
           <SheetContent>
-            <SheetHeader>
-              <SheetTitle>{t("history.detail")}</SheetTitle>
-              <SheetDescription>
-                {t("history.detailDescription")}
-              </SheetDescription>
-            </SheetHeader>
+            <SheetTitle class="sr-only">{t("history.detail")}</SheetTitle>
             <Show when={history.selectedEntry()} keyed>
-              {(entry) => <HistoryDetail entry={entry} />}
+              {(entry) => (
+                <HistoryDetail
+                  entry={entry}
+                  onRename={handleRename}
+                  onClose={() => history.clearSelectedEntry()}
+                />
+              )}
             </Show>
           </SheetContent>
         </Sheet>

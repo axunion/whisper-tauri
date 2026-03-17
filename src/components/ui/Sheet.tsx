@@ -22,7 +22,7 @@ const SheetOverlay = <T extends ValidComponent = "div">(
   return (
     <DialogPrimitive.Overlay
       class={cn(
-        "fixed inset-0 z-50 bg-background/60 backdrop-blur-md data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0",
+        "fixed inset-0 z-50 bg-background/60 backdrop-blur-md duration-300 data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[expanded]:fade-in-0",
         local.class,
       )}
       {...others}
@@ -48,7 +48,7 @@ const SheetContent = <T extends ValidComponent = "div">(
       <SheetOverlay />
       <DialogPrimitive.Content
         class={cn(
-          "fixed inset-y-0 right-0 z-50 flex h-full w-3/4 max-w-lg flex-col gap-4 border-l bg-card/55 backdrop-blur-xl dark:bg-card/35 p-6 shadow-lg duration-200 data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:slide-out-to-right data-[expanded]:slide-in-from-right sm:max-w-xl",
+          "fixed inset-y-0 right-0 z-50 flex h-full w-3/4 max-w-lg flex-col gap-4 border-l bg-card/55 backdrop-blur-xl dark:bg-card/35 p-6 shadow-lg duration-300 data-[expanded]:animate-in data-[closed]:animate-out data-[closed]:slide-out-to-right data-[expanded]:slide-in-from-right sm:max-w-xl",
           local.class,
         )}
         {...others}

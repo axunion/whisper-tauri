@@ -375,6 +375,24 @@ pub fn delete_all_entries(db_path: &Path) -> Result<u64, HistoryError> {
     Ok(deleted as u64)
 }
 
+/// Renames a history entry's file name.
+///
+/// # Errors
+///
+/// Returns `HistoryError::NotFound` if no entry with the given ID exists.
+/// Returns `HistoryError::Database` if the update fails.
+pub fn rename_entry(db_path: &Path, id: &str, new_file_name: &str) -> Result<(), HistoryError> {
+    let conn = Connection::open(db_path)?;
+    let updated = conn.execute(
+        "UPDATE history SET file_name = ?2 WHERE id = ?1",
+        rusqlite::params![id, new_file_name],
+    )?;
+    if updated == 0 {
+        return Err(HistoryError::NotFound(id.to_string()));
+    }
+    Ok(())
+}
+
 /// Returns the current time as an ISO 8601 string (UTC-like, local time).
 fn chrono_now() -> String {
     use std::time::SystemTime;
@@ -868,6 +886,26 @@ mod tests {
         assert_eq!(entries[0].id, "long");
         assert_eq!(entries[1].id, "mid");
         assert_eq!(entries[2].id, "short");
+    }
+
+    #[test]
+    fn rename_entry_updates_file_name() {
+        let (_dir, path) = setup_db();
+        let id = save_entry(&path, &sample_params()).expect("save");
+
+        rename_entry(&path, &id, "renamed_audio.wav").expect("rename");
+
+        let entry = get_entry(&path, &id).expect("get");
+        assert_eq!(entry.file_name, "renamed_audio.wav");
+    }
+
+    #[test]
+    fn rename_entry_not_found() {
+        let (_dir, path) = setup_db();
+        let result = rename_entry(&path, "nonexistent-id", "new_name.wav");
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("History not found"));
     }
 
     #[test]

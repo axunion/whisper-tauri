@@ -3,6 +3,7 @@ import type { Component, JSX } from "solid-js";
 import { For, Show } from "solid-js";
 import { CheckIndicator } from "~/components/history/CheckIndicator";
 import { useI18n } from "~/i18n";
+import { formatDuration } from "~/lib/format";
 import type { HistoryMeta } from "~/types";
 
 interface HistoryListProps {
@@ -12,13 +13,6 @@ interface HistoryListProps {
   onToggleSelect: (id: string) => void;
   onViewEntry: (id: string) => void;
   onEnterSelectionMode: (id: string) => void;
-}
-
-function formatDuration(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes)}m ${String(seconds)}s`;
 }
 
 const VIDEO_EXTS = [".mp4", ".mov", ".avi", ".mkv", ".webm", ".flv"];
@@ -77,7 +71,7 @@ const HistoryList: Component<HistoryListProps> = (props) => {
             return (
               <button
                 type="button"
-                class="group w-full min-w-0 rounded-lg border border-border/30 bg-card/45 px-5 py-4 text-left shadow-sm backdrop-blur-lg transition-all duration-300 hover:border-border/50 hover:shadow-md"
+                class="group w-full min-w-0 cursor-pointer rounded-lg border border-border/30 bg-card/45 px-5 py-4 text-left shadow-sm backdrop-blur-lg transition-all duration-300 hover:scale-[1.01] hover:border-border/50 hover:bg-accent/50 hover:shadow-md"
                 classList={{
                   "ring-2 ring-primary/50 bg-primary/5": isSelected(),
                 }}

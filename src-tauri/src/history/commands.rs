@@ -82,6 +82,17 @@ pub async fn history_delete_all(app: AppHandle) -> Result<u64, String> {
     db::delete_all_entries(&db_path).map_err(Into::into)
 }
 
+/// Renames a history entry's file name.
+///
+/// # Errors
+///
+/// Returns an error if the entry is not found or the database cannot be accessed.
+#[tauri::command]
+pub async fn history_rename(app: AppHandle, id: String, file_name: String) -> Result<(), String> {
+    let db_path = get_db_path(&app)?;
+    db::rename_entry(&db_path, &id, &file_name).map_err(Into::into)
+}
+
 /// Searches history entries using full-text search.
 ///
 /// # Errors

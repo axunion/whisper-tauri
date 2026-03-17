@@ -128,6 +128,23 @@ export function createHistory() {
     }
   }
 
+  async function renameEntry(id: string, fileName: string): Promise<void> {
+    try {
+      await invoke("history_rename", { id, fileName });
+      // Update selectedEntry if it matches
+      const current = selectedEntry();
+      if (current && current.id === id) {
+        setSelectedEntry({ ...current, fileName });
+      }
+      // Update entries list
+      setEntries((prev) =>
+        prev.map((e) => (e.id === id ? { ...e, fileName } : e)),
+      );
+    } catch (e) {
+      setError(parseError(e));
+    }
+  }
+
   function toggleSelect(id: string): void {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -179,6 +196,7 @@ export function createHistory() {
     getEntry,
     deleteEntries,
     deleteAllEntries,
+    renameEntry,
     toggleSelect,
     selectAll,
     clearSelection,

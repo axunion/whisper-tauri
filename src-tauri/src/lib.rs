@@ -58,6 +58,7 @@ pub fn run() {
             history::commands::history_delete,
             history::commands::history_delete_all,
             history::commands::history_search,
+            history::commands::history_rename,
             recording::commands::list_audio_devices,
             recording::commands::start_recording,
             recording::commands::stop_recording,

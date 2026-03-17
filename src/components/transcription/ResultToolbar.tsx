@@ -93,9 +93,11 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
             </Button>
           )}
         </Show>
-        <span class="truncate text-sm text-muted-foreground">
-          {props.fileName}
-        </span>
+        <Show when={props.fileName}>
+          <span class="truncate text-sm text-muted-foreground">
+            {props.fileName}
+          </span>
+        </Show>
       </div>
 
       {/* Right: actions */}
