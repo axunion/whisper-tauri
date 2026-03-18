@@ -19,6 +19,6 @@ describe("App", () => {
 
   it("shows Dashboard as initial page", () => {
     render(() => <App />);
-    expect(screen.getByText("クイックアクション")).toBeInTheDocument();
+    expect(screen.getByText("音声を文字に")).toBeInTheDocument();
   });
 });

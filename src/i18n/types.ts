@@ -22,15 +22,18 @@ export interface Dictionary {
   };
   dashboard: {
     title: string;
-    quickActions: string;
-    recentHistory: string;
+    heroTitle: string;
+    heroSubtitle: string;
+    heroCta: string;
+    statsTranscriptions: string;
+    statsTotalDuration: string;
+    setupModel: string;
+    setupFfmpeg: string;
+    setupAi: string;
+    recentActivity: string;
     viewAll: string;
     noHistory: string;
-    modelStatus: string;
-    loadingModels: string;
-    noModels: string;
     downloaded: string;
-    notDownloaded: string;
   };
   transcription: {
     title: string;
