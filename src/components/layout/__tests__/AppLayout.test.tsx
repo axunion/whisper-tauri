@@ -1,9 +1,14 @@
 import { MemoryRouter, Route } from "@solidjs/router";
 import { render, screen } from "@solidjs/testing-library";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+import { _resetSettingsForTesting } from "~/primitives/createSettings";
 import { AppLayout } from "../AppLayout";
 
 describe("AppLayout", () => {
+  beforeEach(() => {
+    _resetSettingsForTesting({ onboardingCompleted: true, loaded: true });
+  });
+
   it("renders the layout", () => {
     render(() => (
       <MemoryRouter root={AppLayout}>

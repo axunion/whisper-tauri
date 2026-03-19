@@ -189,6 +189,41 @@ export interface Dictionary {
       qwen35_4b: { description: string };
     };
   };
+  onboarding: {
+    stepOf: string;
+    skip: string;
+    skipTitle: string;
+    skipDescription: string;
+    skipConfirm: string;
+    skipNoModel: string;
+    next: string;
+    back: string;
+    getStarted: string;
+    welcomeTitle: string;
+    welcomeSubtitle: string;
+    privacyMessage: string;
+    chooseLanguage: string;
+    chooseTheme: string;
+    modelTitle: string;
+    modelSubtitle: string;
+    modelReady: string;
+    modelDownloadLater: string;
+    modelRequired: string;
+    optionalTitle: string;
+    optionalSubtitle: string;
+    ffmpegTitle: string;
+    ffmpegDescription: string;
+    llmTitle: string;
+    llmDescription: string;
+    completionTitle: string;
+    completionSubtitle: string;
+    summaryModel: string;
+    summaryFfmpeg: string;
+    summaryLlm: string;
+    summaryReady: string;
+    summaryNotInstalled: string;
+    startTranscribing: string;
+  };
   dev: {
     title: string;
     dataReset: string;
@@ -210,6 +245,9 @@ export interface Dictionary {
     inputPlaceholder: string;
     send: string;
     prerequisiteWarning: string;
+    resetOnboarding: string;
+    reset: string;
+    onboardingResetToast: string;
   };
 }
 

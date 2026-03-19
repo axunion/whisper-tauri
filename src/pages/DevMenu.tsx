@@ -3,6 +3,7 @@ import {
   FiMessageSquare,
   FiMusic,
   FiRefreshCw,
+  FiRotateCcw,
   FiTool,
   FiTrash2,
 } from "solid-icons/fi";
@@ -23,6 +24,7 @@ import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
 import { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
 import { createHistory } from "~/primitives/createHistory";
+import { createSettings } from "~/primitives/createSettings";
 import { createTextProcessing } from "~/primitives/createTextProcessing";
 import { createWhisper } from "~/primitives/createWhisper";
 
@@ -32,6 +34,7 @@ function DevMenuContent() {
   const history = createHistory();
   const ffmpeg = createFfmpegDownloader();
   const textProcessing = createTextProcessing();
+  const devSettings = createSettings();
 
   onMount(() => {
     whisper.loadModels();
@@ -66,7 +69,7 @@ function DevMenuContent() {
         <CardContent>
           <div class="flex items-center justify-between rounded-lg border p-4">
             <div class="flex items-center gap-2">
-              <span class="font-medium">FFmpeg</span>
+              <span class="text-sm font-medium">FFmpeg</span>
               <Show when={ffmpeg.isSystemAvailable()}>
                 <Badge variant="secondary">
                   {t("settings.systemInstalled")}
@@ -145,8 +148,23 @@ function DevMenuContent() {
             {t("dev.dataReset")}
           </CardTitleWithIcon>
         </CardHeader>
-        <CardContent>
+        <CardContent class="space-y-4">
           <CacheClear history={history} />
+          <div class="flex items-center justify-between rounded-lg border p-4">
+            <span class="text-sm font-medium">{t("dev.resetOnboarding")}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              class="w-28"
+              onClick={async () => {
+                await devSettings.update({ onboardingCompleted: false });
+                toast.success(t("dev.onboardingResetToast"));
+              }}
+            >
+              <FiRotateCcw />
+              {t("dev.reset")}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

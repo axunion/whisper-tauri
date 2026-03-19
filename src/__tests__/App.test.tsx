@@ -1,5 +1,6 @@
 import { render, screen } from "@solidjs/testing-library";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { _resetSettingsForTesting } from "~/primitives/createSettings";
 import App from "../App";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -7,6 +8,10 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 describe("App", () => {
+  beforeEach(() => {
+    _resetSettingsForTesting({ onboardingCompleted: true, loaded: true });
+  });
+
   it("renders without error", () => {
     render(() => <App />);
     expect(screen.getByRole("main")).toBeInTheDocument();

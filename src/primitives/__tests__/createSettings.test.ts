@@ -1,9 +1,9 @@
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { createRoot } from "solid-js";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppSettings } from "~/types";
 import { DEFAULT_SETTINGS } from "~/types";
-import { createSettings } from "../createSettings";
+import { _resetSettingsForTesting, createSettings } from "../createSettings";
 
 type MockStoreInstance = {
   get: ReturnType<typeof vi.fn>;
@@ -18,6 +18,10 @@ const getLastStoreInstance = (): MockStoreInstance => {
 };
 
 describe("createSettings", () => {
+  beforeEach(() => {
+    _resetSettingsForTesting();
+  });
+
   describe("initial state", () => {
     it("should have default settings", () => {
       createRoot((dispose) => {
@@ -42,6 +46,7 @@ describe("createSettings", () => {
         language: "en",
         theme: "dark",
         whisperLanguage: "ja",
+        onboardingCompleted: true,
       };
 
       await createRoot(async (dispose) => {
