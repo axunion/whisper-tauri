@@ -7,6 +7,7 @@ import {
   FiTool,
 } from "solid-icons/fi";
 import { For, Show } from "solid-js";
+import { DownloadIndicator } from "~/components/layout/DownloadIndicator";
 import {
   Sidebar,
   SidebarContent,
@@ -94,6 +95,7 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
+      <DownloadIndicator />
       <Show when={import.meta.env.DEV}>
         <SidebarFooter>
           <SidebarMenu>

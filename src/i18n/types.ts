@@ -12,6 +12,10 @@ export interface Dictionary {
     deleting: string;
     processing: string;
     done: string;
+    downloading: string;
+    downloadingSpeechModel: string;
+    downloadingFfmpeg: string;
+    downloadingTextModel: string;
   };
   nav: {
     dashboard: string;

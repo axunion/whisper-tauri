@@ -11,7 +11,7 @@ const VALID_MODEL_IDS: [&str; 2] = ["gemma-3-4b", "qwen3.5-4b"];
 /// Model filenames (GGUF `Q4_K_M` quantization).
 fn get_model_filename(model_id: &str) -> Option<&'static str> {
     match model_id {
-        "gemma-3-4b" => Some("gemma-3-4b-it-Q4_K_M.gguf"),
+        "gemma-3-4b" => Some("google_gemma-3-4b-it-Q4_K_M.gguf"),
         "qwen3.5-4b" => Some("Qwen3.5-4B-Q4_K_M.gguf"),
         _ => None,
     }
@@ -197,7 +197,7 @@ mod tests {
     fn get_model_filename_known_models() {
         assert_eq!(
             get_model_filename("gemma-3-4b"),
-            Some("gemma-3-4b-it-Q4_K_M.gguf")
+            Some("google_gemma-3-4b-it-Q4_K_M.gguf")
         );
         assert_eq!(
             get_model_filename("qwen3.5-4b"),
@@ -224,7 +224,7 @@ mod tests {
         let url = get_model_url("gemma-3-4b", Some("https://example.com/models"));
         assert_eq!(
             url,
-            Some("https://example.com/models/gemma-3-4b-it-Q4_K_M.gguf".to_string())
+            Some("https://example.com/models/google_gemma-3-4b-it-Q4_K_M.gguf".to_string())
         );
     }
 
@@ -233,7 +233,7 @@ mod tests {
         let url = get_model_url("gemma-3-4b", Some("https://example.com/models/"));
         assert_eq!(
             url,
-            Some("https://example.com/models/gemma-3-4b-it-Q4_K_M.gguf".to_string())
+            Some("https://example.com/models/google_gemma-3-4b-it-Q4_K_M.gguf".to_string())
         );
     }
 

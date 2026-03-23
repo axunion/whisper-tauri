@@ -9,7 +9,7 @@ import type {
   TranscriptionProgress,
   TranscriptionResult,
 } from "../../types";
-import { createWhisper } from "../createWhisper";
+import { _resetWhisperForTesting, createWhisper } from "../createWhisper";
 
 const mockModel = (overrides?: Partial<ModelInfo>): ModelInfo => ({
   id: "large-v3-turbo",
@@ -41,6 +41,11 @@ const mockResult: TranscriptionResult = {
 };
 
 describe("createWhisper", () => {
+  beforeEach(() => {
+    _resetWhisperForTesting();
+    vi.mocked(invoke).mockReset();
+  });
+
   describe("initial state", () => {
     it("should have empty models array", () => {
       createRoot((dispose) => {
@@ -440,41 +445,33 @@ describe("createWhisper", () => {
 
   describe("cancelTranscription", () => {
     it("should invoke cancel_transcription with task id", async () => {
-      // Set up listen mock to capture the callback
-      let progressCallback: (event: {
-        payload: TranscriptionProgress;
-      }) => void = () => {};
-      vi.mocked(listen).mockImplementation((event, handler) => {
-        if (event === "whisper:progress") {
-          progressCallback = handler as unknown as typeof progressCallback;
-        }
-        return Promise.resolve(() => {});
-      });
-
       vi.mocked(invoke).mockResolvedValue(undefined);
 
-      await createRoot(async (dispose) => {
-        const whisper = createWhisper();
+      const whisper = createWhisper();
 
-        // Simulate a progress event to set the taskId
-        progressCallback({
-          payload: {
-            taskId: "task-456",
-            progress: 50,
-            elapsedMs: 1000,
-          },
-        });
+      // Find the callback registered at module level for "whisper:progress"
+      const call = vi
+        .mocked(listen)
+        .mock.calls.find(([event]) => event === "whisper:progress");
+      const progressCallback = call?.[1] as
+        | ((event: { payload: TranscriptionProgress }) => void)
+        | undefined;
+      expect(progressCallback).toBeDefined();
 
-        await whisper.cancelTranscription();
-
-        expect(invoke).toHaveBeenCalledWith("cancel_transcription", {
+      // Simulate a progress event to set the taskId
+      progressCallback?.({
+        payload: {
           taskId: "task-456",
-        });
-        dispose();
+          progress: 50,
+          elapsedMs: 1000,
+        },
       });
 
-      // Reset listen mock to default
-      vi.mocked(listen).mockImplementation(() => Promise.resolve(() => {}));
+      await whisper.cancelTranscription();
+
+      expect(invoke).toHaveBeenCalledWith("cancel_transcription", {
+        taskId: "task-456",
+      });
     });
   });
 
@@ -611,96 +608,57 @@ describe("createWhisper", () => {
   });
 
   describe("event listeners", () => {
-    it("should update progress on whisper:progress event", async () => {
-      let progressCallback: (event: {
-        payload: TranscriptionProgress;
-      }) => void = () => {};
-      vi.mocked(listen).mockImplementation((event, handler) => {
-        if (event === "whisper:progress") {
-          progressCallback = handler as unknown as typeof progressCallback;
-        }
-        return Promise.resolve(() => {});
-      });
+    it("should update progress on whisper:progress event", () => {
+      const whisper = createWhisper();
 
-      await createRoot(async (dispose) => {
-        const whisper = createWhisper();
+      // Find the callback registered at module level for "whisper:progress"
+      const call = vi
+        .mocked(listen)
+        .mock.calls.find(([event]) => event === "whisper:progress");
+      const callback = call?.[1] as
+        | ((event: { payload: TranscriptionProgress }) => void)
+        | undefined;
+      expect(callback).toBeDefined();
 
-        const progressData: TranscriptionProgress = {
-          taskId: "task-789",
-          progress: 75,
-          elapsedMs: 3000,
-          currentSegment: "Processing...",
-        };
+      const progressData: TranscriptionProgress = {
+        taskId: "task-789",
+        progress: 75,
+        elapsedMs: 3000,
+        currentSegment: "Processing...",
+      };
 
-        progressCallback({ payload: progressData });
+      callback?.({ payload: progressData });
 
-        expect(whisper.progress()).toEqual(progressData);
-        dispose();
-      });
-
-      vi.mocked(listen).mockImplementation(() => Promise.resolve(() => {}));
+      expect(whisper.progress()).toEqual(progressData);
     });
 
-    it("should update downloadProgress on model:download-progress event", async () => {
-      let downloadCallback: (event: { payload: DownloadProgress }) => void =
-        () => {};
-      vi.mocked(listen).mockImplementation((event, handler) => {
-        if (event === "model:download-progress") {
-          downloadCallback = handler as unknown as typeof downloadCallback;
-        }
-        return Promise.resolve(() => {});
-      });
+    it("should update downloadProgress on model:download-progress event", () => {
+      const whisper = createWhisper();
 
-      await createRoot(async (dispose) => {
-        const whisper = createWhisper();
+      const call = vi
+        .mocked(listen)
+        .mock.calls.find(([event]) => event === "model:download-progress");
+      const callback = call?.[1] as
+        | ((event: { payload: DownloadProgress }) => void)
+        | undefined;
+      expect(callback).toBeDefined();
 
-        const downloadData: DownloadProgress = {
-          modelId: "large-v3-turbo",
-          downloadedBytes: 500000000,
-          totalBytes: 1_739_587_584,
-          progress: 28.7,
-        };
+      const downloadData: DownloadProgress = {
+        modelId: "large-v3-turbo",
+        downloadedBytes: 500000000,
+        totalBytes: 1_739_587_584,
+        progress: 28.7,
+      };
 
-        downloadCallback({ payload: downloadData });
+      callback?.({ payload: downloadData });
 
-        expect(whisper.downloadProgress()).toEqual(downloadData);
-        dispose();
-      });
-
-      vi.mocked(listen).mockImplementation(() => Promise.resolve(() => {}));
+      expect(whisper.downloadProgress()).toEqual(downloadData);
     });
 
-    it("should unregister listeners on dispose", async () => {
-      const unlistenProgress = vi.fn();
-      const unlistenDownload = vi.fn();
-
-      vi.mocked(listen).mockImplementation((event: string) => {
-        if (event === "whisper:progress") {
-          return Promise.resolve(unlistenProgress);
-        }
-        if (event === "model:download-progress") {
-          return Promise.resolve(unlistenDownload);
-        }
-        return Promise.resolve(() => {});
-      });
-
-      await createRoot(async (dispose) => {
-        createWhisper();
-
-        // Allow listen promises to resolve
-        await Promise.resolve();
-
-        expect(unlistenProgress).not.toHaveBeenCalled();
-        expect(unlistenDownload).not.toHaveBeenCalled();
-
-        dispose();
-      });
-
-      // After dispose, unlisten should have been called
-      expect(unlistenProgress).toHaveBeenCalled();
-      expect(unlistenDownload).toHaveBeenCalled();
-
-      vi.mocked(listen).mockImplementation(() => Promise.resolve(() => {}));
+    it("should register listeners at module level (singleton)", () => {
+      const listenCalls = vi.mocked(listen).mock.calls.map(([event]) => event);
+      expect(listenCalls).toContain("whisper:progress");
+      expect(listenCalls).toContain("model:download-progress");
     });
   });
 });

@@ -12,6 +12,10 @@ export const en: Dictionary = {
     deleting: "Deleting...",
     processing: "Processing...",
     done: "Done",
+    downloading: "Downloading",
+    downloadingSpeechModel: "Downloading speech model",
+    downloadingFfmpeg: "Downloading FFmpeg",
+    downloadingTextModel: "Downloading language model",
   },
   nav: {
     dashboard: "Dashboard",

@@ -3,9 +3,17 @@ import { listen } from "@tauri-apps/api/event";
 import { createRoot } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
 import type { FfmpegDownloadProgress } from "~/types";
-import { createFfmpegDownloader } from "../createFfmpegDownloader";
+import {
+  _resetFfmpegDownloaderForTesting,
+  createFfmpegDownloader,
+} from "../createFfmpegDownloader";
 
 describe("createFfmpegDownloader", () => {
+  beforeEach(() => {
+    _resetFfmpegDownloaderForTesting();
+    vi.mocked(invoke).mockReset();
+  });
+
   describe("initial state", () => {
     it("should have isBundled as false", () => {
       createRoot((dispose) => {
@@ -298,58 +306,32 @@ describe("createFfmpegDownloader", () => {
   });
 
   describe("event listeners", () => {
-    it("should update downloadProgress on ffmpeg:download-progress event", async () => {
-      let progressCallback: (event: {
-        payload: FfmpegDownloadProgress;
-      }) => void = () => {};
-      vi.mocked(listen).mockImplementation((event, handler) => {
-        if (event === "ffmpeg:download-progress") {
-          progressCallback = handler as unknown as typeof progressCallback;
-        }
-        return Promise.resolve(() => {});
-      });
+    it("should update downloadProgress on ffmpeg:download-progress event", () => {
+      const downloader = createFfmpegDownloader();
 
-      await createRoot(async (dispose) => {
-        const downloader = createFfmpegDownloader();
+      // Find the callback registered at module level for "ffmpeg:download-progress"
+      const call = vi
+        .mocked(listen)
+        .mock.calls.find(([event]) => event === "ffmpeg:download-progress");
+      const callback = call?.[1] as
+        | ((event: { payload: FfmpegDownloadProgress }) => void)
+        | undefined;
+      expect(callback).toBeDefined();
 
-        const progressData: FfmpegDownloadProgress = {
-          downloadedBytes: 50_000_000,
-          totalBytes: 100_000_000,
-          progress: 50.0,
-        };
+      const progressData: FfmpegDownloadProgress = {
+        downloadedBytes: 50_000_000,
+        totalBytes: 100_000_000,
+        progress: 50.0,
+      };
 
-        progressCallback({ payload: progressData });
+      callback?.({ payload: progressData });
 
-        expect(downloader.downloadProgress()).toEqual(progressData);
-        dispose();
-      });
-
-      vi.mocked(listen).mockImplementation(() => Promise.resolve(() => {}));
+      expect(downloader.downloadProgress()).toEqual(progressData);
     });
 
-    it("should unregister listener on dispose", async () => {
-      const unlistenFn = vi.fn();
-
-      vi.mocked(listen).mockImplementation((event: string) => {
-        if (event === "ffmpeg:download-progress") {
-          return Promise.resolve(unlistenFn);
-        }
-        return Promise.resolve(() => {});
-      });
-
-      await createRoot(async (dispose) => {
-        createFfmpegDownloader();
-
-        await Promise.resolve();
-
-        expect(unlistenFn).not.toHaveBeenCalled();
-
-        dispose();
-      });
-
-      expect(unlistenFn).toHaveBeenCalled();
-
-      vi.mocked(listen).mockImplementation(() => Promise.resolve(() => {}));
+    it("should register listener at module level (singleton)", () => {
+      const listenCalls = vi.mocked(listen).mock.calls.map(([event]) => event);
+      expect(listenCalls).toContain("ffmpeg:download-progress");
     });
   });
 });

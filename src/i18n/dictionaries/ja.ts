@@ -12,6 +12,10 @@ export const ja: Dictionary = {
     deleting: "削除中...",
     processing: "処理中...",
     done: "完了",
+    downloading: "ダウンロード中",
+    downloadingSpeechModel: "音声モデルをダウンロード中",
+    downloadingFfmpeg: "FFmpegをダウンロード中",
+    downloadingTextModel: "言語モデルをダウンロード中",
   },
   nav: {
     dashboard: "ダッシュボード",
