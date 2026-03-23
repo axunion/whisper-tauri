@@ -36,6 +36,8 @@ async function update(partial: Partial<AppSettings>): Promise<void> {
 const language = () => settings().language;
 const theme = () => settings().theme;
 const whisperLanguage = () => settings().whisperLanguage;
+const whisperModelId = () => settings().whisperModelId;
+const textModelId = () => settings().textModelId;
 const onboardingCompleted = () => settings().onboardingCompleted;
 
 async function completeOnboarding(): Promise<void> {
@@ -48,6 +50,8 @@ const settingsInstance = {
   language,
   theme,
   whisperLanguage,
+  whisperModelId,
+  textModelId,
   onboardingCompleted,
   load,
   update,

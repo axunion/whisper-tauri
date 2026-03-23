@@ -7,7 +7,9 @@ use super::error::TextProcessingError;
 use super::inference;
 use super::models;
 use super::server::LlamaServerManager;
-use super::types::{ServerStatus, SummaryOptions, TextDownloadProgress, TextModelInfo};
+use super::types::{
+    InferenceProgress, ServerStatus, SummaryOptions, TextDownloadProgress, TextModelInfo,
+};
 
 /// Store filename for settings.
 const SETTINGS_STORE: &str = "settings.json";
@@ -156,17 +158,17 @@ pub async fn text_processing_download_server(app: AppHandle) -> Result<String, S
     let archive_path = bin_dir.join(archive_filename);
     download_file(url, &archive_path, &app).await?;
 
-    let final_path = models::llama_server_path(&app_data_dir);
     let extract_result = if use_tar_gz {
-        extract_llama_server_from_tar_gz(&archive_path, &final_path)
+        extract_llama_server_from_tar_gz(&archive_path, &bin_dir)
     } else {
-        extract_llama_server_from_zip(&archive_path, &final_path)
+        extract_llama_server_from_zip(&archive_path, &bin_dir)
     };
 
     // Always clean up archive, even on extraction failure
     let _ = std::fs::remove_file(&archive_path);
     extract_result?;
 
+    let final_path = models::llama_server_path(&app_data_dir);
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -188,10 +190,25 @@ pub async fn text_processing_download_server(app: AppHandle) -> Result<String, S
 #[tauri::command]
 pub async fn text_processing_delete_server(app: AppHandle) -> Result<(), String> {
     let app_data_dir = resolve_app_data_dir(&app)?;
+    let bin_dir = app_data_dir.join("bin");
+
     let path = models::llama_server_path(&app_data_dir);
     if path.exists() {
         std::fs::remove_file(&path).map_err(TextProcessingError::from)?;
     }
+
+    if bin_dir.is_dir() {
+        if let Ok(entries) = std::fs::read_dir(&bin_dir) {
+            for entry in entries.flatten() {
+                let name = entry.file_name();
+                let name = name.to_string_lossy();
+                if should_extract(&name) && name != LLAMA_SERVER_BINARY_NAME {
+                    let _ = std::fs::remove_file(entry.path());
+                }
+            }
+        }
+    }
+
     Ok(())
 }
 
@@ -215,7 +232,7 @@ pub async fn text_processing_check_server(app: AppHandle) -> Result<bool, String
 pub async fn text_processing_server_status(
     manager: State<'_, tokio::sync::Mutex<LlamaServerManager>>,
 ) -> Result<ServerStatus, String> {
-    let manager = manager.lock().await;
+    let mut manager = manager.lock().await;
     Ok(ServerStatus {
         running: manager.is_running(),
         port: manager.port(),
@@ -241,7 +258,12 @@ pub async fn text_processing_chat(
         task_id: task_id.clone(),
     };
 
+    emit_initial_progress(&app, &task_id);
+
     let port = ensure_server_running(&app, &manager, model_id.as_deref()).await?;
+    if token.is_cancelled() {
+        return Err(TextProcessingError::Cancelled.into());
+    }
 
     let messages = inference::build_chat_messages(&text);
     let result = inference::run_inference(port, &messages, 0.7, &task_id, &token, &app)
@@ -269,7 +291,12 @@ pub async fn text_processing_proofread(
         task_id: task_id.clone(),
     };
 
+    emit_initial_progress(&app, &task_id);
+
     let port = ensure_server_running(&app, &manager, model_id.as_deref()).await?;
+    if token.is_cancelled() {
+        return Err(TextProcessingError::Cancelled.into());
+    }
 
     let chunks = inference::chunk_text(&text, inference::default_max_chunk_chars());
     let mut result = String::new();
@@ -308,7 +335,12 @@ pub async fn text_processing_summarize(
         task_id: task_id.clone(),
     };
 
+    emit_initial_progress(&app, &task_id);
+
     let port = ensure_server_running(&app, &manager, model_id.as_deref()).await?;
+    if token.is_cancelled() {
+        return Err(TextProcessingError::Cancelled.into());
+    }
 
     let opts = options.unwrap_or_default();
     let chunks = inference::chunk_text(&text, inference::default_max_chunk_chars());
@@ -469,11 +501,15 @@ async fn ensure_server_running(
 
     let mut mgr = manager.lock().await;
 
-    // Already running with the same model
     if mgr.is_running() && mgr.model_id() == Some(model_id.as_str()) {
         if let Some(port) = mgr.port() {
-            mgr.touch_activity();
-            return Ok(port);
+            if quick_health_check(port).await {
+                mgr.touch_activity();
+                return Ok(port);
+            }
+            // Server process alive but unresponsive — stop and restart
+            eprintln!("llama-server process alive but unresponsive, restarting");
+            let _ = mgr.stop().await;
         }
     }
 
@@ -484,6 +520,31 @@ async fn ensure_server_running(
         .map_err::<String, _>(Into::into)?;
 
     Ok(port)
+}
+
+/// Emits an initial inference progress event so the frontend has the taskId immediately.
+fn emit_initial_progress(app: &AppHandle, task_id: &str) {
+    let _ = app.emit(
+        "text-processing:inference-progress",
+        InferenceProgress {
+            task_id: task_id.to_string(),
+            token: String::new(),
+            accumulated_text: String::new(),
+            done: false,
+        },
+    );
+}
+
+/// Quick health check with a short timeout to verify the server is responsive.
+async fn quick_health_check(port: u16) -> bool {
+    let url = format!("http://127.0.0.1:{port}/health");
+    let Ok(client) = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(2))
+        .build()
+    else {
+        return false;
+    };
+    matches!(client.get(&url).send().await, Ok(resp) if resp.status().is_success())
 }
 
 /// Downloads a file from a URL to a local path.
@@ -526,68 +587,149 @@ const LLAMA_SERVER_BINARY_NAME: &str = if cfg!(target_os = "windows") {
     "llama-server"
 };
 
-/// Extracts the llama-server binary from a tar.gz archive.
-fn extract_llama_server_from_tar_gz(archive_path: &Path, output_path: &Path) -> Result<(), String> {
-    let file = std::fs::File::open(archive_path)
-        .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())?;
+/// Returns whether a filename should be extracted from the archive.
+///
+/// Extracts the llama-server binary and shared libraries it depends on.
+fn should_extract(filename: &str) -> bool {
+    if filename == LLAMA_SERVER_BINARY_NAME {
+        return true;
+    }
+    // Shared libraries: .dylib (macOS), .so/.so.N (Linux), .dll (Windows)
+    let path = std::path::Path::new(filename);
+    let ext_matches = |ext_name: &str| {
+        path.extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case(ext_name))
+    };
+    ext_matches("dylib")
+        || filename.ends_with(".so") || filename.contains(".so.")
+        || (cfg!(target_os = "windows") && ext_matches("dll"))
+}
+
+/// Extracts the llama-server binary and shared libraries from a tar.gz archive.
+///
+/// Handles both regular files and symlinks (common for versioned `.dylib` on macOS).
+fn extract_llama_server_from_tar_gz(archive_path: &Path, bin_dir: &Path) -> Result<(), String> {
+    let dl_err = |e: std::io::Error| TextProcessingError::DownloadFailed(e.to_string()).to_string();
+
+    let file = std::fs::File::open(archive_path).map_err(dl_err)?;
     let decoder = flate2::read::GzDecoder::new(file);
     let mut archive = tar::Archive::new(decoder);
 
-    for entry in archive
-        .entries()
-        .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())?
-    {
-        let mut entry =
-            entry.map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())?;
-        let path = entry
-            .path()
-            .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())?;
-        if path.file_name().map(|f| f.to_string_lossy()) == Some(LLAMA_SERVER_BINARY_NAME.into()) {
-            let mut out_file = std::fs::File::create(output_path)
+    let mut found_binary = false;
+    // Collect symlinks to create after all regular files are extracted
+    let mut symlinks: Vec<(String, PathBuf)> = Vec::new();
+
+    for entry in archive.entries().map_err(dl_err)? {
+        let mut entry = entry.map_err(dl_err)?;
+        let path = entry.path().map_err(dl_err)?;
+
+        let Some(filename) = path.file_name().map(|f| f.to_string_lossy().to_string()) else {
+            continue;
+        };
+
+        if !should_extract(&filename) {
+            continue;
+        }
+
+        if filename == LLAMA_SERVER_BINARY_NAME {
+            found_binary = true;
+        }
+
+        let entry_type = entry.header().entry_type();
+        let out_path = bin_dir.join(&filename);
+
+        if entry_type.is_symlink() {
+            // Record symlink target to create after extraction
+            if let Ok(Some(target)) = entry.link_name() {
+                let target_name = target
+                    .file_name()
+                    .unwrap_or(target.as_os_str())
+                    .to_string_lossy()
+                    .to_string();
+                symlinks.push((target_name, out_path));
+            }
+        } else if entry_type.is_file() {
+            let mut out_file = std::fs::File::create(&out_path)
                 .map_err(|e| TextProcessingError::Io(e).to_string())?;
             std::io::copy(&mut entry, &mut out_file)
                 .map_err(|e| TextProcessingError::Io(e).to_string())?;
-            return Ok(());
         }
     }
 
-    Err(
-        TextProcessingError::DownloadFailed("llama-server binary not found in archive".to_string())
-            .to_string(),
-    )
+    // Create symlinks (or copy on platforms without symlink support)
+    for (target_name, link_path) in &symlinks {
+        let target_path = bin_dir.join(target_name);
+        if target_path.exists() {
+            // Remove any 0-byte placeholder from previous extraction
+            let _ = std::fs::remove_file(link_path);
+            #[cfg(unix)]
+            {
+                std::os::unix::fs::symlink(&target_path, link_path)
+                    .map_err(|e| TextProcessingError::Io(e).to_string())?;
+            }
+            #[cfg(not(unix))]
+            {
+                std::fs::copy(&target_path, link_path)
+                    .map_err(|e| TextProcessingError::Io(e).to_string())?;
+            }
+        }
+    }
+
+    if found_binary {
+        Ok(())
+    } else {
+        Err(TextProcessingError::DownloadFailed(
+            "llama-server binary not found in archive".to_string(),
+        )
+        .to_string())
+    }
 }
 
-/// Extracts the llama-server binary from a zip archive.
-fn extract_llama_server_from_zip(archive_path: &Path, output_path: &Path) -> Result<(), String> {
+/// Extracts the llama-server binary and shared libraries from a zip archive.
+fn extract_llama_server_from_zip(archive_path: &Path, bin_dir: &Path) -> Result<(), String> {
     let file = std::fs::File::open(archive_path)
         .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())?;
     let mut archive = zip::ZipArchive::new(file)
         .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())?;
+
+    let mut found_binary = false;
 
     for i in 0..archive.len() {
         let mut entry = archive
             .by_index(i)
             .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())?;
 
-        let entry_name = entry
-            .enclosed_name()
-            .and_then(|p| p.file_name().map(|f| f.to_string_lossy().to_string()));
+        if !entry.is_file() {
+            continue;
+        }
 
-        if let Some(name) = entry_name {
-            if name == LLAMA_SERVER_BINARY_NAME && entry.is_file() {
-                let mut out_file = std::fs::File::create(output_path)
-                    .map_err(|e| TextProcessingError::Io(e).to_string())?;
-                std::io::copy(&mut entry, &mut out_file)
-                    .map_err(|e| TextProcessingError::Io(e).to_string())?;
-                return Ok(());
+        let Some(filename) = entry
+            .enclosed_name()
+            .and_then(|p| p.file_name().map(|f| f.to_string_lossy().to_string()))
+        else {
+            continue;
+        };
+
+        if should_extract(&filename) {
+            if filename == LLAMA_SERVER_BINARY_NAME {
+                found_binary = true;
             }
+            let out_path = bin_dir.join(&filename);
+            let mut out_file = std::fs::File::create(&out_path)
+                .map_err(|e| TextProcessingError::Io(e).to_string())?;
+            std::io::copy(&mut entry, &mut out_file)
+                .map_err(|e| TextProcessingError::Io(e).to_string())?;
         }
     }
 
-    Err(
-        TextProcessingError::DownloadFailed("llama-server binary not found in archive".to_string())
-            .to_string(),
-    )
+    if found_binary {
+        Ok(())
+    } else {
+        Err(TextProcessingError::DownloadFailed(
+            "llama-server binary not found in archive".to_string(),
+        )
+        .to_string())
+    }
 }
 
 #[cfg(test)]

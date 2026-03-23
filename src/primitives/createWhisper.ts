@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { batch, createRoot, createSignal } from "solid-js";
 import { parseError } from "~/lib/errors";
+import { createSettings } from "~/primitives/createSettings";
 import type {
   DownloadProgress,
   FileInfo,
@@ -94,6 +95,15 @@ listen<DownloadProgress>("model:download-progress", (event) => {
 function autoSelectModel(): void {
   if (selectedModel()) return;
   const downloaded = models().filter((m) => m.downloaded);
+  // Restore from settings if available
+  const savedId = createSettings().whisperModelId();
+  if (savedId) {
+    const saved = downloaded.find((m) => m.id === savedId);
+    if (saved) {
+      setSelectedModel(saved);
+      return;
+    }
+  }
   const pick = downloaded.find((m) => m.recommended) ?? downloaded[0];
   if (pick) {
     setSelectedModel(pick);
@@ -113,6 +123,7 @@ async function loadModels(): Promise<void> {
 function selectModel(model: ModelInfo): void {
   if (!model.downloaded) return;
   setSelectedModel(model);
+  createSettings().update({ whisperModelId: model.id });
 }
 
 async function downloadModel(modelId: string): Promise<void> {
@@ -134,6 +145,7 @@ async function deleteModel(modelId: string): Promise<void> {
     const wasSelected = selectedModel()?.id === modelId;
     if (wasSelected) {
       setSelectedModel(null);
+      createSettings().update({ whisperModelId: null });
     }
     await loadModels();
   } catch (e) {

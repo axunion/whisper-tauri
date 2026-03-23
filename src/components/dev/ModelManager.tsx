@@ -25,6 +25,9 @@ export function ModelManager(props: ModelManagerProps) {
     null,
   );
 
+  const isSelected = (modelId: string) =>
+    props.whisper.selectedModel()?.id === modelId;
+
   async function handleDeleteModel(modelId: string) {
     setDeletingModelId(modelId);
     try {
@@ -39,14 +42,24 @@ export function ModelManager(props: ModelManagerProps) {
     <div class="space-y-4">
       <For each={props.whisper.models()}>
         {(model) => (
-          <div class="flex items-center justify-between rounded-lg border p-4">
+          <button
+            type="button"
+            class={`flex w-full items-center justify-between rounded-lg border p-4 text-left transition-colors ${
+              model.downloaded
+                ? isSelected(model.id)
+                  ? "ring-2 ring-primary bg-primary/5"
+                  : "hover:bg-muted/50"
+                : ""
+            }`}
+            onClick={() => {
+              if (model.downloaded) props.whisper.selectModel(model);
+            }}
+            disabled={!model.downloaded}
+          >
             <div class="space-y-1">
               <div class="flex items-center gap-2">
                 <span class="font-medium">{model.name}</span>
                 <Badge variant="secondary">{model.size}</Badge>
-                <Show when={model.recommended}>
-                  <Badge>{t("common.recommended")}</Badge>
-                </Show>
               </div>
               <p class="text-sm text-muted-foreground">
                 {getModelDescription(t, model.id, model.description)}
@@ -66,7 +79,10 @@ export function ModelManager(props: ModelManagerProps) {
                         variant="outline"
                         size="sm"
                         class="w-28"
-                        onClick={() => props.whisper.downloadModel(model.id)}
+                        onClick={(e: MouseEvent) => {
+                          e.stopPropagation();
+                          props.whisper.downloadModel(model.id);
+                        }}
                         disabled={props.whisper.isDownloading()}
                       >
                         <FiDownload />
@@ -97,6 +113,7 @@ export function ModelManager(props: ModelManagerProps) {
                     size="sm"
                     class="w-28"
                     disabled={deletingModelId() === model.id}
+                    onClick={(e: MouseEvent) => e.stopPropagation()}
                   >
                     <FiTrash2 />
                     {deletingModelId() === model.id
@@ -133,7 +150,7 @@ export function ModelManager(props: ModelManagerProps) {
                 </AlertDialog>
               </Show>
             </div>
-          </div>
+          </button>
         )}
       </For>
       <Show when={props.whisper.models().length === 0}>

@@ -71,11 +71,7 @@ export function DownloadIndicator() {
                       {Math.round(info.progress)}%
                     </span>
                   </div>
-                  <Progress
-                    value={info.progress}
-                    minValue={0}
-                    maxValue={100}
-                  />
+                  <Progress value={info.progress} minValue={0} maxValue={100} />
                 </div>
               </Show>
             </SidebarMenuItem>

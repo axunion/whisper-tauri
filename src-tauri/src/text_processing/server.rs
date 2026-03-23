@@ -1,6 +1,7 @@
 use std::path::Path;
 use std::time::{Duration, Instant};
 
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{Child, Command};
 
 use super::error::TextProcessingError;
@@ -13,7 +14,7 @@ const DEFAULT_IDLE_TIMEOUT_SECS: u64 = 300;
 const HEALTH_CHECK_INTERVAL_MS: u64 = 1000;
 
 /// Maximum health check wait time in seconds.
-const HEALTH_CHECK_MAX_WAIT_SECS: u64 = 30;
+const HEALTH_CHECK_MAX_WAIT_SECS: u64 = 120;
 
 /// Manages the llama-server subprocess lifecycle.
 pub struct LlamaServerManager {
@@ -44,9 +45,25 @@ impl LlamaServerManager {
     }
 
     /// Returns whether the server is currently running.
+    ///
+    /// Checks the child process with `try_wait()` to detect crashes.
+    /// If the process has exited, internal state is cleaned up automatically.
     #[must_use]
-    pub fn is_running(&self) -> bool {
-        self.child.is_some()
+    pub fn is_running(&mut self) -> bool {
+        let Some(ref mut child) = self.child else {
+            return false;
+        };
+        match child.try_wait() {
+            Ok(Some(_)) | Err(_) => {
+                // Process exited or error checking — clean up
+                self.child = None;
+                self.port = None;
+                self.model_id = None;
+                self.last_activity = None;
+                false
+            }
+            Ok(None) => true, // Still running
+        }
     }
 
     /// Returns the port the server is listening on, if running.
@@ -68,7 +85,7 @@ impl LlamaServerManager {
 
     /// Returns whether the server should be stopped due to idle timeout.
     #[must_use]
-    pub fn should_idle_stop(&self) -> bool {
+    pub fn should_idle_stop(&mut self) -> bool {
         if !self.is_running() {
             return false;
         }
@@ -117,7 +134,7 @@ impl LlamaServerManager {
         let port = find_free_port()?;
 
         // Spawn llama-server subprocess
-        let child = Command::new(&server_path)
+        let mut child = Command::new(&server_path)
             .args([
                 "--port",
                 &port.to_string(),
@@ -129,12 +146,23 @@ impl LlamaServerManager {
                 &num_threads().to_string(),
             ])
             .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
+            .stderr(std::process::Stdio::piped())
             .kill_on_drop(true)
             .spawn()
             .map_err(|e| {
                 TextProcessingError::ServerStartFailed(format!("Failed to spawn server: {e}"))
             })?;
+
+        // Drain stderr to log for debugging server crashes
+        if let Some(stderr) = child.stderr.take() {
+            tokio::spawn(async move {
+                let reader = BufReader::new(stderr);
+                let mut lines = reader.lines();
+                while let Ok(Some(line)) = lines.next_line().await {
+                    eprintln!("[llama-server] {line}");
+                }
+            });
+        }
 
         self.child = Some(child);
         self.port = Some(port);
@@ -186,7 +214,10 @@ fn num_threads() -> usize {
     std::thread::available_parallelism().map_or(4, |n| n.get().min(8))
 }
 
-/// Polls the server health endpoint until it responds or times out.
+/// Polls the server health endpoint until the model is fully loaded or times out.
+///
+/// The llama-server `/health` endpoint returns `{"status":"ok"}` when ready
+/// and may return `{"status":"loading model"}` while still loading.
 async fn wait_for_health(port: u16) -> Result<(), TextProcessingError> {
     let url = format!("http://127.0.0.1:{port}/health");
     let client = reqwest::Client::new();
@@ -196,14 +227,25 @@ async fn wait_for_health(port: u16) -> Result<(), TextProcessingError> {
         tokio::time::sleep(Duration::from_millis(HEALTH_CHECK_INTERVAL_MS)).await;
         if let Ok(resp) = client.get(&url).send().await {
             if resp.status().is_success() {
+                // Verify response body confirms model is loaded
+                if let Ok(body) = resp.text().await {
+                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body) {
+                        if json.get("status").and_then(|s| s.as_str()) == Some("ok") {
+                            return Ok(());
+                        }
+                        // "loading model" or other status — keep polling
+                        continue;
+                    }
+                }
+                // Non-JSON success response — treat as ready
                 return Ok(());
             }
         }
     }
 
-    Err(TextProcessingError::ServerStartFailed(
-        "Health check timed out after 30 seconds".to_string(),
-    ))
+    Err(TextProcessingError::ServerStartFailed(format!(
+        "Health check timed out after {HEALTH_CHECK_MAX_WAIT_SECS} seconds"
+    )))
 }
 
 #[cfg(test)]
@@ -212,7 +254,7 @@ mod tests {
 
     #[test]
     fn new_manager_is_not_running() {
-        let manager = LlamaServerManager::new();
+        let mut manager = LlamaServerManager::new();
         assert!(!manager.is_running());
     }
 
@@ -230,7 +272,7 @@ mod tests {
 
     #[test]
     fn should_idle_stop_false_when_not_running() {
-        let manager = LlamaServerManager::new();
+        let mut manager = LlamaServerManager::new();
         assert!(!manager.should_idle_stop());
     }
 

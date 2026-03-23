@@ -65,6 +65,8 @@ export default function TextModelManager(props: TextModelManagerProps) {
     }
   }
 
+  const isSelected = (modelId: string) => tp.selectedModelId() === modelId;
+
   async function handleDeleteServer() {
     const ok = await tp.deleteServer();
     if (ok) {
@@ -87,7 +89,20 @@ export default function TextModelManager(props: TextModelManagerProps) {
         <CardContent class="space-y-4">
           <For each={tp.models()}>
             {(model) => (
-              <div class="flex items-center justify-between rounded-lg border p-4">
+              <button
+                type="button"
+                class={`flex w-full items-center justify-between rounded-lg border p-4 text-left transition-colors ${
+                  model.downloaded
+                    ? isSelected(model.id)
+                      ? "ring-2 ring-primary bg-primary/5"
+                      : "hover:bg-muted/50"
+                    : ""
+                }`}
+                onClick={() => {
+                  if (model.downloaded) tp.selectModel(model.id);
+                }}
+                disabled={!model.downloaded}
+              >
                 <div class="space-y-1">
                   <div class="flex items-center gap-2">
                     <span class="font-medium">{model.name}</span>
@@ -111,7 +126,10 @@ export default function TextModelManager(props: TextModelManagerProps) {
                             variant="outline"
                             size="sm"
                             class="w-28"
-                            onClick={() => handleDownloadModel(model.id)}
+                            onClick={(e: MouseEvent) => {
+                              e.stopPropagation();
+                              handleDownloadModel(model.id);
+                            }}
                             disabled={tp.isDownloading()}
                           >
                             <FiDownload />
@@ -145,6 +163,7 @@ export default function TextModelManager(props: TextModelManagerProps) {
                         size="sm"
                         class="w-28"
                         disabled={deletingModelId() === model.id}
+                        onClick={(e: MouseEvent) => e.stopPropagation()}
                       >
                         <FiTrash2 />
                         {deletingModelId() === model.id
@@ -183,7 +202,7 @@ export default function TextModelManager(props: TextModelManagerProps) {
                     </AlertDialog>
                   </Show>
                 </div>
-              </div>
+              </button>
             )}
           </For>
         </CardContent>

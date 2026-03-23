@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { createRoot, createSignal } from "solid-js";
 import { parseError } from "~/lib/errors";
+import { createSettings } from "~/primitives/createSettings";
 import type {
   InferenceProgress,
   ServerStatus,
@@ -15,6 +16,8 @@ import type { AppError } from "~/types/errors";
 const {
   models,
   setModels,
+  selectedModelId,
+  setSelectedModelId,
   downloadProgress,
   setDownloadProgress,
   serverStatus,
@@ -41,6 +44,9 @@ const {
   setError,
 } = createRoot(() => {
   const [models, setModels] = createSignal<TextModelInfo[]>([]);
+  const [selectedModelId, setSelectedModelId] = createSignal<string | null>(
+    null,
+  );
   const [downloadProgress, setDownloadProgress] =
     createSignal<TextDownloadProgress | null>(null);
   const [serverStatus, setServerStatus] = createSignal<ServerStatus>({
@@ -67,6 +73,8 @@ const {
   return {
     models,
     setModels,
+    selectedModelId,
+    setSelectedModelId,
     downloadProgress,
     setDownloadProgress,
     serverStatus,
@@ -107,9 +115,29 @@ async function loadModels(): Promise<void> {
   try {
     const result = await invoke<TextModelInfo[]>("text_processing_list_models");
     setModels(result);
+    // Restore selection from settings if not yet set
+    if (!selectedModelId()) {
+      const savedId = createSettings().textModelId();
+      if (savedId) {
+        const exists = result.some((m) => m.id === savedId && m.downloaded);
+        if (exists) {
+          setSelectedModelId(savedId);
+        }
+      }
+    }
   } catch (e) {
     setError(parseError(e));
   }
+}
+
+function selectModel(modelId: string): void {
+  setSelectedModelId(modelId);
+  createSettings().update({ textModelId: modelId });
+}
+
+/** Returns the effective model ID: explicit selection or undefined for backend auto-pick. */
+function effectiveModelId(override?: string): string | undefined {
+  return override ?? selectedModelId() ?? undefined;
 }
 
 async function downloadModel(modelId: string): Promise<boolean> {
@@ -141,6 +169,10 @@ async function downloadModel(modelId: string): Promise<boolean> {
 async function deleteModel(modelId: string): Promise<void> {
   try {
     await invoke("text_processing_delete_model", { modelId });
+    if (selectedModelId() === modelId) {
+      setSelectedModelId(null);
+      createSettings().update({ textModelId: null });
+    }
     await loadModels();
   } catch (e) {
     setError(parseError(e));
@@ -201,7 +233,7 @@ async function chat(text: string, modelId?: string): Promise<string | null> {
   try {
     const result = await invoke<string>("text_processing_chat", {
       text,
-      modelId,
+      modelId: effectiveModelId(modelId),
     });
     setChatResult(result);
     return result;
@@ -224,7 +256,7 @@ async function proofread(
   try {
     const result = await invoke<string>("text_processing_proofread", {
       text,
-      modelId,
+      modelId: effectiveModelId(modelId),
     });
     setProofreadResult(result);
     return result;
@@ -249,7 +281,7 @@ async function summarize(
     const result = await invoke<string>("text_processing_summarize", {
       text,
       options,
-      modelId,
+      modelId: effectiveModelId(modelId),
     });
     setSummaryResult(result);
     return result;
@@ -275,6 +307,7 @@ function clearError(): void {
 const textProcessingInstance = {
   // State (Accessors)
   models,
+  selectedModelId,
   downloadProgress,
   serverStatus,
   inferenceProgress,
@@ -289,6 +322,7 @@ const textProcessingInstance = {
   error,
 
   // Actions
+  selectModel,
   chat,
   loadModels,
   downloadModel,
@@ -310,6 +344,7 @@ export function createTextProcessing() {
 /** @internal Reset singleton state for testing only. */
 export function _resetTextProcessingForTesting(): void {
   setModels([]);
+  setSelectedModelId(null);
   setDownloadProgress(null);
   setServerStatus({ running: false });
   setInferenceProgress(null);
