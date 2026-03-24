@@ -135,6 +135,32 @@ pub struct HistorySearchParams {
     pub sort_order: Option<SortOrder>,
 }
 
+/// AI-generated content associated with a history entry.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct AiContent {
+    pub id: String,
+    pub history_id: String,
+    pub content_type: String,
+    pub created_at: String,
+    pub text: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub options_json: Option<String>,
+    pub text_model_id: String,
+}
+
+/// Parameters for saving AI-generated content.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct AiContentSaveParams {
+    pub history_id: String,
+    pub content_type: String,
+    pub text: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub options_json: Option<String>,
+    pub text_model_id: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

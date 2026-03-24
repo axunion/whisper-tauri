@@ -5,7 +5,8 @@ use tauri::{AppHandle, Manager};
 use super::db;
 use super::error::HistoryError;
 use super::types::{
-    HistoryEntry, HistoryFilter, HistoryMeta, HistorySaveParams, HistorySearchParams,
+    AiContent, AiContentSaveParams, HistoryEntry, HistoryFilter, HistoryMeta, HistorySaveParams,
+    HistorySearchParams,
 };
 
 /// Resolves the app data directory from a Tauri `AppHandle`.
@@ -107,4 +108,47 @@ pub async fn history_search(
     let conn =
         rusqlite::Connection::open(&db_path).map_err(|e| HistoryError::Database(e.to_string()))?;
     super::search::search_entries(&conn, &params).map_err(Into::into)
+}
+
+/// Saves AI-generated content for a history entry.
+///
+/// # Errors
+///
+/// Returns an error if the database cannot be accessed or the content cannot be saved.
+#[tauri::command]
+pub async fn history_save_ai_content(
+    app: AppHandle,
+    params: AiContentSaveParams,
+) -> Result<String, String> {
+    let db_path = get_db_path(&app)?;
+    db::save_ai_content(&db_path, &params).map_err(Into::into)
+}
+
+/// Gets AI-generated content by history ID and content type.
+///
+/// # Errors
+///
+/// Returns an error if the database cannot be accessed.
+#[tauri::command]
+pub async fn history_get_ai_content(
+    app: AppHandle,
+    history_id: String,
+    content_type: String,
+) -> Result<Option<AiContent>, String> {
+    let db_path = get_db_path(&app)?;
+    db::get_ai_content(&db_path, &history_id, &content_type).map_err(Into::into)
+}
+
+/// Gets all AI-generated content for a history entry.
+///
+/// # Errors
+///
+/// Returns an error if the database cannot be accessed.
+#[tauri::command]
+pub async fn history_get_all_ai_content(
+    app: AppHandle,
+    history_id: String,
+) -> Result<Vec<AiContent>, String> {
+    let db_path = get_db_path(&app)?;
+    db::get_all_ai_content(&db_path, &history_id).map_err(Into::into)
 }

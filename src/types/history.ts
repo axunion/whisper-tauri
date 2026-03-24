@@ -93,6 +93,47 @@ export interface HistoryFilter {
 }
 
 /**
+ * Valid content types for AI-generated content.
+ */
+export type AiContentType = "summary" | "keywords" | "actionItems" | "title";
+
+/**
+ * AI-generated content associated with a history entry.
+ */
+export interface AiContent {
+  /** Unique identifier */
+  id: string;
+  /** History entry this content belongs to */
+  historyId: string;
+  /** Type of content */
+  contentType: AiContentType;
+  /** Creation timestamp (ISO 8601) */
+  createdAt: string;
+  /** The generated text content */
+  text: string;
+  /** JSON string of options used for generation */
+  optionsJson?: string | undefined;
+  /** ID of the text model used for generation */
+  textModelId: string;
+}
+
+/**
+ * Parameters for saving AI-generated content.
+ */
+export interface AiContentSaveParams {
+  /** History entry this content belongs to */
+  historyId: string;
+  /** Type of content */
+  contentType: AiContentType;
+  /** The generated text content */
+  text: string;
+  /** JSON string of options used for generation */
+  optionsJson?: string | undefined;
+  /** ID of the text model used for generation */
+  textModelId: string;
+}
+
+/**
  * Parameters for full-text search of history entries.
  */
 export interface HistorySearchParams {

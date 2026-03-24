@@ -130,8 +130,8 @@ export interface Dictionary {
     exportVtt: string;
     textTab: string;
     timelineTab: string;
-    proofreadTab: string;
     summaryTab: string;
+    keywordsTab: string;
   };
   recording: {
     title: string;
@@ -151,11 +151,8 @@ export interface Dictionary {
     recordTab: string;
   };
   textProcessing: {
-    proofread: string;
     summarize: string;
-    proofreading: string;
     summarizing: string;
-    proofreadResult: string;
     summaryResult: string;
     serverStarting: string;
     serverNotReady: string;
@@ -177,10 +174,23 @@ export interface Dictionary {
     bulletPoints: string;
     copyResult: string;
     replaceText: string;
-    proofreadCompletedToast: string;
     summarizeCompletedToast: string;
     cancelledToast: string;
     settingUp: string;
+    extractKeywords: string;
+    extractActionItems: string;
+    keywordsLabel: string;
+    actionItemsLabel: string;
+    keywordsCompletedToast: string;
+    actionItemsCompletedToast: string;
+    titleGeneratedToast: string;
+    extractingActionItems: string;
+    titleSuggestion: string;
+    applyTitle: string;
+    generateSummary: string;
+    generateKeywords: string;
+    generateActionItems: string;
+    regenerate: string;
   };
   models: {
     whisper: {

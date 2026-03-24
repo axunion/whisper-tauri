@@ -3,6 +3,7 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { FiSettings, FiX } from "solid-icons/fi";
+import { TbSparkles } from "solid-icons/tb";
 import type { Component } from "solid-js";
 import { createSignal, onMount, Show } from "solid-js";
 import {
@@ -18,8 +19,8 @@ import type { ExportFormat } from "~/lib/export";
 import { exportResult, getExtension } from "~/lib/export";
 import { toast } from "~/lib/toast";
 import { createTextProcessing } from "~/primitives/createTextProcessing";
-import type { SummaryOptions, TranscriptionResult } from "~/types";
-import { ResultProofreadTab } from "./ResultProofreadTab";
+import type { AiContent, SummaryOptions, TranscriptionResult } from "~/types";
+import { ResultKeywordsTab } from "./ResultKeywordsTab";
 import { ResultSummaryTab } from "./ResultSummaryTab";
 import { ResultTextTab } from "./ResultTextTab";
 import { ResultTimelineTab } from "./ResultTimelineTab";
@@ -29,37 +30,62 @@ import { ResultToolbar } from "./ResultToolbar";
 interface ResultViewerProps {
   result: TranscriptionResult;
   fileName: string;
+  historyId?: string | undefined;
+  initialAiContent?: AiContent[] | undefined;
   onClose?: (() => void) | undefined;
+  suggestedTitle?: string | undefined;
+  onApplyTitle?: ((title: string) => void) | undefined;
 }
 
 const ResultViewer: Component<ResultViewerProps> = (props) => {
   const { t } = useI18n();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = createSignal<ResultTab>("text");
-  const [proofreadActivated, setProofreadActivated] = createSignal(false);
-  const [summaryActivated, setSummaryActivated] = createSignal(false);
   const [showPrereqDialog, setShowPrereqDialog] = createSignal(false);
+  const [titleDismissed, setTitleDismissed] = createSignal(false);
   const tp = createTextProcessing();
 
   const hasDownloadedModel = () => tp.models().some((m) => m.downloaded);
   const isReady = () => tp.serverAvailable() && hasDownloadedModel();
 
+  const summaryTabVisible = () =>
+    tp.summaryResult() !== null ||
+    tp.actionItemsResult() !== null ||
+    tp.isProcessing() ||
+    (props.initialAiContent?.some(
+      (c) => c.contentType === "summary" || c.contentType === "actionItems",
+    ) ??
+      false);
+
+  const keywordsTabVisible = () =>
+    tp.keywordsResult() !== null ||
+    (props.initialAiContent?.some((c) => c.contentType === "keywords") ??
+      false);
+
   onMount(() => {
     tp.checkServer();
     tp.loadModels();
+
+    const initial = props.initialAiContent;
+    if (initial) {
+      const summary = initial.find((c) => c.contentType === "summary");
+      if (summary) tp.setSummaryResult(summary.text);
+      const keywords = initial.find((c) => c.contentType === "keywords");
+      if (keywords) tp.setKeywordsResult(keywords.text);
+      const actionItems = initial.find((c) => c.contentType === "actionItems");
+      if (actionItems) tp.setActionItemsResult(actionItems.text);
+    }
   });
 
   function getCopyText(): string {
     const tab = activeTab();
-    if (tab === "proofread") {
-      return (
-        tp.proofreadResult() ?? tp.inferenceProgress()?.accumulatedText ?? ""
-      );
-    }
     if (tab === "summary") {
       return (
         tp.summaryResult() ?? tp.inferenceProgress()?.accumulatedText ?? ""
       );
+    }
+    if (tab === "keywords") {
+      return tp.keywordsResult() ?? "";
     }
     return props.result.text;
   }
@@ -91,42 +117,30 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     }
   }
 
-  function handleProofread() {
-    if (!isReady()) {
-      setShowPrereqDialog(true);
-      return;
-    }
-    setProofreadActivated(true);
-    setActiveTab("proofread");
-    tp.proofread(props.result.text).then((result) => {
-      if (result) {
-        toast.success(t("textProcessing.proofreadCompletedToast"));
-      }
-    });
-  }
-
   function handleSummarize() {
     if (!isReady()) {
       setShowPrereqDialog(true);
       return;
     }
-    setSummaryActivated(true);
     setActiveTab("summary");
   }
 
-  function handleSummarizeExecute(options: SummaryOptions) {
-    tp.summarize(props.result.text, options).then((result) => {
-      if (result) {
-        toast.success(t("textProcessing.summarizeCompletedToast"));
-      }
-    });
+  function handleExtractKeywords() {
+    if (!isReady()) {
+      setShowPrereqDialog(true);
+      return;
+    }
+    setActiveTab("keywords");
   }
 
-  function closeProcessingTab(tab: "proofread" | "summary") {
-    if (tp.isProcessing()) tp.cancel();
-    if (tab === "proofread") setProofreadActivated(false);
-    else setSummaryActivated(false);
-    setActiveTab("text");
+  function handleSummarizeExecute(options: SummaryOptions) {
+    tp.summarize(props.result.text, options, undefined, props.historyId).then(
+      (result) => {
+        if (result) {
+          toast.success(t("textProcessing.summarizeCompletedToast"));
+        }
+      },
+    );
   }
 
   return (
@@ -137,11 +151,38 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         onClose={props.onClose}
         onCopy={handleCopy}
         onSave={handleSave}
-        onProofread={handleProofread}
         onSummarize={handleSummarize}
-        onCancel={() => tp.cancel()}
+        onExtractKeywords={handleExtractKeywords}
         isProcessing={tp.isProcessing()}
       />
+      <Show when={props.suggestedTitle && !titleDismissed()}>
+        <div class="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
+          <TbSparkles class="size-4 shrink-0 text-primary" />
+          <span class="flex-1 truncate">
+            {t("textProcessing.titleSuggestion")}:
+            <span class="ml-1 font-medium">{props.suggestedTitle}</span>
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            class="h-6 shrink-0 px-2 text-xs"
+            onClick={() => {
+              if (props.suggestedTitle)
+                props.onApplyTitle?.(props.suggestedTitle);
+              setTitleDismissed(true);
+            }}
+          >
+            {t("textProcessing.applyTitle")}
+          </Button>
+          <button
+            type="button"
+            class="inline-flex items-center rounded-full p-0.5 hover:bg-muted-foreground/20"
+            onClick={() => setTitleDismissed(true)}
+          >
+            <FiX class="size-3" />
+          </button>
+        </div>
+      </Show>
       <Tabs
         value={activeTab()}
         onChange={(value) => setActiveTab(value as ResultTab)}
@@ -150,34 +191,12 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         <TabsList>
           <TabsTrigger value="text">{t("result.textTab")}</TabsTrigger>
           <TabsTrigger value="timeline">{t("result.timelineTab")}</TabsTrigger>
-          <Show when={proofreadActivated()}>
-            <TabsTrigger value="proofread" class="gap-1 pr-1.5">
-              {t("result.proofreadTab")}
-              <button
-                type="button"
-                class="ml-0.5 inline-flex items-center rounded-full p-0.5 hover:bg-muted-foreground/20"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeProcessingTab("proofread");
-                }}
-              >
-                <FiX class="size-3" />
-              </button>
-            </TabsTrigger>
+          <Show when={summaryTabVisible()}>
+            <TabsTrigger value="summary">{t("result.summaryTab")}</TabsTrigger>
           </Show>
-          <Show when={summaryActivated()}>
-            <TabsTrigger value="summary" class="gap-1 pr-1.5">
-              {t("result.summaryTab")}
-              <button
-                type="button"
-                class="ml-0.5 inline-flex items-center rounded-full p-0.5 hover:bg-muted-foreground/20"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeProcessingTab("summary");
-                }}
-              >
-                <FiX class="size-3" />
-              </button>
+          <Show when={keywordsTabVisible()}>
+            <TabsTrigger value="keywords">
+              {t("result.keywordsTab")}
             </TabsTrigger>
           </Show>
         </TabsList>
@@ -187,22 +206,35 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         <TabsContent value="timeline" class="mt-3 min-h-0 flex-1">
           <ResultTimelineTab segments={props.result.segments} />
         </TabsContent>
-        <Show when={proofreadActivated()}>
-          <TabsContent value="proofread" class="mt-3 min-h-0 flex-1">
-            <ResultProofreadTab
-              result={tp.proofreadResult()}
+        <Show when={summaryTabVisible()}>
+          <TabsContent value="summary" class="mt-3 min-h-0 flex-1">
+            <ResultSummaryTab
+              summaryResult={tp.summaryResult()}
+              actionItemsResult={tp.actionItemsResult()}
               inferenceProgress={tp.inferenceProgress()}
               isProcessing={tp.isProcessing()}
+              currentOperation={((): "summary" | "actionItems" | null => {
+                const op = tp.currentOperation();
+                return op === "keywords" ? null : op;
+              })()}
+              onSummarize={handleSummarizeExecute}
+              onCancel={() => tp.cancel()}
             />
           </TabsContent>
         </Show>
-        <Show when={summaryActivated()}>
-          <TabsContent value="summary" class="mt-3 min-h-0 flex-1">
-            <ResultSummaryTab
-              result={tp.summaryResult()}
-              inferenceProgress={tp.inferenceProgress()}
+        <Show when={keywordsTabVisible()}>
+          <TabsContent value="keywords" class="mt-3 min-h-0 flex-1">
+            <ResultKeywordsTab
+              keywordsResult={tp.keywordsResult()}
               isProcessing={tp.isProcessing()}
-              onSummarize={handleSummarizeExecute}
+              onExtractKeywords={() => {
+                tp.extractKeywords(
+                  props.result.text,
+                  undefined,
+                  props.historyId,
+                );
+              }}
+              onCancel={() => tp.cancel()}
             />
           </TabsContent>
         </Show>

@@ -6,6 +6,9 @@ export type {
 export type { AppError } from "./errors";
 export { ErrorCategory, ErrorCode } from "./errors";
 export type {
+  AiContent,
+  AiContentSaveParams,
+  AiContentType,
   HistoryEntry,
   HistoryFilter,
   HistoryMeta,

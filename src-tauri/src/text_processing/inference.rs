@@ -30,29 +30,6 @@ pub fn build_chat_messages(text: &str) -> Vec<ChatMessage> {
     ]
 }
 
-/// Builds chat messages for proofreading.
-#[must_use]
-pub fn build_proofread_messages(text: &str) -> Vec<ChatMessage> {
-    vec![
-        ChatMessage {
-            role: "system".to_string(),
-            content: concat!(
-                "あなたは日本語テキストの校正専門家です。以下のルールに従ってテキストを校正してください:\n",
-                "1. 誤字脱字を修正する\n",
-                "2. 助詞・接続詞の誤りを修正する\n",
-                "3. 不自然な表現を修正する\n",
-                "4. 漢字/ひらがな、数字表記（全角/半角）を統一する\n",
-                "5. 校正結果のテキストのみを出力し、説明や注釈は一切含めない\n",
-                "6. 元のテキストの意味を変えない"
-            ).to_string(),
-        },
-        ChatMessage {
-            role: "user".to_string(),
-            content: text.to_string(),
-        },
-    ]
-}
-
 /// Builds chat messages for summarization.
 #[must_use]
 pub fn build_summarize_messages(text: &str, options: &SummaryOptions) -> Vec<ChatMessage> {
@@ -84,6 +61,72 @@ pub fn build_summarize_messages(text: &str, options: &SummaryOptions) -> Vec<Cha
         ChatMessage {
             role: "system".to_string(),
             content: system_prompt,
+        },
+        ChatMessage {
+            role: "user".to_string(),
+            content: text.to_string(),
+        },
+    ]
+}
+
+/// Builds chat messages for title generation.
+#[must_use]
+pub fn build_title_messages(text: &str) -> Vec<ChatMessage> {
+    vec![
+        ChatMessage {
+            role: "system".to_string(),
+            content: concat!(
+                "あなたはテキストから短いタイトルを生成する専門家です。以下のルールに従ってください:\n",
+                "1. テキストの内容を表す15-30文字程度のタイトルを1つだけ生成する\n",
+                "2. タイトルのみを出力し、説明や記号は含めない\n",
+                "3. 日本語のテキストには日本語のタイトル、英語のテキストには英語のタイトルを生成する"
+            )
+            .to_string(),
+        },
+        ChatMessage {
+            role: "user".to_string(),
+            content: text.to_string(),
+        },
+    ]
+}
+
+/// Builds chat messages for keyword extraction.
+#[must_use]
+pub fn build_keywords_messages(text: &str) -> Vec<ChatMessage> {
+    vec![
+        ChatMessage {
+            role: "system".to_string(),
+            content: concat!(
+                "あなたはテキストからキーワードを抽出する専門家です。以下のルールに従ってください:\n",
+                "1. テキストの主要なトピック・キーワードを5-10個抽出する\n",
+                "2. 各キーワードはカンマ区切りで1行で出力する\n",
+                "3. キーワードのみを出力し、番号や説明は含めない\n",
+                "4. 固有名詞、専門用語、重要な概念を優先する"
+            )
+            .to_string(),
+        },
+        ChatMessage {
+            role: "user".to_string(),
+            content: text.to_string(),
+        },
+    ]
+}
+
+/// Builds chat messages for action item extraction.
+#[must_use]
+pub fn build_action_items_messages(text: &str) -> Vec<ChatMessage> {
+    vec![
+        ChatMessage {
+            role: "system".to_string(),
+            content: concat!(
+                "あなたは会議録からアクションアイテムを抽出する専門家です。以下のルールに従ってください:\n",
+                "1. テキストからアクションアイテム（タスク、やるべきこと、決定事項）を抽出する\n",
+                "2. 各アイテムを「- 」で始まる箇条書きで出力する\n",
+                "3. アクションアイテムのみを出力し、説明や前置きは含めない\n",
+                "4. アクションアイテムが見つからない場合は「アクションアイテムはありません」とだけ出力する\n",
+                "5. 担当者や期限が明確な場合はそれも含める"
+            )
+            .to_string(),
         },
         ChatMessage {
             role: "user".to_string(),
@@ -253,23 +296,6 @@ mod tests {
         assert_eq!(messages[1].content, "hello");
     }
 
-    // --- build_proofread_messages ---
-
-    #[test]
-    fn proofread_messages_has_system_and_user() {
-        let messages = build_proofread_messages("テスト文章");
-        assert_eq!(messages.len(), 2);
-        assert_eq!(messages[0].role, "system");
-        assert_eq!(messages[1].role, "user");
-        assert_eq!(messages[1].content, "テスト文章");
-    }
-
-    #[test]
-    fn proofread_system_contains_proofreading_instructions() {
-        let messages = build_proofread_messages("test");
-        assert!(messages[0].content.contains("校正"));
-    }
-
     // --- build_summarize_messages ---
 
     #[test]
@@ -385,5 +411,54 @@ mod tests {
     fn parse_sse_line_empty_content() {
         let line = r#"data: {"choices":[{"delta":{"content":""}}]}"#;
         assert_eq!(parse_sse_line(line), Some(String::new()));
+    }
+
+    // --- build_title_messages ---
+
+    #[test]
+    fn title_messages_has_system_and_user() {
+        let messages = build_title_messages("テスト文章");
+        assert_eq!(messages.len(), 2);
+        assert_eq!(messages[0].role, "system");
+        assert_eq!(messages[1].role, "user");
+        assert_eq!(messages[1].content, "テスト文章");
+    }
+
+    #[test]
+    fn title_system_contains_title_instructions() {
+        let messages = build_title_messages("test");
+        assert!(messages[0].content.contains("タイトル"));
+    }
+
+    // --- build_keywords_messages ---
+
+    #[test]
+    fn keywords_messages_has_system_and_user() {
+        let messages = build_keywords_messages("テスト文章");
+        assert_eq!(messages.len(), 2);
+        assert_eq!(messages[0].role, "system");
+        assert_eq!(messages[1].role, "user");
+    }
+
+    #[test]
+    fn keywords_system_contains_keyword_instructions() {
+        let messages = build_keywords_messages("test");
+        assert!(messages[0].content.contains("キーワード"));
+    }
+
+    // --- build_action_items_messages ---
+
+    #[test]
+    fn action_items_messages_has_system_and_user() {
+        let messages = build_action_items_messages("テスト文章");
+        assert_eq!(messages.len(), 2);
+        assert_eq!(messages[0].role, "system");
+        assert_eq!(messages[1].role, "user");
+    }
+
+    #[test]
+    fn action_items_system_contains_action_instructions() {
+        let messages = build_action_items_messages("test");
+        assert!(messages[0].content.contains("アクションアイテム"));
     }
 }

@@ -272,50 +272,6 @@ pub async fn text_processing_chat(
 
     Ok(result)
 }
-
-/// Runs proofreading on the given text.
-///
-/// # Errors
-///
-/// Returns an error string if the operation fails.
-#[tauri::command]
-pub async fn text_processing_proofread(
-    app: AppHandle,
-    manager: State<'_, tokio::sync::Mutex<LlamaServerManager>>,
-    text: String,
-    model_id: Option<String>,
-) -> Result<String, String> {
-    let task_id = uuid::Uuid::new_v4().to_string();
-    let token = inference::INFERENCE_TASK_MANAGER.create_task(&task_id);
-    let _guard = TaskGuard {
-        task_id: task_id.clone(),
-    };
-
-    emit_initial_progress(&app, &task_id);
-
-    let port = ensure_server_running(&app, &manager, model_id.as_deref()).await?;
-    if token.is_cancelled() {
-        return Err(TextProcessingError::Cancelled.into());
-    }
-
-    let chunks = inference::chunk_text(&text, inference::default_max_chunk_chars());
-    let mut result = String::new();
-
-    for chunk in &chunks {
-        if token.is_cancelled() {
-            return Err(TextProcessingError::Cancelled.into());
-        }
-
-        let messages = inference::build_proofread_messages(chunk);
-        let chunk_result = inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
-            .await
-            .map_err::<String, _>(Into::into)?;
-        result.push_str(&chunk_result);
-    }
-
-    Ok(result)
-}
-
 /// Runs summarization on the given text.
 ///
 /// # Errors
@@ -382,6 +338,155 @@ pub async fn text_processing_summarize(
 #[tauri::command]
 pub async fn text_processing_cancel(task_id: String) -> Result<bool, String> {
     Ok(inference::INFERENCE_TASK_MANAGER.cancel_task(&task_id))
+}
+
+/// Generates a short title from the given text.
+///
+/// # Errors
+///
+/// Returns an error string if the operation fails.
+#[tauri::command]
+pub async fn text_processing_generate_title(
+    app: AppHandle,
+    manager: State<'_, tokio::sync::Mutex<LlamaServerManager>>,
+    text: String,
+    model_id: Option<String>,
+) -> Result<String, String> {
+    let task_id = uuid::Uuid::new_v4().to_string();
+    let token = inference::INFERENCE_TASK_MANAGER.create_task(&task_id);
+    let _guard = TaskGuard {
+        task_id: task_id.clone(),
+    };
+
+    emit_initial_progress(&app, &task_id);
+
+    let port = ensure_server_running(&app, &manager, model_id.as_deref()).await?;
+    if token.is_cancelled() {
+        return Err(TextProcessingError::Cancelled.into());
+    }
+
+    // Use only the first 1000 chars for title generation
+    let truncated: String = text.chars().take(1000).collect();
+    let messages = inference::build_title_messages(&truncated);
+    let result = inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
+        .await
+        .map_err::<String, _>(Into::into)?;
+
+    // Clean up: trim whitespace, remove surrounding quotes if present
+    let title = result
+        .trim()
+        .trim_matches('"')
+        .trim_matches('「')
+        .trim_matches('」')
+        .to_string();
+    Ok(title)
+}
+
+/// Extracts keywords from the given text.
+///
+/// # Errors
+///
+/// Returns an error string if the operation fails.
+#[tauri::command]
+pub async fn text_processing_extract_keywords(
+    app: AppHandle,
+    manager: State<'_, tokio::sync::Mutex<LlamaServerManager>>,
+    text: String,
+    model_id: Option<String>,
+) -> Result<String, String> {
+    let task_id = uuid::Uuid::new_v4().to_string();
+    let token = inference::INFERENCE_TASK_MANAGER.create_task(&task_id);
+    let _guard = TaskGuard {
+        task_id: task_id.clone(),
+    };
+
+    emit_initial_progress(&app, &task_id);
+
+    let port = ensure_server_running(&app, &manager, model_id.as_deref()).await?;
+    if token.is_cancelled() {
+        return Err(TextProcessingError::Cancelled.into());
+    }
+
+    let chunks = inference::chunk_text(&text, inference::default_max_chunk_chars());
+
+    let result = if chunks.len() == 1 {
+        let messages = inference::build_keywords_messages(&text);
+        inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
+            .await
+            .map_err::<String, _>(Into::into)?
+    } else {
+        let mut all_keywords = Vec::new();
+        for chunk in &chunks {
+            if token.is_cancelled() {
+                return Err(TextProcessingError::Cancelled.into());
+            }
+            let messages = inference::build_keywords_messages(chunk);
+            let chunk_result =
+                inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
+                    .await
+                    .map_err::<String, _>(Into::into)?;
+            all_keywords.push(chunk_result);
+        }
+        // Combine and deduplicate via a final pass
+        let combined = all_keywords.join(", ");
+        let messages = inference::build_keywords_messages(&combined);
+        inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
+            .await
+            .map_err::<String, _>(Into::into)?
+    };
+
+    Ok(result)
+}
+
+/// Extracts action items from the given text.
+///
+/// # Errors
+///
+/// Returns an error string if the operation fails.
+#[tauri::command]
+pub async fn text_processing_extract_action_items(
+    app: AppHandle,
+    manager: State<'_, tokio::sync::Mutex<LlamaServerManager>>,
+    text: String,
+    model_id: Option<String>,
+) -> Result<String, String> {
+    let task_id = uuid::Uuid::new_v4().to_string();
+    let token = inference::INFERENCE_TASK_MANAGER.create_task(&task_id);
+    let _guard = TaskGuard {
+        task_id: task_id.clone(),
+    };
+
+    emit_initial_progress(&app, &task_id);
+
+    let port = ensure_server_running(&app, &manager, model_id.as_deref()).await?;
+    if token.is_cancelled() {
+        return Err(TextProcessingError::Cancelled.into());
+    }
+
+    let chunks = inference::chunk_text(&text, inference::default_max_chunk_chars());
+
+    let result = if chunks.len() == 1 {
+        let messages = inference::build_action_items_messages(&text);
+        inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
+            .await
+            .map_err::<String, _>(Into::into)?
+    } else {
+        let mut all_items = Vec::new();
+        for chunk in &chunks {
+            if token.is_cancelled() {
+                return Err(TextProcessingError::Cancelled.into());
+            }
+            let messages = inference::build_action_items_messages(chunk);
+            let chunk_result =
+                inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
+                    .await
+                    .map_err::<String, _>(Into::into)?;
+            all_items.push(chunk_result);
+        }
+        all_items.join("\n")
+    };
+
+    Ok(result)
 }
 
 /// RAII guard that removes a task from the inference task manager on drop.
@@ -601,7 +706,10 @@ fn should_extract(filename: &str) -> bool {
             .is_some_and(|ext| ext.eq_ignore_ascii_case(ext_name))
     };
     ext_matches("dylib")
-        || filename.ends_with(".so") || filename.contains(".so.")
+        || std::path::Path::new(filename)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("so"))
+        || filename.contains(".so.")
         || (cfg!(target_os = "windows") && ext_matches("dll"))
 }
 

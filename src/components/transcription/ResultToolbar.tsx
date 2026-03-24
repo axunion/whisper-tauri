@@ -1,4 +1,4 @@
-import { FiArrowLeft, FiCheck, FiCopy, FiDownload, FiX } from "solid-icons/fi";
+import { FiArrowLeft, FiCheck, FiCopy, FiDownload } from "solid-icons/fi";
 import { TbSparkles } from "solid-icons/tb";
 import type { Component } from "solid-js";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
@@ -8,7 +8,7 @@ import { useI18n } from "~/i18n";
 import type { ExportFormat } from "~/lib/export";
 import { cn } from "~/lib/utils";
 
-type ResultTab = "text" | "timeline" | "proofread" | "summary";
+type ResultTab = "text" | "timeline" | "summary" | "keywords";
 
 const FORMAT_OPTIONS: { value: ExportFormat; labelKey: DictionaryKey }[] = [
   { value: "txt", labelKey: "result.exportTxt" },
@@ -22,9 +22,8 @@ interface ResultToolbarProps {
   onClose?: (() => void) | undefined;
   onCopy: () => void;
   onSave: (format: ExportFormat) => void;
-  onProofread: () => void;
   onSummarize: () => void;
-  onCancel: () => void;
+  onExtractKeywords: () => void;
   isProcessing: boolean;
 }
 
@@ -54,11 +53,7 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
   });
 
   const isTextProcessingTab = () =>
-    props.activeTab === "proofread" || props.activeTab === "summary";
-
-  const isProcessingActive = () =>
-    props.isProcessing &&
-    (props.activeTab === "proofread" || props.activeTab === "summary");
+    props.activeTab === "summary" || props.activeTab === "keywords";
 
   function handleCopy() {
     props.onCopy();
@@ -120,83 +115,70 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
                 class={dropdownItemClass}
                 onClick={() => {
                   setAiOpen(false);
-                  props.onProofread();
+                  props.onSummarize();
                 }}
               >
-                {t("textProcessing.proofread")}
+                {t("textProcessing.summarize")}
               </button>
               <button
                 type="button"
                 class={dropdownItemClass}
                 onClick={() => {
                   setAiOpen(false);
-                  props.onSummarize();
+                  props.onExtractKeywords();
                 }}
               >
-                {t("textProcessing.summarize")}
+                {t("textProcessing.extractKeywords")}
               </button>
             </div>
           </Show>
         </div>
 
-        <Show
-          when={!isProcessingActive()}
-          fallback={
+        {/* Save with format flyout (only for text/timeline) */}
+        <Show when={!isTextProcessingTab()}>
+          <div ref={saveRef} class="relative">
             <Button
               variant="ghost"
               size="icon"
-              class="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={props.onCancel}
+              class="size-8"
+              onClick={() => setSaveOpen(!saveOpen())}
             >
-              <FiX class="size-4" />
+              <FiDownload class="size-4" />
             </Button>
-          }
-        >
-          {/* Save with format flyout (only for text/timeline) */}
-          <Show when={!isTextProcessingTab()}>
-            <div ref={saveRef} class="relative">
-              <Button
-                variant="ghost"
-                size="icon"
-                class="size-8"
-                onClick={() => setSaveOpen(!saveOpen())}
-              >
-                <FiDownload class="size-4" />
-              </Button>
-              <Show when={saveOpen()}>
-                <div class={dropdownMenuClass}>
-                  <For each={FORMAT_OPTIONS}>
-                    {(opt) => (
-                      <button
-                        type="button"
-                        class={cn(
-                          dropdownItemClass,
-                          format() === opt.value &&
-                            "bg-accent text-accent-foreground",
-                        )}
-                        onClick={() => handleSaveWithFormat(opt.value)}
-                      >
-                        {t(opt.labelKey)}
-                      </button>
-                    )}
-                  </For>
-                </div>
-              </Show>
-            </div>
-          </Show>
-
-          {/* Copy */}
-          <Button
-            variant="ghost"
-            size="icon"
-            class="size-8"
-            onClick={handleCopy}
-          >
-            <Show when={copied()} fallback={<FiCopy class="size-4" />}>
-              <FiCheck class="size-4" />
+            <Show when={saveOpen()}>
+              <div class={dropdownMenuClass}>
+                <For each={FORMAT_OPTIONS}>
+                  {(opt) => (
+                    <button
+                      type="button"
+                      class={cn(
+                        dropdownItemClass,
+                        format() === opt.value &&
+                          "bg-accent text-accent-foreground",
+                      )}
+                      onClick={() => handleSaveWithFormat(opt.value)}
+                    >
+                      {t(opt.labelKey)}
+                    </button>
+                  )}
+                </For>
+              </div>
             </Show>
-          </Button>
+          </div>
         </Show>
+
+        {/* Copy */}
+        <Button
+          variant="ghost"
+          size="icon"
+          class="size-8"
+          disabled={props.isProcessing}
+          onClick={handleCopy}
+        >
+          <Show when={copied()} fallback={<FiCopy class="size-4" />}>
+            <FiCheck class="size-4" />
+          </Show>
+        </Button>
       </div>
     </div>
   );

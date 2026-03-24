@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import {
   createMemo,
   createSignal,
@@ -24,6 +25,7 @@ import { createFileConverter } from "~/primitives/createFileConverter";
 import { createHistory } from "~/primitives/createHistory";
 import { createRecording } from "~/primitives/createRecording";
 import { createSettings } from "~/primitives/createSettings";
+import { createTextProcessing } from "~/primitives/createTextProcessing";
 import { createWhisper } from "~/primitives/createWhisper";
 
 const WAV_EXTENSIONS = new Set(["wav"]);
@@ -44,6 +46,8 @@ export default function Transcription() {
 
   const [convertedPath, setConvertedPath] = createSignal<string | null>(null);
   const [activeTab, setActiveTab] = createSignal("file");
+  const [historyId, setHistoryId] = createSignal<string | null>(null);
+  const [suggestedTitle, setSuggestedTitle] = createSignal<string | null>(null);
 
   onMount(async () => {
     whisper.loadModels();
@@ -126,7 +130,7 @@ export default function Transcription() {
     const currentModel = whisper.selectedModel();
     if (transcriptionResult && currentModel) {
       toast.success(t("transcription.completedToast"));
-      history.saveEntry({
+      const id = await history.saveEntry({
         fileName,
         language: transcriptionResult.language,
         modelId: currentModel.id,
@@ -134,6 +138,28 @@ export default function Transcription() {
         text: transcriptionResult.text,
         segments: transcriptionResult.segments,
       });
+      if (id) setHistoryId(id);
+      // Generate title suggestion (best-effort, background — does not auto-rename)
+      const tp = createTextProcessing();
+      if (id && tp.serverAvailable() && tp.models().some((m) => m.downloaded)) {
+        tp.generateTitle(transcriptionResult.text).then(async (title) => {
+          if (title) {
+            try {
+              await invoke("history_save_ai_content", {
+                params: {
+                  historyId: id,
+                  contentType: "title",
+                  text: title,
+                  textModelId: tp.selectedModelId() ?? "unknown",
+                },
+              });
+            } catch {
+              // Best-effort: silently fail
+            }
+            setSuggestedTitle(title);
+          }
+        });
+      }
     }
   }
 
@@ -308,7 +334,16 @@ export default function Transcription() {
                   <ResultViewer
                     result={result()}
                     fileName={whisper.file()?.name ?? ""}
+                    historyId={historyId() ?? undefined}
                     onClose={handleReset}
+                    suggestedTitle={suggestedTitle() ?? undefined}
+                    onApplyTitle={async (title) => {
+                      const id = historyId();
+                      if (id) {
+                        await history.renameEntry(id, title);
+                        setSuggestedTitle(null);
+                      }
+                    }}
                   />
                 )}
               </Show>

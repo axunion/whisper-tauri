@@ -1,11 +1,12 @@
+import { invoke } from "@tauri-apps/api/core";
 import { FiEdit2, FiX } from "solid-icons/fi";
 import type { Component } from "solid-js";
-import { createSignal, Show } from "solid-js";
+import { createSignal, onMount, Show } from "solid-js";
 import { ResultViewer } from "~/components/transcription/ResultViewer";
 import { Button } from "~/components/ui/Button";
 import { useI18n } from "~/i18n";
 import { formatDuration } from "~/lib/format";
-import type { HistoryEntry, TranscriptionResult } from "~/types";
+import type { AiContent, HistoryEntry, TranscriptionResult } from "~/types";
 
 interface HistoryDetailProps {
   entry: HistoryEntry;
@@ -27,6 +28,18 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
   const { locale } = useI18n();
   const [isEditing, setIsEditing] = createSignal(false);
   const [editValue, setEditValue] = createSignal("");
+  const [aiContent, setAiContent] = createSignal<AiContent[]>([]);
+
+  onMount(async () => {
+    try {
+      const content = await invoke<AiContent[]>("history_get_all_ai_content", {
+        historyId: props.entry.id,
+      });
+      setAiContent(content);
+    } catch {
+      // Non-critical: silently ignore if AI content can't be loaded
+    }
+  });
 
   function formatDate(isoString: string): string {
     const date = new Date(isoString);
@@ -70,6 +83,14 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
     `${formatDate(props.entry.createdAt)} \u00B7 ${formatDuration(props.entry.duration)} \u00B7 ${props.entry.modelId}`;
 
   const result = () => toTranscriptionResult(props.entry);
+
+  const titleSuggestion = () => {
+    const title = aiContent().find((c) => c.contentType === "title");
+    if (title && title.text !== props.entry.fileName) {
+      return title.text;
+    }
+    return undefined;
+  };
 
   return (
     <div class="flex flex-1 flex-col gap-2 overflow-hidden">
@@ -117,7 +138,16 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
       </div>
       {/* ResultViewer with meta info displayed in toolbar left side */}
       <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <ResultViewer result={result()} fileName={metaText()} />
+        <ResultViewer
+          result={result()}
+          fileName={metaText()}
+          historyId={props.entry.id}
+          initialAiContent={aiContent()}
+          suggestedTitle={titleSuggestion()}
+          onApplyTitle={(title) => {
+            props.onRename?.(props.entry.id, title);
+          }}
+        />
       </div>
     </div>
   );

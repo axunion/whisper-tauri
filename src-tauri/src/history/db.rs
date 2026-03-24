@@ -5,12 +5,23 @@ use rusqlite::Connection;
 
 use super::error::HistoryError;
 use super::types::{
-    HistoryEntry, HistoryFilter, HistoryMeta, HistorySaveParams, HistorySegment, HistorySortBy,
-    SortOrder,
+    AiContent, AiContentSaveParams, HistoryEntry, HistoryFilter, HistoryMeta, HistorySaveParams,
+    HistorySegment, HistorySortBy, SortOrder,
 };
 
 /// Row type returned by `meta_row_mapper`.
 pub type MetaRow = (String, String, String, String, String, u64, Vec<u8>);
+
+/// Row type returned by `ai_content_row_mapper`.
+pub type AiContentRow = (
+    String,
+    String,
+    String,
+    String,
+    Vec<u8>,
+    Option<String>,
+    String,
+);
 
 /// Extracts a [`MetaRow`] tuple from a rusqlite row.
 ///
@@ -49,6 +60,42 @@ pub fn meta_from_row(row: MetaRow) -> Result<HistoryMeta, HistoryError> {
         model_id,
         duration,
         text_preview: preview,
+    })
+}
+
+/// Extracts an [`AiContentRow`] tuple from a rusqlite row.
+///
+/// Expects columns: `id(0)`, `history_id(1)`, `content_type(2)`, `created_at(3)`,
+/// `text_compressed(4)`, `options_json(5)`, `text_model_id(6)`.
+pub fn ai_content_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<AiContentRow> {
+    Ok((
+        row.get::<_, String>(0)?,
+        row.get::<_, String>(1)?,
+        row.get::<_, String>(2)?,
+        row.get::<_, String>(3)?,
+        row.get::<_, Vec<u8>>(4)?,
+        row.get::<_, Option<String>>(5)?,
+        row.get::<_, String>(6)?,
+    ))
+}
+
+/// Converts an [`AiContentRow`] into an [`AiContent`], decompressing text.
+///
+/// # Errors
+///
+/// Returns an error if text decompression fails.
+pub fn ai_content_from_row(row: AiContentRow) -> Result<AiContent, HistoryError> {
+    let (id, history_id, content_type, created_at, text_compressed, options_json, text_model_id) =
+        row;
+    let text = decompress_text(&text_compressed)?;
+    Ok(AiContent {
+        id,
+        history_id,
+        content_type,
+        created_at,
+        text,
+        options_json,
+        text_model_id,
     })
 }
 
@@ -111,6 +158,22 @@ pub fn init_db(db_path: &Path) -> Result<(), HistoryError> {
     if super::search::needs_fts_migration(&conn)? {
         super::search::rebuild_fts_index(&conn)?;
     }
+
+    conn.execute_batch("PRAGMA foreign_keys = ON;")?;
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS ai_content (
+            id TEXT PRIMARY KEY,
+            history_id TEXT NOT NULL,
+            content_type TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            text_compressed BLOB NOT NULL,
+            options_json TEXT,
+            text_model_id TEXT NOT NULL,
+            UNIQUE(history_id, content_type),
+            FOREIGN KEY (history_id) REFERENCES history(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_ai_content_history ON ai_content(history_id);",
+    )?;
 
     Ok(())
 }
@@ -391,6 +454,94 @@ pub fn rename_entry(db_path: &Path, id: &str, new_file_name: &str) -> Result<(),
         return Err(HistoryError::NotFound(id.to_string()));
     }
     Ok(())
+}
+
+/// Saves AI-generated content (upsert: replaces existing content of same type).
+///
+/// # Errors
+///
+/// Returns `HistoryError` if database operations or compression fail.
+pub fn save_ai_content(
+    db_path: &Path,
+    params: &AiContentSaveParams,
+) -> Result<String, HistoryError> {
+    let id = uuid::Uuid::new_v4().to_string();
+    let created_at = chrono_now();
+    let text_compressed = compress_text(&params.text)?;
+
+    let conn = Connection::open(db_path)?;
+    conn.execute_batch("PRAGMA foreign_keys = ON;")?;
+
+    conn.execute(
+        "INSERT OR REPLACE INTO ai_content (id, history_id, content_type, created_at, text_compressed, options_json, text_model_id)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        rusqlite::params![
+            id,
+            params.history_id,
+            params.content_type,
+            created_at,
+            text_compressed,
+            params.options_json,
+            params.text_model_id,
+        ],
+    )?;
+
+    Ok(id)
+}
+
+/// Gets AI-generated content by history ID and content type.
+///
+/// # Errors
+///
+/// Returns `HistoryError::Database` if the query fails.
+pub fn get_ai_content(
+    db_path: &Path,
+    history_id: &str,
+    content_type: &str,
+) -> Result<Option<AiContent>, HistoryError> {
+    let conn = Connection::open(db_path)?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, history_id, content_type, created_at, text_compressed, options_json, text_model_id
+         FROM ai_content WHERE history_id = ?1 AND content_type = ?2",
+    )?;
+
+    let result = stmt.query_row(
+        rusqlite::params![history_id, content_type],
+        ai_content_row_mapper,
+    );
+
+    match result {
+        Ok(row) => Ok(Some(ai_content_from_row(row)?)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(HistoryError::Database(e.to_string())),
+    }
+}
+
+/// Gets all AI-generated content for a history entry.
+///
+/// # Errors
+///
+/// Returns `HistoryError::Database` if the query fails.
+pub fn get_all_ai_content(
+    db_path: &Path,
+    history_id: &str,
+) -> Result<Vec<AiContent>, HistoryError> {
+    let conn = Connection::open(db_path)?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, history_id, content_type, created_at, text_compressed, options_json, text_model_id
+         FROM ai_content WHERE history_id = ?1",
+    )?;
+
+    let rows = stmt.query_map(rusqlite::params![history_id], ai_content_row_mapper)?;
+
+    let mut entries = Vec::new();
+    for row in rows {
+        entries.push(ai_content_from_row(row?)?);
+    }
+
+    Ok(entries)
 }
 
 /// Returns the current time as an ISO 8601 string (UTC-like, local time).
@@ -944,5 +1095,118 @@ mod tests {
         assert_eq!(entries[0].id, "a"); // Alpha (case-insensitive)
         assert_eq!(entries[1].id, "b"); // bravo
         assert_eq!(entries[2].id, "c"); // charlie
+    }
+
+    #[test]
+    fn save_and_get_ai_content() {
+        let (_dir, path) = setup_db();
+        let entry_id = save_entry(&path, &sample_params()).expect("save entry");
+
+        let params = AiContentSaveParams {
+            history_id: entry_id.clone(),
+            content_type: "summary".to_string(),
+            text: "This is a summary of the transcription.".to_string(),
+            options_json: Some(r#"{"length":"medium","bulletPoints":false}"#.to_string()),
+            text_model_id: "gemma-3-4b".to_string(),
+        };
+
+        let ai_id = save_ai_content(&path, &params).expect("save ai content");
+        assert!(!ai_id.is_empty());
+
+        let content = get_ai_content(&path, &entry_id, "summary").expect("get ai content");
+        assert!(content.is_some());
+        let content = content.unwrap();
+        assert_eq!(content.history_id, entry_id);
+        assert_eq!(content.content_type, "summary");
+        assert_eq!(content.text, "This is a summary of the transcription.");
+        assert_eq!(content.text_model_id, "gemma-3-4b");
+    }
+
+    #[test]
+    fn get_ai_content_not_found() {
+        let (_dir, path) = setup_db();
+        let entry_id = save_entry(&path, &sample_params()).expect("save entry");
+
+        let content = get_ai_content(&path, &entry_id, "summary").expect("get");
+        assert!(content.is_none());
+    }
+
+    #[test]
+    fn save_ai_content_upsert() {
+        let (_dir, path) = setup_db();
+        let entry_id = save_entry(&path, &sample_params()).expect("save entry");
+
+        let params1 = AiContentSaveParams {
+            history_id: entry_id.clone(),
+            content_type: "summary".to_string(),
+            text: "First summary".to_string(),
+            options_json: None,
+            text_model_id: "gemma-3-4b".to_string(),
+        };
+        save_ai_content(&path, &params1).expect("save first");
+
+        let params2 = AiContentSaveParams {
+            history_id: entry_id.clone(),
+            content_type: "summary".to_string(),
+            text: "Updated summary".to_string(),
+            options_json: None,
+            text_model_id: "qwen3.5-4b".to_string(),
+        };
+        save_ai_content(&path, &params2).expect("save second");
+
+        let content = get_ai_content(&path, &entry_id, "summary")
+            .expect("get")
+            .unwrap();
+        assert_eq!(content.text, "Updated summary");
+        assert_eq!(content.text_model_id, "qwen3.5-4b");
+    }
+
+    #[test]
+    fn get_all_ai_content_multiple_types() {
+        let (_dir, path) = setup_db();
+        let entry_id = save_entry(&path, &sample_params()).expect("save entry");
+
+        for content_type in &["summary", "keywords", "actionItems"] {
+            let params = AiContentSaveParams {
+                history_id: entry_id.clone(),
+                content_type: content_type.to_string(),
+                text: format!("Content for {content_type}"),
+                options_json: None,
+                text_model_id: "gemma-3-4b".to_string(),
+            };
+            save_ai_content(&path, &params).expect("save");
+        }
+
+        let all = get_all_ai_content(&path, &entry_id).expect("get all");
+        assert_eq!(all.len(), 3);
+    }
+
+    #[test]
+    fn delete_history_cascades_ai_content() {
+        let (_dir, path) = setup_db();
+        let entry_id = save_entry(&path, &sample_params()).expect("save entry");
+
+        let params = AiContentSaveParams {
+            history_id: entry_id.clone(),
+            content_type: "summary".to_string(),
+            text: "Summary text".to_string(),
+            options_json: None,
+            text_model_id: "gemma-3-4b".to_string(),
+        };
+        save_ai_content(&path, &params).expect("save ai");
+
+        // Need to enable foreign keys for CASCADE to work
+        let conn = Connection::open(&path).expect("open");
+        conn.execute_batch("PRAGMA foreign_keys = ON;")
+            .expect("pragma");
+        conn.execute(
+            "DELETE FROM history WHERE id = ?1",
+            rusqlite::params![entry_id],
+        )
+        .expect("delete");
+        drop(conn);
+
+        let content = get_ai_content(&path, &entry_id, "summary").expect("get");
+        assert!(content.is_none());
     }
 }
