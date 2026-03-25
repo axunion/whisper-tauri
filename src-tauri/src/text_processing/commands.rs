@@ -7,9 +7,7 @@ use super::error::TextProcessingError;
 use super::inference;
 use super::models;
 use super::server::LlamaServerManager;
-use super::types::{
-    InferenceProgress, ServerStatus, SummaryOptions, TextDownloadProgress, TextModelInfo,
-};
+use super::types::{InferenceProgress, ServerStatus, TextDownloadProgress, TextModelInfo};
 
 /// Store filename for settings.
 const SETTINGS_STORE: &str = "settings.json";
@@ -282,7 +280,6 @@ pub async fn text_processing_summarize(
     app: AppHandle,
     manager: State<'_, tokio::sync::Mutex<LlamaServerManager>>,
     text: String,
-    options: Option<SummaryOptions>,
     model_id: Option<String>,
 ) -> Result<String, String> {
     let task_id = uuid::Uuid::new_v4().to_string();
@@ -298,11 +295,10 @@ pub async fn text_processing_summarize(
         return Err(TextProcessingError::Cancelled.into());
     }
 
-    let opts = options.unwrap_or_default();
     let chunks = inference::chunk_text(&text, inference::default_max_chunk_chars());
 
     let result = if chunks.len() == 1 {
-        let messages = inference::build_summarize_messages(&text, &opts);
+        let messages = inference::build_summarize_messages(&text);
         inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
             .await
             .map_err::<String, _>(Into::into)?
@@ -313,7 +309,7 @@ pub async fn text_processing_summarize(
                 return Err(TextProcessingError::Cancelled.into());
             }
 
-            let messages = inference::build_summarize_messages(chunk, &opts);
+            let messages = inference::build_summarize_messages(chunk);
             let summary = inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
                 .await
                 .map_err::<String, _>(Into::into)?;
@@ -321,7 +317,7 @@ pub async fn text_processing_summarize(
         }
 
         let combined = chunk_summaries.join("\n\n");
-        let messages = inference::build_summarize_messages(&combined, &opts);
+        let messages = inference::build_summarize_messages(&combined);
         inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
             .await
             .map_err::<String, _>(Into::into)?

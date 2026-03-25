@@ -49,34 +49,6 @@ pub struct InferenceProgress {
     pub done: bool,
 }
 
-/// Summary generation options.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct SummaryOptions {
-    /// Desired summary length
-    pub length: SummaryLength,
-    /// Whether to use bullet points
-    pub bullet_points: bool,
-}
-
-impl Default for SummaryOptions {
-    fn default() -> Self {
-        Self {
-            length: SummaryLength::Medium,
-            bullet_points: false,
-        }
-    }
-}
-
-/// Summary length options.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub enum SummaryLength {
-    Short,
-    Medium,
-    Long,
-}
-
 /// Server status information.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -167,28 +139,6 @@ mod tests {
     }
 
     #[test]
-    fn summary_options_serializes_correctly() {
-        let options = SummaryOptions {
-            length: SummaryLength::Short,
-            bullet_points: true,
-        };
-
-        let json = serde_json::to_string(&options).expect("Failed to serialize");
-        assert!(json.contains("\"bulletPoints\":true"));
-        assert!(json.contains("\"length\":\"short\""));
-    }
-
-    #[test]
-    fn summary_length_serializes_to_camel_case() {
-        let short = serde_json::to_string(&SummaryLength::Short).expect("serialize");
-        let medium = serde_json::to_string(&SummaryLength::Medium).expect("serialize");
-        let long = serde_json::to_string(&SummaryLength::Long).expect("serialize");
-        assert_eq!(short, "\"short\"");
-        assert_eq!(medium, "\"medium\"");
-        assert_eq!(long, "\"long\"");
-    }
-
-    #[test]
     fn server_status_serializes_correctly() {
         let status = ServerStatus {
             running: true,
@@ -227,10 +177,4 @@ mod tests {
         assert!(json.contains("\"content\":\"You are a helpful assistant.\""));
     }
 
-    #[test]
-    fn summary_options_default() {
-        let options = SummaryOptions::default();
-        assert_eq!(options.length, SummaryLength::Medium);
-        assert!(!options.bullet_points);
-    }
 }

@@ -18,8 +18,10 @@ import { useI18n } from "~/i18n";
 import type { ExportFormat } from "~/lib/export";
 import { exportResult, getExtension } from "~/lib/export";
 import { toast } from "~/lib/toast";
+import { createAiSession } from "~/primitives/createAiSession";
 import { createTextProcessing } from "~/primitives/createTextProcessing";
-import type { AiContent, SummaryOptions, TranscriptionResult } from "~/types";
+import type { TranscriptionResult } from "~/types";
+import { ResultActionItemsTab } from "./ResultActionItemsTab";
 import { ResultKeywordsTab } from "./ResultKeywordsTab";
 import { ResultSummaryTab } from "./ResultSummaryTab";
 import { ResultTextTab } from "./ResultTextTab";
@@ -31,7 +33,6 @@ interface ResultViewerProps {
   result: TranscriptionResult;
   fileName: string;
   historyId?: string | undefined;
-  initialAiContent?: AiContent[] | undefined;
   onClose?: (() => void) | undefined;
   suggestedTitle?: string | undefined;
   onApplyTitle?: ((title: string) => void) | undefined;
@@ -43,49 +44,45 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
   const [activeTab, setActiveTab] = createSignal<ResultTab>("text");
   const [showPrereqDialog, setShowPrereqDialog] = createSignal(false);
   const [titleDismissed, setTitleDismissed] = createSignal(false);
+  const [summaryTabRequested, setSummaryTabRequested] = createSignal(false);
+  const [keywordsTabRequested, setKeywordsTabRequested] = createSignal(false);
+  const [actionItemsTabRequested, setActionItemsTabRequested] =
+    createSignal(false);
+  const [pendingAction, setPendingAction] = createSignal<(() => void) | null>(
+    null,
+  );
   const tp = createTextProcessing();
+  const session = createAiSession(() => props.historyId);
 
   const hasDownloadedModel = () => tp.models().some((m) => m.downloaded);
   const isReady = () => tp.serverAvailable() && hasDownloadedModel();
 
   const summaryTabVisible = () =>
-    tp.summaryResult() !== null ||
-    tp.actionItemsResult() !== null ||
-    tp.isProcessing() ||
-    (props.initialAiContent?.some(
-      (c) => c.contentType === "summary" || c.contentType === "actionItems",
-    ) ??
-      false);
+    summaryTabRequested() ||
+    session.summaryResult() !== null ||
+    session.isProcessing();
 
   const keywordsTabVisible = () =>
-    tp.keywordsResult() !== null ||
-    (props.initialAiContent?.some((c) => c.contentType === "keywords") ??
-      false);
+    keywordsTabRequested() || session.keywordsResult() !== null;
+
+  const actionItemsTabVisible = () =>
+    actionItemsTabRequested() || session.actionItemsResult() !== null;
 
   onMount(() => {
     tp.checkServer();
     tp.loadModels();
-
-    const initial = props.initialAiContent;
-    if (initial) {
-      const summary = initial.find((c) => c.contentType === "summary");
-      if (summary) tp.setSummaryResult(summary.text);
-      const keywords = initial.find((c) => c.contentType === "keywords");
-      if (keywords) tp.setKeywordsResult(keywords.text);
-      const actionItems = initial.find((c) => c.contentType === "actionItems");
-      if (actionItems) tp.setActionItemsResult(actionItems.text);
-    }
   });
 
   function getCopyText(): string {
     const tab = activeTab();
     if (tab === "summary") {
-      return (
-        tp.summaryResult() ?? tp.inferenceProgress()?.accumulatedText ?? ""
-      );
+      return session.summaryResult() ?? "";
     }
     if (tab === "keywords") {
-      return tp.keywordsResult() ?? "";
+      return session.keywordsResult() ?? "";
+    }
+    if (tab === "actionItems") {
+      return session.actionItemsResult() ?? "";
     }
     return props.result.text;
   }
@@ -117,30 +114,53 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     }
   }
 
-  function handleSummarize() {
-    if (!isReady()) {
-      setShowPrereqDialog(true);
-      return;
-    }
+  function executeSummarize() {
+    setSummaryTabRequested(true);
     setActiveTab("summary");
+    session.summarize(props.result.text).then((result) => {
+      if (result) {
+        toast.success(t("textProcessing.summarizeCompletedToast"));
+      }
+    });
   }
 
-  function handleExtractKeywords() {
+  function executeExtractKeywords() {
+    setKeywordsTabRequested(true);
+    setActiveTab("keywords");
+    session.extractKeywords(props.result.text).then((result) => {
+      if (result) {
+        toast.success(t("textProcessing.keywordsCompletedToast"));
+      }
+    });
+  }
+
+  function executeExtractActionItems() {
+    setActionItemsTabRequested(true);
+    setActiveTab("actionItems");
+    session.extractActionItems(props.result.text).then((result) => {
+      if (result) {
+        toast.success(t("textProcessing.actionItemsCompletedToast"));
+      }
+    });
+  }
+
+  /** Execute action, or show overwrite confirmation if results already exist. */
+  function withOverwriteCheck(hasResult: boolean, action: () => void) {
     if (!isReady()) {
       setShowPrereqDialog(true);
       return;
     }
-    setActiveTab("keywords");
+    if (hasResult) {
+      setPendingAction(() => action);
+    } else {
+      action();
+    }
   }
 
-  function handleSummarizeExecute(options: SummaryOptions) {
-    tp.summarize(props.result.text, options, undefined, props.historyId).then(
-      (result) => {
-        if (result) {
-          toast.success(t("textProcessing.summarizeCompletedToast"));
-        }
-      },
-    );
+  function confirmOverwrite() {
+    const action = pendingAction();
+    setPendingAction(null);
+    action?.();
   }
 
   return (
@@ -151,9 +171,22 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         onClose={props.onClose}
         onCopy={handleCopy}
         onSave={handleSave}
-        onSummarize={handleSummarize}
-        onExtractKeywords={handleExtractKeywords}
-        isProcessing={tp.isProcessing()}
+        onSummarize={() =>
+          withOverwriteCheck(session.summaryResult() !== null, executeSummarize)
+        }
+        onExtractKeywords={() =>
+          withOverwriteCheck(
+            session.keywordsResult() !== null,
+            executeExtractKeywords,
+          )
+        }
+        onExtractActionItems={() =>
+          withOverwriteCheck(
+            session.actionItemsResult() !== null,
+            executeExtractActionItems,
+          )
+        }
+        isProcessing={session.isProcessing()}
       />
       <Show when={props.suggestedTitle && !titleDismissed()}>
         <div class="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
@@ -199,6 +232,11 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
               {t("result.keywordsTab")}
             </TabsTrigger>
           </Show>
+          <Show when={actionItemsTabVisible()}>
+            <TabsTrigger value="actionItems">
+              {t("result.actionItemsTab")}
+            </TabsTrigger>
+          </Show>
         </TabsList>
         <TabsContent value="text" class="mt-3 min-h-0 flex-1">
           <ResultTextTab text={props.result.text} />
@@ -209,38 +247,42 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         <Show when={summaryTabVisible()}>
           <TabsContent value="summary" class="mt-3 min-h-0 flex-1">
             <ResultSummaryTab
-              summaryResult={tp.summaryResult()}
-              actionItemsResult={tp.actionItemsResult()}
-              inferenceProgress={tp.inferenceProgress()}
-              isProcessing={tp.isProcessing()}
-              currentOperation={((): "summary" | "actionItems" | null => {
-                const op = tp.currentOperation();
-                return op === "keywords" ? null : op;
-              })()}
-              onSummarize={handleSummarizeExecute}
-              onCancel={() => tp.cancel()}
+              summaryResult={session.summaryResult()}
+              isProcessing={
+                session.isProcessing() &&
+                session.currentOperation() === "summary"
+              }
+              onCancel={() => session.cancel()}
             />
           </TabsContent>
         </Show>
         <Show when={keywordsTabVisible()}>
           <TabsContent value="keywords" class="mt-3 min-h-0 flex-1">
             <ResultKeywordsTab
-              keywordsResult={tp.keywordsResult()}
-              isProcessing={tp.isProcessing()}
-              onExtractKeywords={() => {
-                tp.extractKeywords(
-                  props.result.text,
-                  undefined,
-                  props.historyId,
-                );
-              }}
-              onCancel={() => tp.cancel()}
+              keywordsResult={session.keywordsResult()}
+              isProcessing={
+                session.isProcessing() &&
+                session.currentOperation() === "keywords"
+              }
+              onCancel={() => session.cancel()}
+            />
+          </TabsContent>
+        </Show>
+        <Show when={actionItemsTabVisible()}>
+          <TabsContent value="actionItems" class="mt-3 min-h-0 flex-1">
+            <ResultActionItemsTab
+              actionItemsResult={session.actionItemsResult()}
+              isProcessing={
+                session.isProcessing() &&
+                session.currentOperation() === "actionItems"
+              }
+              onCancel={() => session.cancel()}
             />
           </TabsContent>
         </Show>
       </Tabs>
 
-      {/* Prerequisite dialog for text processing */}
+      {/* Prerequisite dialog */}
       <AlertDialog open={showPrereqDialog()} onOpenChange={setShowPrereqDialog}>
         <AlertDialogContent>
           <AlertDialogTitle>
@@ -267,6 +309,35 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
             >
               <FiSettings class="size-4" />
               {t("nav.settings")}
+            </Button>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Overwrite confirmation dialog */}
+      <AlertDialog
+        open={pendingAction() !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingAction(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogTitle>
+            {t("textProcessing.overwriteConfirmTitle")}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("textProcessing.overwriteConfirmDescription")}
+          </AlertDialogDescription>
+          <div class="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              class="w-32"
+              onClick={() => setPendingAction(null)}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button class="w-32" onClick={confirmOverwrite}>
+              {t("common.confirm")}
             </Button>
           </div>
         </AlertDialogContent>

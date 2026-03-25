@@ -142,7 +142,6 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
           result={result()}
           fileName={metaText()}
           historyId={props.entry.id}
-          initialAiContent={aiContent()}
           suggestedTitle={titleSuggestion()}
           onApplyTitle={(title) => {
             props.onRename?.(props.entry.id, title);

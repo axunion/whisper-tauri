@@ -8,7 +8,7 @@ import { useI18n } from "~/i18n";
 import type { ExportFormat } from "~/lib/export";
 import { cn } from "~/lib/utils";
 
-type ResultTab = "text" | "timeline" | "summary" | "keywords";
+type ResultTab = "text" | "timeline" | "summary" | "keywords" | "actionItems";
 
 const FORMAT_OPTIONS: { value: ExportFormat; labelKey: DictionaryKey }[] = [
   { value: "txt", labelKey: "result.exportTxt" },
@@ -24,6 +24,7 @@ interface ResultToolbarProps {
   onSave: (format: ExportFormat) => void;
   onSummarize: () => void;
   onExtractKeywords: () => void;
+  onExtractActionItems: () => void;
   isProcessing: boolean;
 }
 
@@ -53,7 +54,9 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
   });
 
   const isTextProcessingTab = () =>
-    props.activeTab === "summary" || props.activeTab === "keywords";
+    props.activeTab === "summary" ||
+    props.activeTab === "keywords" ||
+    props.activeTab === "actionItems";
 
   function handleCopy() {
     props.onCopy();
@@ -129,6 +132,16 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
                 }}
               >
                 {t("textProcessing.extractKeywords")}
+              </button>
+              <button
+                type="button"
+                class={dropdownItemClass}
+                onClick={() => {
+                  setAiOpen(false);
+                  props.onExtractActionItems();
+                }}
+              >
+                {t("textProcessing.extractActionItems")}
               </button>
             </div>
           </Show>

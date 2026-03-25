@@ -28,8 +28,6 @@ export { DEFAULT_SETTINGS } from "./settings";
 export type {
   InferenceProgress,
   ServerStatus,
-  SummaryLength,
-  SummaryOptions,
   TextDownloadProgress,
   TextModelInfo,
 } from "./text-processing";

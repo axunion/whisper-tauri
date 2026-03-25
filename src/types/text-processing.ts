@@ -47,21 +47,6 @@ export interface InferenceProgress {
 }
 
 /**
- * Summary generation options.
- */
-export interface SummaryOptions {
-  /** Desired summary length */
-  length: SummaryLength;
-  /** Whether to use bullet points */
-  bulletPoints: boolean;
-}
-
-/**
- * Summary length options.
- */
-export type SummaryLength = "short" | "medium" | "long";
-
-/**
  * Server status information.
  */
 export interface ServerStatus {

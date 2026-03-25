@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 use tauri::{AppHandle, Emitter};
 
 use super::error::TextProcessingError;
-use super::types::{ChatMessage, InferenceProgress, SummaryLength, SummaryOptions};
+use super::types::{ChatMessage, InferenceProgress};
 use crate::whisper::process::{CancellationToken, TaskManager};
 use futures_util::StreamExt;
 
@@ -32,35 +32,22 @@ pub fn build_chat_messages(text: &str) -> Vec<ChatMessage> {
 
 /// Builds chat messages for summarization.
 #[must_use]
-pub fn build_summarize_messages(text: &str, options: &SummaryOptions) -> Vec<ChatMessage> {
-    let length_instruction = match options.length {
-        SummaryLength::Short => "1-2文の短い要約",
-        SummaryLength::Medium => "3-5文の中程度の要約",
-        SummaryLength::Long => "段落レベルの詳細な要約",
-    };
-
-    let format_instruction = if options.bullet_points {
-        "箇条書き形式で出力してください。"
-    } else {
-        "文章形式で出力してください。"
-    };
-
-    let system_prompt = format!(
-        concat!(
-            "あなたは日本語テキストの要約専門家です。以下のルールに従ってテキストを要約してください:\n",
-            "1. {length}を生成する\n",
-            "2. {format}\n",
-            "3. 要約結果のテキストのみを出力し、説明や注釈は一切含めない\n",
-            "4. 元のテキストの重要なポイントを漏らさない"
-        ),
-        length = length_instruction,
-        format = format_instruction,
-    );
-
+pub fn build_summarize_messages(text: &str) -> Vec<ChatMessage> {
     vec![
         ChatMessage {
             role: "system".to_string(),
-            content: system_prompt,
+            content: concat!(
+                "あなたは日本語テキストの要約専門家です。以下のルールに従ってテキストを構造化された要約にまとめてください:\n",
+                "\n",
+                "1. テキストの内容を分析し、主要なトピックごとにセクションを作成する\n",
+                "2. 各セクションは「### セクション見出し」の形式で見出しをつける\n",
+                "3. 各セクションの下に、重要なポイントを「- 」で始まる箇条書きで列挙する\n",
+                "4. セクション数は2〜5個程度にする\n",
+                "5. 各セクションのポイントは1〜4個程度にする\n",
+                "6. 要約結果のみを出力し、説明や前置きは一切含めない\n",
+                "7. 元のテキストの重要な情報を漏らさない"
+            )
+            .to_string(),
         },
         ChatMessage {
             role: "user".to_string(),
@@ -300,41 +287,20 @@ mod tests {
 
     #[test]
     fn summarize_messages_has_system_and_user() {
-        let options = SummaryOptions::default();
-        let messages = build_summarize_messages("テスト文章", &options);
+        let messages = build_summarize_messages("テスト文章");
         assert_eq!(messages.len(), 2);
         assert_eq!(messages[0].role, "system");
         assert_eq!(messages[1].role, "user");
+        assert_eq!(messages[1].content, "テスト文章");
     }
 
     #[test]
-    fn summarize_short_mentions_short() {
-        let options = SummaryOptions {
-            length: SummaryLength::Short,
-            bullet_points: false,
-        };
-        let messages = build_summarize_messages("text", &options);
-        assert!(messages[0].content.contains("短い"));
-    }
-
-    #[test]
-    fn summarize_long_mentions_detailed() {
-        let options = SummaryOptions {
-            length: SummaryLength::Long,
-            bullet_points: false,
-        };
-        let messages = build_summarize_messages("text", &options);
-        assert!(messages[0].content.contains("詳細"));
-    }
-
-    #[test]
-    fn summarize_bullet_points_mentioned() {
-        let options = SummaryOptions {
-            length: SummaryLength::Medium,
-            bullet_points: true,
-        };
-        let messages = build_summarize_messages("text", &options);
-        assert!(messages[0].content.contains("箇条書き"));
+    fn summarize_system_contains_structured_instructions() {
+        let messages = build_summarize_messages("text");
+        let system = &messages[0].content;
+        assert!(system.contains("構造化された要約"));
+        assert!(system.contains("### セクション見出し"));
+        assert!(system.contains("箇条書き"));
     }
 
     // --- chunk_text ---

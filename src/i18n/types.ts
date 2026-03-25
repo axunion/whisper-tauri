@@ -11,6 +11,7 @@ export interface Dictionary {
     recommended: string;
     deleting: string;
     processing: string;
+    confirm: string;
     done: string;
     downloading: string;
     downloadingSpeechModel: string;
@@ -132,6 +133,7 @@ export interface Dictionary {
     timelineTab: string;
     summaryTab: string;
     keywordsTab: string;
+    actionItemsTab: string;
   };
   recording: {
     title: string;
@@ -168,10 +170,6 @@ export interface Dictionary {
     serverDownloadedToast: string;
     serverDeletedToast: string;
     modelDownloadedToast: string;
-    summaryLengthShort: string;
-    summaryLengthMedium: string;
-    summaryLengthLong: string;
-    bulletPoints: string;
     copyResult: string;
     replaceText: string;
     summarizeCompletedToast: string;
@@ -181,16 +179,17 @@ export interface Dictionary {
     extractActionItems: string;
     keywordsLabel: string;
     actionItemsLabel: string;
+    noActionItems: string;
     keywordsCompletedToast: string;
     actionItemsCompletedToast: string;
     titleGeneratedToast: string;
     extractingActionItems: string;
     titleSuggestion: string;
     applyTitle: string;
-    generateSummary: string;
     generateKeywords: string;
     generateActionItems: string;
-    regenerate: string;
+    overwriteConfirmTitle: string;
+    overwriteConfirmDescription: string;
   };
   models: {
     whisper: {
