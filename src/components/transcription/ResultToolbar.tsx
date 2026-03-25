@@ -1,6 +1,6 @@
 import { FiArrowLeft, FiCheck, FiCopy, FiDownload } from "solid-icons/fi";
 import { TbSparkles } from "solid-icons/tb";
-import type { Component } from "solid-js";
+import type { Component, JSX } from "solid-js";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { Button } from "~/components/ui/Button";
 import type { DictionaryKey } from "~/i18n";
@@ -17,7 +17,7 @@ const FORMAT_OPTIONS: { value: ExportFormat; labelKey: DictionaryKey }[] = [
 ];
 
 interface ResultToolbarProps {
-  fileName: string;
+  fileName: JSX.Element;
   activeTab: ResultTab;
   onClose?: (() => void) | undefined;
   onCopy: () => void;

@@ -4,7 +4,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { FiSettings, FiX } from "solid-icons/fi";
 import { TbSparkles } from "solid-icons/tb";
-import type { Component } from "solid-js";
+import type { Component, JSX } from "solid-js";
 import { createSignal, onMount, Show } from "solid-js";
 import {
   AlertDialog,
@@ -31,7 +31,7 @@ import { ResultToolbar } from "./ResultToolbar";
 
 interface ResultViewerProps {
   result: TranscriptionResult;
-  fileName: string;
+  fileName: JSX.Element;
   historyId?: string | undefined;
   onClose?: (() => void) | undefined;
   suggestedTitle?: string | undefined;

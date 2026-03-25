@@ -1,9 +1,16 @@
-import { FiFileText, FiMic, FiMusic, FiVideo } from "solid-icons/fi";
+import {
+  FiCalendar,
+  FiClock,
+  FiFileText,
+  FiMic,
+  FiMusic,
+  FiVideo,
+} from "solid-icons/fi";
 import type { Component, JSX } from "solid-js";
 import { For, Show } from "solid-js";
 import { CheckIndicator } from "~/components/history/CheckIndicator";
 import { useI18n } from "~/i18n";
-import { formatDuration } from "~/lib/format";
+import { formatDate, formatDuration } from "~/lib/format";
 import type { HistoryMeta } from "~/types";
 
 interface HistoryListProps {
@@ -32,17 +39,6 @@ function getSourceIcon(fileName: string): JSX.Element {
 
 const HistoryList: Component<HistoryListProps> = (props) => {
   const { t, locale } = useI18n();
-
-  function formatDate(isoString: string): string {
-    const date = new Date(isoString);
-    return date.toLocaleDateString(locale() === "ja" ? "ja-JP" : "en-US", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
 
   function handleClick(e: MouseEvent, entry: HistoryMeta): void {
     if (props.selectionMode) {
@@ -99,10 +95,20 @@ const HistoryList: Component<HistoryListProps> = (props) => {
                 <p class="mt-2.5 line-clamp-2 text-xs text-muted-foreground">
                   {entry.textPreview}
                 </p>
-                {/* Row 3: Duration (left) + Date (right) */}
-                <div class="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{formatDuration(entry.duration)}</span>
-                  <span>{formatDate(entry.createdAt)}</span>
+                {/* Row 3: Date (left) + Model (center) + Duration (right) */}
+                <div class="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
+                  <span class="inline-flex items-center gap-1">
+                    <FiCalendar class="size-3" />
+                    {formatDate(entry.createdAt, locale())}
+                  </span>
+                  <span class="inline-flex items-center gap-1">
+                    <FiMusic class="size-3" />
+                    {entry.modelId}
+                  </span>
+                  <span class="ml-auto inline-flex items-center gap-1">
+                    <FiClock class="size-3" />
+                    {formatDuration(entry.duration)}
+                  </span>
                 </div>
               </button>
             );

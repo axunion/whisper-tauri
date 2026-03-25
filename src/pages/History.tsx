@@ -1,4 +1,4 @@
-import { FiCheck, FiCheckSquare } from "solid-icons/fi";
+import { FiCheck, FiCheckSquare, FiX } from "solid-icons/fi";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
 import {
@@ -195,15 +195,19 @@ export default function History() {
             if (!open) history.clearSelectedEntry();
           }}
         >
-          <SheetContent>
+          <SheetContent class="max-w-none sm:max-w-none p-8">
             <SheetTitle class="sr-only">{t("history.detail")}</SheetTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              class="absolute left-2 top-2 size-7 text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+              onClick={() => history.clearSelectedEntry()}
+            >
+              <FiX class="size-4" />
+            </Button>
             <Show when={history.selectedEntry()} keyed>
               {(entry) => (
-                <HistoryDetail
-                  entry={entry}
-                  onRename={handleRename}
-                  onClose={() => history.clearSelectedEntry()}
-                />
+                <HistoryDetail entry={entry} onRename={handleRename} />
               )}
             </Show>
           </SheetContent>
