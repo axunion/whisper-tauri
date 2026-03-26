@@ -1,11 +1,17 @@
-import { invoke } from "@tauri-apps/api/core";
-import { FiCalendar, FiCheck, FiClock, FiEdit2, FiMusic } from "solid-icons/fi";
+import {
+  FiCalendar,
+  FiCheck,
+  FiClock,
+  FiEdit2,
+  FiMusic,
+  FiX,
+} from "solid-icons/fi";
 import type { Component } from "solid-js";
-import { createSignal, onMount, Show } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import { ResultViewer } from "~/components/transcription/ResultViewer";
 import { useI18n } from "~/i18n";
 import { formatDate, formatDuration } from "~/lib/format";
-import type { AiContent, HistoryEntry, TranscriptionResult } from "~/types";
+import type { HistoryEntry, TranscriptionResult } from "~/types";
 
 interface HistoryDetailProps {
   entry: HistoryEntry;
@@ -25,22 +31,19 @@ function toTranscriptionResult(entry: HistoryEntry): TranscriptionResult {
 const HistoryDetail: Component<HistoryDetailProps> = (props) => {
   const { locale } = useI18n();
   const [isEditing, setIsEditing] = createSignal(false);
+  const [isSuggestion, setIsSuggestion] = createSignal(false);
+  const [isGeneratingTitle, setIsGeneratingTitle] = createSignal(false);
   const [editValue, setEditValue] = createSignal("");
-  const [aiContent, setAiContent] = createSignal<AiContent[]>([]);
-
-  onMount(async () => {
-    try {
-      const content = await invoke<AiContent[]>("history_get_all_ai_content", {
-        historyId: props.entry.id,
-      });
-      setAiContent(content);
-    } catch {
-      // Non-critical: silently ignore if AI content can't be loaded
-    }
-  });
 
   function startEditing(): void {
     setEditValue(props.entry.fileName);
+    setIsSuggestion(false);
+    setIsEditing(true);
+  }
+
+  function startSuggestion(title: string): void {
+    setEditValue(title);
+    setIsSuggestion(true);
     setIsEditing(true);
   }
 
@@ -50,10 +53,12 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
       props.onRename?.(props.entry.id, trimmed);
     }
     setIsEditing(false);
+    setIsSuggestion(false);
   }
 
   function cancelEditing(): void {
     setIsEditing(false);
+    setIsSuggestion(false);
   }
 
   function handleKeyDown(e: KeyboardEvent): void {
@@ -67,14 +72,6 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
   }
 
   const result = () => toTranscriptionResult(props.entry);
-
-  const titleSuggestion = () => {
-    const title = aiContent().find((c) => c.contentType === "title");
-    if (title && title.text !== props.entry.fileName) {
-      return title.text;
-    }
-    return undefined;
-  };
 
   const metadataJSX = () => (
     <span class="inline-flex items-center gap-3 text-xs text-muted-foreground">
@@ -108,27 +105,52 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
                 value={editValue()}
                 onInput={(e) => setEditValue(e.currentTarget.value)}
                 onKeyDown={handleKeyDown}
-                onBlur={cancelEditing}
+                onBlur={() => {
+                  if (!isSuggestion()) cancelEditing();
+                }}
               />
             }
           >
-            <span class="block truncate text-lg font-semibold">
+            <span
+              class="block truncate text-lg font-semibold"
+              classList={{ "animate-pulse": isGeneratingTitle() }}
+            >
               {props.entry.fileName}
             </span>
           </Show>
         </div>
-        <button
-          type="button"
-          class="shrink-0 text-muted-foreground transition-opacity"
-          classList={{
-            "opacity-0 group-hover/title:opacity-100": !isEditing(),
-          }}
-          onClick={() => (isEditing() ? confirmRename() : startEditing())}
+        <Show
+          when={isSuggestion() && isEditing()}
+          fallback={
+            <button
+              type="button"
+              class="shrink-0 text-muted-foreground transition-opacity"
+              classList={{
+                "opacity-0 group-hover/title:opacity-100": !isEditing(),
+              }}
+              onClick={() => (isEditing() ? confirmRename() : startEditing())}
+            >
+              <Show when={isEditing()} fallback={<FiEdit2 class="size-3.5" />}>
+                <FiCheck class="size-3.5" />
+              </Show>
+            </button>
+          }
         >
-          <Show when={isEditing()} fallback={<FiEdit2 class="size-3.5" />}>
+          <button
+            type="button"
+            class="shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={confirmRename}
+          >
             <FiCheck class="size-3.5" />
-          </Show>
-        </button>
+          </button>
+          <button
+            type="button"
+            class="shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={cancelEditing}
+          >
+            <FiX class="size-3.5" />
+          </button>
+        </Show>
       </div>
       {/* ResultViewer with metadata integrated into toolbar */}
       <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -136,10 +158,8 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
           result={result()}
           fileName={metadataJSX()}
           historyId={props.entry.id}
-          suggestedTitle={titleSuggestion()}
-          onApplyTitle={(title) => {
-            props.onRename?.(props.entry.id, title);
-          }}
+          onTitleGenerated={(title) => startSuggestion(title)}
+          onGeneratingTitleChange={setIsGeneratingTitle}
         />
       </div>
     </div>

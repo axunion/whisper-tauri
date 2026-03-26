@@ -17,7 +17,7 @@ const FORMAT_OPTIONS: { value: ExportFormat; labelKey: DictionaryKey }[] = [
 ];
 
 interface ResultToolbarProps {
-  fileName: JSX.Element;
+  fileName?: JSX.Element | undefined;
   activeTab: ResultTab;
   onClose?: (() => void) | undefined;
   onCopy: () => void;
@@ -25,7 +25,9 @@ interface ResultToolbarProps {
   onSummarize: () => void;
   onExtractKeywords: () => void;
   onExtractActionItems: () => void;
+  onGenerateTitle: () => void;
   isProcessing: boolean;
+  isGeneratingTitle: boolean;
 }
 
 const ResultToolbar: Component<ResultToolbarProps> = (props) => {
@@ -78,13 +80,13 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
   return (
     <div class="flex items-center justify-between">
       {/* Left: close + filename */}
-      <div class="flex items-center gap-2">
+      <div class="flex min-w-0 flex-1 items-center gap-2">
         <Show when={props.onClose}>
           {(onClose) => (
             <Button
               variant="ghost"
               size="icon"
-              class="size-8 text-muted-foreground"
+              class="size-8 shrink-0 text-muted-foreground"
               onClick={onClose()}
             >
               <FiArrowLeft class="size-4" />
@@ -99,14 +101,14 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
       </div>
 
       {/* Right: actions */}
-      <div class="flex items-center gap-1">
+      <div class="flex shrink-0 items-center gap-1">
         {/* AI menu */}
         <div ref={aiRef} class="relative">
           <Button
             variant="ghost"
             size="icon"
             class="size-8"
-            disabled={props.isProcessing}
+            disabled={props.isProcessing || props.isGeneratingTitle}
             onClick={() => setAiOpen(!aiOpen())}
           >
             <TbSparkles class="size-4" />
@@ -115,7 +117,23 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
             <div class={dropdownMenuClass}>
               <button
                 type="button"
+                class={cn(
+                  dropdownItemClass,
+                  props.isGeneratingTitle && "opacity-50",
+                )}
+                disabled={props.isGeneratingTitle}
+                onClick={() => {
+                  setAiOpen(false);
+                  props.onGenerateTitle();
+                }}
+              >
+                {t("textProcessing.generateTitle")}
+              </button>
+              <div class="my-1 border-t border-border/30" />
+              <button
+                type="button"
                 class={dropdownItemClass}
+                disabled={props.isProcessing}
                 onClick={() => {
                   setAiOpen(false);
                   props.onSummarize();
@@ -126,6 +144,7 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
               <button
                 type="button"
                 class={dropdownItemClass}
+                disabled={props.isProcessing}
                 onClick={() => {
                   setAiOpen(false);
                   props.onExtractKeywords();
@@ -136,6 +155,7 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
               <button
                 type="button"
                 class={dropdownItemClass}
+                disabled={props.isProcessing}
                 onClick={() => {
                   setAiOpen(false);
                   props.onExtractActionItems();

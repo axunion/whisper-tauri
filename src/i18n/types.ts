@@ -184,8 +184,7 @@ export interface Dictionary {
     actionItemsCompletedToast: string;
     titleGeneratedToast: string;
     extractingActionItems: string;
-    titleSuggestion: string;
-    applyTitle: string;
+    generateTitle: string;
     generateKeywords: string;
     generateActionItems: string;
     overwriteConfirmTitle: string;

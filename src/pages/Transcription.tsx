@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { FiCheck, FiX } from "solid-icons/fi";
 import {
   createMemo,
   createSignal,
@@ -25,7 +25,6 @@ import { createFileConverter } from "~/primitives/createFileConverter";
 import { createHistory } from "~/primitives/createHistory";
 import { createRecording } from "~/primitives/createRecording";
 import { createSettings } from "~/primitives/createSettings";
-import { createTextProcessing } from "~/primitives/createTextProcessing";
 import { createWhisper } from "~/primitives/createWhisper";
 
 const WAV_EXTENSIONS = new Set(["wav"]);
@@ -47,7 +46,9 @@ export default function Transcription() {
   const [convertedPath, setConvertedPath] = createSignal<string | null>(null);
   const [activeTab, setActiveTab] = createSignal("file");
   const [historyId, setHistoryId] = createSignal<string | null>(null);
-  const [suggestedTitle, setSuggestedTitle] = createSignal<string | null>(null);
+  const [titleEditing, setTitleEditing] = createSignal(false);
+  const [titleEditValue, setTitleEditValue] = createSignal("");
+  const [isGeneratingTitle, setIsGeneratingTitle] = createSignal(false);
 
   onMount(async () => {
     whisper.loadModels();
@@ -139,27 +140,6 @@ export default function Transcription() {
         segments: transcriptionResult.segments,
       });
       if (id) setHistoryId(id);
-      // Generate title suggestion (best-effort, background — does not auto-rename)
-      const tp = createTextProcessing();
-      if (id && tp.serverAvailable() && tp.models().some((m) => m.downloaded)) {
-        tp.generateTitle(transcriptionResult.text).then(async (title) => {
-          if (title) {
-            try {
-              await invoke("history_save_ai_content", {
-                params: {
-                  historyId: id,
-                  contentType: "title",
-                  text: title,
-                  textModelId: tp.selectedModelId() ?? "unknown",
-                },
-              });
-            } catch {
-              // Best-effort: silently fail
-            }
-            setSuggestedTitle(title);
-          }
-        });
-      }
     }
   }
 
@@ -168,12 +148,41 @@ export default function Transcription() {
     whisper.reset();
   }
 
+  function handleTitleGenerated(title: string) {
+    setTitleEditValue(title);
+    setTitleEditing(true);
+  }
+
+  function confirmTitle() {
+    const trimmed = titleEditValue().trim();
+    const id = historyId();
+    if (trimmed && id) {
+      history.renameEntry(id, trimmed);
+    }
+    setTitleEditing(false);
+  }
+
+  function cancelTitle() {
+    setTitleEditing(false);
+  }
+
+  function handleTitleKeyDown(e: KeyboardEvent) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      confirmTitle();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancelTitle();
+    }
+  }
+
   async function handleReset() {
     const prev = convertedPath();
     if (prev) {
       await converter.cleanup(prev);
       setConvertedPath(null);
     }
+    setTitleEditing(false);
     whisper.reset();
   }
 
@@ -331,20 +340,60 @@ export default function Transcription() {
             <Match when={viewState() === "result"}>
               <Show when={whisper.result()}>
                 {(result) => (
-                  <ResultViewer
-                    result={result()}
-                    fileName={whisper.file()?.name ?? ""}
-                    historyId={historyId() ?? undefined}
-                    onClose={handleReset}
-                    suggestedTitle={suggestedTitle() ?? undefined}
-                    onApplyTitle={async (title) => {
-                      const id = historyId();
-                      if (id) {
-                        await history.renameEntry(id, title);
-                        setSuggestedTitle(null);
-                      }
-                    }}
-                  />
+                  <div class="flex min-h-0 flex-1 flex-col gap-2">
+                    {/* Title row */}
+                    <div class="flex h-8 items-center gap-1.5">
+                      <div class="min-w-0 flex-1">
+                        <Show
+                          when={titleEditing()}
+                          fallback={
+                            <span
+                              class="block truncate text-lg font-semibold"
+                              classList={{
+                                "animate-pulse": isGeneratingTitle(),
+                              }}
+                            >
+                              {whisper.file()?.name ?? ""}
+                            </span>
+                          }
+                        >
+                          <input
+                            type="text"
+                            autofocus
+                            class="w-full border-b border-muted-foreground/40 bg-transparent text-lg font-semibold outline-none"
+                            value={titleEditValue()}
+                            onInput={(e) =>
+                              setTitleEditValue(e.currentTarget.value)
+                            }
+                            onKeyDown={handleTitleKeyDown}
+                          />
+                        </Show>
+                      </div>
+                      <Show when={titleEditing()}>
+                        <button
+                          type="button"
+                          class="shrink-0 text-muted-foreground hover:text-foreground"
+                          onClick={confirmTitle}
+                        >
+                          <FiCheck class="size-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          class="shrink-0 text-muted-foreground hover:text-foreground"
+                          onClick={cancelTitle}
+                        >
+                          <FiX class="size-3.5" />
+                        </button>
+                      </Show>
+                    </div>
+                    <ResultViewer
+                      result={result()}
+                      historyId={historyId() ?? undefined}
+                      onClose={handleReset}
+                      onTitleGenerated={handleTitleGenerated}
+                      onGeneratingTitleChange={setIsGeneratingTitle}
+                    />
+                  </div>
                 )}
               </Show>
             </Match>

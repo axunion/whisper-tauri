@@ -11,7 +11,9 @@ export interface AiSession {
   summaryResult: Accessor<string | null>;
   keywordsResult: Accessor<string | null>;
   actionItemsResult: Accessor<string | null>;
+  titleResult: Accessor<string | null>;
   isProcessing: Accessor<boolean>;
+  isGeneratingTitle: Accessor<boolean>;
   isLoaded: Accessor<boolean>;
   currentOperation: Accessor<"summary" | "keywords" | "actionItems" | null>;
   inferenceProgress: Accessor<InferenceProgress | null>;
@@ -21,6 +23,7 @@ export interface AiSession {
   summarize: (text: string) => Promise<string | null>;
   extractKeywords: (text: string) => Promise<string | null>;
   extractActionItems: (text: string) => Promise<string | null>;
+  generateTitle: (text: string) => Promise<string | null>;
   cancel: () => Promise<void>;
   clearError: () => void;
 }
@@ -40,7 +43,9 @@ export function createAiSession(
   const [actionItemsResult, setActionItemsResult] = createSignal<string | null>(
     null,
   );
+  const [titleResult, setTitleResult] = createSignal<string | null>(null);
   const [isProcessing, setIsProcessing] = createSignal(false);
+  const [isGeneratingTitle, setIsGeneratingTitle] = createSignal(false);
   const [currentOperation, setCurrentOperation] = createSignal<
     "summary" | "keywords" | "actionItems" | null
   >(null);
@@ -57,12 +62,22 @@ export function createAiSession(
   });
 
   function loadFromAiContent(content: AiContent[]): void {
-    const summary = content.find((c) => c.contentType === "summary");
-    setSummaryResult(summary?.text ?? null);
-    const keywords = content.find((c) => c.contentType === "keywords");
-    setKeywordsResult(keywords?.text ?? null);
-    const actionItems = content.find((c) => c.contentType === "actionItems");
-    setActionItemsResult(actionItems?.text ?? null);
+    for (const c of content) {
+      switch (c.contentType) {
+        case "summary":
+          setSummaryResult(c.text);
+          break;
+        case "keywords":
+          setKeywordsResult(c.text);
+          break;
+        case "actionItems":
+          setActionItemsResult(c.text);
+          break;
+        case "title":
+          setTitleResult(c.text);
+          break;
+      }
+    }
   }
 
   async function loadFromDb(): Promise<void> {
@@ -163,6 +178,24 @@ export function createAiSession(
     );
   }
 
+  async function generateTitle(text: string): Promise<string | null> {
+    if (isGeneratingTitle()) return null;
+    setIsGeneratingTitle(true);
+    try {
+      const result = await tp.generateTitle(text);
+      if (result) {
+        setTitleResult(result);
+        saveToHistory("title", result, tp.effectiveModelId() ?? "unknown");
+      }
+      return result;
+    } catch (e) {
+      setError(parseError(e));
+      return null;
+    } finally {
+      setIsGeneratingTitle(false);
+    }
+  }
+
   async function cancelSession(): Promise<void> {
     const progress = tp.inferenceProgress();
     if (progress) {
@@ -178,7 +211,9 @@ export function createAiSession(
     summaryResult,
     keywordsResult,
     actionItemsResult,
+    titleResult,
     isProcessing,
+    isGeneratingTitle,
     isLoaded,
     currentOperation,
     inferenceProgress,
@@ -186,6 +221,7 @@ export function createAiSession(
     summarize,
     extractKeywords,
     extractActionItems,
+    generateTitle,
     cancel: cancelSession,
     clearError,
   };

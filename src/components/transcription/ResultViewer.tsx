@@ -3,7 +3,6 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { FiSettings, FiX } from "solid-icons/fi";
-import { TbSparkles } from "solid-icons/tb";
 import type { Component, JSX } from "solid-js";
 import { createSignal, onMount, Show } from "solid-js";
 import {
@@ -31,11 +30,11 @@ import { ResultToolbar } from "./ResultToolbar";
 
 interface ResultViewerProps {
   result: TranscriptionResult;
-  fileName: JSX.Element;
+  fileName?: JSX.Element | undefined;
   historyId?: string | undefined;
   onClose?: (() => void) | undefined;
-  suggestedTitle?: string | undefined;
-  onApplyTitle?: ((title: string) => void) | undefined;
+  onTitleGenerated?: ((title: string) => void) | undefined;
+  onGeneratingTitleChange?: ((generating: boolean) => void) | undefined;
 }
 
 const ResultViewer: Component<ResultViewerProps> = (props) => {
@@ -43,7 +42,6 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = createSignal<ResultTab>("text");
   const [showPrereqDialog, setShowPrereqDialog] = createSignal(false);
-  const [titleDismissed, setTitleDismissed] = createSignal(false);
   const [summaryTabRequested, setSummaryTabRequested] = createSignal(false);
   const [keywordsTabRequested, setKeywordsTabRequested] = createSignal(false);
   const [actionItemsTabRequested, setActionItemsTabRequested] =
@@ -144,6 +142,19 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     });
   }
 
+  async function executeGenerateTitle() {
+    props.onGeneratingTitleChange?.(true);
+    try {
+      const result = await session.generateTitle(props.result.text);
+      if (result) {
+        toast.success(t("textProcessing.titleGeneratedToast"));
+        props.onTitleGenerated?.(result);
+      }
+    } finally {
+      props.onGeneratingTitleChange?.(false);
+    }
+  }
+
   /** Execute action, or show overwrite confirmation if results already exist. */
   function withOverwriteCheck(hasResult: boolean, action: () => void) {
     if (!isReady()) {
@@ -186,36 +197,16 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
             executeExtractActionItems,
           )
         }
+        onGenerateTitle={() => {
+          if (!isReady()) {
+            setShowPrereqDialog(true);
+            return;
+          }
+          executeGenerateTitle();
+        }}
         isProcessing={session.isProcessing()}
+        isGeneratingTitle={session.isGeneratingTitle()}
       />
-      <Show when={props.suggestedTitle && !titleDismissed()}>
-        <div class="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
-          <TbSparkles class="size-4 shrink-0 text-primary" />
-          <span class="flex-1 truncate">
-            {t("textProcessing.titleSuggestion")}:
-            <span class="ml-1 font-medium">{props.suggestedTitle}</span>
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            class="h-6 shrink-0 px-2 text-xs"
-            onClick={() => {
-              if (props.suggestedTitle)
-                props.onApplyTitle?.(props.suggestedTitle);
-              setTitleDismissed(true);
-            }}
-          >
-            {t("textProcessing.applyTitle")}
-          </Button>
-          <button
-            type="button"
-            class="inline-flex items-center rounded-full p-0.5 hover:bg-muted-foreground/20"
-            onClick={() => setTitleDismissed(true)}
-          >
-            <FiX class="size-3" />
-          </button>
-        </div>
-      </Show>
       <Tabs
         value={activeTab()}
         onChange={(value) => setActiveTab(value as ResultTab)}
