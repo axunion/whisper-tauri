@@ -43,7 +43,6 @@ pub fn run() {
             whisper::commands::set_model_download_url,
             whisper::commands::transcribe_audio,
             whisper::commands::cancel_transcription,
-            converter::commands::check_ffmpeg_available,
             converter::commands::check_ffmpeg_bundled,
             converter::commands::check_ffmpeg_needs_update,
             converter::commands::delete_ffmpeg,

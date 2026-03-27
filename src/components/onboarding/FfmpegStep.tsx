@@ -19,8 +19,7 @@ export function FfmpegStep(props: FfmpegStepProps) {
     toast.success(t("settings.ffmpegDownloadedToast"));
   }
 
-  const isReady = () =>
-    props.ffmpeg.isBundled() || props.ffmpeg.isSystemAvailable();
+  const isReady = () => props.ffmpeg.isBundled();
 
   return (
     <div class="animate-fade-in flex flex-col items-center gap-5 text-center">
@@ -73,12 +72,7 @@ export function FfmpegStep(props: FfmpegStepProps) {
           >
             <div class="flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400">
               <FiCheck class="size-4" />
-              <Show
-                when={props.ffmpeg.isSystemAvailable()}
-                fallback={t("onboarding.summaryReady")}
-              >
-                {t("settings.systemInstalled")}
-              </Show>
+              {t("onboarding.summaryReady")}
             </div>
           </Show>
         </div>

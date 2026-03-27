@@ -112,7 +112,7 @@ export function StatsRow() {
       const [models, ffmpegAvailable, serverExists, textModels] =
         await Promise.all([
           invoke<ModelInfo[]>("get_available_models"),
-          invoke<boolean>("check_ffmpeg_available"),
+          invoke<boolean>("check_ffmpeg_bundled"),
           invoke<boolean>("text_processing_check_server"),
           invoke<TextModelInfo[]>("text_processing_list_models"),
         ]);

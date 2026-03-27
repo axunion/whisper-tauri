@@ -25,15 +25,6 @@ pub fn check_available(ffmpeg_path: &Path) -> Result<(), ConverterError> {
     }
 }
 
-/// Checks whether ffmpeg is available on the system PATH.
-///
-/// # Errors
-///
-/// Returns `ConverterError::FfmpegNotFound` if ffmpeg is not in PATH.
-pub fn check_system_available() -> Result<(), ConverterError> {
-    check_available(Path::new("ffmpeg"))
-}
-
 /// Builds the ffmpeg command-line arguments for converting audio to WAV.
 ///
 /// Output format: WAV PCM, 16kHz, mono, 16-bit

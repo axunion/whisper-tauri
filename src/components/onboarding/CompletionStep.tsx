@@ -72,7 +72,7 @@ export function CompletionStep(props: CompletionStepProps) {
         />
         <SummaryRow
           label={t("onboarding.summaryFfmpeg")}
-          ready={props.ffmpeg.isBundled() || props.ffmpeg.isSystemAvailable()}
+          ready={props.ffmpeg.isBundled()}
           readyText={t("onboarding.summaryReady")}
         />
         <SummaryRow

@@ -21,19 +21,13 @@ fn resolve_app_data_dir(app: &AppHandle) -> Result<PathBuf, ConverterError> {
         .map_err(|e| ConverterError::PathError(e.to_string()))
 }
 
-/// Resolves the ffmpeg binary path, checking bundled then system PATH.
+/// Resolves the bundled ffmpeg binary path.
 ///
-/// Returns the path to a working ffmpeg binary, or an error if none found.
+/// Returns the path to the bundled ffmpeg binary, or an error if not downloaded.
 fn resolve_ffmpeg_path(app_data_dir: &Path) -> Result<PathBuf, ConverterError> {
-    // 1. Check bundled ffmpeg
     let bundled_path = downloader::get_ffmpeg_path(app_data_dir);
     if ffmpeg::check_available(&bundled_path).is_ok() {
         return Ok(bundled_path);
-    }
-
-    // 2. Check system PATH
-    if ffmpeg::check_system_available().is_ok() {
-        return Ok(PathBuf::from("ffmpeg"));
     }
 
     Err(ConverterError::FfmpegNotFound(
@@ -41,21 +35,7 @@ fn resolve_ffmpeg_path(app_data_dir: &Path) -> Result<PathBuf, ConverterError> {
     ))
 }
 
-/// Checks whether ffmpeg is available (bundled or system PATH).
-///
-/// # Errors
-///
-/// Returns an error if the app data directory cannot be resolved.
-#[tauri::command]
-pub async fn check_ffmpeg_available(app: AppHandle) -> Result<bool, String> {
-    let app_data_dir = resolve_app_data_dir(&app)?;
-    Ok(resolve_ffmpeg_path(&app_data_dir).is_ok())
-}
-
-/// Checks whether the bundled ffmpeg binary exists (ignores system PATH).
-///
-/// Used by the settings page to show download status independently of
-/// whether the user happens to have ffmpeg installed system-wide.
+/// Checks whether the bundled ffmpeg binary exists and is executable.
 ///
 /// # Errors
 ///

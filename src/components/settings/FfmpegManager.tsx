@@ -32,9 +32,6 @@ export default function FfmpegManager() {
         <div class="flex items-center justify-between rounded-lg border p-4">
           <div class="flex items-center gap-2">
             <span class="font-medium">FFmpeg</span>
-            <Show when={ffmpeg.isSystemAvailable()}>
-              <Badge variant="secondary">{t("settings.systemInstalled")}</Badge>
-            </Show>
             <Show when={ffmpeg.needsUpdate()}>
               <Badge variant="default">
                 {t("settings.ffmpegUpdateAvailable")}

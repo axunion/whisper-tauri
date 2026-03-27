@@ -23,14 +23,6 @@ describe("createFfmpegDownloader", () => {
       });
     });
 
-    it("should have isSystemAvailable as false", () => {
-      createRoot((dispose) => {
-        const downloader = createFfmpegDownloader();
-        expect(downloader.isSystemAvailable()).toBe(false);
-        dispose();
-      });
-    });
-
     it("should have isDownloading as false", () => {
       createRoot((dispose) => {
         const downloader = createFfmpegDownloader();
@@ -57,50 +49,32 @@ describe("createFfmpegDownloader", () => {
   });
 
   describe("checkStatus", () => {
-    it("should set isBundled and isSystemAvailable when bundled", async () => {
+    it("should set isBundled when bundled", async () => {
       vi.mocked(invoke)
         .mockResolvedValueOnce(true) // check_ffmpeg_bundled
-        .mockResolvedValueOnce(true); // check_ffmpeg_available
+        .mockResolvedValueOnce(false); // check_ffmpeg_needs_update
 
       await createRoot(async (dispose) => {
         const downloader = createFfmpegDownloader();
         await downloader.checkStatus();
 
         expect(invoke).toHaveBeenCalledWith("check_ffmpeg_bundled");
-        expect(invoke).toHaveBeenCalledWith("check_ffmpeg_available");
+        expect(invoke).toHaveBeenCalledWith("check_ffmpeg_needs_update");
         expect(downloader.isBundled()).toBe(true);
-        // When bundled, isSystemAvailable should be false (bundled takes priority)
-        expect(downloader.isSystemAvailable()).toBe(false);
         dispose();
       });
     });
 
-    it("should detect system ffmpeg when not bundled", async () => {
+    it("should set isBundled false when not bundled", async () => {
       vi.mocked(invoke)
         .mockResolvedValueOnce(false) // check_ffmpeg_bundled
-        .mockResolvedValueOnce(true); // check_ffmpeg_available
+        .mockResolvedValueOnce(false); // check_ffmpeg_needs_update
 
       await createRoot(async (dispose) => {
         const downloader = createFfmpegDownloader();
         await downloader.checkStatus();
 
         expect(downloader.isBundled()).toBe(false);
-        expect(downloader.isSystemAvailable()).toBe(true);
-        dispose();
-      });
-    });
-
-    it("should set both false when neither available", async () => {
-      vi.mocked(invoke)
-        .mockResolvedValueOnce(false) // check_ffmpeg_bundled
-        .mockResolvedValueOnce(false); // check_ffmpeg_available
-
-      await createRoot(async (dispose) => {
-        const downloader = createFfmpegDownloader();
-        await downloader.checkStatus();
-
-        expect(downloader.isBundled()).toBe(false);
-        expect(downloader.isSystemAvailable()).toBe(false);
         dispose();
       });
     });
@@ -124,34 +98,15 @@ describe("createFfmpegDownloader", () => {
   });
 
   describe("deleteBundled", () => {
-    it("should invoke delete_ffmpeg and re-check system availability", async () => {
-      vi.mocked(invoke)
-        .mockResolvedValueOnce(undefined) // delete_ffmpeg
-        .mockResolvedValueOnce(true); // check_ffmpeg_available
+    it("should invoke delete_ffmpeg and set isBundled false", async () => {
+      vi.mocked(invoke).mockResolvedValueOnce(undefined); // delete_ffmpeg
 
       await createRoot(async (dispose) => {
         const downloader = createFfmpegDownloader();
         await downloader.deleteBundled();
 
         expect(invoke).toHaveBeenCalledWith("delete_ffmpeg");
-        expect(invoke).toHaveBeenCalledWith("check_ffmpeg_available");
         expect(downloader.isBundled()).toBe(false);
-        expect(downloader.isSystemAvailable()).toBe(true);
-        dispose();
-      });
-    });
-
-    it("should set isSystemAvailable false when no system ffmpeg", async () => {
-      vi.mocked(invoke)
-        .mockResolvedValueOnce(undefined) // delete_ffmpeg
-        .mockResolvedValueOnce(false); // check_ffmpeg_available
-
-      await createRoot(async (dispose) => {
-        const downloader = createFfmpegDownloader();
-        await downloader.deleteBundled();
-
-        expect(downloader.isBundled()).toBe(false);
-        expect(downloader.isSystemAvailable()).toBe(false);
         dispose();
       });
     });
@@ -184,7 +139,6 @@ describe("createFfmpegDownloader", () => {
 
         expect(invoke).toHaveBeenCalledWith("download_ffmpeg");
         expect(downloader.isBundled()).toBe(true);
-        expect(downloader.isSystemAvailable()).toBe(false);
         dispose();
       });
     });

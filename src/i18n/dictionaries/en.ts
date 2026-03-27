@@ -111,7 +111,6 @@ export const en: Dictionary = {
     modelDeletedToast: "Model deleted",
     loadingModels: "Loading model info...",
     toolManagement: "Tool Management",
-    systemInstalled: "Installed on system",
     ffmpegDeletedToast: "FFmpeg deleted",
     ffmpegDownloadedToast: "FFmpeg downloaded",
     ffmpegUpdateAvailable: "Update available",

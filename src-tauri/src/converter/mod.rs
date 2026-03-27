@@ -10,10 +10,14 @@ pub use types::*;
 const NATIVE_FORMATS: &[&str] = &["wav"];
 
 /// Audio formats that require conversion via ffmpeg.
-const CONVERTIBLE_AUDIO_FORMATS: &[&str] = &["mp3", "m4a", "flac", "ogg", "aac", "wma", "opus"];
+const CONVERTIBLE_AUDIO_FORMATS: &[&str] = &[
+    "mp3", "m4a", "flac", "ogg", "aac", "wma", "opus", "aiff", "caf", "amr",
+];
 
 /// Video formats that require conversion via ffmpeg.
-const CONVERTIBLE_VIDEO_FORMATS: &[&str] = &["mp4", "mov", "webm", "avi", "mkv"];
+const CONVERTIBLE_VIDEO_FORMATS: &[&str] = &[
+    "mp4", "mov", "webm", "avi", "mkv", "ts", "mts", "wmv", "flv", "3gp",
+];
 
 /// Checks whether the given file extension is a supported format.
 #[must_use]
@@ -84,6 +88,14 @@ fn format_description(ext: &str) -> String {
         "webm" => "WebM Video".to_string(),
         "avi" => "AVI Video".to_string(),
         "mkv" => "MKV Video".to_string(),
+        "aiff" => "AIFF Audio".to_string(),
+        "caf" => "CAF Audio (Core Audio)".to_string(),
+        "amr" => "AMR Audio".to_string(),
+        "ts" => "MPEG-TS Video".to_string(),
+        "mts" => "MTS Video (AVCHD)".to_string(),
+        "wmv" => "WMV Video".to_string(),
+        "flv" => "FLV Video".to_string(),
+        "3gp" => "3GP Video".to_string(),
         _ => format!("{} file", ext.to_uppercase()),
     }
 }
@@ -108,6 +120,9 @@ mod tests {
         assert!(is_supported_format("aac"));
         assert!(is_supported_format("wma"));
         assert!(is_supported_format("opus"));
+        assert!(is_supported_format("aiff"));
+        assert!(is_supported_format("caf"));
+        assert!(is_supported_format("amr"));
     }
 
     #[test]
@@ -117,6 +132,11 @@ mod tests {
         assert!(is_supported_format("webm"));
         assert!(is_supported_format("avi"));
         assert!(is_supported_format("mkv"));
+        assert!(is_supported_format("ts"));
+        assert!(is_supported_format("mts"));
+        assert!(is_supported_format("wmv"));
+        assert!(is_supported_format("flv"));
+        assert!(is_supported_format("3gp"));
     }
 
     #[test]

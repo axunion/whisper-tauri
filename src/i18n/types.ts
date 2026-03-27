@@ -109,7 +109,6 @@ export interface Dictionary {
     modelDeletedToast: string;
     loadingModels: string;
     toolManagement: string;
-    systemInstalled: string;
     ffmpegDeletedToast: string;
     ffmpegDownloadedToast: string;
     ffmpegUpdateAvailable: string;

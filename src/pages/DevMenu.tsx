@@ -70,11 +70,6 @@ function DevMenuContent() {
           <div class="flex items-center justify-between rounded-lg border p-4">
             <div class="flex items-center gap-2">
               <span class="text-sm font-medium">FFmpeg</span>
-              <Show when={ffmpeg.isSystemAvailable()}>
-                <Badge variant="secondary">
-                  {t("settings.systemInstalled")}
-                </Badge>
-              </Show>
               <Show when={ffmpeg.isBundled()}>
                 <Badge variant="outline">{t("dashboard.downloaded")}</Badge>
               </Show>

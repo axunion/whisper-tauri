@@ -112,7 +112,6 @@ export const ja: Dictionary = {
     modelDeletedToast: "モデルを削除しました",
     loadingModels: "モデル情報を読み込み中...",
     toolManagement: "ツール管理",
-    systemInstalled: "システムにインストール済み",
     ffmpegDeletedToast: "FFmpegを削除しました",
     ffmpegDownloadedToast: "FFmpegをダウンロードしました",
     ffmpegUpdateAvailable: "新しいバージョンがあります",
