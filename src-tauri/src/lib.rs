@@ -45,6 +45,7 @@ pub fn run() {
             whisper::commands::cancel_transcription,
             converter::commands::check_ffmpeg_available,
             converter::commands::check_ffmpeg_bundled,
+            converter::commands::check_ffmpeg_needs_update,
             converter::commands::delete_ffmpeg,
             converter::commands::download_ffmpeg,
             converter::commands::get_ffmpeg_download_url,

@@ -115,6 +115,8 @@ export const ja: Dictionary = {
     systemInstalled: "システムにインストール済み",
     ffmpegDeletedToast: "FFmpegを削除しました",
     ffmpegDownloadedToast: "FFmpegをダウンロードしました",
+    ffmpegUpdateAvailable: "新しいバージョンがあります",
+    update: "更新",
   },
   errors: {
     file: "ファイル",

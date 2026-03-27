@@ -67,6 +67,10 @@ pub fn meta_from_row(row: MetaRow) -> Result<HistoryMeta, HistoryError> {
 ///
 /// Expects columns: `id(0)`, `history_id(1)`, `content_type(2)`, `created_at(3)`,
 /// `text_compressed(4)`, `options_json(5)`, `text_model_id(6)`.
+///
+/// # Errors
+///
+/// Returns an error if column extraction fails.
 pub fn ai_content_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<AiContentRow> {
     Ok((
         row.get::<_, String>(0)?,

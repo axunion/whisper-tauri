@@ -67,7 +67,21 @@ pub async fn check_ffmpeg_bundled(app: AppHandle) -> Result<bool, String> {
     Ok(ffmpeg::check_available(&bundled_path).is_ok())
 }
 
-/// Deletes the bundled ffmpeg binary.
+/// Checks whether the bundled ffmpeg needs a version update.
+///
+/// Returns `true` if ffmpeg is installed but does not match the pinned version.
+/// Returns `false` if ffmpeg is not installed or already matches.
+///
+/// # Errors
+///
+/// Returns an error if the app data directory cannot be resolved.
+#[tauri::command]
+pub async fn check_ffmpeg_needs_update(app: AppHandle) -> Result<bool, String> {
+    let app_data_dir = resolve_app_data_dir(&app)?;
+    Ok(downloader::ffmpeg_needs_update(&app_data_dir))
+}
+
+/// Deletes the bundled ffmpeg binary and its version marker.
 ///
 /// # Errors
 ///
@@ -81,6 +95,10 @@ pub async fn delete_ffmpeg(app: AppHandle) -> Result<(), String> {
     if bundled_path.exists() {
         std::fs::remove_file(&bundled_path).map_err(|e| format!("Failed to delete ffmpeg: {e}"))?;
     }
+
+    // Also remove version marker
+    let version_path = downloader::ffmpeg_version_path(&app_data_dir);
+    let _ = std::fs::remove_file(version_path);
 
     Ok(())
 }

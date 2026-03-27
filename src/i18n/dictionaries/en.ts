@@ -114,6 +114,8 @@ export const en: Dictionary = {
     systemInstalled: "Installed on system",
     ffmpegDeletedToast: "FFmpeg deleted",
     ffmpegDownloadedToast: "FFmpeg downloaded",
+    ffmpegUpdateAvailable: "Update available",
+    update: "Update",
   },
   errors: {
     file: "File",

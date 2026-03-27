@@ -1,4 +1,4 @@
-import { FiDownload, FiTool, FiTrash2 } from "solid-icons/fi";
+import { FiDownload, FiRefreshCw, FiTool, FiTrash2 } from "solid-icons/fi";
 import { onMount, Show } from "solid-js";
 import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
@@ -35,22 +35,43 @@ export default function FfmpegManager() {
             <Show when={ffmpeg.isSystemAvailable()}>
               <Badge variant="secondary">{t("settings.systemInstalled")}</Badge>
             </Show>
+            <Show when={ffmpeg.needsUpdate()}>
+              <Badge variant="default">
+                {t("settings.ffmpegUpdateAvailable")}
+              </Badge>
+            </Show>
           </div>
           <Show
             when={!ffmpeg.isBundled()}
             fallback={
-              <Button
-                variant="destructive"
-                size="sm"
-                class="w-28"
-                onClick={async () => {
-                  await ffmpeg.deleteBundled();
-                  toast.success(t("settings.ffmpegDeletedToast"));
-                }}
-              >
-                <FiTrash2 />
-                {t("common.delete")}
-              </Button>
+              <div class="flex items-center gap-2">
+                <Show when={ffmpeg.needsUpdate()}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    class="w-28"
+                    onClick={async () => {
+                      await ffmpeg.download();
+                      toast.success(t("settings.ffmpegDownloadedToast"));
+                    }}
+                  >
+                    <FiRefreshCw />
+                    {t("settings.update")}
+                  </Button>
+                </Show>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  class="w-28"
+                  onClick={async () => {
+                    await ffmpeg.deleteBundled();
+                    toast.success(t("settings.ffmpegDeletedToast"));
+                  }}
+                >
+                  <FiTrash2 />
+                  {t("common.delete")}
+                </Button>
+              </div>
             }
           >
             <Show

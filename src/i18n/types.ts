@@ -112,6 +112,8 @@ export interface Dictionary {
     systemInstalled: string;
     ffmpegDeletedToast: string;
     ffmpegDownloadedToast: string;
+    ffmpegUpdateAvailable: string;
+    update: string;
   };
   errors: {
     file: string;

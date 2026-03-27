@@ -13,6 +13,8 @@ const {
   setIsSystemAvailable,
   isDownloading,
   setIsDownloading,
+  needsUpdate,
+  setNeedsUpdate,
   downloadProgress,
   setDownloadProgress,
   error,
@@ -21,6 +23,7 @@ const {
   const [isBundled, setIsBundled] = createSignal(false);
   const [isSystemAvailable, setIsSystemAvailable] = createSignal(false);
   const [isDownloading, setIsDownloading] = createSignal(false);
+  const [needsUpdate, setNeedsUpdate] = createSignal(false);
   const [downloadProgress, setDownloadProgress] =
     createSignal<FfmpegDownloadProgress | null>(null);
   const [error, setError] = createSignal<AppError | null>(null);
@@ -32,6 +35,8 @@ const {
     setIsSystemAvailable,
     isDownloading,
     setIsDownloading,
+    needsUpdate,
+    setNeedsUpdate,
     downloadProgress,
     setDownloadProgress,
     error,
@@ -46,12 +51,14 @@ listen<FfmpegDownloadProgress>("ffmpeg:download-progress", (event) => {
 
 async function checkStatus(): Promise<void> {
   try {
-    const [bundled, available] = await Promise.all([
+    const [bundled, available, update] = await Promise.all([
       invoke<boolean>("check_ffmpeg_bundled"),
       invoke<boolean>("check_ffmpeg_available"),
+      invoke<boolean>("check_ffmpeg_needs_update"),
     ]);
     setIsBundled(bundled);
     setIsSystemAvailable(available && !bundled);
+    setNeedsUpdate(update);
   } catch (e) {
     setError(parseError(e));
   }
@@ -65,6 +72,7 @@ async function download(): Promise<void> {
     await invoke<string>("download_ffmpeg");
     setIsBundled(true);
     setIsSystemAvailable(false);
+    setNeedsUpdate(false);
   } catch (e) {
     setError(parseError(e));
   } finally {
@@ -93,6 +101,7 @@ async function deleteBundled(): Promise<void> {
   try {
     await invoke("delete_ffmpeg");
     setIsBundled(false);
+    setNeedsUpdate(false);
     // Re-check if system ffmpeg is available
     const available = await invoke<boolean>("check_ffmpeg_available");
     setIsSystemAvailable(available);
@@ -110,6 +119,7 @@ const ffmpegDownloaderInstance = {
   isBundled,
   isSystemAvailable,
   isDownloading,
+  needsUpdate,
   downloadProgress,
   error,
 
@@ -131,6 +141,7 @@ export function _resetFfmpegDownloaderForTesting(): void {
   setIsBundled(false);
   setIsSystemAvailable(false);
   setIsDownloading(false);
+  setNeedsUpdate(false);
   setDownloadProgress(null);
   setError(null);
 }

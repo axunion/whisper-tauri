@@ -2,22 +2,14 @@ use std::path::{Path, PathBuf};
 
 use super::error::ConverterError;
 
-/// macOS download URL (evermeet.cx — recommended by ffmpeg.org).
-/// Redirects to the latest release zip containing a single ffmpeg binary.
-#[cfg(target_os = "macos")]
-const MACOS_DEFAULT_URL: &str = "https://evermeet.cx/ffmpeg/getrelease/zip";
+/// Pinned `FFmpeg` release version for macOS (evermeet.cx).
+pub const FFMPEG_MACOS_VERSION: &str = "8.1";
 
-/// Windows download URL (`BtbN/FFmpeg-Builds` LGPL — GitHub hosted).
-#[cfg(target_os = "windows")]
-const WINDOWS_DEFAULT_URL: &str = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-lgpl.zip";
+/// Pinned `FFmpeg` autobuild release tag for Windows/Linux (`BtbN/FFmpeg-Builds`).
+pub const FFMPEG_BTBN_TAG: &str = "autobuild-2026-03-26-13-16";
 
-/// Linux x64 download URL (`BtbN/FFmpeg-Builds` LGPL — GitHub hosted).
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-const LINUX_X64_DEFAULT_URL: &str = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-lgpl.tar.xz";
-
-/// Linux arm64 download URL (`BtbN/FFmpeg-Builds` LGPL — GitHub hosted).
-#[cfg(all(target_os = "linux", target_arch = "aarch64"))]
-const LINUX_ARM64_DEFAULT_URL: &str = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linuxarm64-lgpl.tar.xz";
+/// Pinned `FFmpeg` build identifier for the `BtbN` autobuild (appears in asset filenames).
+pub const FFMPEG_BTBN_BUILD_ID: &str = "N-123625-gfd9f1e9c52";
 
 /// Archive format of the download.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -28,33 +20,67 @@ pub enum ArchiveFormat {
     TarXz,
 }
 
+/// Constructs a `BtbN/FFmpeg-Builds` release URL for the given platform suffix.
+#[cfg(not(target_os = "macos"))]
+fn btbn_url(suffix: &str) -> String {
+    format!(
+        "https://github.com/BtbN/FFmpeg-Builds/releases/download/{}/ffmpeg-{}-{suffix}",
+        FFMPEG_BTBN_TAG, FFMPEG_BTBN_BUILD_ID,
+    )
+}
+
 /// Returns the default download URL for the current platform.
+///
+/// URLs are constructed from the pinned version/tag constants and cached
+/// for the lifetime of the process via `OnceLock`.
 #[must_use]
 pub fn get_default_download_url() -> &'static str {
+    use std::sync::OnceLock;
+
+    static URL: OnceLock<String> = OnceLock::new();
+
+    URL.get_or_init(|| {
+        #[cfg(target_os = "macos")]
+        {
+            let v = FFMPEG_MACOS_VERSION;
+            format!("https://evermeet.cx/ffmpeg/ffmpeg-{v}.zip")
+        }
+        #[cfg(target_os = "windows")]
+        {
+            btbn_url("win64-lgpl.zip")
+        }
+        #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+        {
+            btbn_url("linux64-lgpl.tar.xz")
+        }
+        #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+        {
+            btbn_url("linuxarm64-lgpl.tar.xz")
+        }
+        #[cfg(not(any(
+            target_os = "macos",
+            target_os = "windows",
+            all(target_os = "linux", target_arch = "x86_64"),
+            all(target_os = "linux", target_arch = "aarch64"),
+        )))]
+        {
+            compile_error!("Unsupported platform: no default ffmpeg download URL available");
+        }
+    })
+}
+
+/// Returns the current pinned `FFmpeg` version string for the platform.
+///
+/// macOS uses the evermeet.cx release version; other platforms use the `BtbN` autobuild tag.
+#[must_use]
+pub fn current_ffmpeg_version() -> &'static str {
     #[cfg(target_os = "macos")]
     {
-        MACOS_DEFAULT_URL
+        FFMPEG_MACOS_VERSION
     }
-    #[cfg(target_os = "windows")]
+    #[cfg(not(target_os = "macos"))]
     {
-        WINDOWS_DEFAULT_URL
-    }
-    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-    {
-        LINUX_X64_DEFAULT_URL
-    }
-    #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
-    {
-        LINUX_ARM64_DEFAULT_URL
-    }
-    #[cfg(not(any(
-        target_os = "macos",
-        target_os = "windows",
-        all(target_os = "linux", target_arch = "x86_64"),
-        all(target_os = "linux", target_arch = "aarch64"),
-    )))]
-    {
-        compile_error!("Unsupported platform: no default ffmpeg download URL available");
+        FFMPEG_BTBN_TAG
     }
 }
 
@@ -88,6 +114,30 @@ pub fn get_ffmpeg_path(app_data_dir: &Path) -> PathBuf {
 #[must_use]
 pub fn ffmpeg_exists(app_data_dir: &Path) -> bool {
     get_ffmpeg_path(app_data_dir).exists()
+}
+
+/// Returns the path to the `FFmpeg` version marker file.
+#[must_use]
+pub fn ffmpeg_version_path(app_data_dir: &Path) -> PathBuf {
+    app_data_dir.join("bin").join(".ffmpeg-version")
+}
+
+/// Checks whether the installed ffmpeg matches the pinned version.
+#[must_use]
+pub fn ffmpeg_version_matches(app_data_dir: &Path) -> bool {
+    let version_file = ffmpeg_version_path(app_data_dir);
+    std::fs::read_to_string(version_file)
+        .map(|v| v.trim() == current_ffmpeg_version())
+        .unwrap_or(false)
+}
+
+/// Checks whether the bundled ffmpeg needs to be updated.
+///
+/// Returns `true` if the binary exists but the version marker does not match
+/// the pinned version (or is missing).
+#[must_use]
+pub fn ffmpeg_needs_update(app_data_dir: &Path) -> bool {
+    ffmpeg_exists(app_data_dir) && !ffmpeg_version_matches(app_data_dir)
 }
 
 /// Returns the bin directory under the app data directory.
@@ -281,6 +331,14 @@ where
         std::fs::set_permissions(&final_path, perms).map_err(ConverterError::from)?;
     }
 
+    // Write version marker (only for default URL downloads)
+    if custom_url.is_none() {
+        if let Err(e) = std::fs::write(ffmpeg_version_path(app_data_dir), current_ffmpeg_version())
+        {
+            eprintln!("Warning: failed to write ffmpeg version marker: {e}");
+        }
+    }
+
     // Emit final 100% progress
     on_progress(0, 0, 100.0);
 
@@ -451,6 +509,141 @@ mod tests {
 
         let result = extract_ffmpeg_from_zip(&archive_path, &output_path);
         assert!(result.is_err(), "should fail with invalid archive");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    // --- version pinning ---
+
+    #[test]
+    fn ffmpeg_version_constants_are_not_empty() {
+        assert!(!FFMPEG_MACOS_VERSION.is_empty());
+        assert!(!FFMPEG_BTBN_TAG.is_empty());
+        assert!(!FFMPEG_BTBN_BUILD_ID.is_empty());
+    }
+
+    #[test]
+    fn get_default_download_url_does_not_contain_latest_tag() {
+        let url = get_default_download_url();
+        assert!(
+            !url.contains("download/latest/"),
+            "URL should not use the 'latest' release tag: {url}"
+        );
+    }
+
+    #[test]
+    fn current_ffmpeg_version_is_not_empty() {
+        let version = current_ffmpeg_version();
+        assert!(!version.is_empty());
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn macos_url_contains_pinned_version() {
+        let url = get_default_download_url();
+        assert!(
+            url.contains(FFMPEG_MACOS_VERSION),
+            "macOS URL should contain the pinned version: {url}"
+        );
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    #[test]
+    fn non_macos_url_contains_pinned_tag() {
+        let url = get_default_download_url();
+        assert!(
+            url.contains(FFMPEG_BTBN_TAG),
+            "URL should contain the pinned BtbN tag: {url}"
+        );
+        assert!(
+            url.contains(FFMPEG_BTBN_BUILD_ID),
+            "URL should contain the pinned build ID: {url}"
+        );
+    }
+
+    #[test]
+    fn ffmpeg_version_path_is_in_bin_directory() {
+        let path = ffmpeg_version_path(Path::new("/app-data"));
+        assert_eq!(path, PathBuf::from("/app-data/bin/.ffmpeg-version"));
+    }
+
+    #[test]
+    fn ffmpeg_version_matches_returns_false_for_missing_file() {
+        let matches = ffmpeg_version_matches(Path::new("/tmp/nonexistent-app-data-dir"));
+        assert!(!matches);
+    }
+
+    #[test]
+    fn ffmpeg_version_matches_returns_true_for_correct_version() {
+        let dir = std::env::temp_dir().join("whisper-test-version-match");
+        let bin_dir = dir.join("bin");
+        let _ = std::fs::create_dir_all(&bin_dir);
+
+        std::fs::write(bin_dir.join(".ffmpeg-version"), current_ffmpeg_version())
+            .expect("write version");
+
+        assert!(ffmpeg_version_matches(&dir));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn ffmpeg_version_matches_returns_false_for_wrong_version() {
+        let dir = std::env::temp_dir().join("whisper-test-version-mismatch");
+        let bin_dir = dir.join("bin");
+        let _ = std::fs::create_dir_all(&bin_dir);
+
+        std::fs::write(bin_dir.join(".ffmpeg-version"), "old-version").expect("write version");
+
+        assert!(!ffmpeg_version_matches(&dir));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn ffmpeg_needs_update_returns_false_when_binary_missing() {
+        assert!(!ffmpeg_needs_update(Path::new(
+            "/tmp/nonexistent-app-data-dir"
+        )));
+    }
+
+    #[test]
+    fn ffmpeg_needs_update_returns_true_for_version_mismatch() {
+        let dir = std::env::temp_dir().join("whisper-test-needs-update");
+        let bin_dir = dir.join("bin");
+        let _ = std::fs::create_dir_all(&bin_dir);
+
+        // Create fake ffmpeg binary
+        let binary_name = if cfg!(target_os = "windows") {
+            "ffmpeg.exe"
+        } else {
+            "ffmpeg"
+        };
+        std::fs::write(bin_dir.join(binary_name), b"fake").expect("write binary");
+        // Write wrong version
+        std::fs::write(bin_dir.join(".ffmpeg-version"), "old-version").expect("write version");
+
+        assert!(ffmpeg_needs_update(&dir));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn ffmpeg_needs_update_returns_false_when_version_matches() {
+        let dir = std::env::temp_dir().join("whisper-test-no-update");
+        let bin_dir = dir.join("bin");
+        let _ = std::fs::create_dir_all(&bin_dir);
+
+        let binary_name = if cfg!(target_os = "windows") {
+            "ffmpeg.exe"
+        } else {
+            "ffmpeg"
+        };
+        std::fs::write(bin_dir.join(binary_name), b"fake").expect("write binary");
+        std::fs::write(bin_dir.join(".ffmpeg-version"), current_ffmpeg_version())
+            .expect("write version");
+
+        assert!(!ffmpeg_needs_update(&dir));
 
         let _ = std::fs::remove_dir_all(&dir);
     }
