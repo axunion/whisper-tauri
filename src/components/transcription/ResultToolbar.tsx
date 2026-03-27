@@ -8,7 +8,7 @@ import { useI18n } from "~/i18n";
 import type { ExportFormat } from "~/lib/export";
 import { cn } from "~/lib/utils";
 
-type ResultTab = "text" | "timeline" | "summary" | "keywords" | "actionItems";
+type ResultTab = "text" | "timeline" | "summary" | "cleanText";
 
 const FORMAT_OPTIONS: { value: ExportFormat; labelKey: DictionaryKey }[] = [
   { value: "txt", labelKey: "result.exportTxt" },
@@ -23,8 +23,7 @@ interface ResultToolbarProps {
   onCopy: () => void;
   onSave: (format: ExportFormat) => void;
   onSummarize: () => void;
-  onExtractKeywords: () => void;
-  onExtractActionItems: () => void;
+  onCleanText: () => void;
   onGenerateTitle: () => void;
   isProcessing: boolean;
   isGeneratingTitle: boolean;
@@ -56,9 +55,7 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
   });
 
   const isTextProcessingTab = () =>
-    props.activeTab === "summary" ||
-    props.activeTab === "keywords" ||
-    props.activeTab === "actionItems";
+    props.activeTab === "summary" || props.activeTab === "cleanText";
 
   function handleCopy() {
     props.onCopy();
@@ -136,32 +133,21 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
                 disabled={props.isProcessing}
                 onClick={() => {
                   setAiOpen(false);
+                  props.onCleanText();
+                }}
+              >
+                {t("textProcessing.cleanText")}
+              </button>
+              <button
+                type="button"
+                class={dropdownItemClass}
+                disabled={props.isProcessing}
+                onClick={() => {
+                  setAiOpen(false);
                   props.onSummarize();
                 }}
               >
                 {t("textProcessing.summarize")}
-              </button>
-              <button
-                type="button"
-                class={dropdownItemClass}
-                disabled={props.isProcessing}
-                onClick={() => {
-                  setAiOpen(false);
-                  props.onExtractKeywords();
-                }}
-              >
-                {t("textProcessing.extractKeywords")}
-              </button>
-              <button
-                type="button"
-                class={dropdownItemClass}
-                disabled={props.isProcessing}
-                onClick={() => {
-                  setAiOpen(false);
-                  props.onExtractActionItems();
-                }}
-              >
-                {t("textProcessing.extractActionItems")}
               </button>
             </div>
           </Show>

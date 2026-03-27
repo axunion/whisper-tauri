@@ -1,35 +1,26 @@
 import { FiX } from "solid-icons/fi";
 import type { Component } from "solid-js";
-import { For, Show } from "solid-js";
+import { Show } from "solid-js";
 import { Button } from "~/components/ui/Button";
 import { useI18n } from "~/i18n";
 
-interface ResultKeywordsTabProps {
-  keywordsResult: string | null;
+interface ResultCleanTextTabProps {
+  cleanTextResult: string | null;
   isProcessing: boolean;
   onCancel: () => void;
 }
 
-const ResultKeywordsTab: Component<ResultKeywordsTabProps> = (props) => {
+const ResultCleanTextTab: Component<ResultCleanTextTabProps> = (props) => {
   const { t } = useI18n();
 
-  const hasResult = () => props.keywordsResult !== null;
-
-  const keywords = () => {
-    const result = props.keywordsResult;
-    if (!result) return [];
-    return result
-      .split(/[,\u3001]/)
-      .map((kw) => kw.trim())
-      .filter((kw) => kw.length > 0);
-  };
+  const hasResult = () => props.cleanTextResult !== null;
 
   return (
     <div class="flex h-full flex-col overflow-y-auto rounded-lg border bg-muted/50 p-4">
       <Show when={props.isProcessing}>
         <div class="flex flex-1 flex-col items-center justify-center gap-4">
           <p class="animate-pulse text-sm text-muted-foreground">
-            {t("textProcessing.extractKeywords")}...
+            {t("textProcessing.cleaningText")}
           </p>
           <Button
             variant="outline"
@@ -44,18 +35,12 @@ const ResultKeywordsTab: Component<ResultKeywordsTabProps> = (props) => {
       </Show>
 
       <Show when={hasResult() && !props.isProcessing}>
-        <div class="flex flex-wrap gap-1.5">
-          <For each={keywords()}>
-            {(keyword) => (
-              <span class="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                {keyword}
-              </span>
-            )}
-          </For>
+        <div class="whitespace-pre-wrap text-sm leading-relaxed text-foreground/85">
+          {props.cleanTextResult}
         </div>
       </Show>
     </div>
   );
 };
 
-export { ResultKeywordsTab };
+export { ResultCleanTextTab };

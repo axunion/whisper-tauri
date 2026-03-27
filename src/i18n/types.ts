@@ -132,8 +132,7 @@ export interface Dictionary {
     textTab: string;
     timelineTab: string;
     summaryTab: string;
-    keywordsTab: string;
-    actionItemsTab: string;
+    cleanTextTab: string;
   };
   recording: {
     title: string;
@@ -175,18 +174,11 @@ export interface Dictionary {
     summarizeCompletedToast: string;
     cancelledToast: string;
     settingUp: string;
-    extractKeywords: string;
-    extractActionItems: string;
-    keywordsLabel: string;
-    actionItemsLabel: string;
-    noActionItems: string;
-    keywordsCompletedToast: string;
-    actionItemsCompletedToast: string;
+    cleanText: string;
+    cleaningText: string;
+    cleanTextCompletedToast: string;
     titleGeneratedToast: string;
-    extractingActionItems: string;
     generateTitle: string;
-    generateKeywords: string;
-    generateActionItems: string;
     overwriteConfirmTitle: string;
     overwriteConfirmDescription: string;
   };

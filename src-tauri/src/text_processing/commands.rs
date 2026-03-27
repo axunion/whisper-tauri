@@ -378,13 +378,13 @@ pub async fn text_processing_generate_title(
     Ok(title)
 }
 
-/// Extracts keywords from the given text.
+/// Cleans up transcribed text (removes fillers, adds punctuation, formats paragraphs).
 ///
 /// # Errors
 ///
 /// Returns an error string if the operation fails.
 #[tauri::command]
-pub async fn text_processing_extract_keywords(
+pub async fn text_processing_clean_text(
     app: AppHandle,
     manager: State<'_, tokio::sync::Mutex<LlamaServerManager>>,
     text: String,
@@ -406,80 +406,24 @@ pub async fn text_processing_extract_keywords(
     let chunks = inference::chunk_text(&text, inference::default_max_chunk_chars());
 
     let result = if chunks.len() == 1 {
-        let messages = inference::build_keywords_messages(&text);
+        let messages = inference::build_clean_text_messages(&text);
         inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
             .await
             .map_err::<String, _>(Into::into)?
     } else {
-        let mut all_keywords = Vec::new();
+        let mut cleaned_chunks = Vec::new();
         for chunk in &chunks {
             if token.is_cancelled() {
                 return Err(TextProcessingError::Cancelled.into());
             }
-            let messages = inference::build_keywords_messages(chunk);
+            let messages = inference::build_clean_text_messages(chunk);
             let chunk_result =
                 inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
                     .await
                     .map_err::<String, _>(Into::into)?;
-            all_keywords.push(chunk_result);
+            cleaned_chunks.push(chunk_result);
         }
-        // Combine and deduplicate via a final pass
-        let combined = all_keywords.join(", ");
-        let messages = inference::build_keywords_messages(&combined);
-        inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
-            .await
-            .map_err::<String, _>(Into::into)?
-    };
-
-    Ok(result)
-}
-
-/// Extracts action items from the given text.
-///
-/// # Errors
-///
-/// Returns an error string if the operation fails.
-#[tauri::command]
-pub async fn text_processing_extract_action_items(
-    app: AppHandle,
-    manager: State<'_, tokio::sync::Mutex<LlamaServerManager>>,
-    text: String,
-    model_id: Option<String>,
-) -> Result<String, String> {
-    let task_id = uuid::Uuid::new_v4().to_string();
-    let token = inference::INFERENCE_TASK_MANAGER.create_task(&task_id);
-    let _guard = TaskGuard {
-        task_id: task_id.clone(),
-    };
-
-    emit_initial_progress(&app, &task_id);
-
-    let port = ensure_server_running(&app, &manager, model_id.as_deref()).await?;
-    if token.is_cancelled() {
-        return Err(TextProcessingError::Cancelled.into());
-    }
-
-    let chunks = inference::chunk_text(&text, inference::default_max_chunk_chars());
-
-    let result = if chunks.len() == 1 {
-        let messages = inference::build_action_items_messages(&text);
-        inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
-            .await
-            .map_err::<String, _>(Into::into)?
-    } else {
-        let mut all_items = Vec::new();
-        for chunk in &chunks {
-            if token.is_cancelled() {
-                return Err(TextProcessingError::Cancelled.into());
-            }
-            let messages = inference::build_action_items_messages(chunk);
-            let chunk_result =
-                inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
-                    .await
-                    .map_err::<String, _>(Into::into)?;
-            all_items.push(chunk_result);
-        }
-        all_items.join("\n")
+        cleaned_chunks.join("\n\n")
     };
 
     Ok(result)

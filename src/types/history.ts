@@ -95,7 +95,7 @@ export interface HistoryFilter {
 /**
  * Valid content types for AI-generated content.
  */
-export type AiContentType = "summary" | "keywords" | "actionItems" | "title";
+export type AiContentType = "summary" | "cleanText" | "title";
 
 /**
  * AI-generated content associated with a history entry.

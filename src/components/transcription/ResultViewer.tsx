@@ -20,8 +20,7 @@ import { toast } from "~/lib/toast";
 import { createAiSession } from "~/primitives/createAiSession";
 import { createTextProcessing } from "~/primitives/createTextProcessing";
 import type { TranscriptionResult } from "~/types";
-import { ResultActionItemsTab } from "./ResultActionItemsTab";
-import { ResultKeywordsTab } from "./ResultKeywordsTab";
+import { ResultCleanTextTab } from "./ResultCleanTextTab";
 import { ResultSummaryTab } from "./ResultSummaryTab";
 import { ResultTextTab } from "./ResultTextTab";
 import { ResultTimelineTab } from "./ResultTimelineTab";
@@ -43,9 +42,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
   const [activeTab, setActiveTab] = createSignal<ResultTab>("text");
   const [showPrereqDialog, setShowPrereqDialog] = createSignal(false);
   const [summaryTabRequested, setSummaryTabRequested] = createSignal(false);
-  const [keywordsTabRequested, setKeywordsTabRequested] = createSignal(false);
-  const [actionItemsTabRequested, setActionItemsTabRequested] =
-    createSignal(false);
+  const [cleanTextTabRequested, setCleanTextTabRequested] = createSignal(false);
   const [pendingAction, setPendingAction] = createSignal<(() => void) | null>(
     null,
   );
@@ -60,11 +57,8 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     session.summaryResult() !== null ||
     session.isProcessing();
 
-  const keywordsTabVisible = () =>
-    keywordsTabRequested() || session.keywordsResult() !== null;
-
-  const actionItemsTabVisible = () =>
-    actionItemsTabRequested() || session.actionItemsResult() !== null;
+  const cleanTextTabVisible = () =>
+    cleanTextTabRequested() || session.cleanTextResult() !== null;
 
   onMount(() => {
     tp.checkServer();
@@ -76,11 +70,8 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     if (tab === "summary") {
       return session.summaryResult() ?? "";
     }
-    if (tab === "keywords") {
-      return session.keywordsResult() ?? "";
-    }
-    if (tab === "actionItems") {
-      return session.actionItemsResult() ?? "";
+    if (tab === "cleanText") {
+      return session.cleanTextResult() ?? "";
     }
     return props.result.text;
   }
@@ -122,22 +113,12 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     });
   }
 
-  function executeExtractKeywords() {
-    setKeywordsTabRequested(true);
-    setActiveTab("keywords");
-    session.extractKeywords(props.result.text).then((result) => {
+  function executeCleanText() {
+    setCleanTextTabRequested(true);
+    setActiveTab("cleanText");
+    session.cleanText(props.result.text).then((result) => {
       if (result) {
-        toast.success(t("textProcessing.keywordsCompletedToast"));
-      }
-    });
-  }
-
-  function executeExtractActionItems() {
-    setActionItemsTabRequested(true);
-    setActiveTab("actionItems");
-    session.extractActionItems(props.result.text).then((result) => {
-      if (result) {
-        toast.success(t("textProcessing.actionItemsCompletedToast"));
+        toast.success(t("textProcessing.cleanTextCompletedToast"));
       }
     });
   }
@@ -185,16 +166,10 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         onSummarize={() =>
           withOverwriteCheck(session.summaryResult() !== null, executeSummarize)
         }
-        onExtractKeywords={() =>
+        onCleanText={() =>
           withOverwriteCheck(
-            session.keywordsResult() !== null,
-            executeExtractKeywords,
-          )
-        }
-        onExtractActionItems={() =>
-          withOverwriteCheck(
-            session.actionItemsResult() !== null,
-            executeExtractActionItems,
+            session.cleanTextResult() !== null,
+            executeCleanText,
           )
         }
         onGenerateTitle={() => {
@@ -215,18 +190,13 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         <TabsList>
           <TabsTrigger value="text">{t("result.textTab")}</TabsTrigger>
           <TabsTrigger value="timeline">{t("result.timelineTab")}</TabsTrigger>
+          <Show when={cleanTextTabVisible()}>
+            <TabsTrigger value="cleanText">
+              {t("result.cleanTextTab")}
+            </TabsTrigger>
+          </Show>
           <Show when={summaryTabVisible()}>
             <TabsTrigger value="summary">{t("result.summaryTab")}</TabsTrigger>
-          </Show>
-          <Show when={keywordsTabVisible()}>
-            <TabsTrigger value="keywords">
-              {t("result.keywordsTab")}
-            </TabsTrigger>
-          </Show>
-          <Show when={actionItemsTabVisible()}>
-            <TabsTrigger value="actionItems">
-              {t("result.actionItemsTab")}
-            </TabsTrigger>
           </Show>
         </TabsList>
         <TabsContent value="text" class="mt-3 min-h-0 flex-1">
@@ -235,6 +205,18 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         <TabsContent value="timeline" class="mt-3 min-h-0 flex-1">
           <ResultTimelineTab segments={props.result.segments} />
         </TabsContent>
+        <Show when={cleanTextTabVisible()}>
+          <TabsContent value="cleanText" class="mt-3 min-h-0 flex-1">
+            <ResultCleanTextTab
+              cleanTextResult={session.cleanTextResult()}
+              isProcessing={
+                session.isProcessing() &&
+                session.currentOperation() === "cleanText"
+              }
+              onCancel={() => session.cancel()}
+            />
+          </TabsContent>
+        </Show>
         <Show when={summaryTabVisible()}>
           <TabsContent value="summary" class="mt-3 min-h-0 flex-1">
             <ResultSummaryTab
@@ -242,30 +224,6 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
               isProcessing={
                 session.isProcessing() &&
                 session.currentOperation() === "summary"
-              }
-              onCancel={() => session.cancel()}
-            />
-          </TabsContent>
-        </Show>
-        <Show when={keywordsTabVisible()}>
-          <TabsContent value="keywords" class="mt-3 min-h-0 flex-1">
-            <ResultKeywordsTab
-              keywordsResult={session.keywordsResult()}
-              isProcessing={
-                session.isProcessing() &&
-                session.currentOperation() === "keywords"
-              }
-              onCancel={() => session.cancel()}
-            />
-          </TabsContent>
-        </Show>
-        <Show when={actionItemsTabVisible()}>
-          <TabsContent value="actionItems" class="mt-3 min-h-0 flex-1">
-            <ResultActionItemsTab
-              actionItemsResult={session.actionItemsResult()}
-              isProcessing={
-                session.isProcessing() &&
-                session.currentOperation() === "actionItems"
               }
               onCancel={() => session.cancel()}
             />

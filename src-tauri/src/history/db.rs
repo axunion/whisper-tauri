@@ -1166,7 +1166,7 @@ mod tests {
         let (_dir, path) = setup_db();
         let entry_id = save_entry(&path, &sample_params()).expect("save entry");
 
-        for content_type in &["summary", "keywords", "actionItems"] {
+        for content_type in &["summary", "cleanText", "title"] {
             let params = AiContentSaveParams {
                 history_id: entry_id.clone(),
                 content_type: content_type.to_string(),

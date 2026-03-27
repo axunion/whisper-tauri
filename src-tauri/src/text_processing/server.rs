@@ -134,6 +134,8 @@ impl LlamaServerManager {
         let port = find_free_port()?;
 
         // Spawn llama-server subprocess
+        // --jinja + --chat-template-kwargs: disables Qwen3.5 thinking mode
+        // (ignored by models that don't use enable_thinking in their template)
         let mut child = Command::new(&server_path)
             .args([
                 "--port",
@@ -144,6 +146,9 @@ impl LlamaServerManager {
                 "4096",
                 "--threads",
                 &num_threads().to_string(),
+                "--jinja",
+                "--chat-template-kwargs",
+                r#"{"enable_thinking":false}"#,
             ])
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::piped())

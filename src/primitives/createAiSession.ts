@@ -9,20 +9,18 @@ import type { AppError } from "~/types/errors";
 export interface AiSession {
   // State
   summaryResult: Accessor<string | null>;
-  keywordsResult: Accessor<string | null>;
-  actionItemsResult: Accessor<string | null>;
+  cleanTextResult: Accessor<string | null>;
   titleResult: Accessor<string | null>;
   isProcessing: Accessor<boolean>;
   isGeneratingTitle: Accessor<boolean>;
   isLoaded: Accessor<boolean>;
-  currentOperation: Accessor<"summary" | "keywords" | "actionItems" | null>;
+  currentOperation: Accessor<"summary" | "cleanText" | null>;
   inferenceProgress: Accessor<InferenceProgress | null>;
   error: Accessor<AppError | null>;
 
   // Actions
   summarize: (text: string) => Promise<string | null>;
-  extractKeywords: (text: string) => Promise<string | null>;
-  extractActionItems: (text: string) => Promise<string | null>;
+  cleanText: (text: string) => Promise<string | null>;
   generateTitle: (text: string) => Promise<string | null>;
   cancel: () => Promise<void>;
   clearError: () => void;
@@ -39,15 +37,14 @@ export function createAiSession(
   const tp = createTextProcessing();
 
   const [summaryResult, setSummaryResult] = createSignal<string | null>(null);
-  const [keywordsResult, setKeywordsResult] = createSignal<string | null>(null);
-  const [actionItemsResult, setActionItemsResult] = createSignal<string | null>(
+  const [cleanTextResult, setCleanTextResult] = createSignal<string | null>(
     null,
   );
   const [titleResult, setTitleResult] = createSignal<string | null>(null);
   const [isProcessing, setIsProcessing] = createSignal(false);
   const [isGeneratingTitle, setIsGeneratingTitle] = createSignal(false);
   const [currentOperation, setCurrentOperation] = createSignal<
-    "summary" | "keywords" | "actionItems" | null
+    "summary" | "cleanText" | null
   >(null);
   const [error, setError] = createSignal<AppError | null>(null);
   const [isLoaded, setIsLoaded] = createSignal(false);
@@ -67,11 +64,8 @@ export function createAiSession(
         case "summary":
           setSummaryResult(c.text);
           break;
-        case "keywords":
-          setKeywordsResult(c.text);
-          break;
-        case "actionItems":
-          setActionItemsResult(c.text);
+        case "cleanText":
+          setCleanTextResult(c.text);
           break;
         case "title":
           setTitleResult(c.text);
@@ -122,7 +116,7 @@ export function createAiSession(
   async function runExtraction(
     command: string,
     contentType: AiContentType,
-    operation: "summary" | "keywords" | "actionItems",
+    operation: "summary" | "cleanText",
     setResult: (v: string | null) => void,
     text: string,
   ): Promise<string | null> {
@@ -158,22 +152,12 @@ export function createAiSession(
     );
   }
 
-  async function extractKeywords(text: string): Promise<string | null> {
+  async function cleanText(text: string): Promise<string | null> {
     return runExtraction(
-      "text_processing_extract_keywords",
-      "keywords",
-      "keywords",
-      setKeywordsResult,
-      text,
-    );
-  }
-
-  async function extractActionItems(text: string): Promise<string | null> {
-    return runExtraction(
-      "text_processing_extract_action_items",
-      "actionItems",
-      "actionItems",
-      setActionItemsResult,
+      "text_processing_clean_text",
+      "cleanText",
+      "cleanText",
+      setCleanTextResult,
       text,
     );
   }
@@ -209,8 +193,7 @@ export function createAiSession(
 
   return {
     summaryResult,
-    keywordsResult,
-    actionItemsResult,
+    cleanTextResult,
     titleResult,
     isProcessing,
     isGeneratingTitle,
@@ -219,8 +202,7 @@ export function createAiSession(
     inferenceProgress,
     error,
     summarize,
-    extractKeywords,
-    extractActionItems,
+    cleanText,
     generateTitle,
     cancel: cancelSession,
     clearError,

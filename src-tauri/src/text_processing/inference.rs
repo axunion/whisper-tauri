@@ -37,15 +37,21 @@ pub fn build_summarize_messages(text: &str) -> Vec<ChatMessage> {
         ChatMessage {
             role: "system".to_string(),
             content: concat!(
-                "あなたは日本語テキストの要約専門家です。以下のルールに従ってテキストを構造化された要約にまとめてください:\n",
+                "あなたは文字起こしテキストを構造化された要約にまとめる専門家です。以下のルールに従ってください:\n",
+                "1. テキストの主要なトピックごとにセクションを作る\n",
+                "2. 各セクションは「### 見出し」で始める\n",
+                "3. 各セクションの下に重要ポイントを「- 」の箇条書きで書く\n",
+                "4. セクション数は2〜4個、各セクションのポイントは1〜3個\n",
+                "5. 要約のみ出力し、前置きや説明は不要\n",
                 "\n",
-                "1. テキストの内容を分析し、主要なトピックごとにセクションを作成する\n",
-                "2. 各セクションは「### セクション見出し」の形式で見出しをつける\n",
-                "3. 各セクションの下に、重要なポイントを「- 」で始まる箇条書きで列挙する\n",
-                "4. セクション数は2〜5個程度にする\n",
-                "5. 各セクションのポイントは1〜4個程度にする\n",
-                "6. 要約結果のみを出力し、説明や前置きは一切含めない\n",
-                "7. 元のテキストの重要な情報を漏らさない"
+                "<example>\n",
+                "### プロジェクトの進捗\n",
+                "- バックエンドAPIの実装が完了し、テスト環境へのデプロイが済んだ\n",
+                "- フロントエンドは来週中にデザインレビューを行う予定\n",
+                "\n",
+                "### 今後の課題\n",
+                "- パフォーマンス最適化が未着手のため優先度を上げる必要がある\n",
+                "</example>"
             )
             .to_string(),
         },
@@ -77,41 +83,20 @@ pub fn build_title_messages(text: &str) -> Vec<ChatMessage> {
     ]
 }
 
-/// Builds chat messages for keyword extraction.
+/// Builds chat messages for text cleanup (filler removal, punctuation, paragraphs).
 #[must_use]
-pub fn build_keywords_messages(text: &str) -> Vec<ChatMessage> {
+pub fn build_clean_text_messages(text: &str) -> Vec<ChatMessage> {
     vec![
         ChatMessage {
             role: "system".to_string(),
             content: concat!(
-                "あなたはテキストからキーワードを抽出する専門家です。以下のルールに従ってください:\n",
-                "1. テキストの主要なトピック・キーワードを5-10個抽出する\n",
-                "2. 各キーワードはカンマ区切りで1行で出力する\n",
-                "3. キーワードのみを出力し、番号や説明は含めない\n",
-                "4. 固有名詞、専門用語、重要な概念を優先する"
-            )
-            .to_string(),
-        },
-        ChatMessage {
-            role: "user".to_string(),
-            content: text.to_string(),
-        },
-    ]
-}
-
-/// Builds chat messages for action item extraction.
-#[must_use]
-pub fn build_action_items_messages(text: &str) -> Vec<ChatMessage> {
-    vec![
-        ChatMessage {
-            role: "system".to_string(),
-            content: concat!(
-                "あなたは会議録からアクションアイテムを抽出する専門家です。以下のルールに従ってください:\n",
-                "1. テキストからアクションアイテム（タスク、やるべきこと、決定事項）を抽出する\n",
-                "2. 各アイテムを「- 」で始まる箇条書きで出力する\n",
-                "3. アクションアイテムのみを出力し、説明や前置きは含めない\n",
-                "4. アクションアイテムが見つからない場合は「アクションアイテムはありません」とだけ出力する\n",
-                "5. 担当者や期限が明確な場合はそれも含める"
+                "あなたは日本語の文字起こしテキストを読みやすく整形する専門家です。以下のルールに従ってください:\n",
+                "1. フィラー（えーと、あのー、まあ、えー、うーん等）を除去する\n",
+                "2. 言い直しや繰り返しを整理する\n",
+                "3. 適切な句読点（。、）を補い、文を整える\n",
+                "4. 意味のまとまりごとに段落を分ける\n",
+                "5. 元の内容や意味は変更しない\n",
+                "6. 整形後のテキストのみを出力する"
             )
             .to_string(),
         },
@@ -299,7 +284,7 @@ mod tests {
         let messages = build_summarize_messages("text");
         let system = &messages[0].content;
         assert!(system.contains("構造化された要約"));
-        assert!(system.contains("### セクション見出し"));
+        assert!(system.contains("### 見出し"));
         assert!(system.contains("箇条書き"));
     }
 
@@ -396,35 +381,19 @@ mod tests {
         assert!(messages[0].content.contains("タイトル"));
     }
 
-    // --- build_keywords_messages ---
+    // --- build_clean_text_messages ---
 
     #[test]
-    fn keywords_messages_has_system_and_user() {
-        let messages = build_keywords_messages("テスト文章");
+    fn clean_text_messages_has_system_and_user() {
+        let messages = build_clean_text_messages("テスト文章");
         assert_eq!(messages.len(), 2);
         assert_eq!(messages[0].role, "system");
         assert_eq!(messages[1].role, "user");
     }
 
     #[test]
-    fn keywords_system_contains_keyword_instructions() {
-        let messages = build_keywords_messages("test");
-        assert!(messages[0].content.contains("キーワード"));
-    }
-
-    // --- build_action_items_messages ---
-
-    #[test]
-    fn action_items_messages_has_system_and_user() {
-        let messages = build_action_items_messages("テスト文章");
-        assert_eq!(messages.len(), 2);
-        assert_eq!(messages[0].role, "system");
-        assert_eq!(messages[1].role, "user");
-    }
-
-    #[test]
-    fn action_items_system_contains_action_instructions() {
-        let messages = build_action_items_messages("test");
-        assert!(messages[0].content.contains("アクションアイテム"));
+    fn clean_text_system_contains_instructions() {
+        let messages = build_clean_text_messages("test");
+        assert!(messages[0].content.contains("整形"));
     }
 }

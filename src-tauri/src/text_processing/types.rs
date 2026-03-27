@@ -176,5 +176,4 @@ mod tests {
         assert!(json.contains("\"role\":\"system\""));
         assert!(json.contains("\"content\":\"You are a helpful assistant.\""));
     }
-
 }
