@@ -25,13 +25,12 @@ export function DownloadIndicator() {
 
   const downloadInfo = createMemo(() => {
     if (tp.isDownloading()) {
-      const progress =
-        tp.downloadPhase() === "server"
-          ? 0
-          : (tp.downloadProgress()?.progress ?? 0);
+      const isServerPhase = tp.downloadPhase() === "server";
       return {
-        label: t("common.downloadingTextModel"),
-        progress,
+        label: isServerPhase
+          ? t("common.downloadingServer")
+          : t("common.downloadingTextModel"),
+        progress: tp.downloadProgress()?.progress ?? 0,
       };
     }
     if (whisper.isDownloading()) {

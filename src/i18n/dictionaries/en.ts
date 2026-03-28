@@ -17,6 +17,7 @@ export const en: Dictionary = {
     downloadingSpeechModel: "Downloading speech model",
     downloadingFfmpeg: "Downloading FFmpeg",
     downloadingTextModel: "Downloading language model",
+    downloadingServer: "Downloading llama-server",
   },
   nav: {
     dashboard: "Dashboard",

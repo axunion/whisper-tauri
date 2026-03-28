@@ -135,11 +135,13 @@ async function downloadModel(modelId: string): Promise<boolean> {
     // Phase 1: サーバーが未ダウンロードなら自動取得
     if (!serverAvailable()) {
       setDownloadPhase("server");
+      setDownloadProgress(null);
       await invoke("text_processing_download_server");
       setServerAvailable(true);
     }
     // Phase 2: モデルダウンロード
     setDownloadPhase("model");
+    setDownloadProgress(null);
     await invoke("text_processing_download_model", { modelId });
     await loadModels();
     return true;
@@ -170,6 +172,7 @@ async function downloadServer(): Promise<boolean> {
   if (isDownloading()) return false;
   setIsDownloading(true);
   setDownloadPhase("server");
+  setDownloadProgress(null);
   try {
     await invoke("text_processing_download_server");
     setServerAvailable(true);

@@ -13,7 +13,7 @@ import {
 } from "../ui/AlertDialog";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
-import { Progress } from "../ui/Progress";
+import { DownloadProgress } from "../ui/DownloadProgress";
 
 interface ModelManagerProps {
   whisper: ReturnType<typeof createWhisper>;
@@ -49,12 +49,12 @@ export function ModelManager(props: ModelManagerProps) {
                 ? isSelected(model.id)
                   ? "ring-2 ring-primary bg-primary/5"
                   : "hover:bg-muted/50"
-                : ""
+                : "opacity-50 pointer-events-auto"
             }`}
+            aria-disabled={!model.downloaded}
             onClick={() => {
               if (model.downloaded) props.whisper.selectModel(model);
             }}
-            disabled={!model.downloaded}
           >
             <div class="space-y-1">
               <div class="flex items-center gap-2">
@@ -90,19 +90,9 @@ export function ModelManager(props: ModelManagerProps) {
                       </Button>
                     }
                   >
-                    <div class="w-28 space-y-1">
-                      <Progress
-                        value={props.whisper.downloadProgress()?.progress ?? 0}
-                        minValue={0}
-                        maxValue={100}
-                      />
-                      <p class="text-center text-xs text-muted-foreground">
-                        {Math.round(
-                          props.whisper.downloadProgress()?.progress ?? 0,
-                        )}
-                        %
-                      </p>
-                    </div>
+                    <DownloadProgress
+                      progress={props.whisper.downloadProgress()?.progress ?? 0}
+                    />
                   </Show>
                 }
               >

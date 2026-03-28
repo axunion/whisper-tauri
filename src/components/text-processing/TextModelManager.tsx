@@ -15,7 +15,7 @@ import {
   CardHeader,
   CardTitleWithIcon,
 } from "~/components/ui/Card";
-import { Progress } from "~/components/ui/Progress";
+import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { useI18n } from "~/i18n";
 import { getModelDescription } from "~/lib/modelDescription";
 import { toast } from "~/lib/toast";
@@ -96,12 +96,12 @@ export default function TextModelManager(props: TextModelManagerProps) {
                     ? isSelected(model.id)
                       ? "ring-2 ring-primary bg-primary/5"
                       : "hover:bg-muted/50"
-                    : ""
+                    : "opacity-50 pointer-events-auto"
                 }`}
+                aria-disabled={!model.downloaded}
                 onClick={() => {
                   if (model.downloaded) tp.selectModel(model.id);
                 }}
-                disabled={!model.downloaded}
               >
                 <div class="space-y-1">
                   <div class="flex items-center gap-2">
@@ -137,22 +137,14 @@ export default function TextModelManager(props: TextModelManagerProps) {
                           </Button>
                         }
                       >
-                        <div class="w-28 space-y-1">
-                          <Progress
-                            value={
-                              tp.downloadPhase() === "server"
-                                ? 0
-                                : (tp.downloadProgress()?.progress ?? 0)
-                            }
-                            minValue={0}
-                            maxValue={100}
-                          />
-                          <p class="text-center text-xs text-muted-foreground">
-                            {tp.downloadPhase() === "server"
+                        <DownloadProgress
+                          progress={tp.downloadProgress()?.progress ?? 0}
+                          label={
+                            tp.downloadPhase() === "server"
                               ? t("textProcessing.settingUp")
-                              : `${Math.round(tp.downloadProgress()?.progress ?? 0)}%`}
-                          </p>
-                        </div>
+                              : undefined
+                          }
+                        />
                       </Show>
                     }
                   >
@@ -220,9 +212,6 @@ export default function TextModelManager(props: TextModelManagerProps) {
             <div class="flex items-center justify-between rounded-lg border p-4">
               <div class="flex items-center gap-2">
                 <span class="font-medium">llama-server</span>
-                <Show when={tp.serverAvailable()}>
-                  <Badge variant="secondary">{t("dashboard.downloaded")}</Badge>
-                </Show>
               </div>
               <Show
                 when={tp.serverAvailable()}
@@ -245,16 +234,9 @@ export default function TextModelManager(props: TextModelManagerProps) {
                       </Button>
                     }
                   >
-                    <div class="w-28 space-y-1">
-                      <Progress
-                        value={tp.downloadProgress()?.progress ?? 0}
-                        minValue={0}
-                        maxValue={100}
-                      />
-                      <p class="text-center text-xs text-muted-foreground">
-                        {Math.round(tp.downloadProgress()?.progress ?? 0)}%
-                      </p>
-                    </div>
+                    <DownloadProgress
+                      progress={tp.downloadProgress()?.progress ?? 0}
+                    />
                   </Show>
                 }
               >

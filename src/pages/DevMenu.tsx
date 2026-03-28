@@ -11,7 +11,6 @@ import { onMount, Show } from "solid-js";
 import { CacheClear, LlmTester, ModelManager } from "~/components/dev";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
 import { TextModelManager } from "~/components/text-processing";
-import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
 import {
   Card,
@@ -19,7 +18,7 @@ import {
   CardHeader,
   CardTitleWithIcon,
 } from "~/components/ui/Card";
-import { Progress } from "~/components/ui/Progress";
+import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
 import { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
@@ -70,9 +69,6 @@ function DevMenuContent() {
           <div class="flex items-center justify-between rounded-lg border p-4">
             <div class="flex items-center gap-2">
               <span class="text-sm font-medium">FFmpeg</span>
-              <Show when={ffmpeg.isBundled()}>
-                <Badge variant="outline">{t("dashboard.downloaded")}</Badge>
-              </Show>
             </div>
             <Show
               when={ffmpeg.isBundled()}
@@ -94,16 +90,9 @@ function DevMenuContent() {
                     </Button>
                   }
                 >
-                  <div class="w-28 space-y-1">
-                    <Progress
-                      value={ffmpeg.downloadProgress()?.progress ?? 0}
-                      minValue={0}
-                      maxValue={100}
-                    />
-                    <p class="text-center text-xs text-muted-foreground">
-                      {Math.round(ffmpeg.downloadProgress()?.progress ?? 0)}%
-                    </p>
-                  </div>
+                  <DownloadProgress
+                    progress={ffmpeg.downloadProgress()?.progress ?? 0}
+                  />
                 </Show>
               }
             >

@@ -17,6 +17,7 @@ export interface Dictionary {
     downloadingSpeechModel: string;
     downloadingFfmpeg: string;
     downloadingTextModel: string;
+    downloadingServer: string;
   };
   nav: {
     dashboard: string;

@@ -16,7 +16,7 @@ import {
   CardHeader,
   CardTitleWithIcon,
 } from "~/components/ui/Card";
-import { Progress } from "~/components/ui/Progress";
+import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { useI18n } from "~/i18n";
 import { getModelDescription } from "~/lib/modelDescription";
 import { toast } from "~/lib/toast";
@@ -61,12 +61,12 @@ export default function WhisperModelManager() {
                     ? isSelected(model.id)
                       ? "ring-2 ring-primary bg-primary/5"
                       : "hover:bg-muted/50"
-                    : ""
+                    : "opacity-50 pointer-events-auto"
                 }`}
+                aria-disabled={!model.downloaded}
                 onClick={() => {
                   if (model.downloaded) whisper.selectModel(model);
                 }}
-                disabled={!model.downloaded}
               >
                 <div class="space-y-1">
                   <div class="flex items-center gap-2">
@@ -102,19 +102,9 @@ export default function WhisperModelManager() {
                           </Button>
                         }
                       >
-                        <div class="w-28 space-y-1">
-                          <Progress
-                            value={whisper.downloadProgress()?.progress ?? 0}
-                            minValue={0}
-                            maxValue={100}
-                          />
-                          <p class="text-center text-xs text-muted-foreground">
-                            {Math.round(
-                              whisper.downloadProgress()?.progress ?? 0,
-                            )}
-                            %
-                          </p>
-                        </div>
+                        <DownloadProgress
+                          progress={whisper.downloadProgress()?.progress ?? 0}
+                        />
                       </Show>
                     }
                   >

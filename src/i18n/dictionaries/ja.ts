@@ -17,6 +17,7 @@ export const ja: Dictionary = {
     downloadingSpeechModel: "音声モデルをダウンロード中",
     downloadingFfmpeg: "FFmpegをダウンロード中",
     downloadingTextModel: "言語モデルをダウンロード中",
+    downloadingServer: "llama-serverをダウンロード中",
   },
   nav: {
     dashboard: "ダッシュボード",

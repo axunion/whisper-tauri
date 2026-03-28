@@ -10,6 +10,7 @@ export {
   CardHeader,
   CardTitle,
 } from "./Card";
+export { DownloadProgress } from "./DownloadProgress";
 export { Progress } from "./Progress";
 export {
   Sidebar,

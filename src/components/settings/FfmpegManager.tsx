@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitleWithIcon,
 } from "~/components/ui/Card";
-import { Progress } from "~/components/ui/Progress";
+import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
 import { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
@@ -88,16 +88,9 @@ export default function FfmpegManager() {
                 </Button>
               }
             >
-              <div class="w-28 space-y-1">
-                <Progress
-                  value={ffmpeg.downloadProgress()?.progress ?? 0}
-                  minValue={0}
-                  maxValue={100}
-                />
-                <p class="text-center text-xs text-muted-foreground">
-                  {Math.round(ffmpeg.downloadProgress()?.progress ?? 0)}%
-                </p>
-              </div>
+              <DownloadProgress
+                progress={ffmpeg.downloadProgress()?.progress ?? 0}
+              />
             </Show>
           </Show>
         </div>
