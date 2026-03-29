@@ -40,11 +40,8 @@ describe("t()", () => {
     const i18n = createI18n("en");
     const result = i18n.t("settings.deleteModelConfirmation", {
       name: "large-v3-turbo",
-      size: "1.6GB",
     });
-    expect(result).toBe(
-      "Delete large-v3-turbo (1.6GB). This action cannot be undone.",
-    );
+    expect(result).toBe("Delete large-v3-turbo. This action cannot be undone.");
   });
 });
 

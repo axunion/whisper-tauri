@@ -109,10 +109,13 @@ export const ja: Dictionary = {
     modelManagement: "音声モデル管理",
     deleteModel: "モデルの削除",
     deleteModelConfirmation:
-      "{name} ({size}) が削除されます。この操作は取り消せません。",
+      "{name} が削除されます。この操作は取り消せません。",
     modelDeletedToast: "モデルを削除しました",
     loadingModels: "モデル情報を読み込み中...",
     toolManagement: "ツール管理",
+    deleteFfmpeg: "FFmpegの削除",
+    deleteFfmpegConfirmation:
+      "アプリで管理するFFmpegが削除されます。この操作は取り消せません。",
     ffmpegDeletedToast: "FFmpegを削除しました",
     ffmpegDownloadedToast: "FFmpegをダウンロードしました",
     ffmpegUpdateAvailable: "新しいバージョンがあります",
@@ -174,9 +177,12 @@ export const ja: Dictionary = {
     serverManagement: "推論サーバー管理",
     deleteModel: "モデルの削除",
     deleteModelConfirmation:
-      "{name} ({size}) が削除されます。この操作は取り消せません。",
+      "{name} が削除されます。この操作は取り消せません。",
     modelDeletedToast: "言語モデルを削除しました",
     serverDownloadedToast: "llama-serverをダウンロードしました",
+    deleteServer: "サーバーの削除",
+    deleteServerConfirmation:
+      "llama-serverが削除されます。この操作は取り消せません。",
     serverDeletedToast: "llama-serverを削除しました",
     modelDownloadedToast: "言語モデルをダウンロードしました",
     copyResult: "結果をコピー",
@@ -254,15 +260,22 @@ export const ja: Dictionary = {
     noDownloadedModels: "ダウンロード済みモデルはありません。",
     deleteModel: "モデルの削除",
     deleteModelConfirmation:
-      "{name} ({size}) が削除されます。この操作は取り消せません。",
+      "{name} が削除されます。この操作は取り消せません。",
     deleteAllModels: "すべてのモデルを削除",
     deletingAll: "全削除中...",
     deleteAllModelsConfirmation:
       "ダウンロード済みの {count} モデルがすべて削除されます。この操作は取り消せません。",
     modelDeletedToast: "モデルを削除しました",
     allModelsDeletedToast: "すべてのモデルを削除しました",
+    deleteFfmpeg: "FFmpegの削除",
+    deleteFfmpegConfirmation:
+      "アプリで管理するFFmpegが削除されます。この操作は取り消せません。",
     ffmpegDeletedToast: "FFmpegを削除しました",
+    resetOnboardingConfirmTitle: "オンボーディングのリセット",
+    resetOnboardingConfirmDescription:
+      "オンボーディング状態がリセットされ、次回起動時にセットアップ画面が表示されます。",
     llmTester: "LLMテスト",
+    defaultInput: "あなたの特徴を説明してください。",
     inputPlaceholder: "メッセージを入力...",
     send: "送信",
     prerequisiteWarning: "が未ダウンロードです",

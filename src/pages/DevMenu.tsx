@@ -18,6 +18,7 @@ import {
   CardHeader,
   CardTitleWithIcon,
 } from "~/components/ui/Card";
+import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
@@ -58,6 +59,18 @@ function DevMenuContent() {
       {/* Text Model Management */}
       <TextModelManager devMode textProcessing={textProcessing} />
 
+      {/* LLM Tester */}
+      <Card>
+        <CardHeader>
+          <CardTitleWithIcon icon={() => <FiMessageSquare class="size-4" />}>
+            {t("dev.llmTester")}
+          </CardTitleWithIcon>
+        </CardHeader>
+        <CardContent>
+          <LlmTester textProcessing={textProcessing} />
+        </CardContent>
+      </Card>
+
       {/* FFmpeg Manager */}
       <Card>
         <CardHeader>
@@ -96,32 +109,34 @@ function DevMenuContent() {
                 </Show>
               }
             >
-              <Button
-                variant="destructive"
-                size="sm"
-                class="w-28"
-                onClick={async () => {
+              <ConfirmDialog
+                title={t("dev.deleteFfmpeg")}
+                description={t("dev.deleteFfmpegConfirmation")}
+                confirmLabel={
+                  <>
+                    <FiTrash2 />
+                    {t("common.delete")}
+                  </>
+                }
+                onConfirm={async () => {
                   await ffmpeg.deleteBundled();
                   toast.success(t("dev.ffmpegDeletedToast"));
                 }}
               >
-                <FiTrash2 />
-                {t("common.delete")}
-              </Button>
+                {(openDialog) => (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    class="w-28"
+                    onClick={openDialog}
+                  >
+                    <FiTrash2 />
+                    {t("common.delete")}
+                  </Button>
+                )}
+              </ConfirmDialog>
             </Show>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* LLM Tester */}
-      <Card>
-        <CardHeader>
-          <CardTitleWithIcon icon={() => <FiMessageSquare class="size-4" />}>
-            {t("dev.llmTester")}
-          </CardTitleWithIcon>
-        </CardHeader>
-        <CardContent>
-          <LlmTester textProcessing={textProcessing} />
         </CardContent>
       </Card>
 
@@ -136,18 +151,32 @@ function DevMenuContent() {
           <CacheClear history={history} />
           <div class="flex items-center justify-between rounded-lg border p-4">
             <span class="text-sm font-medium">{t("dev.resetOnboarding")}</span>
-            <Button
-              variant="outline"
-              size="sm"
-              class="w-28"
-              onClick={async () => {
+            <ConfirmDialog
+              title={t("dev.resetOnboardingConfirmTitle")}
+              description={t("dev.resetOnboardingConfirmDescription")}
+              confirmLabel={
+                <>
+                  <FiRotateCcw />
+                  {t("dev.reset")}
+                </>
+              }
+              onConfirm={async () => {
                 await devSettings.update({ onboardingCompleted: false });
                 toast.success(t("dev.onboardingResetToast"));
               }}
             >
-              <FiRotateCcw />
-              {t("dev.reset")}
-            </Button>
+              {(openDialog) => (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  class="w-28"
+                  onClick={openDialog}
+                >
+                  <FiRotateCcw />
+                  {t("dev.reset")}
+                </Button>
+              )}
+            </ConfirmDialog>
           </div>
         </CardContent>
       </Card>

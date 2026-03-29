@@ -107,11 +107,13 @@ export const en: Dictionary = {
     themeSystem: "System",
     modelManagement: "Audio Model Management",
     deleteModel: "Delete Model",
-    deleteModelConfirmation:
-      "Delete {name} ({size}). This action cannot be undone.",
+    deleteModelConfirmation: "Delete {name}. This action cannot be undone.",
     modelDeletedToast: "Model deleted",
     loadingModels: "Loading model info...",
     toolManagement: "Tool Management",
+    deleteFfmpeg: "Delete FFmpeg",
+    deleteFfmpegConfirmation:
+      "The app-managed FFmpeg will be deleted. This action cannot be undone.",
     ffmpegDeletedToast: "FFmpeg deleted",
     ffmpegDownloadedToast: "FFmpeg downloaded",
     ffmpegUpdateAvailable: "Update available",
@@ -172,10 +174,12 @@ export const en: Dictionary = {
     modelManagement: "Language Model Management",
     serverManagement: "Inference Server Management",
     deleteModel: "Delete Model",
-    deleteModelConfirmation:
-      "Delete {name} ({size}). This action cannot be undone.",
+    deleteModelConfirmation: "Delete {name}. This action cannot be undone.",
     modelDeletedToast: "Language model deleted",
     serverDownloadedToast: "llama-server downloaded",
+    deleteServer: "Delete Server",
+    deleteServerConfirmation:
+      "llama-server will be deleted. This action cannot be undone.",
     serverDeletedToast: "llama-server deleted",
     modelDownloadedToast: "Language model downloaded",
     copyResult: "Copy Result",
@@ -261,16 +265,22 @@ export const en: Dictionary = {
     historyClearedToast: "History cleared",
     noDownloadedModels: "No downloaded models.",
     deleteModel: "Delete Model",
-    deleteModelConfirmation:
-      "Delete {name} ({size})? This action cannot be undone.",
+    deleteModelConfirmation: "Delete {name}? This action cannot be undone.",
     deleteAllModels: "Delete All Models",
     deletingAll: "Deleting All...",
     deleteAllModelsConfirmation:
       "Delete all {count} downloaded models? This action cannot be undone.",
     modelDeletedToast: "Model deleted",
     allModelsDeletedToast: "All models deleted",
+    deleteFfmpeg: "Delete FFmpeg",
+    deleteFfmpegConfirmation:
+      "The app-managed FFmpeg will be deleted. This action cannot be undone.",
     ffmpegDeletedToast: "FFmpeg deleted",
+    resetOnboardingConfirmTitle: "Reset Onboarding",
+    resetOnboardingConfirmDescription:
+      "Onboarding will be reset. The setup screen will appear on next launch.",
     llmTester: "LLM Tester",
+    defaultInput: "Describe your key features.",
     inputPlaceholder: "Enter a message...",
     send: "Send",
     prerequisiteWarning: "not downloaded",

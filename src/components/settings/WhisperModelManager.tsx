@@ -1,13 +1,6 @@
-import { FiDownload, FiMusic, FiTrash2, FiX } from "solid-icons/fi";
+import { FiDownload, FiMusic, FiTrash2 } from "solid-icons/fi";
 import { createSignal, For, onMount, Show } from "solid-js";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "~/components/ui/AlertDialog";
 import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
 import {
@@ -16,6 +9,7 @@ import {
   CardHeader,
   CardTitleWithIcon,
 } from "~/components/ui/Card";
+import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { useI18n } from "~/i18n";
 import { getModelDescription } from "~/lib/modelDescription";
@@ -108,50 +102,37 @@ export default function WhisperModelManager() {
                       </Show>
                     }
                   >
-                    <AlertDialog>
-                      <AlertDialogTrigger
-                        as={Button}
-                        variant="destructive"
-                        size="sm"
-                        class="w-28"
-                        disabled={deletingModelId() === model.id}
-                        onClick={(e: MouseEvent) => e.stopPropagation()}
-                      >
-                        <FiTrash2 />
-                        {deletingModelId() === model.id
-                          ? t("common.deleting")
-                          : t("common.delete")}
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogTitle>
-                          {t("settings.deleteModel")}
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {t("settings.deleteModelConfirmation", {
-                            name: model.name,
-                            size: model.size,
-                          })}
-                        </AlertDialogDescription>
-                        <div class="flex justify-end gap-2">
-                          <AlertDialogTrigger
-                            as={Button}
-                            variant="outline"
-                            class="w-32"
-                          >
-                            <FiX />
-                            {t("common.cancel")}
-                          </AlertDialogTrigger>
-                          <Button
-                            variant="destructive"
-                            class="w-32"
-                            onClick={() => handleDeleteModel(model.id)}
-                          >
-                            <FiTrash2 />
-                            {t("common.delete")}
-                          </Button>
-                        </div>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <ConfirmDialog
+                      title={t("settings.deleteModel")}
+                      description={t("settings.deleteModelConfirmation", {
+                        name: model.name,
+                      })}
+                      confirmLabel={
+                        <>
+                          <FiTrash2 />
+                          {t("common.delete")}
+                        </>
+                      }
+                      onConfirm={() => handleDeleteModel(model.id)}
+                    >
+                      {(openDialog) => (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          class="w-28"
+                          disabled={deletingModelId() === model.id}
+                          onClick={(e: MouseEvent) => {
+                            e.stopPropagation();
+                            openDialog();
+                          }}
+                        >
+                          <FiTrash2 />
+                          {deletingModelId() === model.id
+                            ? t("common.deleting")
+                            : t("common.delete")}
+                        </Button>
+                      )}
+                    </ConfirmDialog>
                   </Show>
                 </div>
               </button>

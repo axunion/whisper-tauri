@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitleWithIcon,
 } from "~/components/ui/Card";
+import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
@@ -56,18 +57,32 @@ export default function FfmpegManager() {
                     {t("settings.update")}
                   </Button>
                 </Show>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  class="w-28"
-                  onClick={async () => {
+                <ConfirmDialog
+                  title={t("settings.deleteFfmpeg")}
+                  description={t("settings.deleteFfmpegConfirmation")}
+                  confirmLabel={
+                    <>
+                      <FiTrash2 />
+                      {t("common.delete")}
+                    </>
+                  }
+                  onConfirm={async () => {
                     await ffmpeg.deleteBundled();
                     toast.success(t("settings.ffmpegDeletedToast"));
                   }}
                 >
-                  <FiTrash2 />
-                  {t("common.delete")}
-                </Button>
+                  {(openDialog) => (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      class="w-28"
+                      onClick={openDialog}
+                    >
+                      <FiTrash2 />
+                      {t("common.delete")}
+                    </Button>
+                  )}
+                </ConfirmDialog>
               </div>
             }
           >

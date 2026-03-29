@@ -1,18 +1,12 @@
-import { FiDownload, FiTrash2, FiX } from "solid-icons/fi";
+import { FiDownload, FiTrash2 } from "solid-icons/fi";
 import { createSignal, For, Show } from "solid-js";
 import { useI18n } from "~/i18n";
 import { getModelDescription } from "~/lib/modelDescription";
 import { toast } from "~/lib/toast";
 import type { createWhisper } from "~/primitives/createWhisper";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "../ui/AlertDialog";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { DownloadProgress } from "../ui/DownloadProgress";
 
 interface ModelManagerProps {
@@ -96,48 +90,37 @@ export function ModelManager(props: ModelManagerProps) {
                   </Show>
                 }
               >
-                <AlertDialog>
-                  <AlertDialogTrigger
-                    as={Button}
-                    variant="destructive"
-                    size="sm"
-                    class="w-28"
-                    disabled={deletingModelId() === model.id}
-                    onClick={(e: MouseEvent) => e.stopPropagation()}
-                  >
-                    <FiTrash2 />
-                    {deletingModelId() === model.id
-                      ? t("common.deleting")
-                      : t("common.delete")}
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogTitle>{t("dev.deleteModel")}</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {t("dev.deleteModelConfirmation", {
-                        name: model.name,
-                        size: model.size,
-                      })}
-                    </AlertDialogDescription>
-                    <div class="flex justify-end gap-2">
-                      <AlertDialogTrigger
-                        as={Button}
-                        variant="outline"
-                        class="w-32"
-                      >
-                        <FiX />
-                        {t("common.cancel")}
-                      </AlertDialogTrigger>
-                      <Button
-                        variant="destructive"
-                        class="w-32"
-                        onClick={() => handleDeleteModel(model.id)}
-                      >
-                        <FiTrash2 />
-                        {t("common.delete")}
-                      </Button>
-                    </div>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <ConfirmDialog
+                  title={t("dev.deleteModel")}
+                  description={t("dev.deleteModelConfirmation", {
+                    name: model.name,
+                  })}
+                  confirmLabel={
+                    <>
+                      <FiTrash2 />
+                      {t("common.delete")}
+                    </>
+                  }
+                  onConfirm={() => handleDeleteModel(model.id)}
+                >
+                  {(openDialog) => (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      class="w-28"
+                      disabled={deletingModelId() === model.id}
+                      onClick={(e: MouseEvent) => {
+                        e.stopPropagation();
+                        openDialog();
+                      }}
+                    >
+                      <FiTrash2 />
+                      {deletingModelId() === model.id
+                        ? t("common.deleting")
+                        : t("common.delete")}
+                    </Button>
+                  )}
+                </ConfirmDialog>
               </Show>
             </div>
           </button>

@@ -1,12 +1,5 @@
-import { FiCpu, FiDownload, FiServer, FiTrash2, FiX } from "solid-icons/fi";
+import { FiCpu, FiDownload, FiServer, FiTrash2 } from "solid-icons/fi";
 import { createSignal, For, onMount, Show } from "solid-js";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "~/components/ui/AlertDialog";
 import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
 import {
@@ -15,6 +8,7 @@ import {
   CardHeader,
   CardTitleWithIcon,
 } from "~/components/ui/Card";
+import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { useI18n } from "~/i18n";
 import { getModelDescription } from "~/lib/modelDescription";
@@ -79,7 +73,6 @@ export default function TextModelManager(props: TextModelManagerProps) {
 
   return (
     <>
-      {/* Text Model Management */}
       <Card>
         <CardHeader>
           <CardTitleWithIcon icon={() => <FiCpu class="size-4" />}>
@@ -148,50 +141,37 @@ export default function TextModelManager(props: TextModelManagerProps) {
                       </Show>
                     }
                   >
-                    <AlertDialog>
-                      <AlertDialogTrigger
-                        as={Button}
-                        variant="destructive"
-                        size="sm"
-                        class="w-28"
-                        disabled={deletingModelId() === model.id}
-                        onClick={(e: MouseEvent) => e.stopPropagation()}
-                      >
-                        <FiTrash2 />
-                        {deletingModelId() === model.id
-                          ? t("common.deleting")
-                          : t("common.delete")}
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogTitle>
-                          {t("textProcessing.deleteModel")}
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {t("textProcessing.deleteModelConfirmation", {
-                            name: model.name,
-                            size: model.size,
-                          })}
-                        </AlertDialogDescription>
-                        <div class="flex justify-end gap-2">
-                          <AlertDialogTrigger
-                            as={Button}
-                            variant="outline"
-                            class="w-32"
-                          >
-                            <FiX />
-                            {t("common.cancel")}
-                          </AlertDialogTrigger>
-                          <Button
-                            variant="destructive"
-                            class="w-32"
-                            onClick={() => handleDeleteModel(model.id)}
-                          >
-                            <FiTrash2 />
-                            {t("common.delete")}
-                          </Button>
-                        </div>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <ConfirmDialog
+                      title={t("textProcessing.deleteModel")}
+                      description={t("textProcessing.deleteModelConfirmation", {
+                        name: model.name,
+                      })}
+                      confirmLabel={
+                        <>
+                          <FiTrash2 />
+                          {t("common.delete")}
+                        </>
+                      }
+                      onConfirm={() => handleDeleteModel(model.id)}
+                    >
+                      {(openDialog) => (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          class="w-28"
+                          disabled={deletingModelId() === model.id}
+                          onClick={(e: MouseEvent) => {
+                            e.stopPropagation();
+                            openDialog();
+                          }}
+                        >
+                          <FiTrash2 />
+                          {deletingModelId() === model.id
+                            ? t("common.deleting")
+                            : t("common.delete")}
+                        </Button>
+                      )}
+                    </ConfirmDialog>
                   </Show>
                 </div>
               </button>
@@ -200,7 +180,6 @@ export default function TextModelManager(props: TextModelManagerProps) {
         </CardContent>
       </Card>
 
-      {/* Server Management (dev mode only) */}
       <Show when={props.devMode}>
         <Card>
           <CardHeader>
@@ -240,15 +219,29 @@ export default function TextModelManager(props: TextModelManagerProps) {
                   </Show>
                 }
               >
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  class="w-28"
-                  onClick={handleDeleteServer}
+                <ConfirmDialog
+                  title={t("textProcessing.deleteServer")}
+                  description={t("textProcessing.deleteServerConfirmation")}
+                  confirmLabel={
+                    <>
+                      <FiTrash2 />
+                      {t("common.delete")}
+                    </>
+                  }
+                  onConfirm={handleDeleteServer}
                 >
-                  <FiTrash2 />
-                  {t("common.delete")}
-                </Button>
+                  {(openDialog) => (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      class="w-28"
+                      onClick={openDialog}
+                    >
+                      <FiTrash2 />
+                      {t("common.delete")}
+                    </Button>
+                  )}
+                </ConfirmDialog>
               </Show>
             </div>
           </CardContent>

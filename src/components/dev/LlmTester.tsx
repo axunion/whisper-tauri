@@ -58,42 +58,47 @@ export function LlmTester(props: LlmTesterProps) {
       </Show>
 
       {/* Input + Send */}
-      <div class="flex gap-2">
-        <input
-          type="text"
-          class="flex-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          placeholder={t("dev.inputPlaceholder")}
+      <div class="space-y-2">
+        <textarea
+          class="w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          rows={4}
+          placeholder={t("dev.defaultInput")}
           value={inputText()}
           onInput={(e) => setInputText(e.currentTarget.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && canSend()) handleSend();
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && canSend()) {
+              e.preventDefault();
+              handleSend();
+            }
           }}
           disabled={!isReady()}
         />
-        <Show
-          when={!props.textProcessing.isProcessing()}
-          fallback={
-            <Button
-              variant="destructive"
-              size="sm"
-              class="shrink-0"
-              onClick={() => props.textProcessing.cancel()}
-            >
-              <FiX />
-              {t("common.cancel")}
-            </Button>
-          }
-        >
-          <Button
-            size="sm"
-            class="shrink-0"
-            onClick={handleSend}
-            disabled={!canSend()}
+        <div class="flex justify-end">
+          <Show
+            when={!props.textProcessing.isProcessing()}
+            fallback={
+              <Button
+                variant="destructive"
+                size="sm"
+                class="w-28"
+                onClick={() => props.textProcessing.cancel()}
+              >
+                <FiX />
+                {t("common.cancel")}
+              </Button>
+            }
           >
-            <FiSend />
-            {t("dev.send")}
-          </Button>
-        </Show>
+            <Button
+              size="sm"
+              class="w-28"
+              onClick={handleSend}
+              disabled={!canSend()}
+            >
+              <FiSend />
+              {t("dev.send")}
+            </Button>
+          </Show>
+        </div>
       </div>
 
       {/* Error */}

@@ -110,6 +110,8 @@ export interface Dictionary {
     modelDeletedToast: string;
     loadingModels: string;
     toolManagement: string;
+    deleteFfmpeg: string;
+    deleteFfmpegConfirmation: string;
     ffmpegDeletedToast: string;
     ffmpegDownloadedToast: string;
     ffmpegUpdateAvailable: string;
@@ -169,6 +171,8 @@ export interface Dictionary {
     deleteModelConfirmation: string;
     modelDeletedToast: string;
     serverDownloadedToast: string;
+    deleteServer: string;
+    deleteServerConfirmation: string;
     serverDeletedToast: string;
     modelDownloadedToast: string;
     copyResult: string;
@@ -246,8 +250,13 @@ export interface Dictionary {
     deleteAllModelsConfirmation: string;
     modelDeletedToast: string;
     allModelsDeletedToast: string;
+    deleteFfmpeg: string;
+    deleteFfmpegConfirmation: string;
     ffmpegDeletedToast: string;
+    resetOnboardingConfirmTitle: string;
+    resetOnboardingConfirmDescription: string;
     llmTester: string;
+    defaultInput: string;
     inputPlaceholder: string;
     send: string;
     prerequisiteWarning: string;
