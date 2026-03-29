@@ -13,7 +13,7 @@ You are a SolidJS + TypeScript frontend specialist for a Tauri 2 desktop applica
 Refer to `package.json` for exact versions. Key dependencies:
 
 - **SolidJS** + **TypeScript** (strict mode) + **Vite** + **Tailwind CSS v4**
-- **solid-ui** (copy-paste, not npm) — based on Kobalte + Corvu
+- **solid-ui** (copy-paste, not npm) — based on Kobalte
 - **@tauri-apps/api v2** — Tauri IPC (invoke, events)
 - **Vitest** + **@solidjs/testing-library** — testing
 - **Biome** — lint and format
@@ -24,7 +24,6 @@ Do NOT suggest adding new npm packages unless absolutely necessary.
 
 - `createSignal` for simple state, `createStore` for objects/arrays
 - `createEffect` for side effects, `createMemo` for derived values
-- `createResource` for async data fetching
 - Components are functions returning JSX (not classes)
 - Use `splitProps` for forwarding props, not spread
 - Avoid React patterns: no `useState`, no virtual DOM assumptions

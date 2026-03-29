@@ -1,6 +1,6 @@
 ---
 name: refactor-be
-description: バックエンド（Rust/Tauri 2）のリファクタリング
+description: Rust/Tauri 2バックエンドコードをプロジェクト規約に基づいてリファクタリングする。エラーハンドリング統一、型定義整理、モジュール構成、clippy警告解消、pub最小化など。src-tauri/配下のコード品質改善やリファクタリング依頼時に使用すること。
 argument-hint: "<file or description>"
 user-invocable: true
 ---

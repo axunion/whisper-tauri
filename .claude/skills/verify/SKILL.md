@@ -1,6 +1,6 @@
 ---
 name: verify
-description: 作業完了後の検証チェックを一括実行する（自動修正・並行実行対応）
+description: lint・型チェック・テスト・ビルドを一括検証する。コミット前や機能実装・リファクタリング完了後に必ず使用すること。自動修正可能なエラーは自動修正し、独立チェックは並行実行で高速処理する。
 argument-hint: "[frontend|backend|all]"
 user-invocable: true
 ---

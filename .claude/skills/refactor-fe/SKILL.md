@@ -1,6 +1,6 @@
 ---
 name: refactor-fe
-description: フロントエンド（SolidJS/TypeScript）のリファクタリング
+description: SolidJS/TypeScriptフロントエンドコードをプロジェクト規約に基づいてリファクタリングする。importパス整理、Tailwindクラス結合、エラーハンドリング統一、コンポーネント分割、未使用コード除去など。src/配下のコード品質改善やリファクタリング依頼時に使用すること。
 argument-hint: "<file or description>"
 user-invocable: true
 ---
