@@ -145,9 +145,15 @@ async function deleteModel(modelId: string): Promise<void> {
     const wasSelected = selectedModel()?.id === modelId;
     if (wasSelected) {
       setSelectedModel(null);
-      createSettings().update({ whisperModelId: null });
     }
     await loadModels();
+    // autoSelectModel (called by loadModels) picks the next model when
+    // selectedModel is null, then we sync the choice back to settings.
+    if (wasSelected) {
+      createSettings().update({
+        whisperModelId: selectedModel()?.id ?? null,
+      });
+    }
   } catch (e) {
     setError(parseError(e));
   }

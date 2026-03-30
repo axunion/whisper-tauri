@@ -1,6 +1,5 @@
 import { FiCpu, FiDownload, FiServer, FiTrash2 } from "solid-icons/fi";
 import { createSignal, For, onMount, Show } from "solid-js";
-import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
 import {
   Card,
@@ -10,6 +9,7 @@ import {
 } from "~/components/ui/Card";
 import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { DownloadProgress } from "~/components/ui/DownloadProgress";
+import { ModelListItem } from "~/components/ui/ModelListItem";
 import { useI18n } from "~/i18n";
 import { getModelDescription } from "~/lib/modelDescription";
 import { toast } from "~/lib/toast";
@@ -79,33 +79,21 @@ export default function TextModelManager(props: TextModelManagerProps) {
             {t("textProcessing.modelManagement")}
           </CardTitleWithIcon>
         </CardHeader>
-        <CardContent class="space-y-4">
+        <CardContent class="space-y-4" role="radiogroup">
           <For each={tp.models()}>
             {(model) => (
-              <button
-                type="button"
-                class={`flex w-full items-center justify-between rounded-lg border p-4 text-left transition-colors ${
-                  model.downloaded
-                    ? isSelected(model.id)
-                      ? "ring-2 ring-primary bg-primary/5"
-                      : "hover:bg-muted/50"
-                    : "opacity-50 pointer-events-auto"
-                }`}
-                aria-disabled={!model.downloaded}
-                onClick={() => {
-                  if (model.downloaded) tp.selectModel(model.id);
-                }}
-              >
-                <div class="space-y-1">
-                  <div class="flex items-center gap-2">
-                    <span class="font-medium">{model.name}</span>
-                    <Badge variant="secondary">{model.size}</Badge>
-                  </div>
-                  <p class="text-sm text-muted-foreground">
-                    {getModelDescription(t, model.id, model.description)}
-                  </p>
-                </div>
-                <div class="flex items-center gap-2">
+              <ModelListItem
+                name={model.name}
+                size={model.size}
+                description={getModelDescription(
+                  t,
+                  model.id,
+                  model.description,
+                )}
+                downloaded={model.downloaded}
+                selected={isSelected(model.id)}
+                onSelect={() => tp.selectModel(model.id)}
+                actionSlot={
                   <Show
                     when={model.downloaded}
                     fallback={
@@ -119,10 +107,7 @@ export default function TextModelManager(props: TextModelManagerProps) {
                             variant="outline"
                             size="sm"
                             class="w-28"
-                            onClick={(e: MouseEvent) => {
-                              e.stopPropagation();
-                              handleDownloadModel(model.id);
-                            }}
+                            onClick={() => handleDownloadModel(model.id)}
                             disabled={tp.isDownloading()}
                           >
                             <FiDownload />
@@ -160,10 +145,7 @@ export default function TextModelManager(props: TextModelManagerProps) {
                           size="sm"
                           class="w-28"
                           disabled={deletingModelId() === model.id}
-                          onClick={(e: MouseEvent) => {
-                            e.stopPropagation();
-                            openDialog();
-                          }}
+                          onClick={openDialog}
                         >
                           <FiTrash2 />
                           {deletingModelId() === model.id
@@ -173,8 +155,8 @@ export default function TextModelManager(props: TextModelManagerProps) {
                       )}
                     </ConfirmDialog>
                   </Show>
-                </div>
-              </button>
+                }
+              />
             )}
           </For>
         </CardContent>

@@ -167,7 +167,7 @@ function DevMenuContent() {
             >
               {(openDialog) => (
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   class="w-28"
                   onClick={openDialog}

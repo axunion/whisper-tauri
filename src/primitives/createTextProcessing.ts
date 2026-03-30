@@ -158,11 +158,19 @@ async function downloadModel(modelId: string): Promise<boolean> {
 async function deleteModel(modelId: string): Promise<void> {
   try {
     await invoke("text_processing_delete_model", { modelId });
-    if (selectedModelId() === modelId) {
+    const wasSelected = selectedModelId() === modelId;
+    if (wasSelected) {
       setSelectedModelId(null);
-      createSettings().update({ textModelId: null });
     }
     await loadModels();
+    if (wasSelected) {
+      const next = models().find((m) => m.downloaded);
+      if (next) {
+        selectModel(next.id);
+      } else {
+        createSettings().update({ textModelId: null });
+      }
+    }
   } catch (e) {
     setError(parseError(e));
   }

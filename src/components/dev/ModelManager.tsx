@@ -4,10 +4,10 @@ import { useI18n } from "~/i18n";
 import { getModelDescription } from "~/lib/modelDescription";
 import { toast } from "~/lib/toast";
 import type { createWhisper } from "~/primitives/createWhisper";
-import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { DownloadProgress } from "../ui/DownloadProgress";
+import { ModelListItem } from "../ui/ModelListItem";
 
 interface ModelManagerProps {
   whisper: ReturnType<typeof createWhisper>;
@@ -33,33 +33,17 @@ export function ModelManager(props: ModelManagerProps) {
   }
 
   return (
-    <div class="space-y-4">
+    <div class="space-y-4" role="radiogroup">
       <For each={props.whisper.models()}>
         {(model) => (
-          <button
-            type="button"
-            class={`flex w-full items-center justify-between rounded-lg border p-4 text-left transition-colors ${
-              model.downloaded
-                ? isSelected(model.id)
-                  ? "ring-2 ring-primary bg-primary/5"
-                  : "hover:bg-muted/50"
-                : "opacity-50 pointer-events-auto"
-            }`}
-            aria-disabled={!model.downloaded}
-            onClick={() => {
-              if (model.downloaded) props.whisper.selectModel(model);
-            }}
-          >
-            <div class="space-y-1">
-              <div class="flex items-center gap-2">
-                <span class="font-medium">{model.name}</span>
-                <Badge variant="secondary">{model.size}</Badge>
-              </div>
-              <p class="text-sm text-muted-foreground">
-                {getModelDescription(t, model.id, model.description)}
-              </p>
-            </div>
-            <div class="flex items-center gap-2">
+          <ModelListItem
+            name={model.name}
+            size={model.size}
+            description={getModelDescription(t, model.id, model.description)}
+            downloaded={model.downloaded}
+            selected={isSelected(model.id)}
+            onSelect={() => props.whisper.selectModel(model)}
+            actionSlot={
               <Show
                 when={model.downloaded}
                 fallback={
@@ -73,10 +57,7 @@ export function ModelManager(props: ModelManagerProps) {
                         variant="outline"
                         size="sm"
                         class="w-28"
-                        onClick={(e: MouseEvent) => {
-                          e.stopPropagation();
-                          props.whisper.downloadModel(model.id);
-                        }}
+                        onClick={() => props.whisper.downloadModel(model.id)}
                         disabled={props.whisper.isDownloading()}
                       >
                         <FiDownload />
@@ -109,10 +90,7 @@ export function ModelManager(props: ModelManagerProps) {
                       size="sm"
                       class="w-28"
                       disabled={deletingModelId() === model.id}
-                      onClick={(e: MouseEvent) => {
-                        e.stopPropagation();
-                        openDialog();
-                      }}
+                      onClick={openDialog}
                     >
                       <FiTrash2 />
                       {deletingModelId() === model.id
@@ -122,8 +100,8 @@ export function ModelManager(props: ModelManagerProps) {
                   )}
                 </ConfirmDialog>
               </Show>
-            </div>
-          </button>
+            }
+          />
         )}
       </For>
       <Show when={props.whisper.models().length === 0}>
