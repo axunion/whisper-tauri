@@ -60,9 +60,7 @@ export function ModelListItem(props: ModelListItemProps) {
         </div>
       </button>
 
-      <div class="flex shrink-0 items-center pr-4">
-        {props.actionSlot}
-      </div>
+      <div class="flex shrink-0 items-center pr-4">{props.actionSlot}</div>
     </div>
   );
 }

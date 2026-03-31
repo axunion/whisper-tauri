@@ -1,5 +1,16 @@
-import { FiArrowLeft, FiCheck, FiCopy, FiDownload } from "solid-icons/fi";
-import { TbSparkles } from "solid-icons/tb";
+import type { IconTypes } from "solid-icons";
+import {
+  FiAlignLeft,
+  FiArrowLeft,
+  FiCheck,
+  FiCopy,
+  FiDownload,
+  FiFileText,
+  FiFilm,
+  FiGlobe,
+  FiType,
+} from "solid-icons/fi";
+import { TbSparkles, TbSubtask } from "solid-icons/tb";
 import type { Component, JSX } from "solid-js";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { Button } from "~/components/ui/Button";
@@ -10,10 +21,14 @@ import { cn } from "~/lib/utils";
 
 type ResultTab = "text" | "timeline" | "summary" | "cleanText";
 
-const FORMAT_OPTIONS: { value: ExportFormat; labelKey: DictionaryKey }[] = [
-  { value: "txt", labelKey: "result.exportTxt" },
-  { value: "srt", labelKey: "result.exportSrt" },
-  { value: "vtt", labelKey: "result.exportVtt" },
+const FORMAT_OPTIONS: {
+  value: ExportFormat;
+  labelKey: DictionaryKey;
+  icon: IconTypes;
+}[] = [
+  { value: "txt", labelKey: "result.exportTxt", icon: FiFileText },
+  { value: "srt", labelKey: "result.exportSrt", icon: FiFilm },
+  { value: "vtt", labelKey: "result.exportVtt", icon: FiGlobe },
 ];
 
 interface ResultToolbarProps {
@@ -34,7 +49,6 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
   const [copied, setCopied] = createSignal(false);
   const [saveOpen, setSaveOpen] = createSignal(false);
   const [aiOpen, setAiOpen] = createSignal(false);
-  const [format, setFormat] = createSignal<ExportFormat>("txt");
   let saveRef: HTMLDivElement | undefined;
   let aiRef: HTMLDivElement | undefined;
 
@@ -64,15 +78,15 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
   }
 
   function handleSaveWithFormat(fmt: ExportFormat) {
-    setFormat(fmt);
     setSaveOpen(false);
     props.onSave(fmt);
   }
 
   const dropdownMenuClass =
-    "absolute right-0 top-full z-50 mt-1 min-w-40 rounded-lg border border-border/30 bg-popover/55 p-1 shadow-md backdrop-blur-xl dark:bg-popover/35";
+    "absolute right-0 top-full z-50 mt-1 min-w-48 rounded-lg border border-border/30 bg-popover/80 p-1.5 shadow-md backdrop-blur-xl dark:bg-popover/65";
   const dropdownItemClass =
-    "flex w-full items-center rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground";
+    "flex w-full items-center gap-2.5 whitespace-nowrap rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground";
+  const dropdownIconClass = "size-4 shrink-0 text-violet-500";
 
   return (
     <div class="flex items-center justify-between">
@@ -124,6 +138,7 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
                   props.onGenerateTitle();
                 }}
               >
+                <FiType class={dropdownIconClass} />
                 {t("textProcessing.generateTitle")}
               </button>
               <div class="my-1 border-t border-border/30" />
@@ -136,6 +151,7 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
                   props.onCleanText();
                 }}
               >
+                <FiAlignLeft class={dropdownIconClass} />
                 {t("textProcessing.cleanText")}
               </button>
               <button
@@ -147,6 +163,7 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
                   props.onSummarize();
                 }}
               >
+                <TbSubtask class={dropdownIconClass} />
                 {t("textProcessing.summarize")}
               </button>
             </div>
@@ -170,13 +187,10 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
                   {(opt) => (
                     <button
                       type="button"
-                      class={cn(
-                        dropdownItemClass,
-                        format() === opt.value &&
-                          "bg-accent text-accent-foreground",
-                      )}
+                      class={dropdownItemClass}
                       onClick={() => handleSaveWithFormat(opt.value)}
                     >
+                      <opt.icon class={dropdownIconClass} />
                       {t(opt.labelKey)}
                     </button>
                   )}
