@@ -28,18 +28,15 @@ export interface Dictionary {
   };
   dashboard: {
     title: string;
-    heroTitle: string;
-    heroSubtitle: string;
-    heroCta: string;
-    statsTranscriptions: string;
-    statsTotalDuration: string;
-    setupModel: string;
-    setupFfmpeg: string;
-    setupAi: string;
+    quickActionFile: string;
+    quickActionFileDesc: string;
+    quickActionRecord: string;
+    quickActionRecordDesc: string;
+    setupModelHint: string;
+    setupFfmpegHint: string;
+    setupAiHint: string;
     recentActivity: string;
     viewAll: string;
-    noHistory: string;
-    downloaded: string;
   };
   transcription: {
     title: string;

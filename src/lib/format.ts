@@ -26,3 +26,13 @@ export function formatDate(isoString: string, locale: string): string {
     minute: "2-digit",
   });
 }
+
+/** Format ISO date string as localized date only (e.g. "2024/01/15"). */
+export function formatDateShort(isoString: string, locale: string): string {
+  const date = new Date(isoString);
+  return date.toLocaleDateString(locale === "ja" ? "ja-JP" : "en-US", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}

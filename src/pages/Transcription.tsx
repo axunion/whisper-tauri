@@ -1,8 +1,11 @@
+import { useLocation } from "@solidjs/router";
 import { FiCheck, FiX } from "solid-icons/fi";
 import {
+  createEffect,
   createMemo,
   createSignal,
   Match,
+  on,
   onMount,
   Show,
   Switch,
@@ -19,6 +22,7 @@ import { Card, CardContent } from "~/components/ui/Card";
 import { Progress } from "~/components/ui/Progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/Tabs";
 import { useI18n } from "~/i18n";
+import { extractFilename } from "~/lib/constants";
 import { toast } from "~/lib/toast";
 import { cn } from "~/lib/utils";
 import { createFileConverter } from "~/primitives/createFileConverter";
@@ -43,6 +47,8 @@ export default function Transcription() {
   const recording = createRecording();
   const settings = createSettings();
 
+  const location = useLocation<{ filePath?: string; tab?: string }>();
+
   const [convertedPath, setConvertedPath] = createSignal<string | null>(null);
   const [activeTab, setActiveTab] = createSignal("file");
   const [historyId, setHistoryId] = createSignal<string | null>(null);
@@ -59,6 +65,21 @@ export default function Transcription() {
       whisper.setLanguage(saved);
     }
   });
+
+  createEffect(
+    on(
+      () => location.state,
+      (state) => {
+        if (state?.filePath) {
+          const path = state.filePath;
+          whisper.setFile({ path, name: extractFilename(path), size: 0 });
+        }
+        if (state?.tab === "record") {
+          setActiveTab("record");
+        }
+      },
+    ),
+  );
 
   const needsConversion = () => {
     const f = whisper.file();

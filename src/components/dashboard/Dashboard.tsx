@@ -1,12 +1,12 @@
-import { HeroCard } from "./HeroCard";
+import { QuickActions } from "./QuickActions";
 import { RecentActivity } from "./RecentActivity";
-import { StatsRow } from "./StatsRow";
+import { SetupBanner } from "./SetupBanner";
 
 export function Dashboard() {
   return (
-    <div class="animate-fade-in mx-auto w-full max-w-2xl space-y-5">
-      <HeroCard />
-      <StatsRow />
+    <div class="animate-fade-in m-auto w-full max-w-2xl space-y-5">
+      <QuickActions />
+      <SetupBanner />
       <RecentActivity />
     </div>
   );

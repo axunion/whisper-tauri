@@ -24,6 +24,6 @@ describe("App", () => {
 
   it("shows Dashboard as initial page", () => {
     render(() => <App />);
-    expect(screen.getByText("音声を文字に")).toBeInTheDocument();
+    expect(screen.getByText("ファイルを選択")).toBeInTheDocument();
   });
 });

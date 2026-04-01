@@ -9,6 +9,7 @@ import type { Component } from "solid-js";
 import { Show } from "solid-js";
 
 import { useI18n } from "~/i18n";
+import { AUDIO_EXTENSIONS, extractFilename } from "~/lib/constants";
 import type { FileInfo } from "~/types";
 
 interface FileSelectorProps {
@@ -17,22 +18,6 @@ interface FileSelectorProps {
   onFileClear: () => void;
   disabled?: boolean;
 }
-
-const AUDIO_EXTENSIONS = [
-  "wav",
-  "mp3",
-  "m4a",
-  "flac",
-  "ogg",
-  "aac",
-  "wma",
-  "opus",
-  "mp4",
-  "mov",
-  "webm",
-  "avi",
-  "mkv",
-];
 
 const FileSelector: Component<FileSelectorProps> = (props) => {
   const { t } = useI18n();
@@ -52,7 +37,7 @@ const FileSelector: Component<FileSelectorProps> = (props) => {
 
     if (selected) {
       const path = selected;
-      const name = path.split("/").pop() ?? path.split("\\").pop() ?? path;
+      const name = extractFilename(path);
       props.onFileSelect({
         path,
         name,
