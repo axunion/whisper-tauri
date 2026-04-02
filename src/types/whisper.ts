@@ -20,6 +20,10 @@ export interface ModelInfo {
   recommended: boolean;
   /** Estimated processing speed for this hardware */
   speedNote: string;
+  /** Estimated seconds to process 1 minute of audio (lower bound) */
+  speedSecondsPerMinuteLow: number;
+  /** Estimated seconds to process 1 minute of audio (upper bound) */
+  speedSecondsPerMinuteHigh: number;
   /** Path to the model file (if downloaded) */
   path?: string;
 }

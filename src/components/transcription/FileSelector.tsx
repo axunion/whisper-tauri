@@ -1,6 +1,8 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
+  FiActivity,
   FiCheckCircle,
+  FiClock,
   FiRefreshCw,
   FiUpload,
   FiXCircle,
@@ -10,10 +12,12 @@ import { Show } from "solid-js";
 
 import { useI18n } from "~/i18n";
 import { AUDIO_EXTENSIONS, extractFilename } from "~/lib/constants";
+import { formatDurationColon } from "~/lib/format";
 import type { FileInfo } from "~/types";
 
 interface FileSelectorProps {
   file: FileInfo | null;
+  estimateLabel?: string | undefined;
   onFileSelect: (file: FileInfo) => void;
   onFileClear: () => void;
   disabled?: boolean;
@@ -67,7 +71,7 @@ const FileSelector: Component<FileSelectorProps> = (props) => {
       }
     >
       {(file) => (
-        <div class="flex h-full flex-col items-center justify-center gap-4">
+        <div class="flex h-full flex-col items-center justify-center gap-3">
           <div class="flex items-start gap-4 px-6">
             <FiCheckCircle class="mt-0.5 size-6 shrink-0 text-primary" />
             <span class="min-w-0 break-all text-center text-lg font-medium">
@@ -91,6 +95,24 @@ const FileSelector: Component<FileSelectorProps> = (props) => {
             <FiRefreshCw class="size-3.5" />
             {t("transcription.changeFile")}
           </button>
+          <Show when={file().duration}>
+            {(dur) => (
+              <div class="flex items-center gap-3">
+                <span class="flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-0.5 text-xs text-muted-foreground">
+                  <FiClock class="size-3" />
+                  {formatDurationColon(dur())}
+                </span>
+                <Show when={props.estimateLabel}>
+                  {(label) => (
+                    <span class="flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-0.5 text-xs text-muted-foreground">
+                      <FiActivity class="size-3" />
+                      {label()}
+                    </span>
+                  )}
+                </Show>
+              </div>
+            )}
+          </Show>
         </div>
       )}
     </Show>

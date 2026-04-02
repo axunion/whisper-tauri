@@ -72,7 +72,7 @@ export default function Transcription() {
       (state) => {
         if (state?.filePath) {
           const path = state.filePath;
-          whisper.setFile({ path, name: extractFilename(path), size: 0 });
+          whisper.selectFile({ path, name: extractFilename(path), size: 0 });
         }
         if (state?.tab === "record") {
           setActiveTab("record");
@@ -91,6 +91,21 @@ export default function Transcription() {
   const downloadedModels = createMemo(() =>
     whisper.models().filter((m) => m.downloaded),
   );
+
+  const estimateLabel = createMemo(() => {
+    const f = whisper.file();
+    const model = whisper.selectedModel();
+    if (!f?.duration || !model || model.speedSecondsPerMinuteHigh === 0)
+      return undefined;
+    const audioMinutes = f.duration / 60_000;
+    // Use midpoint between low and high for a realistic estimate
+    const speedPerMin =
+      (model.speedSecondsPerMinuteLow + model.speedSecondsPerMinuteHigh) / 2;
+    const estimateSec = audioMinutes * speedPerMin;
+    return t("transcription.estimatedTime", {
+      minutes: Math.max(1, Math.ceil(estimateSec / 60)),
+    });
+  });
 
   const canStartFile = () =>
     whisper.file() !== null &&
@@ -267,7 +282,8 @@ export default function Transcription() {
                     <div class="flex h-full flex-col justify-center">
                       <FileSelector
                         file={whisper.file()}
-                        onFileSelect={(file) => whisper.setFile(file)}
+                        estimateLabel={estimateLabel()}
+                        onFileSelect={(file) => whisper.selectFile(file)}
                         onFileClear={() => whisper.setFile(null)}
                         disabled={
                           whisper.isProcessing() || converter.isConverting()

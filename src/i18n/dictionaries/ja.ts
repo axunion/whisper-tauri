@@ -63,6 +63,7 @@ export const ja: Dictionary = {
     supportedFormats: "WAV, MP3, M4A, FLAC, OGG, AAC, MP4, MOV など",
     audioFilesFilter: "音声ファイル",
     completedToast: "文字起こしが完了しました",
+    estimatedTime: "約{minutes}分",
   },
   history: {
     title: "履歴",

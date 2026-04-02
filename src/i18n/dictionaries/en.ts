@@ -62,6 +62,7 @@ export const en: Dictionary = {
     supportedFormats: "WAV, MP3, M4A, FLAC, OGG, AAC, MP4, MOV, etc.",
     audioFilesFilter: "Audio Files",
     completedToast: "Transcription completed",
+    estimatedTime: "~{minutes} min",
   },
   history: {
     title: "History",

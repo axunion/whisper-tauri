@@ -6,6 +6,18 @@ export function formatDuration(ms: number): string {
   return `${String(minutes)}m ${String(seconds)}s`;
 }
 
+/** Format milliseconds as colon-separated time (e.g. "3:24" or "1:03:24"). */
+export function formatDurationColon(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
 /** Format milliseconds as `Xh Ym` or `Xm` — coarser granularity for aggregate stats. */
 export function formatDurationShort(ms: number): string {
   const totalMinutes = Math.floor(ms / 60_000);

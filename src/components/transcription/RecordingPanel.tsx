@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "~/components/ui/Select";
 import { useI18n } from "~/i18n";
+import { formatDurationColon } from "~/lib/format";
 import { toast } from "~/lib/toast";
 import type { AudioDevice, RecordingLevel } from "~/types";
 import { AudioLevelMeter } from "./AudioLevelMeter";
@@ -28,13 +29,6 @@ interface RecordingPanelProps {
   onStartRecording: () => void;
   onStopRecording: () => void;
   onDiscard: () => void;
-}
-
-function formatDuration(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
 const RecordingPanel: Component<RecordingPanelProps> = (props) => {
@@ -166,7 +160,7 @@ const RecordingPanel: Component<RecordingPanelProps> = (props) => {
                 {t("recording.recording")}
               </span>
               <span class="font-mono tabular-nums">
-                {formatDuration(props.duration)}
+                {formatDurationColon(props.duration)}
               </span>
             </div>
           </Show>
@@ -182,7 +176,7 @@ const RecordingPanel: Component<RecordingPanelProps> = (props) => {
               {t("recording.title")}
             </span>
             <span class="font-mono text-xl font-medium tabular-nums">
-              {formatDuration(props.duration)}
+              {formatDurationColon(props.duration)}
             </span>
           </div>
           <div class="flex gap-3">

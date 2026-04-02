@@ -57,6 +57,21 @@ pub fn get_speed_note(model_id: &str, arch: &str) -> &'static str {
     }
 }
 
+/// Returns speed factor estimates (seconds per minute of audio) for the given model/arch.
+///
+/// Returns `(0.0, 0.0)` for unknown combinations.
+#[must_use]
+pub fn get_speed_factors(model_id: &str, arch: &str) -> (f64, f64) {
+    match (model_id, arch) {
+        ("large-v3-turbo", "aarch64") => (5.0, 15.0),
+        ("medium", "aarch64") => (5.0, 18.0),
+        ("small", "aarch64") => (2.0, 5.0),
+        ("large-v3-turbo" | "medium", "x86_64") => (30.0, 90.0),
+        ("small", "x86_64") => (10.0, 30.0),
+        _ => (0.0, 0.0),
+    }
+}
+
 /// Returns the list of available models.
 ///
 /// All models have `downloaded`, `bundled`, and `recommended` set to `false`.
@@ -75,6 +90,8 @@ pub fn get_model_list() -> Vec<ModelInfo> {
             bundled: false,
             recommended: false,
             speed_note: String::new(),
+            speed_seconds_per_minute_low: 0.0,
+            speed_seconds_per_minute_high: 0.0,
             path: None,
         },
         ModelInfo {
@@ -88,6 +105,8 @@ pub fn get_model_list() -> Vec<ModelInfo> {
             bundled: false,
             recommended: false,
             speed_note: String::new(),
+            speed_seconds_per_minute_low: 0.0,
+            speed_seconds_per_minute_high: 0.0,
             path: None,
         },
         ModelInfo {
@@ -100,6 +119,8 @@ pub fn get_model_list() -> Vec<ModelInfo> {
             bundled: false,
             recommended: false,
             speed_note: String::new(),
+            speed_seconds_per_minute_low: 0.0,
+            speed_seconds_per_minute_high: 0.0,
             path: None,
         },
     ]
@@ -156,6 +177,9 @@ pub fn get_model_list_with_recommendation() -> Vec<ModelInfo> {
             model.recommended = true;
         }
         model.speed_note = get_speed_note(&model.id, arch).to_string();
+        let (low, high) = get_speed_factors(&model.id, arch);
+        model.speed_seconds_per_minute_low = low;
+        model.speed_seconds_per_minute_high = high;
     }
     models
 }
@@ -362,6 +386,70 @@ mod tests {
             assert!(
                 model.speed_note.is_empty(),
                 "model {} should have empty speed_note",
+                model.id
+            );
+        }
+    }
+
+    // --- get_speed_factors ---
+
+    #[test]
+    fn get_speed_factors_aarch64_large_v3_turbo() {
+        assert_eq!(get_speed_factors("large-v3-turbo", "aarch64"), (5.0, 15.0));
+    }
+
+    #[test]
+    fn get_speed_factors_aarch64_medium() {
+        assert_eq!(get_speed_factors("medium", "aarch64"), (5.0, 18.0));
+    }
+
+    #[test]
+    fn get_speed_factors_aarch64_small() {
+        assert_eq!(get_speed_factors("small", "aarch64"), (2.0, 5.0));
+    }
+
+    #[test]
+    fn get_speed_factors_x86_64_large_v3_turbo() {
+        assert_eq!(
+            get_speed_factors("large-v3-turbo", "x86_64"),
+            (30.0, 90.0)
+        );
+    }
+
+    #[test]
+    fn get_speed_factors_x86_64_medium() {
+        assert_eq!(get_speed_factors("medium", "x86_64"), (30.0, 90.0));
+    }
+
+    #[test]
+    fn get_speed_factors_x86_64_small() {
+        assert_eq!(get_speed_factors("small", "x86_64"), (10.0, 30.0));
+    }
+
+    #[test]
+    fn get_speed_factors_unknown_model() {
+        assert_eq!(get_speed_factors("unknown", "aarch64"), (0.0, 0.0));
+    }
+
+    #[test]
+    fn get_speed_factors_unknown_arch() {
+        assert_eq!(get_speed_factors("small", "riscv64"), (0.0, 0.0));
+    }
+
+    // --- get_model_list speed_seconds_per_minute ---
+
+    #[test]
+    fn get_model_list_has_zero_speed_factors() {
+        let models = get_model_list();
+        for model in &models {
+            assert_eq!(
+                model.speed_seconds_per_minute_low, 0.0,
+                "model {} should have zero speed_seconds_per_minute_low",
+                model.id
+            );
+            assert_eq!(
+                model.speed_seconds_per_minute_high, 0.0,
+                "model {} should have zero speed_seconds_per_minute_high",
                 model.id
             );
         }

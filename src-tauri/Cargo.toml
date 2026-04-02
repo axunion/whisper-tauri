@@ -45,6 +45,7 @@ rusqlite = { version = "0.32", features = ["bundled-full"] }
 flate2 = "1"
 tar = "0.4"
 cpal = "0.15"
+symphonia = { version = "0.5", default-features = false, features = ["wav", "mp3", "flac", "ogg", "aac", "isomp4", "mkv"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 whisper-rs = { version = "0.15", features = ["metal"] }

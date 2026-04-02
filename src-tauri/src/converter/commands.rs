@@ -4,6 +4,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_store::StoreExt;
 
 use super::downloader;
+use super::duration;
 use super::error::ConverterError;
 use super::ffmpeg;
 use super::types::{ConversionResult, FfmpegDownloadProgress, SupportedFormat};
@@ -162,6 +163,38 @@ pub async fn set_ffmpeg_download_url(app: AppHandle, url: Option<String>) -> Res
     }
 
     Ok(())
+}
+
+/// Gets the duration of an audio/video file in milliseconds.
+///
+/// Uses Symphonia (pure Rust) as the primary method, falling back to
+/// ffmpeg for unsupported formats.
+///
+/// # Errors
+///
+/// Returns an error if the duration cannot be determined by either method.
+#[tauri::command]
+pub async fn get_audio_duration(app: AppHandle, file_path: String) -> Result<u64, String> {
+    let input_path = PathBuf::from(&file_path);
+    let app_data_dir = resolve_app_data_dir(&app)?;
+
+    tokio::task::spawn_blocking(move || {
+        // Try Symphonia first (pure Rust, no external dependencies)
+        if let Ok(duration) = duration::get_duration_via_symphonia(&input_path) {
+            return Ok(duration);
+        }
+
+        // Fallback: try ffmpeg if available
+        if let Ok(ffmpeg_path) = resolve_ffmpeg_path(&app_data_dir) {
+            if let Ok(duration) = duration::get_duration_via_ffmpeg(&ffmpeg_path, &input_path) {
+                return Ok(duration);
+            }
+        }
+
+        Err("Could not determine audio duration".to_string())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
 }
 
 /// Converts an audio/video file to WAV format using ffmpeg.

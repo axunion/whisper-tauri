@@ -22,6 +22,8 @@ describe("Whisper Types", () => {
         bundled: false,
         recommended: true,
         speedNote: "~5-15s/min",
+        speedSecondsPerMinuteLow: 5.0,
+        speedSecondsPerMinuteHigh: 15.0,
       };
 
       expect(model.id).toBe("large-v3-turbo");
@@ -48,6 +50,8 @@ describe("Whisper Types", () => {
         bundled: false,
         recommended: false,
         speedNote: "~2-5s/min",
+        speedSecondsPerMinuteLow: 2.0,
+        speedSecondsPerMinuteHigh: 5.0,
         path: "/path/to/model.bin",
       };
 
@@ -63,6 +67,8 @@ describe("Whisper Types", () => {
         bundled: false,
         recommended: false,
         speedNote: "",
+        speedSecondsPerMinuteLow: 0,
+        speedSecondsPerMinuteHigh: 0,
       };
 
       expect(modelWithoutPath.path).toBeUndefined();

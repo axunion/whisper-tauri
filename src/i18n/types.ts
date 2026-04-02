@@ -62,6 +62,7 @@ export interface Dictionary {
     supportedFormats: string;
     audioFilesFilter: string;
     completedToast: string;
+    estimatedTime: string;
   };
   history: {
     title: string;

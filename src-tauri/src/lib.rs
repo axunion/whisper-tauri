@@ -49,6 +49,7 @@ pub fn run() {
             converter::commands::download_ffmpeg,
             converter::commands::get_ffmpeg_download_url,
             converter::commands::set_ffmpeg_download_url,
+            converter::commands::get_audio_duration,
             converter::commands::convert_audio_file,
             converter::commands::get_supported_formats,
             converter::commands::cleanup_converted_file,

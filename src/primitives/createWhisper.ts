@@ -159,6 +159,23 @@ async function deleteModel(modelId: string): Promise<void> {
   }
 }
 
+async function selectFile(fileInfo: FileInfo): Promise<void> {
+  setFile(fileInfo);
+
+  // Fetch duration asynchronously — non-critical, UI works without it
+  const filePath = fileInfo.path;
+  try {
+    const duration = await invoke<number>("get_audio_duration", { filePath });
+    // Only update if the file hasn't changed while we were fetching
+    const current = file();
+    if (current?.path === filePath) {
+      setFile({ ...current, duration });
+    }
+  } catch (e) {
+    console.warn("Could not get audio duration:", e);
+  }
+}
+
 async function startTranscription(overrideAudioPath?: string): Promise<void> {
   const currentFile = file();
   const currentModel = selectedModel();
@@ -219,6 +236,7 @@ const whisperInstance = {
   // Actions
   loadModels,
   selectModel,
+  selectFile,
   setFile,
   setLanguage,
   downloadModel,

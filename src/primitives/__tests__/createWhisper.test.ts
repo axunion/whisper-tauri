@@ -21,6 +21,8 @@ const mockModel = (overrides?: Partial<ModelInfo>): ModelInfo => ({
   bundled: false,
   recommended: true,
   speedNote: "~5-15s/min",
+  speedSecondsPerMinuteLow: 5.0,
+  speedSecondsPerMinuteHigh: 15.0,
   path: "/models/ggml-large-v3-turbo.bin",
   ...overrides,
 });

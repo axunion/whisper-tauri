@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod downloader;
+pub mod duration;
 pub mod error;
 pub mod ffmpeg;
 pub mod types;

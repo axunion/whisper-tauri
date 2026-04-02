@@ -22,6 +22,10 @@ pub struct ModelInfo {
     pub recommended: bool,
     /// Estimated processing speed for this hardware
     pub speed_note: String,
+    /// Estimated seconds to process 1 minute of audio (lower bound)
+    pub speed_seconds_per_minute_low: f64,
+    /// Estimated seconds to process 1 minute of audio (upper bound)
+    pub speed_seconds_per_minute_high: f64,
     /// Path to the model file (if downloaded)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub path: Option<String>,
@@ -115,6 +119,8 @@ mod tests {
             bundled: false,
             recommended: false,
             speed_note: "~5-15s/min".to_string(),
+            speed_seconds_per_minute_low: 0.0,
+            speed_seconds_per_minute_high: 0.0,
             path: Some("/path/to/model.bin".to_string()),
         };
 
@@ -136,6 +142,8 @@ mod tests {
             bundled: false,
             recommended: false,
             speed_note: String::new(),
+            speed_seconds_per_minute_low: 0.0,
+            speed_seconds_per_minute_high: 0.0,
             path: None,
         };
 
