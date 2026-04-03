@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelInfo {
-    /// Model identifier (e.g., "small", "medium", "large-v3-turbo")
+    /// Model identifier (e.g., "small", "large-v3-turbo")
     pub id: String,
     /// Display name
     pub name: String,
@@ -20,8 +20,6 @@ pub struct ModelInfo {
     pub bundled: bool,
     /// Whether the model is recommended for this system
     pub recommended: bool,
-    /// Estimated processing speed for this hardware
-    pub speed_note: String,
     /// Estimated seconds to process 1 minute of audio (lower bound)
     pub speed_seconds_per_minute_low: f64,
     /// Estimated seconds to process 1 minute of audio (upper bound)
@@ -118,7 +116,6 @@ mod tests {
             downloaded: true,
             bundled: false,
             recommended: false,
-            speed_note: "~5-15s/min".to_string(),
             speed_seconds_per_minute_low: 0.0,
             speed_seconds_per_minute_high: 0.0,
             path: Some("/path/to/model.bin".to_string()),
@@ -126,7 +123,6 @@ mod tests {
 
         let json = serde_json::to_string(&model).expect("Failed to serialize");
         assert!(json.contains("\"sizeBytes\":148897792"));
-        assert!(json.contains("\"speedNote\":\"~5-15s/min\""));
         assert!(json.contains("\"path\":\"/path/to/model.bin\""));
     }
 
@@ -141,7 +137,6 @@ mod tests {
             downloaded: false,
             bundled: false,
             recommended: false,
-            speed_note: String::new(),
             speed_seconds_per_minute_low: 0.0,
             speed_seconds_per_minute_high: 0.0,
             path: None,

@@ -196,11 +196,8 @@ export const en: Dictionary = {
   },
   models: {
     whisper: {
-      largeV3Turbo: {
-        description: "High quality and fast. Excellent Japanese accuracy",
-      },
-      medium: { description: "Balanced quality and speed. Lighter than Turbo" },
-      small: { description: "Lightweight and fast. Moderate quality" },
+      largeV3Turbo: { description: "High transcription accuracy" },
+      small: { description: "Lightweight and fast. Saves storage" },
     },
     text: {
       gemma3_4b: {

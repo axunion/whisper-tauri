@@ -16,12 +16,10 @@ describe("Whisper Types", () => {
         name: "Large v3 Turbo",
         size: "1.6GB",
         sizeBytes: 1_739_587_584,
-        description:
-          "Recommended. High quality and fast, excellent Japanese accuracy",
+        description: "High transcription accuracy",
         downloaded: true,
         bundled: false,
         recommended: true,
-        speedNote: "~5-15s/min",
         speedSecondsPerMinuteLow: 5.0,
         speedSecondsPerMinuteHigh: 15.0,
       };
@@ -30,13 +28,10 @@ describe("Whisper Types", () => {
       expect(model.name).toBe("Large v3 Turbo");
       expect(model.size).toBe("1.6GB");
       expect(model.sizeBytes).toBe(1_739_587_584);
-      expect(model.description).toBe(
-        "Recommended. High quality and fast, excellent Japanese accuracy",
-      );
+      expect(model.description).toBe("High transcription accuracy");
       expect(model.downloaded).toBe(true);
       expect(model.bundled).toBe(false);
       expect(model.recommended).toBe(true);
-      expect(model.speedNote).toBe("~5-15s/min");
     });
 
     it("should allow optional path property", () => {
@@ -49,7 +44,6 @@ describe("Whisper Types", () => {
         downloaded: true,
         bundled: false,
         recommended: false,
-        speedNote: "~2-5s/min",
         speedSecondsPerMinuteLow: 2.0,
         speedSecondsPerMinuteHigh: 5.0,
         path: "/path/to/model.bin",
@@ -66,7 +60,6 @@ describe("Whisper Types", () => {
         downloaded: false,
         bundled: false,
         recommended: false,
-        speedNote: "",
         speedSecondsPerMinuteLow: 0,
         speedSecondsPerMinuteHigh: 0,
       };

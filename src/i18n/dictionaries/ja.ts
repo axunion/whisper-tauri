@@ -199,9 +199,8 @@ export const ja: Dictionary = {
   },
   models: {
     whisper: {
-      largeV3Turbo: { description: "高品質かつ高速。日本語の精度が高い" },
-      medium: { description: "品質と速度のバランス型。Turboより軽量" },
-      small: { description: "軽量で動作が速い。品質は控えめ" },
+      largeV3Turbo: { description: "文字起こし精度が高い" },
+      small: { description: "軽量で処理が速い。容量を節約できる" },
     },
     text: {
       gemma3_4b: { description: "Google製。日本語を含むCJK言語に最適化" },

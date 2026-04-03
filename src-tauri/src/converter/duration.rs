@@ -58,7 +58,11 @@ pub fn get_duration_via_symphonia(input_path: &Path) -> Result<u64, ConverterErr
     let params = &track.codec_params;
 
     // Try to get duration from codec params
-    #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    #[allow(
+        clippy::cast_precision_loss,
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss
+    )]
     if let (Some(n_frames), Some(sample_rate)) = (params.n_frames, params.sample_rate) {
         if sample_rate > 0 {
             let duration_ms = n_frames as f64 / f64::from(sample_rate) * 1000.0;
@@ -67,7 +71,11 @@ pub fn get_duration_via_symphonia(input_path: &Path) -> Result<u64, ConverterErr
     }
 
     // Fallback: try time_base + n_frames
-    #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    #[allow(
+        clippy::cast_precision_loss,
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss
+    )]
     if let (Some(time_base), Some(n_frames)) = (params.time_base, params.n_frames) {
         let duration_secs =
             f64::from(time_base.numer) / f64::from(time_base.denom) * n_frames as f64;

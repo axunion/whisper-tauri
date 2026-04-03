@@ -20,7 +20,6 @@ const mockModel = (overrides?: Partial<ModelInfo>): ModelInfo => ({
   downloaded: true,
   bundled: false,
   recommended: true,
-  speedNote: "~5-15s/min",
   speedSecondsPerMinuteLow: 5.0,
   speedSecondsPerMinuteHigh: 15.0,
   path: "/models/ggml-large-v3-turbo.bin",
@@ -187,8 +186,8 @@ describe("createWhisper", () => {
           recommended: false,
         }),
         mockModel({
-          id: "medium",
-          name: "Medium",
+          id: "large-v3-turbo",
+          name: "Large v3 Turbo",
           downloaded: false,
           recommended: false,
         }),
