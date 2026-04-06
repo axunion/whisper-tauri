@@ -200,9 +200,8 @@ export const en: Dictionary = {
       small: { description: "Lightweight and fast. Saves storage" },
     },
     text: {
-      gemma3_4b: {
-        description:
-          "By Google. Optimized for CJK languages including Japanese",
+      gemma4_e2b: {
+        description: "By Google. Apache 2.0 license, 128K context window",
       },
       qwen35_4b: {
         description:

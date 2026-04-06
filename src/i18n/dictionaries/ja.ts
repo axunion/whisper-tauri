@@ -203,7 +203,7 @@ export const ja: Dictionary = {
       small: { description: "軽量で処理が速い。容量を節約できる" },
     },
     text: {
-      gemma3_4b: { description: "Google製。日本語を含むCJK言語に最適化" },
+      gemma4_e2b: { description: "Google製。Apache 2.0、128Kコンテキスト" },
       qwen35_4b: { description: "Alibaba製。201言語対応で日本語性能が高い" },
     },
   },

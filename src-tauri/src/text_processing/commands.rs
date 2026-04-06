@@ -174,6 +174,8 @@ pub async fn text_processing_download_server(app: AppHandle) -> Result<String, S
         std::fs::set_permissions(&final_path, perms).map_err(TextProcessingError::from)?;
     }
 
+    models::write_server_version(&app_data_dir).map_err(TextProcessingError::from)?;
+
     final_path
         .to_str()
         .map(std::string::ToString::to_string)
@@ -194,6 +196,7 @@ pub async fn text_processing_delete_server(app: AppHandle) -> Result<(), String>
     if path.exists() {
         std::fs::remove_file(&path).map_err(TextProcessingError::from)?;
     }
+    models::delete_server_version(&app_data_dir);
 
     if bin_dir.is_dir() {
         if let Ok(entries) = std::fs::read_dir(&bin_dir) {
@@ -218,7 +221,9 @@ pub async fn text_processing_delete_server(app: AppHandle) -> Result<(), String>
 #[tauri::command]
 pub async fn text_processing_check_server(app: AppHandle) -> Result<bool, String> {
     let app_data_dir = resolve_app_data_dir(&app)?;
-    Ok(models::llama_server_path(&app_data_dir).exists())
+    let exists = models::llama_server_path(&app_data_dir).exists()
+        && models::is_server_version_current(&app_data_dir);
+    Ok(exists)
 }
 
 /// Returns the current server status.

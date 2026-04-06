@@ -192,7 +192,7 @@ export interface Dictionary {
       small: { description: string };
     };
     text: {
-      gemma3_4b: { description: string };
+      gemma4_e2b: { description: string };
       qwen35_4b: { description: string };
     };
   };

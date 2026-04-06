@@ -47,7 +47,7 @@ describe("createSettings", () => {
         theme: "dark",
         whisperLanguage: "ja",
         whisperModelId: "large-v3-turbo",
-        textModelId: "gemma-3-4b",
+        textModelId: "gemma-4-e2b",
         onboardingCompleted: true,
       };
 

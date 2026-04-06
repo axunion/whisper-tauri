@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TextModelInfo {
-    /// Model identifier (e.g., "gemma-3-4b", "qwen3.5-4b")
+    /// Model identifier (e.g., "gemma-4-e2b", "qwen3.5-4b")
     pub id: String,
     /// Display name
     pub name: String,

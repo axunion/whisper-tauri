@@ -3,15 +3,15 @@ use std::path::{Path, PathBuf};
 use super::types::TextModelInfo;
 
 /// Pinned llama-server release version (verified to work).
-pub const LLAMA_SERVER_VERSION: &str = "b8354";
+pub const LLAMA_SERVER_VERSION: &str = "b8672";
 
 /// Valid text model IDs.
-const VALID_MODEL_IDS: [&str; 2] = ["gemma-3-4b", "qwen3.5-4b"];
+const VALID_MODEL_IDS: [&str; 2] = ["gemma-4-e2b", "qwen3.5-4b"];
 
 /// Model filenames (GGUF `Q4_K_M` quantization).
 fn get_model_filename(model_id: &str) -> Option<&'static str> {
     match model_id {
-        "gemma-3-4b" => Some("google_gemma-3-4b-it-Q4_K_M.gguf"),
+        "gemma-4-e2b" => Some("google_gemma-4-E2B-it-Q4_K_M.gguf"),
         "qwen3.5-4b" => Some("Qwen3.5-4B-Q4_K_M.gguf"),
         _ => None,
     }
@@ -20,8 +20,8 @@ fn get_model_filename(model_id: &str) -> Option<&'static str> {
 /// Default download base URLs for each model.
 fn get_default_model_base_url(model_id: &str) -> Option<&'static str> {
     match model_id {
-        "gemma-3-4b" => {
-            Some("https://huggingface.co/bartowski/google_gemma-3-4b-it-GGUF/resolve/main")
+        "gemma-4-e2b" => {
+            Some("https://huggingface.co/bartowski/google_gemma-4-E2B-it-GGUF/resolve/main")
         }
         "qwen3.5-4b" => Some("https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main"),
         _ => None,
@@ -54,6 +54,30 @@ pub fn text_models_dir(app_data_dir: &Path) -> PathBuf {
 pub fn text_model_path(app_data_dir: &Path, model_id: &str) -> Option<PathBuf> {
     let filename = get_model_filename(model_id)?;
     Some(text_models_dir(app_data_dir).join(filename))
+}
+
+/// Returns the path to the llama-server version marker file.
+#[must_use]
+pub fn llama_server_version_path(app_data_dir: &Path) -> PathBuf {
+    app_data_dir.join("bin").join("llama-server.version")
+}
+
+/// Writes the current pinned version to the version marker file.
+pub fn write_server_version(app_data_dir: &Path) -> Result<(), std::io::Error> {
+    std::fs::write(llama_server_version_path(app_data_dir), LLAMA_SERVER_VERSION)
+}
+
+/// Deletes the version marker file (best-effort, ignores errors).
+pub fn delete_server_version(app_data_dir: &Path) {
+    let _ = std::fs::remove_file(llama_server_version_path(app_data_dir));
+}
+
+/// Returns `true` if the version marker matches the pinned version.
+#[must_use]
+pub fn is_server_version_current(app_data_dir: &Path) -> bool {
+    std::fs::read_to_string(llama_server_version_path(app_data_dir))
+        .map(|v| v.trim() == LLAMA_SERVER_VERSION)
+        .unwrap_or(false)
 }
 
 /// Returns the path where the llama-server binary will be stored.
@@ -126,11 +150,11 @@ pub fn get_default_server_url() -> &'static str {
 pub fn get_model_list() -> Vec<TextModelInfo> {
     vec![
         TextModelInfo {
-            id: "gemma-3-4b".to_string(),
-            name: "Gemma 3 4B".to_string(),
-            size: "2.7GB".to_string(),
-            size_bytes: 2_900_000_000,
-            description: "Google Gemma 3. CJK tokenizer optimized, stable".to_string(),
+            id: "gemma-4-e2b".to_string(),
+            name: "Gemma 4 E2B".to_string(),
+            size: "3.5GB".to_string(),
+            size_bytes: 3_460_000_000,
+            description: "Google Gemma 4. Apache 2.0, 128K context, CJK optimized".to_string(),
             downloaded: false,
             path: None,
         },
@@ -161,14 +185,14 @@ mod tests {
     fn model_list_contains_expected_ids() {
         let models = get_model_list();
         let ids: Vec<&str> = models.iter().map(|m| m.id.as_str()).collect();
-        assert!(ids.contains(&"gemma-3-4b"));
+        assert!(ids.contains(&"gemma-4-e2b"));
         assert!(ids.contains(&"qwen3.5-4b"));
     }
 
     #[test]
     fn model_list_alphabetical_order() {
         let models = get_model_list();
-        assert_eq!(models[0].id, "gemma-3-4b");
+        assert_eq!(models[0].id, "gemma-4-e2b");
         assert_eq!(models[1].id, "qwen3.5-4b");
     }
 
@@ -183,7 +207,7 @@ mod tests {
 
     #[test]
     fn is_valid_model_id_accepts_known() {
-        assert!(is_valid_model_id("gemma-3-4b"));
+        assert!(is_valid_model_id("gemma-4-e2b"));
         assert!(is_valid_model_id("qwen3.5-4b"));
     }
 
@@ -196,8 +220,8 @@ mod tests {
     #[test]
     fn get_model_filename_known_models() {
         assert_eq!(
-            get_model_filename("gemma-3-4b"),
-            Some("google_gemma-3-4b-it-Q4_K_M.gguf")
+            get_model_filename("gemma-4-e2b"),
+            Some("google_gemma-4-E2B-it-Q4_K_M.gguf")
         );
         assert_eq!(
             get_model_filename("qwen3.5-4b"),
@@ -221,19 +245,19 @@ mod tests {
 
     #[test]
     fn get_model_url_with_custom_base() {
-        let url = get_model_url("gemma-3-4b", Some("https://example.com/models"));
+        let url = get_model_url("gemma-4-e2b", Some("https://example.com/models"));
         assert_eq!(
             url,
-            Some("https://example.com/models/google_gemma-3-4b-it-Q4_K_M.gguf".to_string())
+            Some("https://example.com/models/google_gemma-4-E2B-it-Q4_K_M.gguf".to_string())
         );
     }
 
     #[test]
     fn get_model_url_strips_trailing_slash() {
-        let url = get_model_url("gemma-3-4b", Some("https://example.com/models/"));
+        let url = get_model_url("gemma-4-e2b", Some("https://example.com/models/"));
         assert_eq!(
             url,
-            Some("https://example.com/models/google_gemma-3-4b-it-Q4_K_M.gguf".to_string())
+            Some("https://example.com/models/google_gemma-4-E2B-it-Q4_K_M.gguf".to_string())
         );
     }
 

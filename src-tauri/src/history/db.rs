@@ -1111,7 +1111,7 @@ mod tests {
             content_type: "summary".to_string(),
             text: "This is a summary of the transcription.".to_string(),
             options_json: Some(r#"{"length":"medium","bulletPoints":false}"#.to_string()),
-            text_model_id: "gemma-3-4b".to_string(),
+            text_model_id: "gemma-4-e2b".to_string(),
         };
 
         let ai_id = save_ai_content(&path, &params).expect("save ai content");
@@ -1123,7 +1123,7 @@ mod tests {
         assert_eq!(content.history_id, entry_id);
         assert_eq!(content.content_type, "summary");
         assert_eq!(content.text, "This is a summary of the transcription.");
-        assert_eq!(content.text_model_id, "gemma-3-4b");
+        assert_eq!(content.text_model_id, "gemma-4-e2b");
     }
 
     #[test]
@@ -1145,7 +1145,7 @@ mod tests {
             content_type: "summary".to_string(),
             text: "First summary".to_string(),
             options_json: None,
-            text_model_id: "gemma-3-4b".to_string(),
+            text_model_id: "gemma-4-e2b".to_string(),
         };
         save_ai_content(&path, &params1).expect("save first");
 
@@ -1176,7 +1176,7 @@ mod tests {
                 content_type: content_type.to_string(),
                 text: format!("Content for {content_type}"),
                 options_json: None,
-                text_model_id: "gemma-3-4b".to_string(),
+                text_model_id: "gemma-4-e2b".to_string(),
             };
             save_ai_content(&path, &params).expect("save");
         }
@@ -1195,7 +1195,7 @@ mod tests {
             content_type: "summary".to_string(),
             text: "Summary text".to_string(),
             options_json: None,
-            text_model_id: "gemma-3-4b".to_string(),
+            text_model_id: "gemma-4-e2b".to_string(),
         };
         save_ai_content(&path, &params).expect("save ai");
 

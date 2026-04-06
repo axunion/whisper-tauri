@@ -2,7 +2,7 @@
  * Text processing model information.
  */
 export interface TextModelInfo {
-  /** Model identifier (e.g., "gemma-3-4b", "qwen3.5-4b") */
+  /** Model identifier (e.g., "gemma-4-e2b", "qwen3.5-4b") */
   id: string;
   /** Display name */
   name: string;
