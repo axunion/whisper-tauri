@@ -236,7 +236,7 @@ export default function Transcription() {
       class={cn(
         "animate-fade-in mx-auto w-full max-w-3xl",
         viewState() === "result"
-          ? "-mb-10 flex flex-1 flex-col gap-8"
+          ? "flex min-h-0 flex-1 flex-col gap-8"
           : "space-y-8",
       )}
     >
@@ -249,7 +249,7 @@ export default function Transcription() {
       <Card
         class={cn(
           "rounded-2xl shadow-sm",
-          viewState() === "result" && "flex flex-1 flex-col",
+          viewState() === "result" && "flex min-h-0 flex-1 flex-col",
         )}
       >
         <CardContent

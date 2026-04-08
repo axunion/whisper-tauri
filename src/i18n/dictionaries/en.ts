@@ -276,7 +276,7 @@ export const en: Dictionary = {
     llmTester: "LLM Tester",
     defaultInput: "Describe your key features.",
     inputPlaceholder: "Enter a message...",
-    send: "Send",
+    send: "Test",
     prerequisiteWarning: "not downloaded",
     resetOnboarding: "Onboarding",
     reset: "Reset",

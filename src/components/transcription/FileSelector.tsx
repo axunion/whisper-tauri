@@ -97,15 +97,15 @@ const FileSelector: Component<FileSelectorProps> = (props) => {
           </button>
           <Show when={file().duration}>
             {(dur) => (
-              <div class="flex items-center gap-3">
-                <span class="flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-0.5 text-xs text-muted-foreground">
-                  <FiClock class="size-3" />
+              <div class="mt-3 flex items-center gap-3">
+                <span class="flex items-center gap-1.5 rounded-full bg-muted/60 px-3 py-1 text-sm text-muted-foreground">
+                  <FiClock class="size-3.5" />
                   {formatDurationColon(dur())}
                 </span>
                 <Show when={props.estimateLabel}>
                   {(label) => (
-                    <span class="flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-0.5 text-xs text-muted-foreground">
-                      <FiActivity class="size-3" />
+                    <span class="flex items-center gap-1.5 rounded-full bg-muted/60 px-3 py-1 text-sm text-muted-foreground">
+                      <FiActivity class="size-3.5" />
                       {label()}
                     </span>
                   )}

@@ -274,7 +274,7 @@ export const ja: Dictionary = {
     llmTester: "LLMテスト",
     defaultInput: "あなたの特徴を説明してください。",
     inputPlaceholder: "メッセージを入力...",
-    send: "送信",
+    send: "テスト",
     prerequisiteWarning: "が未ダウンロードです",
     resetOnboarding: "オンボーディング",
     reset: "リセット",

@@ -200,6 +200,11 @@
   }
 }
 
+/* ---------- Button cursor reset ---------- */
+button {
+  cursor: pointer;
+}
+
 /* ---------- Global scrollbar ---------- */
 ::-webkit-scrollbar {
   width: 6px;
