@@ -55,7 +55,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
   const summaryTabVisible = () =>
     summaryTabRequested() ||
     session.summaryResult() !== null ||
-    session.isProcessing();
+    (session.isProcessing() && session.currentOperation() === "summary");
 
   const cleanTextTabVisible = () =>
     cleanTextTabRequested() || session.cleanTextResult() !== null;

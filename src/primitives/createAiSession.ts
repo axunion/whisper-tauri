@@ -123,7 +123,6 @@ export function createAiSession(
     if (isProcessing()) return null;
     setIsProcessing(true);
     setCurrentOperation(operation);
-    setResult(null);
     setError(null);
     try {
       const modelId = tp.effectiveModelId();
