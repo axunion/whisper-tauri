@@ -28,9 +28,9 @@ export function WelcomeStep(props: WelcomeStepProps) {
       </div>
 
       <div class="space-y-1.5">
-        <h1 class="text-xl font-bold tracking-tight">
+        <div class="text-xl font-bold tracking-tight">
           {t("onboarding.welcomeTitle")}
-        </h1>
+        </div>
         <p class="text-sm text-muted-foreground">
           {t("onboarding.welcomeSubtitle")}
         </p>

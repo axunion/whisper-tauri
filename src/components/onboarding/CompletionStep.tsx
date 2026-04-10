@@ -56,9 +56,9 @@ export function CompletionStep(props: CompletionStepProps) {
       </div>
 
       <div class="space-y-1.5">
-        <h1 class="text-xl font-bold tracking-tight">
+        <div class="text-xl font-bold tracking-tight">
           {t("onboarding.completionTitle")}
-        </h1>
+        </div>
         <p class="text-sm text-muted-foreground">
           {t("onboarding.completionSubtitle")}
         </p>

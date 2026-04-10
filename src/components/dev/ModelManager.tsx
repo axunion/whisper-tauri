@@ -1,13 +1,13 @@
 import { FiDownload, FiTrash2 } from "solid-icons/fi";
 import { createSignal, For, Show } from "solid-js";
+import { Button } from "~/components/ui/Button";
+import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
+import { DownloadProgress } from "~/components/ui/DownloadProgress";
+import { ModelListItem } from "~/components/ui/ModelListItem";
 import { useI18n } from "~/i18n";
 import { getModelDescription } from "~/lib/modelDescription";
 import { toast } from "~/lib/toast";
 import type { createWhisper } from "~/primitives/createWhisper";
-import { Button } from "../ui/Button";
-import { ConfirmDialog } from "../ui/ConfirmDialog";
-import { DownloadProgress } from "../ui/DownloadProgress";
-import { ModelListItem } from "../ui/ModelListItem";
 
 interface ModelManagerProps {
   whisper: ReturnType<typeof createWhisper>;

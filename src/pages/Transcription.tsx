@@ -1,5 +1,4 @@
 import { useLocation } from "@solidjs/router";
-import { FiCheck, FiX } from "solid-icons/fi";
 import {
   createEffect,
   createMemo,
@@ -14,9 +13,9 @@ import { ErrorDisplay } from "~/components/ErrorDisplay";
 import {
   FileSelector,
   RecordingPanel,
-  ResultViewer,
   TranscriptionOptionsBar,
   TranscriptionProgress,
+  TranscriptionResult,
 } from "~/components/transcription";
 import { Card, CardContent } from "~/components/ui/Card";
 import { Progress } from "~/components/ui/Progress";
@@ -52,9 +51,6 @@ export default function Transcription() {
   const [convertedPath, setConvertedPath] = createSignal<string | null>(null);
   const [activeTab, setActiveTab] = createSignal("file");
   const [historyId, setHistoryId] = createSignal<string | null>(null);
-  const [titleEditing, setTitleEditing] = createSignal(false);
-  const [titleEditValue, setTitleEditValue] = createSignal("");
-  const [isGeneratingTitle, setIsGeneratingTitle] = createSignal(false);
 
   onMount(async () => {
     whisper.loadModels();
@@ -184,41 +180,12 @@ export default function Transcription() {
     whisper.reset();
   }
 
-  function handleTitleGenerated(title: string) {
-    setTitleEditValue(title);
-    setTitleEditing(true);
-  }
-
-  function confirmTitle() {
-    const trimmed = titleEditValue().trim();
-    const id = historyId();
-    if (trimmed && id) {
-      history.renameEntry(id, trimmed);
-    }
-    setTitleEditing(false);
-  }
-
-  function cancelTitle() {
-    setTitleEditing(false);
-  }
-
-  function handleTitleKeyDown(e: KeyboardEvent) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      confirmTitle();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      cancelTitle();
-    }
-  }
-
   async function handleReset() {
     const prev = convertedPath();
     if (prev) {
       await converter.cleanup(prev);
       setConvertedPath(null);
     }
-    setTitleEditing(false);
     whisper.reset();
   }
 
@@ -377,60 +344,13 @@ export default function Transcription() {
             <Match when={viewState() === "result"}>
               <Show when={whisper.result()}>
                 {(result) => (
-                  <div class="flex min-h-0 flex-1 flex-col gap-2">
-                    {/* Title row */}
-                    <div class="flex h-8 items-center gap-1.5">
-                      <div class="min-w-0 flex-1">
-                        <Show
-                          when={titleEditing()}
-                          fallback={
-                            <span
-                              class="block truncate text-lg font-semibold"
-                              classList={{
-                                "animate-pulse": isGeneratingTitle(),
-                              }}
-                            >
-                              {whisper.file()?.name ?? ""}
-                            </span>
-                          }
-                        >
-                          <input
-                            type="text"
-                            autofocus
-                            class="w-full border-b border-muted-foreground/40 bg-transparent text-lg font-semibold outline-none"
-                            value={titleEditValue()}
-                            onInput={(e) =>
-                              setTitleEditValue(e.currentTarget.value)
-                            }
-                            onKeyDown={handleTitleKeyDown}
-                          />
-                        </Show>
-                      </div>
-                      <Show when={titleEditing()}>
-                        <button
-                          type="button"
-                          class="shrink-0 text-muted-foreground hover:text-foreground"
-                          onClick={confirmTitle}
-                        >
-                          <FiCheck class="size-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          class="shrink-0 text-muted-foreground hover:text-foreground"
-                          onClick={cancelTitle}
-                        >
-                          <FiX class="size-3.5" />
-                        </button>
-                      </Show>
-                    </div>
-                    <ResultViewer
-                      result={result()}
-                      historyId={historyId() ?? undefined}
-                      onClose={handleReset}
-                      onTitleGenerated={handleTitleGenerated}
-                      onGeneratingTitleChange={setIsGeneratingTitle}
-                    />
-                  </div>
+                  <TranscriptionResult
+                    result={result()}
+                    fileName={whisper.file()?.name ?? ""}
+                    historyId={historyId()}
+                    onClose={handleReset}
+                    onRename={(id, name) => history.renameEntry(id, name)}
+                  />
                 )}
               </Show>
             </Match>

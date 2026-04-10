@@ -31,9 +31,9 @@ export function LlmStep(props: LlmStepProps) {
       </div>
 
       <div class="space-y-1.5">
-        <h2 class="text-lg font-bold tracking-tight">
+        <div class="text-lg font-bold tracking-tight">
           {t("onboarding.llmTitle")}
-        </h2>
+        </div>
         <p class="text-xs text-muted-foreground">
           {t("onboarding.llmDescription")}
         </p>

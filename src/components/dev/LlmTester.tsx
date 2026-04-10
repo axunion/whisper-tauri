@@ -1,8 +1,8 @@
 import { FiSend, FiX } from "solid-icons/fi";
 import { createSignal, Show } from "solid-js";
+import { Button } from "~/components/ui/Button";
 import { useI18n } from "~/i18n";
 import type { createTextProcessing } from "~/primitives/createTextProcessing";
-import { Button } from "../ui/Button";
 
 interface LlmTesterProps {
   textProcessing: ReturnType<typeof createTextProcessing>;

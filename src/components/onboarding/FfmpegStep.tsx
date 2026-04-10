@@ -28,9 +28,9 @@ export function FfmpegStep(props: FfmpegStepProps) {
       </div>
 
       <div class="space-y-1.5">
-        <h2 class="text-lg font-bold tracking-tight">
+        <div class="text-lg font-bold tracking-tight">
           {t("onboarding.ffmpegTitle")}
-        </h2>
+        </div>
         <p class="text-xs text-muted-foreground">
           {t("onboarding.ffmpegDescription")}
         </p>

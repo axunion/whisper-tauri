@@ -1,9 +1,9 @@
 import { FiTrash2 } from "solid-icons/fi";
+import { Button } from "~/components/ui/Button";
+import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
 import type { createHistory } from "~/primitives/createHistory";
-import { Button } from "../ui/Button";
-import { ConfirmDialog } from "../ui/ConfirmDialog";
 
 interface CacheClearProps {
   history: ReturnType<typeof createHistory>;

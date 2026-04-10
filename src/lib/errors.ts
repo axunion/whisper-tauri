@@ -3,7 +3,7 @@ import {
   ErrorCategory,
   ErrorCode,
   type ErrorCode as ErrorCodeType,
-} from "../types/errors";
+} from "~/types/errors";
 
 const CATEGORY_MAP: Record<ErrorCodeType, ErrorCategory> = {
   [ErrorCode.FILE_NOT_FOUND]: ErrorCategory.FILE,

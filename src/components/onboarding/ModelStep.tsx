@@ -21,9 +21,9 @@ export function ModelStep(props: ModelStepProps) {
   return (
     <div class="animate-fade-in mx-auto flex w-full max-w-lg flex-col gap-3">
       <div class="text-center">
-        <h2 class="text-lg font-bold tracking-tight">
+        <div class="text-lg font-bold tracking-tight">
           {t("onboarding.modelTitle")}
-        </h2>
+        </div>
         <p class="mt-1 text-xs text-muted-foreground">
           {t("onboarding.modelSubtitle")}
         </p>
