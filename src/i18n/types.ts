@@ -7,10 +7,8 @@ export interface Dictionary {
     close: string;
     retry: string;
     download: string;
-    save: string;
     recommended: string;
     deleting: string;
-    processing: string;
     confirm: string;
     done: string;
     downloading: string;
