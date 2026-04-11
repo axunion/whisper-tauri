@@ -63,8 +63,15 @@ pub fn llama_server_version_path(app_data_dir: &Path) -> PathBuf {
 }
 
 /// Writes the current pinned version to the version marker file.
+///
+/// # Errors
+///
+/// Returns an error if the version file cannot be written.
 pub fn write_server_version(app_data_dir: &Path) -> Result<(), std::io::Error> {
-    std::fs::write(llama_server_version_path(app_data_dir), LLAMA_SERVER_VERSION)
+    std::fs::write(
+        llama_server_version_path(app_data_dir),
+        LLAMA_SERVER_VERSION,
+    )
 }
 
 /// Deletes the version marker file (best-effort, ignores errors).

@@ -65,6 +65,7 @@ pub struct ServerStatus {
 
 /// OpenAI-compatible chat message.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct ChatMessage {
     /// Message role (system, user, assistant)
     pub role: String,

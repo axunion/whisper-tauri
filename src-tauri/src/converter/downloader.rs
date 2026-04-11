@@ -34,7 +34,7 @@ fn btbn_url(suffix: &str) -> String {
 /// URLs are constructed from the pinned version/tag constants and cached
 /// for the lifetime of the process via `OnceLock`.
 #[must_use]
-pub fn get_default_download_url() -> &'static str {
+fn get_default_download_url() -> &'static str {
     use std::sync::OnceLock;
 
     static URL: OnceLock<String> = OnceLock::new();
@@ -73,7 +73,7 @@ pub fn get_default_download_url() -> &'static str {
 ///
 /// macOS uses the evermeet.cx release version; other platforms use the `BtbN` autobuild tag.
 #[must_use]
-pub fn current_ffmpeg_version() -> &'static str {
+fn current_ffmpeg_version() -> &'static str {
     #[cfg(target_os = "macos")]
     {
         FFMPEG_MACOS_VERSION
@@ -86,7 +86,7 @@ pub fn current_ffmpeg_version() -> &'static str {
 
 /// Returns the expected archive format for the current platform.
 #[must_use]
-pub fn get_archive_format() -> ArchiveFormat {
+fn get_archive_format() -> ArchiveFormat {
     #[cfg(target_os = "linux")]
     {
         ArchiveFormat::TarXz
