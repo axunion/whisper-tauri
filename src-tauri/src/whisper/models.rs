@@ -44,8 +44,8 @@ pub fn is_valid_model_id(model_id: &str) -> bool {
 #[must_use]
 pub fn get_speed_factors(model_id: &str, arch: &str) -> (f64, f64) {
     match (model_id, arch) {
-        ("large-v3-turbo", "aarch64") => (5.0, 15.0),
-        ("small", "aarch64") => (2.0, 5.0),
+        ("large-v3-turbo", "aarch64") => (3.0, 7.0),
+        ("small", "aarch64") => (1.5, 3.5),
         ("large-v3-turbo", "x86_64") => (30.0, 90.0),
         ("small", "x86_64") => (10.0, 30.0),
         _ => (0.0, 0.0),
@@ -279,12 +279,12 @@ mod tests {
 
     #[test]
     fn get_speed_factors_aarch64_large_v3_turbo() {
-        assert_eq!(get_speed_factors("large-v3-turbo", "aarch64"), (5.0, 15.0));
+        assert_eq!(get_speed_factors("large-v3-turbo", "aarch64"), (3.0, 7.0));
     }
 
     #[test]
     fn get_speed_factors_aarch64_small() {
-        assert_eq!(get_speed_factors("small", "aarch64"), (2.0, 5.0));
+        assert_eq!(get_speed_factors("small", "aarch64"), (1.5, 3.5));
     }
 
     #[test]

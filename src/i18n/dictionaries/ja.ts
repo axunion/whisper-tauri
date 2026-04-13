@@ -62,6 +62,9 @@ export const ja: Dictionary = {
     audioFilesFilter: "音声ファイル",
     completedToast: "文字起こしが完了しました",
     estimatedTime: "約{minutes}分",
+    remainingTime: "残り約{minutes}分",
+    almostDone: "まもなく完了",
+    cancelling: "キャンセル中...",
   },
   history: {
     title: "履歴",

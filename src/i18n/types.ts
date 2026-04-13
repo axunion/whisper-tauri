@@ -61,6 +61,9 @@ export interface Dictionary {
     audioFilesFilter: string;
     completedToast: string;
     estimatedTime: string;
+    remainingTime: string;
+    almostDone: string;
+    cancelling: string;
   };
   history: {
     title: string;

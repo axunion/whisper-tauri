@@ -88,7 +88,7 @@ export default function Transcription() {
     whisper.models().filter((m) => m.downloaded),
   );
 
-  const estimateLabel = createMemo(() => {
+  const estimatedTotalSec = createMemo(() => {
     const f = whisper.file();
     const model = whisper.selectedModel();
     if (!f?.duration || !model || model.speedSecondsPerMinuteHigh === 0)
@@ -97,9 +97,14 @@ export default function Transcription() {
     // Use midpoint between low and high for a realistic estimate
     const speedPerMin =
       (model.speedSecondsPerMinuteLow + model.speedSecondsPerMinuteHigh) / 2;
-    const estimateSec = audioMinutes * speedPerMin;
+    return audioMinutes * speedPerMin;
+  });
+
+  const estimateLabel = createMemo(() => {
+    const sec = estimatedTotalSec();
+    if (sec === undefined) return undefined;
     return t("transcription.estimatedTime", {
-      minutes: Math.max(1, Math.ceil(estimateSec / 60)),
+      minutes: Math.max(1, Math.ceil(sec / 60)),
     });
   });
 
@@ -310,7 +315,7 @@ export default function Transcription() {
             </Match>
 
             <Match when={viewState() === "converting"}>
-              <div class="space-y-6 py-8">
+              <div class="flex h-93 flex-col justify-center space-y-6">
                 <Show when={whisper.file()}>
                   {(file) => (
                     <p class="text-center text-sm text-muted-foreground">
@@ -326,7 +331,7 @@ export default function Transcription() {
             </Match>
 
             <Match when={viewState() === "processing"}>
-              <div class="space-y-6 py-4">
+              <div class="flex h-93 flex-col justify-center space-y-6">
                 <Show when={whisper.file()}>
                   {(file) => (
                     <p class="text-center text-sm text-muted-foreground">
@@ -336,6 +341,7 @@ export default function Transcription() {
                 </Show>
                 <TranscriptionProgress
                   progress={whisper.progress()}
+                  estimatedTotalSec={estimatedTotalSec()}
                   onCancel={() => whisper.cancelTranscription()}
                 />
               </div>

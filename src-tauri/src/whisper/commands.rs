@@ -9,7 +9,7 @@ use tokio::io::AsyncWriteExt;
 use super::error::WhisperError;
 use super::models;
 use super::process;
-use super::types::{DownloadProgress, ModelInfo, TranscriptionResult};
+use super::types::{DownloadProgress, ModelInfo, TranscriptionProgress, TranscriptionResult};
 
 /// Progress event throttle interval in milliseconds.
 const PROGRESS_THROTTLE_MS: u128 = 100;
@@ -277,15 +277,38 @@ pub async fn transcribe_audio(
 ) -> Result<TranscriptionResult, String> {
     let task_id = uuid::Uuid::new_v4().to_string();
     let token = process::TASK_MANAGER.create_task(&task_id);
+    let _guard = TaskGuard {
+        task_id: task_id.clone(),
+    };
+
+    // Emit an initial progress event so the frontend receives the task_id
+    // and can enable the cancel button before heavy work begins.
+    let _ = app.emit(
+        "whisper:progress",
+        TranscriptionProgress {
+            task_id: task_id.clone(),
+            progress: 0.0,
+            elapsed_ms: 0,
+            current_segment: None,
+        },
+    );
+
+    if token.is_cancelled() {
+        return Err(WhisperError::Cancelled.into());
+    }
 
     // Load WAV file on current thread (I/O bound)
     let path = PathBuf::from(&audio_path);
     let samples = process::load_wav_file(&path).map_err::<String, _>(Into::into)?;
 
+    if token.is_cancelled() {
+        return Err(WhisperError::Cancelled.into());
+    }
+
     let task_id_clone = task_id.clone();
 
     // Run transcription on a blocking thread (CPU bound)
-    let result = tokio::task::spawn_blocking(move || {
+    tokio::task::spawn_blocking(move || {
         process::transcribe(
             &model_path,
             &samples,
@@ -297,11 +320,18 @@ pub async fn transcribe_audio(
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))?
-    .map_err::<String, _>(Into::into)?;
+    .map_err::<String, _>(Into::into)
+}
 
-    process::TASK_MANAGER.remove_task(&task_id);
+/// RAII guard that removes a task from the transcription task manager on drop.
+struct TaskGuard {
+    task_id: String,
+}
 
-    Ok(result)
+impl Drop for TaskGuard {
+    fn drop(&mut self) {
+        process::TASK_MANAGER.remove_task(&self.task_id);
+    }
 }
 
 /// Cancels an in-progress transcription task.

@@ -1,27 +1,72 @@
 import { FiX } from "solid-icons/fi";
 import type { Component } from "solid-js";
-import { Show } from "solid-js";
+import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 import { Button } from "~/components/ui/Button";
 import { Progress } from "~/components/ui/Progress";
 import { useI18n } from "~/i18n";
 import type { TranscriptionProgress as TranscriptionProgressType } from "~/types";
 
+const MEASURED_PROGRESS_THRESHOLD = 5;
+const NBSP = "\u00A0";
+
 interface TranscriptionProgressProps {
   progress: TranscriptionProgressType | null;
+  estimatedTotalSec?: number | undefined;
   onCancel: () => void;
-}
-
-function formatElapsedTime(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 const TranscriptionProgress: Component<TranscriptionProgressProps> = (
   props,
 ) => {
   const { t } = useI18n();
+
+  const [localElapsedMs, setLocalElapsedMs] = createSignal(0);
+  const [isCancelling, setIsCancelling] = createSignal(false);
+  let startTime: number | undefined;
+  let timer: ReturnType<typeof setInterval> | undefined;
+
+  function handleCancel() {
+    if (isCancelling()) return;
+    setIsCancelling(true);
+    props.onCancel();
+  }
+
+  createEffect(() => {
+    const p = props.progress;
+    if (p && startTime === undefined) {
+      const anchor = Date.now() - p.elapsedMs;
+      startTime = anchor;
+      setLocalElapsedMs(p.elapsedMs);
+      timer = setInterval(() => {
+        setLocalElapsedMs(Date.now() - anchor);
+      }, 1000);
+    }
+  });
+
+  onCleanup(() => {
+    if (timer) clearInterval(timer);
+  });
+
+  function getRemainingLabel(
+    progressPct: number,
+    elapsedMs: number,
+    estimatedTotalSec: number | undefined,
+  ): string | undefined {
+    const elapsedSec = elapsedMs / 1000;
+    let remainingSec: number | undefined;
+
+    if (progressPct >= MEASURED_PROGRESS_THRESHOLD) {
+      remainingSec = (elapsedSec * (100 - progressPct)) / progressPct;
+    } else if (estimatedTotalSec !== undefined && estimatedTotalSec > 0) {
+      remainingSec = Math.max(0, estimatedTotalSec - elapsedSec);
+    }
+
+    if (remainingSec === undefined) return undefined;
+
+    const remainingMin = Math.ceil(remainingSec / 60);
+    if (remainingMin < 1) return t("transcription.almostDone");
+    return t("transcription.remainingTime", { minutes: remainingMin });
+  }
 
   return (
     <div class="space-y-3">
@@ -30,7 +75,7 @@ const TranscriptionProgress: Component<TranscriptionProgressProps> = (
         fallback={
           <>
             <div class="flex items-center justify-between text-sm">
-              <span class="text-muted-foreground">00:00</span>
+              <span class="text-muted-foreground">{NBSP}</span>
               <span class="font-medium">0%</span>
             </div>
             <Progress value={0} />
@@ -41,7 +86,11 @@ const TranscriptionProgress: Component<TranscriptionProgressProps> = (
           <>
             <div class="flex items-center justify-between text-sm">
               <span class="text-muted-foreground">
-                {formatElapsedTime(progress().elapsedMs)}
+                {getRemainingLabel(
+                  progress().progress,
+                  localElapsedMs(),
+                  props.estimatedTotalSec,
+                ) ?? NBSP}
               </span>
               <span class="font-medium">
                 {Math.round(progress().progress)}%
@@ -58,9 +107,14 @@ const TranscriptionProgress: Component<TranscriptionProgressProps> = (
           </>
         )}
       </Show>
-      <Button variant="outline" size="sm" onClick={() => props.onCancel()}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleCancel}
+        disabled={isCancelling()}
+      >
         <FiX />
-        {t("common.cancel")}
+        {isCancelling() ? t("transcription.cancelling") : t("common.cancel")}
       </Button>
     </div>
   );

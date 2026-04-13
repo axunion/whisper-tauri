@@ -61,6 +61,9 @@ export const en: Dictionary = {
     audioFilesFilter: "Audio Files",
     completedToast: "Transcription completed",
     estimatedTime: "~{minutes} min",
+    remainingTime: "~{minutes} min remaining",
+    almostDone: "Almost done",
+    cancelling: "Cancelling...",
   },
   history: {
     title: "History",
