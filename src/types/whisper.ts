@@ -64,8 +64,6 @@ export interface TranscriptionProgress {
   progress: number;
   /** Elapsed time in milliseconds */
   elapsedMs: number;
-  /** Current segment being processed */
-  currentSegment?: string;
 }
 
 /**

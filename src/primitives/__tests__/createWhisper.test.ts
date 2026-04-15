@@ -625,7 +625,6 @@ describe("createWhisper", () => {
         taskId: "task-789",
         progress: 75,
         elapsedMs: 3000,
-        currentSegment: "Processing...",
       };
 
       callback?.({ payload: progressData });

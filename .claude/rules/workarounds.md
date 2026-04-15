@@ -7,9 +7,9 @@ paths:
 
 # 既知の問題・ワークアラウンド
 
-## whisper-rs 0.15.1: `set_abort_callback_safe` の UB バグ
+## whisper-rs 0.15.1〜0.16.0: `set_abort_callback_safe` の UB バグ
 
-`set_abort_callback_safe` に直接クロージャを渡すと、FFI トランポリン関数の型不一致により未定義動作が発生する。
+`set_abort_callback_safe` に直接クロージャを渡すと、FFI トランポリン関数の型不一致により未定義動作が発生する。0.16.0 のソース (`whisper_params.rs:621-655`) でも同一バグが残存していることを確認済み（trampoline が `trampoline::<F>` で単態化されているのに対し、user_data は `Box<dyn FnMut() -> bool>` を指す）。なお `set_progress_callback_safe` は `trampoline::<Box<dyn FnMut(i32)>>` で正しく単態化されているため安全。
 
 **ワークアラウンド** (`src-tauri/src/whisper/process.rs`):
 

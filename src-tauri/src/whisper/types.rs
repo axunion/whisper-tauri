@@ -67,9 +67,6 @@ pub struct TranscriptionProgress {
     pub progress: f64,
     /// Elapsed time in milliseconds
     pub elapsed_ms: u64,
-    /// Current segment being processed
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub current_segment: Option<String>,
 }
 
 /// Model download progress.
@@ -180,31 +177,16 @@ mod tests {
     }
 
     #[test]
-    fn transcription_progress_skips_none_current_segment() {
+    fn transcription_progress_serializes_to_camel_case() {
         let progress = TranscriptionProgress {
             task_id: "task-123".to_string(),
             progress: 50.0,
             elapsed_ms: 1500,
-            current_segment: None,
         };
 
         let json = serde_json::to_string(&progress).expect("Failed to serialize");
         assert!(json.contains("\"taskId\":\"task-123\""));
         assert!(json.contains("\"elapsedMs\":1500"));
-        assert!(!json.contains("\"currentSegment\""));
-    }
-
-    #[test]
-    fn transcription_progress_includes_current_segment_when_present() {
-        let progress = TranscriptionProgress {
-            task_id: "task-123".to_string(),
-            progress: 75.0,
-            elapsed_ms: 2000,
-            current_segment: Some("Processing...".to_string()),
-        };
-
-        let json = serde_json::to_string(&progress).expect("Failed to serialize");
-        assert!(json.contains("\"currentSegment\":\"Processing...\""));
     }
 
     #[test]

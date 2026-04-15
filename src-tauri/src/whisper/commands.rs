@@ -289,7 +289,6 @@ pub async fn transcribe_audio(
             task_id: task_id.clone(),
             progress: 0.0,
             elapsed_ms: 0,
-            current_segment: None,
         },
     );
 

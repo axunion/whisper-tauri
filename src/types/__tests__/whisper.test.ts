@@ -117,25 +117,6 @@ describe("Whisper Types", () => {
       expect(progress.progress).toBe(50);
       expect(progress.elapsedMs).toBe(1500);
     });
-
-    it("should allow optional currentSegment", () => {
-      const progressWithSegment: TranscriptionProgress = {
-        taskId: "task-123",
-        progress: 75,
-        elapsedMs: 2000,
-        currentSegment: "Processing audio...",
-      };
-
-      expect(progressWithSegment.currentSegment).toBe("Processing audio...");
-
-      const progressWithoutSegment: TranscriptionProgress = {
-        taskId: "task-123",
-        progress: 25,
-        elapsedMs: 500,
-      };
-
-      expect(progressWithoutSegment.currentSegment).toBeUndefined();
-    });
   });
 
   describe("DownloadProgress", () => {

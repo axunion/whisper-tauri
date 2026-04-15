@@ -223,6 +223,25 @@ pub fn load_wav_file(path: &Path) -> Result<Vec<f32>, WhisperError> {
     Ok(samples)
 }
 
+/// Number of most-recent kept segments to scan for repetitions.
+const REPETITION_LOOKBACK: usize = 3;
+/// Minimum number of matches within the lookback window to classify as a hallucination loop.
+const REPETITION_THRESHOLD: usize = 2;
+
+/// Detects hallucination loops where Whisper repeats the same phrase.
+///
+/// Returns `true` if `text` appears at least [`REPETITION_THRESHOLD`] times
+/// within the last [`REPETITION_LOOKBACK`] entries of `recent_texts`.
+/// Caller must pass pre-trimmed strings.
+fn is_repetition(text: &str, recent_texts: &[String]) -> bool {
+    if text.is_empty() {
+        return false;
+    }
+    let lookback = recent_texts.len().min(REPETITION_LOOKBACK);
+    let recent = &recent_texts[recent_texts.len().saturating_sub(lookback)..];
+    recent.iter().filter(|prev| prev.as_str() == text).count() >= REPETITION_THRESHOLD
+}
+
 /// Transcribes audio samples using a Whisper model.
 ///
 /// Emits `whisper:progress` events during processing.
@@ -256,12 +275,14 @@ pub fn transcribe(
     params.set_print_realtime(false);
     params.set_print_timestamps(false);
     params.set_print_special(false);
+    // Suppress non-speech tokens like "[Music]" or "(applause)".
+    params.set_suppress_nst(true);
 
     #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
     let n_threads = std::thread::available_parallelism().map_or(4, |n| n.get().min(8) as i32);
     params.set_n_threads(n_threads);
 
-    // Progress callback
+    // Progress callback (% updates).
     let task_id_cb = task_id.to_string();
     let app_cb = app.clone();
     params.set_progress_callback_safe(move |progress| {
@@ -272,16 +293,17 @@ pub fn transcribe(
                 task_id: task_id_cb.clone(),
                 progress: f64::from(progress),
                 elapsed_ms,
-                current_segment: None,
             },
         );
     });
 
     // Abort callback for cancellation.
-    // WORKAROUND: whisper-rs 0.15.1 set_abort_callback_safe has a bug where the
-    // trampoline is monomorphized as trampoline::<F> (concrete type) but the actual
-    // user_data is Box<dyn FnMut() -> bool>. By pre-boxing the closure so that
-    // F = Box<dyn FnMut() -> bool>, the trampoline type matches the data layout.
+    // WORKAROUND: whisper-rs 0.15.1〜0.16.0 `set_abort_callback_safe` has a bug
+    // where the trampoline is monomorphized as `trampoline::<F>` (concrete type)
+    // but the actual user_data is `Box<dyn FnMut() -> bool>`. By pre-boxing the
+    // closure so that `F = Box<dyn FnMut() -> bool>`, the trampoline type matches
+    // the data layout. Verified against whisper-rs 0.16.0 source; bug still
+    // present. Remove once whisper-rs releases a fix.
     let token_cb = Arc::clone(token);
     let abort_fn: Box<dyn FnMut() -> bool> = Box::new(move || token_cb.is_cancelled());
     params.set_abort_callback_safe(abort_fn);
@@ -296,39 +318,7 @@ pub fn transcribe(
 
     result.map_err(|e| WhisperError::TranscriptionError(e.to_string()))?;
 
-    // Collect segments
-    let num_segments = state.full_n_segments();
-
-    let mut segments = Vec::new();
-    let mut full_text = String::new();
-
-    for i in 0..num_segments {
-        let segment = state.get_segment(i).ok_or_else(|| {
-            WhisperError::TranscriptionError(format!("Failed to get segment {i}"))
-        })?;
-
-        let text = segment
-            .to_str_lossy()
-            .map_err(|e| WhisperError::TranscriptionError(e.to_string()))?
-            .to_string();
-
-        let t0 = segment.start_timestamp();
-        let t1 = segment.end_timestamp();
-
-        full_text.push_str(&text);
-
-        // Convert centiseconds to milliseconds
-        #[allow(clippy::cast_sign_loss)]
-        let start_ms = (t0 * 10).max(0) as u64;
-        #[allow(clippy::cast_sign_loss)]
-        let end_ms = (t1 * 10).max(0) as u64;
-
-        segments.push(TranscriptionSegment {
-            start: start_ms,
-            end: end_ms,
-            text,
-        });
-    }
+    let (segments, full_text) = collect_segments(&state)?;
 
     // Detect language from state
     let lang_id = state.full_lang_id_from_state();
@@ -351,6 +341,56 @@ pub fn transcribe(
         language,
         duration: audio_duration_ms,
     })
+}
+
+/// Collects segments from the Whisper state, filtering out hallucinations.
+fn collect_segments(
+    state: &whisper_rs::WhisperState,
+) -> Result<(Vec<TranscriptionSegment>, String), WhisperError> {
+    let mut segments = Vec::new();
+    let mut full_text = String::new();
+    let mut recent_texts: Vec<String> = Vec::new();
+
+    for segment in state.as_iter() {
+        let text = segment
+            .to_str_lossy()
+            .map_err(|e| WhisperError::TranscriptionError(e.to_string()))?
+            .to_string();
+
+        let trimmed = text.trim();
+
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        if is_repetition(trimmed, &recent_texts) {
+            continue;
+        }
+
+        if recent_texts.len() >= REPETITION_LOOKBACK {
+            recent_texts.remove(0);
+        }
+        recent_texts.push(trimmed.to_string());
+
+        let t0 = segment.start_timestamp();
+        let t1 = segment.end_timestamp();
+
+        full_text.push_str(&text);
+
+        // Convert centiseconds to milliseconds
+        #[allow(clippy::cast_sign_loss)]
+        let start_ms = (t0 * 10).max(0) as u64;
+        #[allow(clippy::cast_sign_loss)]
+        let end_ms = (t1 * 10).max(0) as u64;
+
+        segments.push(TranscriptionSegment {
+            start: start_ms,
+            end: end_ms,
+            text,
+        });
+    }
+
+    Ok((segments, full_text))
 }
 
 #[cfg(test)]
@@ -538,5 +578,44 @@ mod tests {
         assert_eq!(samples.len(), 16000);
 
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    // --- is_repetition ---
+
+    #[test]
+    fn repetition_detects_triple_repeat() {
+        let recent = vec!["hello".to_string(), "hello".to_string()];
+        assert!(is_repetition("hello", &recent));
+    }
+
+    #[test]
+    fn repetition_ignores_single_occurrence() {
+        let recent = vec!["hello".to_string(), "world".to_string()];
+        assert!(!is_repetition("hello", &recent));
+    }
+
+    #[test]
+    fn repetition_empty_recent() {
+        let recent: Vec<String> = vec![];
+        assert!(!is_repetition("hello", &recent));
+    }
+
+    #[test]
+    fn repetition_empty_text() {
+        let recent = vec!["hello".to_string(), "hello".to_string()];
+        assert!(!is_repetition("", &recent));
+    }
+
+    #[test]
+    fn repetition_looks_back_at_most_3() {
+        let recent = vec![
+            "old".to_string(),
+            "old".to_string(),
+            "a".to_string(),
+            "b".to_string(),
+            "c".to_string(),
+        ];
+        // "old" appeared twice but outside the 3-segment lookback window
+        assert!(!is_repetition("old", &recent));
     }
 }
