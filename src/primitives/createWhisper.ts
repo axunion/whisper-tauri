@@ -188,12 +188,18 @@ async function startTranscription(overrideAudioPath?: string): Promise<void> {
     setIsProcessing(true);
   });
   try {
+    let vadModelPath: string | null = null;
+    if (createSettings().vadEnabled()) {
+      vadModelPath = await invoke<string>("ensure_vad_model");
+    }
+
     const transcriptionResult = await invoke<TranscriptionResult>(
       "transcribe_audio",
       {
         audioPath: overrideAudioPath ?? currentFile.path,
         modelPath: currentModel.path,
         language: language(),
+        vadModelPath,
       },
     );
     setResult(transcriptionResult);

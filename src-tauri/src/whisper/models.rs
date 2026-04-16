@@ -16,6 +16,13 @@ use super::types::ModelInfo;
 /// Default base URL for downloading Whisper models (`HuggingFace`).
 const DEFAULT_BASE_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main";
 
+/// Filename for the Silero VAD model (GGML format).
+const VAD_MODEL_FILENAME: &str = "ggml-silero-v5.1.2.bin";
+
+/// Download URL for the Silero VAD model.
+const VAD_MODEL_URL: &str =
+    "https://huggingface.co/ggml-org/whisper-vad/resolve/main/ggml-silero-v5.1.2.bin";
+
 /// Valid model IDs.
 const VALID_MODEL_IDS: [&str; 4] = ["large-v3", "large-v3-turbo", "medium", "small"];
 
@@ -46,6 +53,18 @@ pub fn get_model_url(model_id: &str, base_url: &str) -> String {
 #[must_use]
 pub fn is_valid_model_id(model_id: &str) -> bool {
     VALID_MODEL_IDS.contains(&model_id)
+}
+
+/// Returns the filename for the Silero VAD model.
+#[must_use]
+pub fn get_vad_model_filename() -> &'static str {
+    VAD_MODEL_FILENAME
+}
+
+/// Returns the download URL for the Silero VAD model.
+#[must_use]
+pub fn get_vad_model_url() -> &'static str {
+    VAD_MODEL_URL
 }
 
 /// Returns speed factor estimates (seconds per minute of audio) for the given model/arch.
@@ -340,5 +359,22 @@ mod tests {
         assert!(!is_valid_model_id("tiny"));
         assert!(!is_valid_model_id("base"));
         assert!(!is_valid_model_id("nonexistent"));
+    }
+
+    // --- VAD model helpers ---
+
+    #[test]
+    fn get_vad_model_filename_returns_silero_bin() {
+        let filename = get_vad_model_filename();
+        assert!(filename.contains("silero"));
+        assert!(filename.ends_with(".bin"));
+    }
+
+    #[test]
+    fn get_vad_model_url_returns_huggingface_url() {
+        let url = get_vad_model_url();
+        assert!(url.contains("huggingface.co"));
+        assert!(url.contains("silero"));
+        assert!(url.ends_with(".bin"));
     }
 }

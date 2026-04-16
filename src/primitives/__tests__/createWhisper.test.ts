@@ -366,7 +366,10 @@ describe("createWhisper", () => {
     });
 
     it("should invoke transcribe_audio and set result", async () => {
-      vi.mocked(invoke).mockResolvedValueOnce(mockResult);
+      const vadPath = "/models/ggml-silero-v5.1.2.bin";
+      vi.mocked(invoke)
+        .mockResolvedValueOnce(vadPath) // ensure_vad_model
+        .mockResolvedValueOnce(mockResult); // transcribe_audio
 
       await createRoot(async (dispose) => {
         const whisper = createWhisper();
@@ -376,10 +379,12 @@ describe("createWhisper", () => {
 
         await whisper.startTranscription();
 
+        expect(invoke).toHaveBeenCalledWith("ensure_vad_model");
         expect(invoke).toHaveBeenCalledWith("transcribe_audio", {
           audioPath: mockFile.path,
           modelPath: model.path,
           language: null,
+          vadModelPath: vadPath,
         });
         expect(whisper.result()).toEqual(mockResult);
         dispose();
@@ -391,9 +396,9 @@ describe("createWhisper", () => {
       const transcribePromise = new Promise<TranscriptionResult>((resolve) => {
         resolveTranscribe = resolve;
       });
-      vi.mocked(invoke).mockReturnValueOnce(
-        transcribePromise as Promise<unknown>,
-      );
+      vi.mocked(invoke)
+        .mockResolvedValueOnce("/models/ggml-silero-v5.1.2.bin") // ensure_vad_model
+        .mockReturnValueOnce(transcribePromise as Promise<unknown>); // transcribe_audio
 
       await createRoot(async (dispose) => {
         const whisper = createWhisper();

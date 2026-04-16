@@ -5,6 +5,7 @@ export interface AppSettings {
   whisperModelId: string | null;
   textModelId: string | null;
   onboardingCompleted: boolean;
+  vadEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -14,4 +15,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   whisperModelId: null,
   textModelId: null,
   onboardingCompleted: false,
+  vadEnabled: true,
 };

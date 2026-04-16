@@ -49,6 +49,7 @@ describe("createSettings", () => {
         whisperModelId: "large-v3",
         textModelId: "gemma-4-e2b",
         onboardingCompleted: true,
+        vadEnabled: false,
       };
 
       await createRoot(async (dispose) => {

@@ -118,6 +118,8 @@ export const en: Dictionary = {
     ffmpegDownloadedToast: "FFmpeg downloaded",
     ffmpegUpdateAvailable: "Update available",
     update: "Update",
+    vadEnabled: "Voice Activity Detection (VAD)",
+    vadDescription: "Skip silent sections to speed up transcription",
   },
   errors: {
     file: "File",

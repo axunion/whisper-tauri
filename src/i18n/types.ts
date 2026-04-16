@@ -115,6 +115,8 @@ export interface Dictionary {
     ffmpegDownloadedToast: string;
     ffmpegUpdateAvailable: string;
     update: string;
+    vadEnabled: string;
+    vadDescription: string;
   };
   errors: {
     file: string;

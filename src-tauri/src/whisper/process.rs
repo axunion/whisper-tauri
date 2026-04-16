@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -6,7 +7,10 @@ use std::time::Instant;
 
 use once_cell::sync::Lazy;
 use tauri::{AppHandle, Emitter};
-use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
+use whisper_rs::{
+    FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters, WhisperVadContext,
+    WhisperVadContextParams, WhisperVadParams,
+};
 
 use super::error::WhisperError;
 use super::types::{TranscriptionProgress, TranscriptionResult, TranscriptionSegment};
@@ -223,6 +227,102 @@ pub fn load_wav_file(path: &Path) -> Result<Vec<f32>, WhisperError> {
     Ok(samples)
 }
 
+/// Maps timestamps from a concatenated speech buffer back to the original audio timeline.
+struct TimestampMap {
+    /// Each entry: (start in concat buffer, start in original audio, length) — all in samples.
+    segments: Vec<(usize, usize, usize)>,
+}
+
+impl TimestampMap {
+    /// Converts a millisecond timestamp in the concatenated buffer to the original timeline.
+    fn to_original_ms(&self, concat_ms: u64) -> u64 {
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
+        let concat_sample = (concat_ms as f64 / 1000.0 * f64::from(WHISPER_SAMPLE_RATE)) as usize;
+        let mut acc = 0_usize;
+        for &(_, orig_start, len) in &self.segments {
+            if concat_sample < acc + len {
+                let offset = concat_sample - acc;
+                #[allow(
+                    clippy::cast_possible_truncation,
+                    clippy::cast_sign_loss,
+                    clippy::cast_precision_loss
+                )]
+                return ((orig_start + offset) as f64 / f64::from(WHISPER_SAMPLE_RATE) * 1000.0)
+                    as u64;
+            }
+            acc += len;
+        }
+        // Past end — return end of last segment
+        if let Some(&(_, orig_start, len)) = self.segments.last() {
+            #[allow(
+                clippy::cast_possible_truncation,
+                clippy::cast_sign_loss,
+                clippy::cast_precision_loss
+            )]
+            return ((orig_start + len) as f64 / f64::from(WHISPER_SAMPLE_RATE) * 1000.0) as u64;
+        }
+        concat_ms
+    }
+}
+
+/// Runs standalone Silero VAD and extracts speech-only audio.
+///
+/// Returns the concatenated speech samples and a timestamp mapping, or `None`
+/// if the audio should be processed without VAD (e.g. fallback on error).
+fn preprocess_with_vad(
+    samples: &[f32],
+    vad_model_path: &str,
+) -> Result<Option<(Vec<f32>, TimestampMap)>, WhisperError> {
+    let mut vad_params = WhisperVadParams::default();
+    vad_params.set_threshold(0.3);
+    vad_params.set_speech_pad(100);
+
+    let mut vad_ctx = WhisperVadContext::new(vad_model_path, WhisperVadContextParams::default())
+        .map_err(|e| WhisperError::ModelLoadError(format!("VAD model: {e}")))?;
+
+    let vad_segments = vad_ctx
+        .segments_from_samples(vad_params, samples)
+        .map_err(|e| WhisperError::TranscriptionError(format!("VAD failed: {e}")))?;
+
+    let mut concat = Vec::new();
+    let mut mapping = Vec::new();
+
+    for seg in vad_segments {
+        // VAD timestamps are in centiseconds (1cs = 10ms).
+        #[allow(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            clippy::cast_precision_loss
+        )]
+        let start_sample = (f64::from(seg.start) / 100.0 * f64::from(WHISPER_SAMPLE_RATE)) as usize;
+        #[allow(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            clippy::cast_precision_loss
+        )]
+        let end_sample = ((f64::from(seg.end) / 100.0 * f64::from(WHISPER_SAMPLE_RATE)) as usize)
+            .min(samples.len());
+
+        if start_sample >= end_sample || start_sample >= samples.len() {
+            continue;
+        }
+
+        let len = end_sample - start_sample;
+        mapping.push((concat.len(), start_sample, len));
+        concat.extend_from_slice(&samples[start_sample..end_sample]);
+    }
+
+    if mapping.is_empty() {
+        return Ok(None);
+    }
+
+    Ok(Some((concat, TimestampMap { segments: mapping })))
+}
+
 /// Number of most-recent kept segments to scan for repetitions.
 const REPETITION_LOOKBACK: usize = 3;
 /// Minimum number of matches within the lookback window to classify as a hallucination loop.
@@ -257,8 +357,35 @@ pub fn transcribe(
     token: &Arc<CancellationToken>,
     app: &AppHandle,
     language: Option<&str>,
+    vad_model_path: Option<&str>,
 ) -> Result<TranscriptionResult, WhisperError> {
     let start = Instant::now();
+
+    // WORKAROUND: whisper.cpp's built-in VAD ignores custom vad_params set
+    // via FullParams. Standalone VAD gives us control over detection sensitivity.
+    let (audio, timestamp_map): (Cow<[f32]>, Option<TimestampMap>) =
+        if let Some(vad_path) = vad_model_path {
+            if let Some((extracted, map)) = preprocess_with_vad(samples, vad_path)? {
+                (Cow::Owned(extracted), Some(map))
+            } else {
+                // No speech detected — return empty result
+                #[allow(
+                    clippy::cast_possible_truncation,
+                    clippy::cast_sign_loss,
+                    clippy::cast_precision_loss
+                )]
+                let dur = (samples.len() as f64 / f64::from(WHISPER_SAMPLE_RATE) * 1000.0) as u64;
+                return Ok(TranscriptionResult {
+                    task_id: task_id.to_string(),
+                    text: String::new(),
+                    segments: Vec::new(),
+                    language: language.unwrap_or("ja").to_string(),
+                    duration: dur,
+                });
+            }
+        } else {
+            (Cow::Borrowed(samples), None)
+        };
 
     // Load model
     let ctx = WhisperContext::new_with_params(model_path, WhisperContextParameters::default())
@@ -306,8 +433,8 @@ pub fn transcribe(
     let abort_fn: Box<dyn FnMut() -> bool> = Box::new(move || token_cb.is_cancelled());
     params.set_abort_callback_safe(abort_fn);
 
-    // Run transcription
-    let result = state.full(params, samples);
+    // Run transcription on the (possibly VAD-filtered) audio
+    let result = state.full(params, &audio);
 
     // Check cancellation after transcription completes
     if token.is_cancelled() {
@@ -316,7 +443,15 @@ pub fn transcribe(
 
     result.map_err(|e| WhisperError::TranscriptionError(e.to_string()))?;
 
-    let (segments, full_text) = collect_segments(&state)?;
+    let (mut segments, full_text) = collect_segments(&state)?;
+
+    // Remap timestamps to the original audio timeline when VAD was used
+    if let Some(ref map) = timestamp_map {
+        for seg in &mut segments {
+            seg.start = map.to_original_ms(seg.start);
+            seg.end = map.to_original_ms(seg.end);
+        }
+    }
 
     // Detect language from state
     let lang_id = state.full_lang_id_from_state();
@@ -324,7 +459,7 @@ pub fn transcribe(
         .unwrap_or("ja")
         .to_string();
 
-    // Audio duration from sample count
+    // Audio duration from ORIGINAL sample count (not the VAD-filtered audio)
     #[allow(
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss,

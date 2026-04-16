@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitleWithIcon,
 } from "~/components/ui/Card";
+import { Checkbox } from "~/components/ui/Checkbox";
 import { Separator } from "~/components/ui/Separator";
 import { useI18n } from "~/i18n";
 import { createSettings } from "~/primitives/createSettings";
@@ -80,6 +81,23 @@ export default function Settings() {
               });
             }}
           />
+
+          <Separator />
+
+          <div class="flex items-center justify-between">
+            <div class="space-y-0.5">
+              <div class="text-sm font-medium">{t("settings.vadEnabled")}</div>
+              <p class="text-sm text-muted-foreground">
+                {t("settings.vadDescription")}
+              </p>
+            </div>
+            <Checkbox
+              checked={settings.vadEnabled()}
+              onChange={(checked: boolean) => {
+                settings.update({ vadEnabled: checked });
+              }}
+            />
+          </div>
         </CardContent>
       </Card>
 

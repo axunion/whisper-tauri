@@ -6,6 +6,8 @@ use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_store::StoreExt;
 use tokio::io::AsyncWriteExt;
 
+use crate::download;
+
 use super::error::WhisperError;
 use super::models;
 use super::process;
@@ -58,6 +60,13 @@ fn resolve_app_data_dir(app: &AppHandle) -> Result<PathBuf, WhisperError> {
     app.path()
         .app_data_dir()
         .map_err(|e| WhisperError::PathError(e.to_string()))
+}
+
+/// Converts a `Path` to an owned `String`.
+fn path_to_string(path: &Path) -> Result<String, WhisperError> {
+    path.to_str()
+        .map(std::string::ToString::to_string)
+        .ok_or_else(|| WhisperError::PathError("Invalid path encoding".to_string()))
 }
 
 /// Returns available models with download status.
@@ -195,10 +204,7 @@ pub async fn download_model(
         },
     );
 
-    final_path
-        .to_str()
-        .map(std::string::ToString::to_string)
-        .ok_or_else(|| WhisperError::PathError("Invalid path encoding".to_string()).into())
+    path_to_string(&final_path).map_err(Into::into)
 }
 
 /// Deletes a downloaded model file.
@@ -259,6 +265,51 @@ pub async fn set_model_download_url(app: AppHandle, url: Option<String>) -> Resu
     Ok(())
 }
 
+/// Returns the path to the VAD model file.
+///
+/// # Errors
+///
+/// Returns `WhisperError::PathError` if the models directory path cannot
+/// be constructed.
+pub fn vad_model_path(app_data_dir: &Path) -> Result<PathBuf, WhisperError> {
+    let dir = models_dir(app_data_dir)?;
+    Ok(dir.join(models::get_vad_model_filename()))
+}
+
+/// Ensures the Silero VAD model is downloaded, downloading it if necessary.
+///
+/// Returns the path to the VAD model file.
+///
+/// # Errors
+///
+/// Returns an error if the app data directory cannot be resolved or the
+/// download fails.
+#[tauri::command]
+pub async fn ensure_vad_model(app: AppHandle) -> Result<String, String> {
+    let app_data_dir = resolve_app_data_dir(&app)?;
+    let path = vad_model_path(&app_data_dir)?;
+
+    if path.exists() {
+        return path_to_string(&path).map_err(Into::into);
+    }
+
+    let dir = models_dir(&app_data_dir)?;
+    std::fs::create_dir_all(&dir).map_err(WhisperError::from)?;
+
+    let part_path = path.with_extension("bin.part");
+    let url = models::get_vad_model_url();
+
+    download::download_file(url, &part_path, |_, _, _| {})
+        .await
+        .map_err(|e| WhisperError::DownloadFailed(e.to_string()))?;
+
+    tokio::fs::rename(&part_path, &path)
+        .await
+        .map_err(WhisperError::from)?;
+
+    path_to_string(&path).map_err(Into::into)
+}
+
 /// Transcribes a WAV audio file using the specified Whisper model.
 ///
 /// Runs the transcription on a blocking thread to avoid blocking the
@@ -274,6 +325,7 @@ pub async fn transcribe_audio(
     audio_path: String,
     model_path: String,
     language: Option<String>,
+    vad_model_path: Option<String>,
 ) -> Result<TranscriptionResult, String> {
     let task_id = uuid::Uuid::new_v4().to_string();
     let token = process::TASK_MANAGER.create_task(&task_id);
@@ -315,6 +367,7 @@ pub async fn transcribe_audio(
             &token,
             &app,
             language.as_deref(),
+            vad_model_path.as_deref(),
         )
     })
     .await
@@ -401,5 +454,25 @@ mod tests {
         let app_data = Path::new("/tmp/test-whisper-invalid");
         let result = model_exists(app_data, "tiny");
         assert!(result.is_err());
+    }
+
+    // --- vad_model_path ---
+
+    #[test]
+    fn vad_model_path_returns_correct_path() {
+        let app_data = Path::new("/tmp/test-app-data");
+        let path = vad_model_path(app_data).unwrap();
+        assert_eq!(
+            path,
+            PathBuf::from("/tmp/test-app-data/models/ggml-silero-v5.1.2.bin")
+        );
+    }
+
+    #[test]
+    fn vad_model_path_is_in_models_dir() {
+        let app_data = Path::new("/tmp/test-app-data");
+        let path = vad_model_path(app_data).unwrap();
+        let dir = models_dir(app_data).unwrap();
+        assert!(path.starts_with(&dir));
     }
 }

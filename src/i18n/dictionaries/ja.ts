@@ -119,6 +119,8 @@ export const ja: Dictionary = {
     ffmpegDownloadedToast: "FFmpegをダウンロードしました",
     ffmpegUpdateAvailable: "新しいバージョンがあります",
     update: "更新",
+    vadEnabled: "音声区間検出（VAD）",
+    vadDescription: "無音区間をスキップして文字起こしを高速化",
   },
   errors: {
     file: "ファイル",
