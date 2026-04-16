@@ -1,13 +1,23 @@
+//! Whisper model definitions and utilities.
+//!
+//! # Model selection rationale
+//!
+//! This app targets multilingual transcription with accurate punctuation.
+//! Four model tiers are provided so users can choose the best trade-off
+//! between accuracy and speed for their use case.
+//!
+//! - **small**: Lightweight option for quick transcription
+//! - **medium**: Balanced accuracy and speed
+//! - **large-v3-turbo**: Distilled model — fast with good accuracy
+//! - **large-v3**: Highest accuracy, best for demanding multilingual use
+
 use super::types::ModelInfo;
 
 /// Default base URL for downloading Whisper models (`HuggingFace`).
 const DEFAULT_BASE_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main";
 
 /// Valid model IDs.
-const VALID_MODEL_IDS: [&str; 2] = ["large-v3-turbo", "small"];
-
-/// RAM threshold for recommending large model (8 GB).
-const RAM_8GB: u64 = 8 * 1024 * 1024 * 1024;
+const VALID_MODEL_IDS: [&str; 4] = ["large-v3", "large-v3-turbo", "medium", "small"];
 
 /// Returns the default base URL for downloading Whisper models.
 #[must_use]
@@ -44,9 +54,11 @@ pub fn is_valid_model_id(model_id: &str) -> bool {
 #[must_use]
 pub fn get_speed_factors(model_id: &str, arch: &str) -> (f64, f64) {
     match (model_id, arch) {
-        ("large-v3-turbo", "aarch64") => (3.0, 7.0),
+        ("large-v3", "aarch64") => (6.0, 15.0),
+        ("large-v3-turbo" | "medium", "aarch64") => (3.0, 7.0),
         ("small", "aarch64") => (1.5, 3.5),
-        ("large-v3-turbo", "x86_64") => (30.0, 90.0),
+        ("large-v3", "x86_64") => (60.0, 180.0),
+        ("large-v3-turbo" | "medium", "x86_64") => (30.0, 90.0),
         ("small", "x86_64") => (10.0, 30.0),
         _ => (0.0, 0.0),
     }
@@ -54,20 +66,43 @@ pub fn get_speed_factors(model_id: &str, arch: &str) -> (f64, f64) {
 
 /// Returns the list of available models.
 ///
-/// All models have `downloaded`, `bundled`, and `recommended` set to `false`.
-/// Use [`get_model_list_with_recommendation`] for system-aware recommendations.
+/// All models have `downloaded` and `bundled` set to `false`.
+/// Use [`get_model_list_with_speed_factors`] for architecture-aware speed estimates.
 #[must_use]
 pub fn get_model_list() -> Vec<ModelInfo> {
     vec![
+        ModelInfo {
+            id: "large-v3".to_string(),
+            name: "Large v3".to_string(),
+            size: "2.9GB".to_string(),
+            size_bytes: 3_095_033_483,
+            description: "High transcription accuracy".to_string(),
+            downloaded: false,
+            bundled: false,
+            speed_seconds_per_minute_low: 0.0,
+            speed_seconds_per_minute_high: 0.0,
+            path: None,
+        },
         ModelInfo {
             id: "large-v3-turbo".to_string(),
             name: "Large v3 Turbo".to_string(),
             size: "1.6GB".to_string(),
             size_bytes: 1_739_587_584,
-            description: "High transcription accuracy".to_string(),
+            description: "Fast and accurate. Distilled model".to_string(),
             downloaded: false,
             bundled: false,
-            recommended: false,
+            speed_seconds_per_minute_low: 0.0,
+            speed_seconds_per_minute_high: 0.0,
+            path: None,
+        },
+        ModelInfo {
+            id: "medium".to_string(),
+            name: "Medium".to_string(),
+            size: "1.4GB".to_string(),
+            size_bytes: 1_533_763_059,
+            description: "Balanced accuracy and speed".to_string(),
+            downloaded: false,
+            bundled: false,
             speed_seconds_per_minute_low: 0.0,
             speed_seconds_per_minute_high: 0.0,
             path: None,
@@ -80,7 +115,6 @@ pub fn get_model_list() -> Vec<ModelInfo> {
             description: "Lightweight and fast. Saves storage".to_string(),
             downloaded: false,
             bundled: false,
-            recommended: false,
             speed_seconds_per_minute_low: 0.0,
             speed_seconds_per_minute_high: 0.0,
             path: None,
@@ -88,46 +122,12 @@ pub fn get_model_list() -> Vec<ModelInfo> {
     ]
 }
 
-/// Determines the recommended model ID based on system specs.
-///
-/// This is a pure function for testability.
-///
-/// Rules:
-/// - RAM 8GB+ OR aarch64 architecture → `large-v3-turbo`
-/// - RAM <8GB → `small`
+/// Returns the model list with architecture-aware speed factor estimates.
 #[must_use]
-pub fn recommend_model_id(total_memory: u64, arch: &str) -> &'static str {
-    if total_memory >= RAM_8GB || arch == "aarch64" {
-        return "large-v3-turbo";
-    }
-    "small"
-}
-
-/// Returns the recommended model ID based on the current system.
-#[must_use]
-pub fn get_recommended_model_id() -> &'static str {
-    let mut sys = sysinfo::System::new();
-    sys.refresh_memory();
-
-    let total_memory = sys.total_memory();
-    let arch = std::env::consts::ARCH;
-
-    recommend_model_id(total_memory, arch)
-}
-
-/// Returns the model list with system-aware recommendation and speed factors.
-///
-/// Sets `recommended: true` on the model matching the system recommendation,
-/// and populates speed factors based on the current architecture.
-#[must_use]
-pub fn get_model_list_with_recommendation() -> Vec<ModelInfo> {
-    let recommended_id = get_recommended_model_id();
+pub fn get_model_list_with_speed_factors() -> Vec<ModelInfo> {
     let arch = std::env::consts::ARCH;
     let mut models = get_model_list();
     for model in &mut models {
-        if model.id == recommended_id {
-            model.recommended = true;
-        }
         let (low, high) = get_speed_factors(&model.id, arch);
         model.speed_seconds_per_minute_low = low;
         model.speed_seconds_per_minute_high = high;
@@ -153,10 +153,12 @@ mod tests {
     #[test]
     fn get_model_filename_returns_ggml_format() {
         assert_eq!(get_model_filename("small"), "ggml-small.bin");
+        assert_eq!(get_model_filename("medium"), "ggml-medium.bin");
         assert_eq!(
             get_model_filename("large-v3-turbo"),
             "ggml-large-v3-turbo.bin"
         );
+        assert_eq!(get_model_filename("large-v3"), "ggml-large-v3.bin");
     }
 
     // --- get_model_url ---
@@ -194,17 +196,18 @@ mod tests {
     fn get_model_list_contains_all_expected_models() {
         let models = get_model_list();
         let ids: Vec<&str> = models.iter().map(|m| m.id.as_str()).collect();
+        assert!(ids.contains(&"large-v3"));
         assert!(ids.contains(&"large-v3-turbo"));
+        assert!(ids.contains(&"medium"));
         assert!(ids.contains(&"small"));
     }
 
     #[test]
-    fn get_model_list_excludes_tiny_base_and_medium() {
+    fn get_model_list_excludes_legacy_models() {
         let models = get_model_list();
         let ids: Vec<&str> = models.iter().map(|m| m.id.as_str()).collect();
         assert!(!ids.contains(&"tiny"));
         assert!(!ids.contains(&"base"));
-        assert!(!ids.contains(&"medium"));
     }
 
     #[test]
@@ -212,9 +215,17 @@ mod tests {
         let models = get_model_list();
         for model in &models {
             match model.id.as_str() {
+                "large-v3" => {
+                    assert_eq!(model.size_bytes, 3_095_033_483);
+                    assert_eq!(model.size, "2.9GB");
+                }
                 "large-v3-turbo" => {
                     assert_eq!(model.size_bytes, 1_739_587_584);
                     assert_eq!(model.size, "1.6GB");
+                }
+                "medium" => {
+                    assert_eq!(model.size_bytes, 1_533_763_059);
+                    assert_eq!(model.size, "1.4GB");
                 }
                 "small" => {
                     assert_eq!(model.size_bytes, 488_636_416);
@@ -236,11 +247,6 @@ mod tests {
             );
             assert!(!model.bundled, "model {} should not be bundled", model.id);
             assert!(
-                !model.recommended,
-                "model {} should not be recommended",
-                model.id
-            );
-            assert!(
                 model.path.is_none(),
                 "model {} should have no path",
                 model.id
@@ -248,38 +254,21 @@ mod tests {
         }
     }
 
-    // --- recommend_model_id (pure function) ---
-
-    #[test]
-    fn recommend_model_id_16gb_ram_returns_large_v3_turbo() {
-        let ram_16gb = 16 * 1024 * 1024 * 1024;
-        assert_eq!(recommend_model_id(ram_16gb, "x86_64"), "large-v3-turbo");
-    }
-
-    #[test]
-    fn recommend_model_id_aarch64_returns_large_v3_turbo() {
-        // Even with low RAM, aarch64 (Apple Silicon) gets large-v3-turbo
-        let ram_4gb = 4 * 1024 * 1024 * 1024;
-        assert_eq!(recommend_model_id(ram_4gb, "aarch64"), "large-v3-turbo");
-    }
-
-    #[test]
-    fn recommend_model_id_8gb_returns_large_v3_turbo() {
-        let ram_8gb = 8 * 1024 * 1024 * 1024;
-        assert_eq!(recommend_model_id(ram_8gb, "x86_64"), "large-v3-turbo");
-    }
-
-    #[test]
-    fn recommend_model_id_under_8gb_returns_small() {
-        let ram_4gb = 4 * 1024 * 1024 * 1024;
-        assert_eq!(recommend_model_id(ram_4gb, "x86_64"), "small");
-    }
-
     // --- get_speed_factors ---
+
+    #[test]
+    fn get_speed_factors_aarch64_large_v3() {
+        assert_eq!(get_speed_factors("large-v3", "aarch64"), (6.0, 15.0));
+    }
 
     #[test]
     fn get_speed_factors_aarch64_large_v3_turbo() {
         assert_eq!(get_speed_factors("large-v3-turbo", "aarch64"), (3.0, 7.0));
+    }
+
+    #[test]
+    fn get_speed_factors_aarch64_medium() {
+        assert_eq!(get_speed_factors("medium", "aarch64"), (3.0, 7.0));
     }
 
     #[test]
@@ -288,8 +277,18 @@ mod tests {
     }
 
     #[test]
+    fn get_speed_factors_x86_64_large_v3() {
+        assert_eq!(get_speed_factors("large-v3", "x86_64"), (60.0, 180.0));
+    }
+
+    #[test]
     fn get_speed_factors_x86_64_large_v3_turbo() {
         assert_eq!(get_speed_factors("large-v3-turbo", "x86_64"), (30.0, 90.0));
+    }
+
+    #[test]
+    fn get_speed_factors_x86_64_medium() {
+        assert_eq!(get_speed_factors("medium", "x86_64"), (30.0, 90.0));
     }
 
     #[test]
@@ -330,7 +329,9 @@ mod tests {
 
     #[test]
     fn is_valid_model_id_accepts_known_models() {
+        assert!(is_valid_model_id("large-v3"));
         assert!(is_valid_model_id("large-v3-turbo"));
+        assert!(is_valid_model_id("medium"));
         assert!(is_valid_model_id("small"));
     }
 
@@ -338,7 +339,6 @@ mod tests {
     fn is_valid_model_id_rejects_unknown_models() {
         assert!(!is_valid_model_id("tiny"));
         assert!(!is_valid_model_id("base"));
-        assert!(!is_valid_model_id("medium"));
         assert!(!is_valid_model_id("nonexistent"));
     }
 }

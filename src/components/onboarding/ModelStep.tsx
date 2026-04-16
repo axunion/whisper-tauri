@@ -38,9 +38,6 @@ export function ModelStep(props: ModelStepProps) {
                   <div class="flex items-center gap-2">
                     <span class="text-sm font-medium">{model.name}</span>
                     <Badge variant="secondary">{model.size}</Badge>
-                    <Show when={model.recommended}>
-                      <Badge>{t("common.recommended")}</Badge>
-                    </Show>
                   </div>
                   <p class="text-xs text-muted-foreground">
                     {getModelDescription(t, model.id, model.description)}

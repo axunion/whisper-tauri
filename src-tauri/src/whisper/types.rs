@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelInfo {
-    /// Model identifier (e.g., "small", "large-v3-turbo")
+    /// Model identifier (e.g., "small", "medium", "large-v3")
     pub id: String,
     /// Display name
     pub name: String,
@@ -18,8 +18,6 @@ pub struct ModelInfo {
     pub downloaded: bool,
     /// Whether the model is bundled with the app
     pub bundled: bool,
-    /// Whether the model is recommended for this system
-    pub recommended: bool,
     /// Estimated seconds to process 1 minute of audio (lower bound)
     pub speed_seconds_per_minute_low: f64,
     /// Estimated seconds to process 1 minute of audio (upper bound)
@@ -112,7 +110,6 @@ mod tests {
             description: "Base model".to_string(),
             downloaded: true,
             bundled: false,
-            recommended: false,
             speed_seconds_per_minute_low: 0.0,
             speed_seconds_per_minute_high: 0.0,
             path: Some("/path/to/model.bin".to_string()),
@@ -133,7 +130,6 @@ mod tests {
             description: "Base model".to_string(),
             downloaded: false,
             bundled: false,
-            recommended: false,
             speed_seconds_per_minute_low: 0.0,
             speed_seconds_per_minute_high: 0.0,
             path: None,

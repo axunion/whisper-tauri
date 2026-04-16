@@ -60,7 +60,7 @@ fn resolve_app_data_dir(app: &AppHandle) -> Result<PathBuf, WhisperError> {
         .map_err(|e| WhisperError::PathError(e.to_string()))
 }
 
-/// Returns available models with download status and system recommendation.
+/// Returns available models with download status.
 ///
 /// # Errors
 ///
@@ -68,7 +68,7 @@ fn resolve_app_data_dir(app: &AppHandle) -> Result<PathBuf, WhisperError> {
 #[tauri::command]
 pub async fn get_available_models(app: AppHandle) -> Result<Vec<ModelInfo>, String> {
     let app_data_dir = resolve_app_data_dir(&app)?;
-    let mut model_list = models::get_model_list_with_recommendation();
+    let mut model_list = models::get_model_list_with_speed_factors();
 
     for model in &mut model_list {
         match model_exists(&app_data_dir, &model.id) {

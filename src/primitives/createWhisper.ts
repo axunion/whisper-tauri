@@ -104,7 +104,7 @@ function autoSelectModel(): void {
       return;
     }
   }
-  const pick = downloaded.find((m) => m.recommended) ?? downloaded[0];
+  const pick = downloaded[0];
   if (pick) {
     setSelectedModel(pick);
   }

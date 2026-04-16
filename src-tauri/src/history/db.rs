@@ -602,7 +602,7 @@ mod tests {
         HistorySaveParams {
             file_name: "test_audio.wav".to_string(),
             language: "ja".to_string(),
-            model_id: "large-v3-turbo".to_string(),
+            model_id: "large-v3".to_string(),
             duration: 60000,
             text: "This is a test transcription.".to_string(),
             segments: vec![
@@ -694,7 +694,7 @@ mod tests {
         assert_eq!(entries[0].id, id);
         assert_eq!(entries[0].file_name, "test_audio.wav");
         assert_eq!(entries[0].language, "ja");
-        assert_eq!(entries[0].model_id, "large-v3-turbo");
+        assert_eq!(entries[0].model_id, "large-v3");
         assert_eq!(entries[0].duration, 60000);
     }
 
@@ -811,7 +811,7 @@ mod tests {
                 "2026-06-15T10:00:00",
                 "new.wav",
                 "ja",
-                "large-v3-turbo",
+                "large-v3",
                 60000_i64,
                 text_compressed2,
                 segments_compressed2,
@@ -946,7 +946,7 @@ mod tests {
                 "2026-02-20T10:00:00",
                 "test.wav",
                 "ja",
-                "large-v3-turbo",
+                "large-v3",
                 60000_i64,
                 text_compressed,
                 segments_compressed,

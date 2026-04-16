@@ -2,7 +2,7 @@
  * Whisper model information.
  */
 export interface ModelInfo {
-  /** Model identifier (e.g., "small", "large-v3-turbo") */
+  /** Model identifier (e.g., "small", "medium", "large-v3") */
   id: string;
   /** Display name */
   name: string;
@@ -16,8 +16,6 @@ export interface ModelInfo {
   downloaded: boolean;
   /** Whether the model is bundled with the app */
   bundled: boolean;
-  /** Whether the model is recommended for this system */
-  recommended: boolean;
   /** Estimated seconds to process 1 minute of audio (lower bound) */
   speedSecondsPerMinuteLow: number;
   /** Estimated seconds to process 1 minute of audio (upper bound) */

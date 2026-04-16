@@ -12,26 +12,24 @@ describe("Whisper Types", () => {
   describe("ModelInfo", () => {
     it("should have required properties", () => {
       const model: ModelInfo = {
-        id: "large-v3-turbo",
-        name: "Large v3 Turbo",
-        size: "1.6GB",
-        sizeBytes: 1_739_587_584,
+        id: "large-v3",
+        name: "Large v3",
+        size: "2.9GB",
+        sizeBytes: 3_095_033_483,
         description: "High transcription accuracy",
         downloaded: true,
         bundled: false,
-        recommended: true,
         speedSecondsPerMinuteLow: 5.0,
         speedSecondsPerMinuteHigh: 15.0,
       };
 
-      expect(model.id).toBe("large-v3-turbo");
-      expect(model.name).toBe("Large v3 Turbo");
-      expect(model.size).toBe("1.6GB");
-      expect(model.sizeBytes).toBe(1_739_587_584);
+      expect(model.id).toBe("large-v3");
+      expect(model.name).toBe("Large v3");
+      expect(model.size).toBe("2.9GB");
+      expect(model.sizeBytes).toBe(3_095_033_483);
       expect(model.description).toBe("High transcription accuracy");
       expect(model.downloaded).toBe(true);
       expect(model.bundled).toBe(false);
-      expect(model.recommended).toBe(true);
     });
 
     it("should allow optional path property", () => {
@@ -43,7 +41,6 @@ describe("Whisper Types", () => {
         description: "Small model",
         downloaded: true,
         bundled: false,
-        recommended: false,
         speedSecondsPerMinuteLow: 2.0,
         speedSecondsPerMinuteHigh: 5.0,
         path: "/path/to/model.bin",
@@ -59,7 +56,6 @@ describe("Whisper Types", () => {
         description: "Small model",
         downloaded: false,
         bundled: false,
-        recommended: false,
         speedSecondsPerMinuteLow: 0,
         speedSecondsPerMinuteHigh: 0,
       };

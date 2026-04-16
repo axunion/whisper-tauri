@@ -39,10 +39,10 @@ describe("t()", () => {
   it("interpolates multiple parameters", () => {
     const i18n = createI18n("en");
     const result = i18n.t("settings.deleteModelConfirmation", {
-      name: "large-v3-turbo",
+      name: "large-v3",
     });
     expect(result).toBe(
-      "large-v3-turbo will be deleted. This action cannot be undone.",
+      "large-v3 will be deleted. This action cannot be undone.",
     );
   });
 });

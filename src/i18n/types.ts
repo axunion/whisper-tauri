@@ -7,7 +7,7 @@ export interface Dictionary {
     close: string;
     retry: string;
     download: string;
-    recommended: string;
+
     deleting: string;
     confirm: string;
     done: string;
@@ -189,7 +189,9 @@ export interface Dictionary {
   };
   models: {
     whisper: {
+      largeV3: { description: string };
       largeV3Turbo: { description: string };
+      medium: { description: string };
       small: { description: string };
     };
     text: {

@@ -275,8 +275,6 @@ pub fn transcribe(
     params.set_print_realtime(false);
     params.set_print_timestamps(false);
     params.set_print_special(false);
-    // Suppress non-speech tokens like "[Music]" or "(applause)".
-    params.set_suppress_nst(true);
 
     #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
     let n_threads = std::thread::available_parallelism().map_or(4, |n| n.get().min(8) as i32);

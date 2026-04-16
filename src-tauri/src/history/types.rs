@@ -185,14 +185,14 @@ mod tests {
             created_at: "2026-01-15T10:30:00Z".to_string(),
             file_name: "audio.wav".to_string(),
             language: "ja".to_string(),
-            model_id: "large-v3-turbo".to_string(),
+            model_id: "large-v3".to_string(),
             duration: 60000,
             text_preview: "Hello world...".to_string(),
         };
         let json = serde_json::to_string(&meta).expect("Failed to serialize");
         assert!(json.contains("\"createdAt\":\"2026-01-15T10:30:00Z\""));
         assert!(json.contains("\"fileName\":\"audio.wav\""));
-        assert!(json.contains("\"modelId\":\"large-v3-turbo\""));
+        assert!(json.contains("\"modelId\":\"large-v3\""));
         assert!(json.contains("\"textPreview\":\"Hello world...\""));
     }
 
@@ -203,7 +203,7 @@ mod tests {
             created_at: "2026-01-15T10:30:00Z".to_string(),
             file_name: "audio.wav".to_string(),
             language: "ja".to_string(),
-            model_id: "large-v3-turbo".to_string(),
+            model_id: "large-v3".to_string(),
             duration: 60000,
             text: "Hello world".to_string(),
             segments: vec![HistorySegment {

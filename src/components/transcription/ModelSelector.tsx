@@ -49,9 +49,6 @@ const ModelSelector: Component<ModelSelectorProps> = (props) => {
                 <div class="flex items-center gap-2">
                   <span class="text-sm font-medium">{model.name}</span>
                   <Badge variant="secondary">{model.size}</Badge>
-                  <Show when={model.recommended}>
-                    <Badge variant="default">{t("common.recommended")}</Badge>
-                  </Show>
                 </div>
                 <p class="mt-1 text-xs text-muted-foreground">
                   {getModelDescription(t, model.id, model.description)}

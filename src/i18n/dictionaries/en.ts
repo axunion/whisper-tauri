@@ -7,7 +7,7 @@ export const en: Dictionary = {
     close: "Close",
     retry: "Retry",
     download: "Download",
-    recommended: "Recommended",
+
     deleting: "Deleting...",
     confirm: "Confirm",
     done: "Done",
@@ -199,7 +199,9 @@ export const en: Dictionary = {
   },
   models: {
     whisper: {
-      largeV3Turbo: { description: "High transcription accuracy" },
+      largeV3: { description: "High transcription accuracy" },
+      largeV3Turbo: { description: "Fast and accurate. Distilled model" },
+      medium: { description: "Balanced accuracy and speed" },
       small: { description: "Lightweight and fast. Saves storage" },
     },
     text: {
