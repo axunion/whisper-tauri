@@ -135,7 +135,7 @@ const result = await invoke<MyResult>("my_command", { params });
 
 ```
 src-tauri/src/<module>/
-├── mod.rs        — サブモジュール宣言 + pub use types::*;
+├── mod.rs        — サブモジュール宣言
 ├── commands.rs   — #[tauri::command] 関数
 ├── types.rs      — Serde 型定義
 └── error.rs      — thiserror エラー型 + From<Error> for String

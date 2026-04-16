@@ -31,7 +31,7 @@ Do NOT suggest adding new crates unless absolutely necessary.
 
 ## Module Structure
 
-Each module follows: `mod.rs` (re-exports) / `commands.rs` / `types.rs` / `error.rs`
+Each module follows: `mod.rs` (submodule declarations) / `commands.rs` / `types.rs` / `error.rs`
 
 ## Guidelines
 
