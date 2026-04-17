@@ -1,3 +1,15 @@
+#![cfg_attr(
+    test,
+    allow(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::float_cmp,
+        clippy::const_is_empty,
+        clippy::inefficient_to_string,
+        clippy::case_sensitive_file_extension_comparisons,
+    )
+)]
+
 use tauri::Manager;
 
 pub mod converter;

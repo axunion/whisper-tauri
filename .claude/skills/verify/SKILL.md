@@ -23,7 +23,7 @@ user-invocable: true
 | Phase | Frontend (`fe`) | Backend (`be`) | All |
 |-------|----------------|----------------|-----|
 | 0: Auto-fix | `pnpm lint:fix` | `cargo fmt` | 両方並行 |
-| 1: Static Analysis | `pnpm lint` + `pnpm typecheck` (並行) | `cargo fmt --check` + `cargo clippy -- -D warnings` (並行) | 4つ並行 |
+| 1: Static Analysis | `pnpm lint` + `pnpm typecheck` (並行) | `cargo fmt --check` + `cargo clippy --all-targets -- -D warnings` (並行) | 4つ並行 |
 | 2: Tests | `pnpm test:run` | `cargo test` | 両方並行 |
 | 3: Build | `pnpm build` | (なし) | `pnpm build` |
 
@@ -43,7 +43,7 @@ user-invocable: true
 読み取り専用の静的解析フェーズ。対象コマンドを**すべて並行**で実行する。
 
 - Frontend: `pnpm lint` + `pnpm typecheck`
-- Backend: `cargo fmt --check` + `cargo clippy -- -D warnings`
+- Backend: `cargo fmt --check` + `cargo clippy --all-targets -- -D warnings`
 
 **失敗時の自動修正（最大2回リトライ）:**
 
