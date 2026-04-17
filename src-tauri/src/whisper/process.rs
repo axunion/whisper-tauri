@@ -323,25 +323,6 @@ fn preprocess_with_vad(
     Ok(Some((concat, TimestampMap { segments: mapping })))
 }
 
-/// Number of most-recent kept segments to scan for repetitions.
-const REPETITION_LOOKBACK: usize = 3;
-/// Minimum number of matches within the lookback window to classify as a hallucination loop.
-const REPETITION_THRESHOLD: usize = 2;
-
-/// Detects hallucination loops where Whisper repeats the same phrase.
-///
-/// Returns `true` if `text` appears at least [`REPETITION_THRESHOLD`] times
-/// within the last [`REPETITION_LOOKBACK`] entries of `recent_texts`.
-/// Caller must pass pre-trimmed strings.
-fn is_repetition(text: &str, recent_texts: &[String]) -> bool {
-    if text.is_empty() {
-        return false;
-    }
-    let lookback = recent_texts.len().min(REPETITION_LOOKBACK);
-    let recent = &recent_texts[recent_texts.len().saturating_sub(lookback)..];
-    recent.iter().filter(|prev| prev.as_str() == text).count() >= REPETITION_THRESHOLD
-}
-
 /// Transcribes audio samples using a Whisper model.
 ///
 /// Emits `whisper:progress` events during processing.
@@ -396,7 +377,7 @@ pub fn transcribe(
         .map_err(|e| WhisperError::ModelLoadError(e.to_string()))?;
 
     // Configure parameters
-    let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
+    let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 5 });
     params.set_language(language);
     params.set_print_progress(false);
     params.set_print_realtime(false);
@@ -476,13 +457,12 @@ pub fn transcribe(
     })
 }
 
-/// Collects segments from the Whisper state, filtering out hallucinations.
+/// Collects segments from the Whisper state.
 fn collect_segments(
     state: &whisper_rs::WhisperState,
 ) -> Result<(Vec<TranscriptionSegment>, String), WhisperError> {
     let mut segments = Vec::new();
     let mut full_text = String::new();
-    let mut recent_texts: Vec<String> = Vec::new();
 
     for segment in state.as_iter() {
         let text = segment
@@ -490,20 +470,9 @@ fn collect_segments(
             .map_err(|e| WhisperError::TranscriptionError(e.to_string()))?
             .to_string();
 
-        let trimmed = text.trim();
-
-        if trimmed.is_empty() {
+        if text.trim().is_empty() {
             continue;
         }
-
-        if is_repetition(trimmed, &recent_texts) {
-            continue;
-        }
-
-        if recent_texts.len() >= REPETITION_LOOKBACK {
-            recent_texts.remove(0);
-        }
-        recent_texts.push(trimmed.to_string());
 
         let t0 = segment.start_timestamp();
         let t1 = segment.end_timestamp();
@@ -711,44 +680,5 @@ mod tests {
         assert_eq!(samples.len(), 16000);
 
         let _ = std::fs::remove_dir_all(dir);
-    }
-
-    // --- is_repetition ---
-
-    #[test]
-    fn repetition_detects_triple_repeat() {
-        let recent = vec!["hello".to_string(), "hello".to_string()];
-        assert!(is_repetition("hello", &recent));
-    }
-
-    #[test]
-    fn repetition_ignores_single_occurrence() {
-        let recent = vec!["hello".to_string(), "world".to_string()];
-        assert!(!is_repetition("hello", &recent));
-    }
-
-    #[test]
-    fn repetition_empty_recent() {
-        let recent: Vec<String> = vec![];
-        assert!(!is_repetition("hello", &recent));
-    }
-
-    #[test]
-    fn repetition_empty_text() {
-        let recent = vec!["hello".to_string(), "hello".to_string()];
-        assert!(!is_repetition("", &recent));
-    }
-
-    #[test]
-    fn repetition_looks_back_at_most_3() {
-        let recent = vec![
-            "old".to_string(),
-            "old".to_string(),
-            "a".to_string(),
-            "b".to_string(),
-            "c".to_string(),
-        ];
-        // "old" appeared twice but outside the 3-segment lookback window
-        assert!(!is_repetition("old", &recent));
     }
 }

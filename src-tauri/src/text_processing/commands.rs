@@ -269,7 +269,7 @@ pub async fn text_processing_chat(
     }
 
     let messages = inference::build_chat_messages(&text);
-    let result = inference::run_inference(port, &messages, 0.7, &task_id, &token, &app)
+    let result = inference::run_inference(port, &messages, 0.7, 2048, &task_id, &token, &app)
         .await
         .map_err::<String, _>(Into::into)?;
 
@@ -304,7 +304,7 @@ pub async fn text_processing_summarize(
 
     let result = if chunks.len() == 1 {
         let messages = inference::build_summarize_messages(&text);
-        inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
+        inference::run_inference(port, &messages, 0.3, 1024, &task_id, &token, &app)
             .await
             .map_err::<String, _>(Into::into)?
     } else {
@@ -315,15 +315,16 @@ pub async fn text_processing_summarize(
             }
 
             let messages = inference::build_summarize_messages(chunk);
-            let summary = inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
-                .await
-                .map_err::<String, _>(Into::into)?;
+            let summary =
+                inference::run_inference(port, &messages, 0.3, 1024, &task_id, &token, &app)
+                    .await
+                    .map_err::<String, _>(Into::into)?;
             chunk_summaries.push(summary);
         }
 
         let combined = chunk_summaries.join("\n\n");
         let messages = inference::build_summarize_messages(&combined);
-        inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
+        inference::run_inference(port, &messages, 0.3, 1024, &task_id, &token, &app)
             .await
             .map_err::<String, _>(Into::into)?
     };
@@ -369,7 +370,7 @@ pub async fn text_processing_generate_title(
     // Use only the first 1000 chars for title generation
     let truncated: String = text.chars().take(1000).collect();
     let messages = inference::build_title_messages(&truncated);
-    let result = inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
+    let result = inference::run_inference(port, &messages, 0.3, 64, &task_id, &token, &app)
         .await
         .map_err::<String, _>(Into::into)?;
 
@@ -411,8 +412,9 @@ pub async fn text_processing_clean_text(
     let chunks = inference::chunk_text(&text, inference::default_max_chunk_chars());
 
     let result = if chunks.len() == 1 {
+        let max_tokens = inference::clean_text_max_tokens(&text);
         let messages = inference::build_clean_text_messages(&text);
-        inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
+        inference::run_inference(port, &messages, 0.3, max_tokens, &task_id, &token, &app)
             .await
             .map_err::<String, _>(Into::into)?
     } else {
@@ -421,9 +423,10 @@ pub async fn text_processing_clean_text(
             if token.is_cancelled() {
                 return Err(TextProcessingError::Cancelled.into());
             }
+            let max_tokens = inference::clean_text_max_tokens(chunk);
             let messages = inference::build_clean_text_messages(chunk);
             let chunk_result =
-                inference::run_inference(port, &messages, 0.3, &task_id, &token, &app)
+                inference::run_inference(port, &messages, 0.3, max_tokens, &task_id, &token, &app)
                     .await
                     .map_err::<String, _>(Into::into)?;
             cleaned_chunks.push(chunk_result);

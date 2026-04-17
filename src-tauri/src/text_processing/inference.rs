@@ -168,6 +168,7 @@ pub async fn run_inference(
     port: u16,
     messages: &[ChatMessage],
     temperature: f64,
+    max_tokens: u32,
     task_id: &str,
     token: &Arc<CancellationToken>,
     app: &AppHandle,
@@ -181,7 +182,7 @@ pub async fn run_inference(
     let body = serde_json::json!({
         "messages": messages,
         "temperature": temperature,
-        "max_tokens": 4096,
+        "max_tokens": max_tokens,
         "stream": true,
     });
 
@@ -251,6 +252,23 @@ pub async fn run_inference(
 #[must_use]
 pub fn default_max_chunk_chars() -> usize {
     MAX_CHUNK_CHARS
+}
+
+/// Computes `max_tokens` for clean-up tasks, scaled to input length.
+///
+/// Cleanup reformats existing text, so the output length is roughly proportional
+/// to the input. A 1.5× factor leaves room for added punctuation and paragraph
+/// breaks; 256 is a floor for very short inputs; 4096 caps the request body to
+/// the server context size.
+#[must_use]
+pub fn clean_text_max_tokens(text: &str) -> u32 {
+    #[allow(
+        clippy::cast_precision_loss,
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss
+    )]
+    let approx = (text.chars().count() as f64 * 1.5) as u32 + 256;
+    approx.min(4096)
 }
 
 #[cfg(test)]
@@ -395,5 +413,32 @@ mod tests {
     fn clean_text_system_contains_instructions() {
         let messages = build_clean_text_messages("test");
         assert!(messages[0].content.contains("整形"));
+    }
+
+    // --- clean_text_max_tokens ---
+
+    #[test]
+    fn clean_text_max_tokens_short_input_uses_floor() {
+        // 10 chars × 1.5 = 15, +256 = 271 (above 256 floor, below cap)
+        assert_eq!(clean_text_max_tokens("1234567890"), 271);
+    }
+
+    #[test]
+    fn clean_text_max_tokens_scales_with_length() {
+        // 1000 chars × 1.5 + 256 = 1756
+        let text: String = "あ".repeat(1000);
+        assert_eq!(clean_text_max_tokens(&text), 1756);
+    }
+
+    #[test]
+    fn clean_text_max_tokens_caps_at_4096() {
+        // 4000 chars × 1.5 + 256 = 6256 → capped to 4096
+        let text: String = "x".repeat(4000);
+        assert_eq!(clean_text_max_tokens(&text), 4096);
+    }
+
+    #[test]
+    fn clean_text_max_tokens_empty_returns_floor() {
+        assert_eq!(clean_text_max_tokens(""), 256);
     }
 }
