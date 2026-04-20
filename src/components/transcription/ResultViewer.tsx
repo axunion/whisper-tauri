@@ -2,24 +2,18 @@ import { useNavigate } from "@solidjs/router";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
-import { FiSettings, FiX } from "solid-icons/fi";
 import type { Component, JSX } from "solid-js";
 import { createSignal, onMount, Show } from "solid-js";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogTitle,
-} from "~/components/ui/AlertDialog";
-import { Button } from "~/components/ui/Button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/Tabs";
 import { useI18n } from "~/i18n";
 import type { ExportFormat } from "~/lib/export";
 import { exportResult, getExtension } from "~/lib/export";
 import { toast } from "~/lib/toast";
+import { createAiActions } from "~/primitives/createAiActions";
 import { createAiSession } from "~/primitives/createAiSession";
 import { createTextProcessing } from "~/primitives/createTextProcessing";
 import type { TranscriptionResult } from "~/types";
+import { AiActionDialogs } from "./AiActionDialogs";
 import { ResultCleanTextTab } from "./ResultCleanTextTab";
 import { ResultSummaryTab } from "./ResultSummaryTab";
 import { ResultTextTab } from "./ResultTextTab";
@@ -40,17 +34,27 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
   const { t } = useI18n();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = createSignal<ResultTab>("text");
-  const [showPrereqDialog, setShowPrereqDialog] = createSignal(false);
   const [summaryTabRequested, setSummaryTabRequested] = createSignal(false);
   const [cleanTextTabRequested, setCleanTextTabRequested] = createSignal(false);
-  const [pendingAction, setPendingAction] = createSignal<(() => void) | null>(
-    null,
-  );
   const tp = createTextProcessing();
   const session = createAiSession(() => props.historyId);
 
-  const hasDownloadedModel = () => tp.models().some((m) => m.downloaded);
-  const isReady = () => tp.serverAvailable() && hasDownloadedModel();
+  const actions = createAiActions({
+    session,
+    tp,
+    getResultText: () => props.result.text,
+    onOpenSummary: () => {
+      setSummaryTabRequested(true);
+      setActiveTab("summary");
+    },
+    onOpenCleanText: () => {
+      setCleanTextTabRequested(true);
+      setActiveTab("cleanText");
+    },
+    onTitleGenerated: props.onTitleGenerated,
+    onGeneratingTitleChange: props.onGeneratingTitleChange,
+    t,
+  });
 
   const summaryTabVisible = () =>
     summaryTabRequested() ||
@@ -103,58 +107,6 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     }
   }
 
-  function executeSummarize() {
-    setSummaryTabRequested(true);
-    setActiveTab("summary");
-    session.summarize(props.result.text).then((result) => {
-      if (result) {
-        toast.success(t("textProcessing.summarizeCompletedToast"));
-      }
-    });
-  }
-
-  function executeCleanText() {
-    setCleanTextTabRequested(true);
-    setActiveTab("cleanText");
-    session.cleanText(props.result.text).then((result) => {
-      if (result) {
-        toast.success(t("textProcessing.cleanTextCompletedToast"));
-      }
-    });
-  }
-
-  async function executeGenerateTitle() {
-    props.onGeneratingTitleChange?.(true);
-    try {
-      const result = await session.generateTitle(props.result.text);
-      if (result) {
-        toast.success(t("textProcessing.titleGeneratedToast"));
-        props.onTitleGenerated?.(result);
-      }
-    } finally {
-      props.onGeneratingTitleChange?.(false);
-    }
-  }
-
-  /** Execute action, or show overwrite confirmation if results already exist. */
-  function withOverwriteCheck(hasResult: boolean, action: () => void) {
-    if (!isReady()) {
-      setShowPrereqDialog(true);
-      return;
-    }
-    if (hasResult) {
-      setPendingAction(() => action);
-    } else {
-      action();
-    }
-  }
-
-  function confirmOverwrite() {
-    const action = pendingAction();
-    setPendingAction(null);
-    action?.();
-  }
-
   return (
     <div class="flex min-h-0 flex-1 flex-col gap-3">
       <ResultToolbar
@@ -163,22 +115,9 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         onClose={props.onClose}
         onCopy={handleCopy}
         onSave={handleSave}
-        onSummarize={() =>
-          withOverwriteCheck(session.summaryResult() !== null, executeSummarize)
-        }
-        onCleanText={() =>
-          withOverwriteCheck(
-            session.cleanTextResult() !== null,
-            executeCleanText,
-          )
-        }
-        onGenerateTitle={() => {
-          if (!isReady()) {
-            setShowPrereqDialog(true);
-            return;
-          }
-          executeGenerateTitle();
-        }}
+        onSummarize={actions.onSummarize}
+        onCleanText={actions.onCleanText}
+        onGenerateTitle={actions.onGenerateTitle}
         isProcessing={session.isProcessing()}
         isGeneratingTitle={session.isGeneratingTitle()}
       />
@@ -231,66 +170,19 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         </Show>
       </Tabs>
 
-      {/* Prerequisite dialog */}
-      <AlertDialog open={showPrereqDialog()} onOpenChange={setShowPrereqDialog}>
-        <AlertDialogContent>
-          <AlertDialogTitle>
-            {t("textProcessing.aiSetupRequired")}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {t("textProcessing.aiSetupDescription")}
-          </AlertDialogDescription>
-          <div class="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              class="w-32"
-              onClick={() => setShowPrereqDialog(false)}
-            >
-              <FiX class="size-4" />
-              {t("common.close")}
-            </Button>
-            <Button
-              class="w-32"
-              onClick={() => {
-                setShowPrereqDialog(false);
-                navigate("/settings");
-              }}
-            >
-              <FiSettings class="size-4" />
-              {t("nav.settings")}
-            </Button>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Overwrite confirmation dialog */}
-      <AlertDialog
-        open={pendingAction() !== null}
-        onOpenChange={(open) => {
-          if (!open) setPendingAction(null);
+      <AiActionDialogs
+        showPrereq={actions.showPrereqDialog}
+        onPrereqOpenChange={actions.setShowPrereqDialog}
+        onGoToSettings={() => {
+          actions.setShowPrereqDialog(false);
+          navigate("/settings");
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogTitle>
-            {t("textProcessing.overwriteConfirmTitle")}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {t("textProcessing.overwriteConfirmDescription")}
-          </AlertDialogDescription>
-          <div class="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              class="w-32"
-              onClick={() => setPendingAction(null)}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button class="w-32" onClick={confirmOverwrite}>
-              {t("common.confirm")}
-            </Button>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
+        showOverwrite={() => actions.pendingAction() !== null}
+        onOverwriteOpenChange={(open) => {
+          if (!open) actions.cancelPending();
+        }}
+        onConfirmOverwrite={actions.confirmOverwrite}
+      />
     </div>
   );
 };
