@@ -1,10 +1,7 @@
-import { FiSettings } from "solid-icons/fi";
+import { FiMusic, FiSettings } from "solid-icons/fi";
 import { onMount } from "solid-js";
-import {
-  FfmpegManager,
-  SettingsSelect,
-  WhisperModelManager,
-} from "~/components/settings";
+import { ErrorDisplay } from "~/components/ErrorDisplay";
+import { FfmpegManager, SettingsSelect } from "~/components/settings";
 import { TextModelManager } from "~/components/text-processing";
 import {
   Card,
@@ -14,9 +11,11 @@ import {
 } from "~/components/ui/Card";
 import { Checkbox } from "~/components/ui/Checkbox";
 import { Separator } from "~/components/ui/Separator";
+import { WhisperModelList } from "~/components/ui/WhisperModelList";
 import { useI18n } from "~/i18n";
 import { createSettings } from "~/primitives/createSettings";
 import { applyTheme } from "~/primitives/createTheme";
+import { createWhisper } from "~/primitives/createWhisper";
 import type { AppSettings } from "~/types";
 
 type OptionItem = { value: string; label: string };
@@ -24,6 +23,7 @@ type OptionItem = { value: string; label: string };
 export default function Settings() {
   const { t, setLocale } = useI18n();
   const settings = createSettings();
+  const whisper = createWhisper();
 
   const languageOptions = () => [
     { value: "ja", label: t("settings.languageJa") },
@@ -40,6 +40,7 @@ export default function Settings() {
 
   onMount(() => {
     settings.load();
+    whisper.loadModels();
   });
 
   function findOption(options: OptionItem[], value: string): OptionItem | null {
@@ -101,14 +102,36 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      {/* Model Management */}
-      <WhisperModelManager />
+      {/* Whisper Model Management */}
+      <Card>
+        <CardHeader>
+          <CardTitleWithIcon icon={() => <FiMusic class="size-4" />}>
+            {t("settings.modelManagement")}
+          </CardTitleWithIcon>
+        </CardHeader>
+        <CardContent>
+          <WhisperModelList
+            whisper={whisper}
+            labels={{
+              deletedToast: "settings.modelDeletedToast",
+              deleteTitle: "settings.deleteModel",
+              deleteDescription: "settings.deleteModelConfirmation",
+              emptyState: "settings.loadingModels",
+            }}
+          />
+        </CardContent>
+      </Card>
 
       {/* Text Model Management */}
       <TextModelManager />
 
       {/* FFmpeg */}
       <FfmpegManager />
+
+      <ErrorDisplay
+        error={whisper.error()}
+        onDismiss={() => whisper.clearError()}
+      />
     </div>
   );
 }

@@ -1,19 +1,30 @@
 import { FiDownload, FiTrash2 } from "solid-icons/fi";
+import type { Component } from "solid-js";
 import { createSignal, For, Show } from "solid-js";
 import { Button } from "~/components/ui/Button";
 import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { ModelListItem } from "~/components/ui/ModelListItem";
 import { useI18n } from "~/i18n";
+import type { DictionaryKey } from "~/i18n/types";
 import { getModelDescription } from "~/lib/modelDescription";
 import { toast } from "~/lib/toast";
 import type { createWhisper } from "~/primitives/createWhisper";
 
-interface ModelManagerProps {
-  whisper: ReturnType<typeof createWhisper>;
+export interface WhisperModelListLabels {
+  deletedToast: DictionaryKey;
+  deleteTitle: DictionaryKey;
+  /** Description with `{name}` placeholder for the model being deleted. */
+  deleteDescription: DictionaryKey;
+  emptyState: DictionaryKey;
 }
 
-export function ModelManager(props: ModelManagerProps) {
+interface WhisperModelListProps {
+  whisper: ReturnType<typeof createWhisper>;
+  labels: WhisperModelListLabels;
+}
+
+const WhisperModelList: Component<WhisperModelListProps> = (props) => {
   const { t } = useI18n();
   const [deletingModelId, setDeletingModelId] = createSignal<string | null>(
     null,
@@ -26,7 +37,7 @@ export function ModelManager(props: ModelManagerProps) {
     setDeletingModelId(modelId);
     try {
       await props.whisper.deleteModel(modelId);
-      toast.success(t("dev.modelDeletedToast"));
+      toast.success(t(props.labels.deletedToast));
     } finally {
       setDeletingModelId(null);
     }
@@ -72,8 +83,8 @@ export function ModelManager(props: ModelManagerProps) {
                 }
               >
                 <ConfirmDialog
-                  title={t("dev.deleteModel")}
-                  description={t("dev.deleteModelConfirmation", {
+                  title={t(props.labels.deleteTitle)}
+                  description={t(props.labels.deleteDescription, {
                     name: model.name,
                   })}
                   confirmLabel={
@@ -106,9 +117,11 @@ export function ModelManager(props: ModelManagerProps) {
       </For>
       <Show when={props.whisper.models().length === 0}>
         <p class="text-sm text-muted-foreground">
-          {t("dev.noDownloadedModels")}
+          {t(props.labels.emptyState)}
         </p>
       </Show>
     </div>
   );
-}
+};
+
+export { WhisperModelList };

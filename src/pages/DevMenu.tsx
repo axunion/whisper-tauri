@@ -6,7 +6,7 @@ import {
   FiTool,
 } from "solid-icons/fi";
 import { onMount, Show } from "solid-js";
-import { CacheClear, LlmTester, ModelManager } from "~/components/dev";
+import { CacheClear, LlmTester } from "~/components/dev";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
 import { TextModelManager } from "~/components/text-processing";
 import { Button } from "~/components/ui/Button";
@@ -18,6 +18,7 @@ import {
 } from "~/components/ui/Card";
 import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { FfmpegControl } from "~/components/ui/FfmpegControl";
+import { WhisperModelList } from "~/components/ui/WhisperModelList";
 import { useI18n } from "~/i18n";
 import { combineErrorProviders } from "~/lib/errors";
 import { toast } from "~/lib/toast";
@@ -58,7 +59,15 @@ function DevMenuContent() {
           </CardTitleWithIcon>
         </CardHeader>
         <CardContent>
-          <ModelManager whisper={whisper} />
+          <WhisperModelList
+            whisper={whisper}
+            labels={{
+              deletedToast: "dev.modelDeletedToast",
+              deleteTitle: "dev.deleteModel",
+              deleteDescription: "dev.deleteModelConfirmation",
+              emptyState: "dev.noDownloadedModels",
+            }}
+          />
         </CardContent>
       </Card>
 
