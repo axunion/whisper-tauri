@@ -1,17 +1,13 @@
-import { FiDownload, FiRefreshCw, FiTool, FiTrash2 } from "solid-icons/fi";
-import { onMount, Show } from "solid-js";
-import { Badge } from "~/components/ui/Badge";
-import { Button } from "~/components/ui/Button";
+import { FiTool } from "solid-icons/fi";
+import { onMount } from "solid-js";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitleWithIcon,
 } from "~/components/ui/Card";
-import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
-import { DownloadProgress } from "~/components/ui/DownloadProgress";
+import { FfmpegControl } from "~/components/ui/FfmpegControl";
 import { useI18n } from "~/i18n";
-import { toast } from "~/lib/toast";
 import { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
 
 export default function FfmpegManager() {
@@ -30,85 +26,16 @@ export default function FfmpegManager() {
         </CardTitleWithIcon>
       </CardHeader>
       <CardContent>
-        <div class="flex items-center justify-between rounded-lg border p-4">
-          <div class="flex items-center gap-2">
-            <span class="font-medium">FFmpeg</span>
-            <Show when={ffmpeg.needsUpdate()}>
-              <Badge variant="default">
-                {t("settings.ffmpegUpdateAvailable")}
-              </Badge>
-            </Show>
-          </div>
-          <Show
-            when={!ffmpeg.isBundled()}
-            fallback={
-              <div class="flex items-center gap-2">
-                <Show when={ffmpeg.needsUpdate()}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    class="w-28"
-                    onClick={async () => {
-                      await ffmpeg.download();
-                      toast.success(t("settings.ffmpegDownloadedToast"));
-                    }}
-                  >
-                    <FiRefreshCw />
-                    {t("settings.update")}
-                  </Button>
-                </Show>
-                <ConfirmDialog
-                  title={t("settings.deleteFfmpeg")}
-                  description={t("settings.deleteFfmpegConfirmation")}
-                  confirmLabel={
-                    <>
-                      <FiTrash2 />
-                      {t("common.delete")}
-                    </>
-                  }
-                  onConfirm={async () => {
-                    await ffmpeg.deleteBundled();
-                    toast.success(t("settings.ffmpegDeletedToast"));
-                  }}
-                >
-                  {(openDialog) => (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      class="w-28"
-                      onClick={openDialog}
-                    >
-                      <FiTrash2 />
-                      {t("common.delete")}
-                    </Button>
-                  )}
-                </ConfirmDialog>
-              </div>
-            }
-          >
-            <Show
-              when={ffmpeg.isDownloading()}
-              fallback={
-                <Button
-                  variant="outline"
-                  size="sm"
-                  class="w-28"
-                  onClick={async () => {
-                    await ffmpeg.download();
-                    toast.success(t("settings.ffmpegDownloadedToast"));
-                  }}
-                >
-                  <FiDownload />
-                  {t("common.download")}
-                </Button>
-              }
-            >
-              <DownloadProgress
-                progress={ffmpeg.downloadProgress()?.progress ?? 0}
-              />
-            </Show>
-          </Show>
-        </div>
+        <FfmpegControl
+          ffmpeg={ffmpeg}
+          showUpdateBadge
+          labels={{
+            deleteTitle: "settings.deleteFfmpeg",
+            deleteDescription: "settings.deleteFfmpegConfirmation",
+            deletedToast: "settings.ffmpegDeletedToast",
+            downloadedToast: "settings.ffmpegDownloadedToast",
+          }}
+        />
       </CardContent>
     </Card>
   );

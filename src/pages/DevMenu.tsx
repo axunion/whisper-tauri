@@ -1,11 +1,9 @@
 import {
-  FiDownload,
   FiMessageSquare,
   FiMusic,
   FiRefreshCw,
   FiRotateCcw,
   FiTool,
-  FiTrash2,
 } from "solid-icons/fi";
 import { onMount, Show } from "solid-js";
 import { CacheClear, LlmTester, ModelManager } from "~/components/dev";
@@ -19,7 +17,7 @@ import {
   CardTitleWithIcon,
 } from "~/components/ui/Card";
 import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
-import { DownloadProgress } from "~/components/ui/DownloadProgress";
+import { FfmpegControl } from "~/components/ui/FfmpegControl";
 import { useI18n } from "~/i18n";
 import { combineErrorProviders } from "~/lib/errors";
 import { toast } from "~/lib/toast";
@@ -87,64 +85,15 @@ function DevMenuContent() {
           </CardTitleWithIcon>
         </CardHeader>
         <CardContent>
-          <div class="flex items-center justify-between rounded-lg border p-4">
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-medium">FFmpeg</span>
-            </div>
-            <Show
-              when={ffmpeg.isBundled()}
-              fallback={
-                <Show
-                  when={ffmpeg.isDownloading()}
-                  fallback={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      class="w-28"
-                      onClick={async () => {
-                        await ffmpeg.download();
-                        toast.success(t("settings.ffmpegDownloadedToast"));
-                      }}
-                    >
-                      <FiDownload />
-                      {t("common.download")}
-                    </Button>
-                  }
-                >
-                  <DownloadProgress
-                    progress={ffmpeg.downloadProgress()?.progress ?? 0}
-                  />
-                </Show>
-              }
-            >
-              <ConfirmDialog
-                title={t("dev.deleteFfmpeg")}
-                description={t("dev.deleteFfmpegConfirmation")}
-                confirmLabel={
-                  <>
-                    <FiTrash2 />
-                    {t("common.delete")}
-                  </>
-                }
-                onConfirm={async () => {
-                  await ffmpeg.deleteBundled();
-                  toast.success(t("dev.ffmpegDeletedToast"));
-                }}
-              >
-                {(openDialog) => (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    class="w-28"
-                    onClick={openDialog}
-                  >
-                    <FiTrash2 />
-                    {t("common.delete")}
-                  </Button>
-                )}
-              </ConfirmDialog>
-            </Show>
-          </div>
+          <FfmpegControl
+            ffmpeg={ffmpeg}
+            labels={{
+              deleteTitle: "dev.deleteFfmpeg",
+              deleteDescription: "dev.deleteFfmpegConfirmation",
+              deletedToast: "dev.ffmpegDeletedToast",
+              downloadedToast: "settings.ffmpegDownloadedToast",
+            }}
+          />
         </CardContent>
       </Card>
 
