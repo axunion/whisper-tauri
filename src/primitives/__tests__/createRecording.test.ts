@@ -7,7 +7,7 @@ import type {
   RecordingLevel,
   RecordingStopResult,
 } from "../../types";
-import { createRecording } from "../createRecording";
+import { _resetRecordingForTesting, createRecording } from "../createRecording";
 
 const mockDevice = (overrides?: Partial<AudioDevice>): AudioDevice => ({
   id: "default-mic",
@@ -23,6 +23,11 @@ const mockStopResult: RecordingStopResult = {
 };
 
 describe("createRecording", () => {
+  beforeEach(() => {
+    _resetRecordingForTesting();
+    vi.mocked(invoke).mockReset();
+  });
+
   describe("initial state", () => {
     it("should have empty devices array", () => {
       createRoot((dispose) => {
@@ -282,8 +287,8 @@ describe("createRecording", () => {
   describe("stopRecording", () => {
     it("should invoke stop_recording and return result", async () => {
       vi.mocked(invoke)
-        .mockResolvedValueOnce(undefined) // start_recording
-        .mockResolvedValueOnce(mockStopResult); // stop_recording
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(mockStopResult);
 
       await createRoot(async (dispose) => {
         const recording = createRecording();
@@ -341,8 +346,8 @@ describe("createRecording", () => {
 
     it("should set error on failure and reset isRecording", async () => {
       vi.mocked(invoke)
-        .mockResolvedValueOnce(undefined) // start_recording
-        .mockRejectedValueOnce(new Error("Stop failed")); // stop_recording
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error("Stop failed"));
 
       await createRoot(async (dispose) => {
         const recording = createRecording();
@@ -365,9 +370,9 @@ describe("createRecording", () => {
   describe("cleanup", () => {
     it("should invoke cleanup_recording with path", async () => {
       vi.mocked(invoke)
-        .mockResolvedValueOnce(undefined) // start_recording
-        .mockResolvedValueOnce(mockStopResult) // stop_recording
-        .mockResolvedValueOnce(undefined); // cleanup_recording
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(mockStopResult)
+        .mockResolvedValueOnce(undefined);
 
       await createRoot(async (dispose) => {
         const recording = createRecording();
@@ -417,57 +422,30 @@ describe("createRecording", () => {
   });
 
   describe("event listeners", () => {
-    it("should update level on recording:level event", async () => {
-      let levelCallback: (event: { payload: RecordingLevel }) => void =
-        () => {};
-      vi.mocked(listen).mockImplementation((event, handler) => {
-        if (event === "recording:level") {
-          levelCallback = handler as unknown as typeof levelCallback;
-        }
-        return Promise.resolve(() => {});
-      });
+    it("should update level on recording:level event", () => {
+      const recording = createRecording();
 
-      await createRoot(async (dispose) => {
-        const recording = createRecording();
+      const call = vi
+        .mocked(listen)
+        .mock.calls.find(([event]) => event === "recording:level");
+      const callback = call?.[1] as
+        | ((event: { payload: RecordingLevel }) => void)
+        | undefined;
+      expect(callback).toBeDefined();
 
-        const levelData: RecordingLevel = {
-          level: 0.5,
-          peakLevel: 0.8,
-        };
+      const levelData: RecordingLevel = {
+        level: 0.5,
+        peakLevel: 0.8,
+      };
 
-        levelCallback({ payload: levelData });
+      callback?.({ payload: levelData });
 
-        expect(recording.level()).toEqual(levelData);
-        dispose();
-      });
-
-      vi.mocked(listen).mockImplementation(() => Promise.resolve(() => {}));
+      expect(recording.level()).toEqual(levelData);
     });
 
-    it("should unregister listener on dispose", async () => {
-      const unlistenLevel = vi.fn();
-
-      vi.mocked(listen).mockImplementation((event: string) => {
-        if (event === "recording:level") {
-          return Promise.resolve(unlistenLevel);
-        }
-        return Promise.resolve(() => {});
-      });
-
-      await createRoot(async (dispose) => {
-        createRecording();
-
-        // Allow listen promises to resolve
-        await Promise.resolve();
-
-        expect(unlistenLevel).not.toHaveBeenCalled();
-
-        dispose();
-      });
-
-      expect(unlistenLevel).toHaveBeenCalled();
-
-      vi.mocked(listen).mockImplementation(() => Promise.resolve(() => {}));
+    it("should register listener at module level (singleton)", () => {
+      const listenCalls = vi.mocked(listen).mock.calls.map(([event]) => event);
+      expect(listenCalls).toContain("recording:level");
     });
   });
 });
