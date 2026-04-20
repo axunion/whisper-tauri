@@ -1,4 +1,4 @@
-import type { Dictionary } from "../types";
+import type { Dictionary } from "~/i18n/types";
 
 export const ja: Dictionary = {
   common: {

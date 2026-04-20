@@ -79,6 +79,37 @@ function matchErrorCode(message: string): ErrorCodeType {
   return ErrorCode.UNKNOWN_ERROR;
 }
 
+export interface ErrorProvider {
+  error: () => AppError | null;
+  clearError: () => void;
+}
+
+export interface CombinedErrorProvider {
+  error: () => AppError | null;
+  clearAll: () => void;
+}
+
+/**
+ * Combines multiple error providers: exposes the first non-null error and
+ * a `clearAll` that clears every provider at once.
+ */
+export function combineErrorProviders(
+  providers: readonly ErrorProvider[],
+): CombinedErrorProvider {
+  return {
+    error: () => {
+      for (const p of providers) {
+        const e = p.error();
+        if (e) return e;
+      }
+      return null;
+    },
+    clearAll: () => {
+      for (const p of providers) p.clearError();
+    },
+  };
+}
+
 export function parseError(error: unknown): AppError {
   let message: string;
 

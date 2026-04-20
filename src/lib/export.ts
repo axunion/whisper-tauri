@@ -17,25 +17,26 @@ export function toTXT(result: TranscriptionResult): string {
   return result.text;
 }
 
-export function toSRT(result: TranscriptionResult): string {
-  return result.segments
+function formatCues(
+  segments: TranscriptionResult["segments"],
+  format: "srt" | "vtt",
+): string {
+  return segments
     .map((seg, i) => {
-      const start = formatTimestamp(seg.start, "srt");
-      const end = formatTimestamp(seg.end, "srt");
-      return `${i + 1}\n${start} --> ${end}\n${seg.text.trim()}\n`;
+      const start = formatTimestamp(seg.start, format);
+      const end = formatTimestamp(seg.end, format);
+      const prefix = format === "srt" ? `${i + 1}\n` : "";
+      return `${prefix}${start} --> ${end}\n${seg.text.trim()}\n`;
     })
     .join("\n");
 }
 
+export function toSRT(result: TranscriptionResult): string {
+  return formatCues(result.segments, "srt");
+}
+
 export function toVTT(result: TranscriptionResult): string {
-  const cues = result.segments
-    .map((seg) => {
-      const start = formatTimestamp(seg.start, "vtt");
-      const end = formatTimestamp(seg.end, "vtt");
-      return `${start} --> ${end}\n${seg.text.trim()}\n`;
-    })
-    .join("\n");
-  return `WEBVTT\n\n${cues}`;
+  return `WEBVTT\n\n${formatCues(result.segments, "vtt")}`;
 }
 
 export function exportResult(

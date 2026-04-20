@@ -27,10 +27,13 @@ export function formatDurationShort(ms: number): string {
   return `${String(minutes)}m`;
 }
 
+function toBcp47(locale: string): string {
+  return locale === "ja" ? "ja-JP" : "en-US";
+}
+
 /** Format ISO date string as localized date+time (e.g. "2024/01/15 14:30"). */
 export function formatDate(isoString: string, locale: string): string {
-  const date = new Date(isoString);
-  return date.toLocaleDateString(locale === "ja" ? "ja-JP" : "en-US", {
+  return new Date(isoString).toLocaleDateString(toBcp47(locale), {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -41,8 +44,7 @@ export function formatDate(isoString: string, locale: string): string {
 
 /** Format ISO date string as localized date only (e.g. "2024/01/15"). */
 export function formatDateShort(isoString: string, locale: string): string {
-  const date = new Date(isoString);
-  return date.toLocaleDateString(locale === "ja" ? "ja-JP" : "en-US", {
+  return new Date(isoString).toLocaleDateString(toBcp47(locale), {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",

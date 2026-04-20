@@ -1,8 +1,7 @@
-import { FiX } from "solid-icons/fi";
 import type { Component, JSX } from "solid-js";
 import { createMemo, For, Show } from "solid-js";
-import { Button } from "~/components/ui/Button";
 import { useI18n } from "~/i18n";
+import { ResultProcessingShell } from "./ResultProcessingShell";
 
 interface ResultSummaryTabProps {
   summaryResult: string | null;
@@ -102,35 +101,20 @@ function renderStructuredSummary(sections: SummarySection[]): JSX.Element {
 const ResultSummaryTab: Component<ResultSummaryTabProps> = (props) => {
   const { t } = useI18n();
 
-  const hasResult = () => props.summaryResult !== null;
   const sections = createMemo(() => {
     const text = props.summaryResult;
     return text ? parseSections(text) : [];
   });
 
   return (
-    <div class="flex h-full flex-col overflow-y-auto rounded-lg border bg-muted/50 p-4">
-      <Show when={props.isProcessing}>
-        <div class="flex flex-1 flex-col items-center justify-center gap-4">
-          <p class="animate-pulse text-sm text-muted-foreground">
-            {t("textProcessing.summarizing")}
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            class="gap-1.5"
-            onClick={props.onCancel}
-          >
-            <FiX class="size-3.5" />
-            {t("common.cancel")}
-          </Button>
-        </div>
-      </Show>
-
-      <Show when={hasResult() && !props.isProcessing}>
-        {renderStructuredSummary(sections())}
-      </Show>
-    </div>
+    <ResultProcessingShell
+      isProcessing={props.isProcessing}
+      processingLabel={t("textProcessing.summarizing")}
+      onCancel={props.onCancel}
+      hasResult={props.summaryResult !== null}
+    >
+      {renderStructuredSummary(sections())}
+    </ResultProcessingShell>
   );
 };
 

@@ -11,6 +11,7 @@ import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { ModelListItem } from "~/components/ui/ModelListItem";
 import { useI18n } from "~/i18n";
+import type { DictionaryKey } from "~/i18n/types";
 import { getModelDescription } from "~/lib/modelDescription";
 import { toast } from "~/lib/toast";
 import { createTextProcessing } from "~/primitives/createTextProcessing";
@@ -32,6 +33,19 @@ export default function TextModelManager(props: TextModelManagerProps) {
     tp.checkServer();
   });
 
+  async function runWithToast(
+    action: () => Promise<boolean>,
+    successKey: DictionaryKey,
+  ): Promise<void> {
+    const ok = await action();
+    if (ok) {
+      toast.success(t(successKey));
+    } else {
+      const err = tp.error();
+      if (err) toast.error(err.message);
+    }
+  }
+
   async function handleDeleteModel(modelId: string) {
     setDeletingModelId(modelId);
     await tp.deleteModel(modelId);
@@ -40,36 +54,27 @@ export default function TextModelManager(props: TextModelManagerProps) {
   }
 
   async function handleDownloadModel(modelId: string) {
-    const ok = await tp.downloadModel(modelId);
-    if (ok) {
-      toast.success(t("textProcessing.modelDownloadedToast"));
-    } else {
-      const err = tp.error();
-      if (err) toast.error(err.message);
-    }
+    await runWithToast(
+      () => tp.downloadModel(modelId),
+      "textProcessing.modelDownloadedToast",
+    );
   }
 
   async function handleDownloadServer() {
-    const ok = await tp.downloadServer();
-    if (ok) {
-      toast.success(t("textProcessing.serverDownloadedToast"));
-    } else {
-      const err = tp.error();
-      if (err) toast.error(err.message);
-    }
+    await runWithToast(
+      () => tp.downloadServer(),
+      "textProcessing.serverDownloadedToast",
+    );
+  }
+
+  async function handleDeleteServer() {
+    await runWithToast(
+      () => tp.deleteServer(),
+      "textProcessing.serverDeletedToast",
+    );
   }
 
   const isSelected = (modelId: string) => tp.selectedModelId() === modelId;
-
-  async function handleDeleteServer() {
-    const ok = await tp.deleteServer();
-    if (ok) {
-      toast.success(t("textProcessing.serverDeletedToast"));
-    } else {
-      const err = tp.error();
-      if (err) toast.error(err.message);
-    }
-  }
 
   return (
     <>

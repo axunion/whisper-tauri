@@ -11,6 +11,7 @@ import { createSignal, Show } from "solid-js";
 import { ResultViewer } from "~/components/transcription/ResultViewer";
 import { useI18n } from "~/i18n";
 import { formatDate, formatDuration } from "~/lib/format";
+import { createTitleEditor } from "~/primitives/createTitleEditor";
 import type { HistoryEntry, TranscriptionResult } from "~/types";
 
 interface HistoryDetailProps {
@@ -30,45 +31,31 @@ function toTranscriptionResult(entry: HistoryEntry): TranscriptionResult {
 
 const HistoryDetail: Component<HistoryDetailProps> = (props) => {
   const { locale } = useI18n();
-  const [isEditing, setIsEditing] = createSignal(false);
   const [isSuggestion, setIsSuggestion] = createSignal(false);
   const [isGeneratingTitle, setIsGeneratingTitle] = createSignal(false);
-  const [editValue, setEditValue] = createSignal("");
+
+  const title = createTitleEditor({
+    onConfirm: (value) => {
+      if (value !== props.entry.fileName) {
+        props.onRename?.(props.entry.id, value);
+      }
+      setIsSuggestion(false);
+    },
+  });
 
   function startEditing(): void {
-    setEditValue(props.entry.fileName);
     setIsSuggestion(false);
-    setIsEditing(true);
+    title.startEditing(props.entry.fileName);
   }
 
-  function startSuggestion(title: string): void {
-    setEditValue(title);
+  function startSuggestion(suggested: string): void {
     setIsSuggestion(true);
-    setIsEditing(true);
-  }
-
-  function confirmRename(): void {
-    const trimmed = editValue().trim();
-    if (trimmed && trimmed !== props.entry.fileName) {
-      props.onRename?.(props.entry.id, trimmed);
-    }
-    setIsEditing(false);
-    setIsSuggestion(false);
+    title.startEditing(suggested);
   }
 
   function cancelEditing(): void {
-    setIsEditing(false);
     setIsSuggestion(false);
-  }
-
-  function handleKeyDown(e: KeyboardEvent): void {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      confirmRename();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      cancelEditing();
-    }
+    title.cancel();
   }
 
   const result = () => toTranscriptionResult(props.entry);
@@ -96,15 +83,15 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
       <div class="group/title flex h-8 items-center gap-1.5">
         <div class="min-w-0 flex-1">
           <Show
-            when={!isEditing()}
+            when={!title.isEditing()}
             fallback={
               <input
                 type="text"
                 autofocus
                 class="w-full border-b border-muted-foreground/40 bg-transparent text-lg font-semibold outline-none"
-                value={editValue()}
-                onInput={(e) => setEditValue(e.currentTarget.value)}
-                onKeyDown={handleKeyDown}
+                value={title.editValue()}
+                onInput={(e) => title.setEditValue(e.currentTarget.value)}
+                onKeyDown={title.handleKeyDown}
                 onBlur={() => {
                   if (!isSuggestion()) cancelEditing();
                 }}
@@ -120,17 +107,22 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
           </Show>
         </div>
         <Show
-          when={isSuggestion() && isEditing()}
+          when={isSuggestion() && title.isEditing()}
           fallback={
             <button
               type="button"
               class="shrink-0 text-muted-foreground transition-opacity"
               classList={{
-                "opacity-0 group-hover/title:opacity-100": !isEditing(),
+                "opacity-0 group-hover/title:opacity-100": !title.isEditing(),
               }}
-              onClick={() => (isEditing() ? confirmRename() : startEditing())}
+              onClick={() =>
+                title.isEditing() ? title.confirm() : startEditing()
+              }
             >
-              <Show when={isEditing()} fallback={<FiEdit2 class="size-3.5" />}>
+              <Show
+                when={title.isEditing()}
+                fallback={<FiEdit2 class="size-3.5" />}
+              >
                 <FiCheck class="size-3.5" />
               </Show>
             </button>
@@ -139,7 +131,7 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
           <button
             type="button"
             class="shrink-0 text-muted-foreground hover:text-foreground"
-            onClick={confirmRename}
+            onClick={title.confirm}
           >
             <FiCheck class="size-3.5" />
           </button>

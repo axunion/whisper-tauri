@@ -1,1 +1,0 @@
-export { createWhisper } from "./createWhisper";

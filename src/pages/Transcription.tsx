@@ -22,6 +22,7 @@ import { Progress } from "~/components/ui/Progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/Tabs";
 import { useI18n } from "~/i18n";
 import { extractFilename } from "~/lib/constants";
+import { combineErrorProviders } from "~/lib/errors";
 import { toast } from "~/lib/toast";
 import { cn } from "~/lib/utils";
 import { createFileConverter } from "~/primitives/createFileConverter";
@@ -119,14 +120,7 @@ export default function Transcription() {
     whisper.selectedModel() !== null &&
     !whisper.isProcessing();
 
-  const combinedError = () =>
-    whisper.error() ?? converter.error() ?? recording.error();
-
-  function clearAllErrors() {
-    whisper.clearError();
-    converter.clearError();
-    recording.clearError();
-  }
+  const errors = combineErrorProviders([whisper, converter, recording]);
 
   async function handleStartFile() {
     const currentFile = whisper.file();
@@ -213,8 +207,8 @@ export default function Transcription() {
       )}
     >
       <ErrorDisplay
-        error={combinedError()}
-        onDismiss={clearAllErrors}
+        error={errors.error()}
+        onDismiss={errors.clearAll}
         onRetry={canStartFile() ? handleStartFile : undefined}
       />
 

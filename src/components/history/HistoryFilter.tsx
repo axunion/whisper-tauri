@@ -65,18 +65,12 @@ const HistoryFilter: Component<HistoryFilterProps> = (props) => {
   function handleSelect(range: QuickFilterRange): void {
     if (range === activeRange()) return;
     const { dateFrom, dateTo } = computeDateRange(range);
-    const next: HistoryFilterType = { ...props.filter };
-    if (dateFrom) {
-      next.dateFrom = dateFrom;
-    } else {
-      delete next.dateFrom;
-    }
-    if (dateTo) {
-      next.dateTo = dateTo;
-    } else {
-      delete next.dateTo;
-    }
-    props.onFilterChange(next);
+    const { dateFrom: _from, dateTo: _to, ...rest } = props.filter;
+    props.onFilterChange({
+      ...rest,
+      ...(dateFrom ? { dateFrom } : {}),
+      ...(dateTo ? { dateTo } : {}),
+    });
   }
 
   return (

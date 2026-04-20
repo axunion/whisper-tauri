@@ -21,6 +21,7 @@ import {
 import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { useI18n } from "~/i18n";
+import { combineErrorProviders } from "~/lib/errors";
 import { toast } from "~/lib/toast";
 import { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
 import { createHistory } from "~/primitives/createHistory";
@@ -35,6 +36,13 @@ function DevMenuContent() {
   const ffmpeg = createFfmpegDownloader();
   const textProcessing = createTextProcessing();
   const devSettings = createSettings();
+
+  const errors = combineErrorProviders([
+    whisper,
+    history,
+    ffmpeg,
+    textProcessing,
+  ]);
 
   onMount(() => {
     whisper.loadModels();
@@ -182,20 +190,7 @@ function DevMenuContent() {
       </Card>
 
       {/* Error display */}
-      <ErrorDisplay
-        error={
-          whisper.error() ??
-          history.error() ??
-          ffmpeg.error() ??
-          textProcessing.error()
-        }
-        onDismiss={() => {
-          whisper.clearError();
-          history.clearError();
-          ffmpeg.clearError();
-          textProcessing.clearError();
-        }}
-      />
+      <ErrorDisplay error={errors.error()} onDismiss={errors.clearAll} />
     </div>
   );
 }
