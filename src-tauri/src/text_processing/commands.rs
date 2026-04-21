@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use tauri::{AppHandle, Emitter, State};
 
@@ -6,6 +6,7 @@ use crate::paths;
 use crate::settings;
 
 use super::error::TextProcessingError;
+use super::extract;
 use super::inference;
 use super::models;
 use super::server::LlamaServerManager;
@@ -146,9 +147,9 @@ pub async fn text_processing_download_server(app: AppHandle) -> Result<String, S
     download_file(url, &archive_path, &app).await?;
 
     let extract_result = if use_tar_gz {
-        extract_llama_server_from_tar_gz(&archive_path, &bin_dir)
+        extract::extract_from_tar_gz(&archive_path, &bin_dir)
     } else {
-        extract_llama_server_from_zip(&archive_path, &bin_dir)
+        extract::extract_from_zip(&archive_path, &bin_dir)
     };
 
     // Always clean up archive, even on extraction failure
@@ -189,7 +190,7 @@ pub async fn text_processing_delete_server(app: AppHandle) -> Result<(), String>
             for entry in entries.flatten() {
                 let name = entry.file_name();
                 let name = name.to_string_lossy();
-                if should_extract(&name) && name != LLAMA_SERVER_BINARY_NAME {
+                if extract::is_extracted_artifact(&name) {
                     let _ = std::fs::remove_file(entry.path());
                 }
             }
@@ -578,164 +579,10 @@ async fn download_file(url: &str, output_path: &Path, app: &AppHandle) -> Result
     .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())
 }
 
-/// Target binary name for the current platform.
-const LLAMA_SERVER_BINARY_NAME: &str = if cfg!(target_os = "windows") {
-    "llama-server.exe"
-} else {
-    "llama-server"
-};
-
-/// Returns whether a filename should be extracted from the archive.
-///
-/// Extracts the llama-server binary and shared libraries it depends on.
-fn should_extract(filename: &str) -> bool {
-    if filename == LLAMA_SERVER_BINARY_NAME {
-        return true;
-    }
-    // Shared libraries: .dylib (macOS), .so/.so.N (Linux), .dll (Windows)
-    let path = std::path::Path::new(filename);
-    let ext_matches = |ext_name: &str| {
-        path.extension()
-            .is_some_and(|ext| ext.eq_ignore_ascii_case(ext_name))
-    };
-    ext_matches("dylib")
-        || std::path::Path::new(filename)
-            .extension()
-            .is_some_and(|ext| ext.eq_ignore_ascii_case("so"))
-        || filename.contains(".so.")
-        || (cfg!(target_os = "windows") && ext_matches("dll"))
-}
-
-/// Extracts the llama-server binary and shared libraries from a tar.gz archive.
-///
-/// Handles both regular files and symlinks (common for versioned `.dylib` on macOS).
-fn extract_llama_server_from_tar_gz(archive_path: &Path, bin_dir: &Path) -> Result<(), String> {
-    let dl_err = |e: std::io::Error| TextProcessingError::DownloadFailed(e.to_string()).to_string();
-
-    let file = std::fs::File::open(archive_path).map_err(dl_err)?;
-    let decoder = flate2::read::GzDecoder::new(file);
-    let mut archive = tar::Archive::new(decoder);
-
-    let mut found_binary = false;
-    // Collect symlinks to create after all regular files are extracted
-    let mut symlinks: Vec<(String, PathBuf)> = Vec::new();
-
-    for entry in archive.entries().map_err(dl_err)? {
-        let mut entry = entry.map_err(dl_err)?;
-        let path = entry.path().map_err(dl_err)?;
-
-        let Some(filename) = path.file_name().map(|f| f.to_string_lossy().to_string()) else {
-            continue;
-        };
-
-        if !should_extract(&filename) {
-            continue;
-        }
-
-        if filename == LLAMA_SERVER_BINARY_NAME {
-            found_binary = true;
-        }
-
-        let entry_type = entry.header().entry_type();
-        let out_path = bin_dir.join(&filename);
-
-        if entry_type.is_symlink() {
-            // Record symlink target to create after extraction
-            if let Ok(Some(target)) = entry.link_name() {
-                let target_name = target
-                    .file_name()
-                    .unwrap_or(target.as_os_str())
-                    .to_string_lossy()
-                    .to_string();
-                symlinks.push((target_name, out_path));
-            }
-        } else if entry_type.is_file() {
-            let mut out_file = std::fs::File::create(&out_path)
-                .map_err(|e| TextProcessingError::Io(e).to_string())?;
-            std::io::copy(&mut entry, &mut out_file)
-                .map_err(|e| TextProcessingError::Io(e).to_string())?;
-        }
-    }
-
-    // Create symlinks (or copy on platforms without symlink support)
-    for (target_name, link_path) in &symlinks {
-        let target_path = bin_dir.join(target_name);
-        if target_path.exists() {
-            // Remove any 0-byte placeholder from previous extraction
-            let _ = std::fs::remove_file(link_path);
-            #[cfg(unix)]
-            {
-                std::os::unix::fs::symlink(&target_path, link_path)
-                    .map_err(|e| TextProcessingError::Io(e).to_string())?;
-            }
-            #[cfg(not(unix))]
-            {
-                std::fs::copy(&target_path, link_path)
-                    .map_err(|e| TextProcessingError::Io(e).to_string())?;
-            }
-        }
-    }
-
-    if found_binary {
-        Ok(())
-    } else {
-        Err(TextProcessingError::DownloadFailed(
-            "llama-server binary not found in archive".to_string(),
-        )
-        .to_string())
-    }
-}
-
-/// Extracts the llama-server binary and shared libraries from a zip archive.
-fn extract_llama_server_from_zip(archive_path: &Path, bin_dir: &Path) -> Result<(), String> {
-    let file = std::fs::File::open(archive_path)
-        .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())?;
-    let mut archive = zip::ZipArchive::new(file)
-        .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())?;
-
-    let mut found_binary = false;
-
-    for i in 0..archive.len() {
-        let mut entry = archive
-            .by_index(i)
-            .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())?;
-
-        if !entry.is_file() {
-            continue;
-        }
-
-        let Some(filename) = entry
-            .enclosed_name()
-            .and_then(|p| p.file_name().map(|f| f.to_string_lossy().to_string()))
-        else {
-            continue;
-        };
-
-        if should_extract(&filename) {
-            if filename == LLAMA_SERVER_BINARY_NAME {
-                found_binary = true;
-            }
-            let out_path = bin_dir.join(&filename);
-            let mut out_file = std::fs::File::create(&out_path)
-                .map_err(|e| TextProcessingError::Io(e).to_string())?;
-            std::io::copy(&mut entry, &mut out_file)
-                .map_err(|e| TextProcessingError::Io(e).to_string())?;
-        }
-    }
-
-    if found_binary {
-        Ok(())
-    } else {
-        Err(TextProcessingError::DownloadFailed(
-            "llama-server binary not found in archive".to_string(),
-        )
-        .to_string())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn text_models_dir_returns_correct_path() {

@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
+
+use crate::paths;
 
 use super::db;
 use super::error::HistoryError;
@@ -9,16 +11,9 @@ use super::types::{
     HistorySearchParams,
 };
 
-/// Resolves the app data directory from a Tauri `AppHandle`.
-fn resolve_app_data_dir(app: &AppHandle) -> Result<PathBuf, HistoryError> {
-    app.path()
-        .app_data_dir()
-        .map_err(|e| HistoryError::PathError(e.to_string()))
-}
-
 /// Returns the database path, initializing the database if needed.
-fn get_db_path(app: &AppHandle) -> Result<PathBuf, HistoryError> {
-    let app_data_dir = resolve_app_data_dir(app)?;
+fn get_db_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let app_data_dir = paths::app_data_dir(app)?;
     std::fs::create_dir_all(&app_data_dir).map_err(HistoryError::from)?;
     let path = db::db_path(&app_data_dir);
     db::init_db(&path)?;

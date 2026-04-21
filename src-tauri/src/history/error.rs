@@ -17,10 +17,6 @@ pub enum HistoryError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
-    /// A path resolution error occurred.
-    #[error("Path error: {0}")]
-    PathError(String),
-
     /// A serialization or deserialization error occurred.
     #[error("Serialization error: {0}")]
     Serialization(String),
@@ -58,12 +54,6 @@ mod tests {
     fn error_display_not_found() {
         let err = HistoryError::NotFound("abc-123".to_string());
         assert_eq!(err.to_string(), "History not found: abc-123");
-    }
-
-    #[test]
-    fn error_display_path_error() {
-        let err = HistoryError::PathError("invalid path".to_string());
-        assert_eq!(err.to_string(), "Path error: invalid path");
     }
 
     #[test]

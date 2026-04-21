@@ -44,33 +44,20 @@ pub fn needs_conversion(extension: &str) -> bool {
 /// Returns the list of all supported formats with metadata.
 #[must_use]
 pub fn get_supported_formats() -> Vec<SupportedFormat> {
-    let mut formats = Vec::new();
+    let native = NATIVE_FORMATS.iter().map(|&ext| (ext, false));
+    let convertible = CONVERTIBLE_AUDIO_FORMATS
+        .iter()
+        .chain(CONVERTIBLE_VIDEO_FORMATS.iter())
+        .map(|&ext| (ext, true));
 
-    for &ext in NATIVE_FORMATS {
-        formats.push(SupportedFormat {
+    native
+        .chain(convertible)
+        .map(|(ext, needs_conversion)| SupportedFormat {
             extension: ext.to_string(),
             description: format_description(ext),
-            needs_conversion: false,
-        });
-    }
-
-    for &ext in CONVERTIBLE_AUDIO_FORMATS {
-        formats.push(SupportedFormat {
-            extension: ext.to_string(),
-            description: format_description(ext),
-            needs_conversion: true,
-        });
-    }
-
-    for &ext in CONVERTIBLE_VIDEO_FORMATS {
-        formats.push(SupportedFormat {
-            extension: ext.to_string(),
-            description: format_description(ext),
-            needs_conversion: true,
-        });
-    }
-
-    formats
+            needs_conversion,
+        })
+        .collect()
 }
 
 /// Returns a human-readable description for a file extension.
