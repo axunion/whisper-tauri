@@ -24,14 +24,6 @@ pub enum ConverterError {
     /// An HTTP error occurred.
     #[error("HTTP error: {0}")]
     Http(#[from] reqwest::Error),
-
-    /// A path resolution error occurred.
-    #[error("Path error: {0}")]
-    PathError(String),
-
-    /// A store operation error occurred.
-    #[error("Store error: {0}")]
-    StoreError(String),
 }
 
 impl From<crate::download::DownloadError> for ConverterError {
@@ -72,18 +64,6 @@ mod tests {
     fn error_display_download_failed() {
         let err = ConverterError::DownloadFailed("timeout".to_string());
         assert_eq!(err.to_string(), "Download failed: timeout");
-    }
-
-    #[test]
-    fn error_display_path_error() {
-        let err = ConverterError::PathError("invalid path".to_string());
-        assert_eq!(err.to_string(), "Path error: invalid path");
-    }
-
-    #[test]
-    fn error_display_store_error() {
-        let err = ConverterError::StoreError("access denied".to_string());
-        assert_eq!(err.to_string(), "Store error: access denied");
     }
 
     #[test]

@@ -2,11 +2,12 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use futures_util::StreamExt;
-use tauri::{AppHandle, Emitter, Manager};
-use tauri_plugin_store::StoreExt;
+use tauri::{AppHandle, Emitter};
 use tokio::io::AsyncWriteExt;
 
 use crate::download;
+use crate::paths;
+use crate::settings;
 
 use super::error::WhisperError;
 use super::models;
@@ -16,9 +17,6 @@ use super::types::{DownloadProgress, ModelInfo, TranscriptionProgress, Transcrip
 /// Progress event throttle interval in milliseconds.
 const PROGRESS_THROTTLE_MS: u128 = 100;
 
-/// Store filename for settings.
-const SETTINGS_STORE: &str = "settings.json";
-
 /// Store key for custom model download base URL.
 const MODEL_DOWNLOAD_URL_KEY: &str = "modelDownloadBaseUrl";
 
@@ -26,7 +24,7 @@ const MODEL_DOWNLOAD_URL_KEY: &str = "modelDownloadBaseUrl";
 ///
 /// # Errors
 ///
-/// Returns `WhisperError::PathError` if the path cannot be constructed.
+/// Returns an error if the path cannot be constructed.
 pub fn models_dir(app_data_dir: &Path) -> Result<PathBuf, WhisperError> {
     let dir = app_data_dir.join("models");
     Ok(dir)
@@ -55,20 +53,6 @@ pub fn model_exists(app_data_dir: &Path, model_id: &str) -> Result<bool, Whisper
     Ok(path.exists())
 }
 
-/// Resolves the app data directory from a Tauri `AppHandle`.
-fn resolve_app_data_dir(app: &AppHandle) -> Result<PathBuf, WhisperError> {
-    app.path()
-        .app_data_dir()
-        .map_err(|e| WhisperError::PathError(e.to_string()))
-}
-
-/// Converts a `Path` to an owned `String`.
-fn path_to_string(path: &Path) -> Result<String, WhisperError> {
-    path.to_str()
-        .map(std::string::ToString::to_string)
-        .ok_or_else(|| WhisperError::PathError("Invalid path encoding".to_string()))
-}
-
 /// Returns available models with download status.
 ///
 /// # Errors
@@ -76,7 +60,7 @@ fn path_to_string(path: &Path) -> Result<String, WhisperError> {
 /// Returns an error if the app data directory cannot be resolved.
 #[tauri::command]
 pub async fn get_available_models(app: AppHandle) -> Result<Vec<ModelInfo>, String> {
-    let app_data_dir = resolve_app_data_dir(&app)?;
+    let app_data_dir = paths::app_data_dir(&app)?;
     let mut model_list = models::get_model_list_with_speed_factors();
 
     for model in &mut model_list {
@@ -103,7 +87,7 @@ pub async fn get_available_models(app: AppHandle) -> Result<Vec<ModelInfo>, Stri
 /// cannot be resolved.
 #[tauri::command]
 pub async fn check_model_exists(app: AppHandle, model_id: String) -> Result<bool, String> {
-    let app_data_dir = resolve_app_data_dir(&app)?;
+    let app_data_dir = paths::app_data_dir(&app)?;
     model_exists(&app_data_dir, &model_id).map_err(Into::into)
 }
 
@@ -126,7 +110,7 @@ pub async fn download_model(
         return Err(WhisperError::ModelNotFound(model_id).into());
     }
 
-    let app_data_dir = resolve_app_data_dir(&app)?;
+    let app_data_dir = paths::app_data_dir(&app)?;
     let dir = models_dir(&app_data_dir)?;
 
     // Create models directory if it doesn't exist
@@ -204,7 +188,7 @@ pub async fn download_model(
         },
     );
 
-    path_to_string(&final_path).map_err(Into::into)
+    paths::path_to_owned_string(&final_path).map_err(Into::into)
 }
 
 /// Deletes a downloaded model file.
@@ -214,7 +198,7 @@ pub async fn download_model(
 /// Returns an error if the model ID is invalid or the file cannot be deleted.
 #[tauri::command]
 pub async fn delete_model(app: AppHandle, model_id: String) -> Result<(), String> {
-    let app_data_dir = resolve_app_data_dir(&app)?;
+    let app_data_dir = paths::app_data_dir(&app)?;
     let path = model_path(&app_data_dir, &model_id)?;
 
     if path.exists() {
@@ -231,15 +215,7 @@ pub async fn delete_model(app: AppHandle, model_id: String) -> Result<(), String
 /// Returns an error if the settings store cannot be accessed.
 #[tauri::command]
 pub async fn get_model_download_url(app: AppHandle) -> Result<Option<String>, String> {
-    let store = app
-        .store(SETTINGS_STORE)
-        .map_err(|e| WhisperError::StoreError(e.to_string()))?;
-
-    let value = store
-        .get(MODEL_DOWNLOAD_URL_KEY)
-        .and_then(|v| v.as_str().map(std::string::ToString::to_string));
-
-    Ok(value)
+    settings::get_string(&app, MODEL_DOWNLOAD_URL_KEY).map_err(Into::into)
 }
 
 /// Sets or clears the custom model download base URL in settings.
@@ -249,28 +225,14 @@ pub async fn get_model_download_url(app: AppHandle) -> Result<Option<String>, St
 /// Returns an error if the settings store cannot be accessed.
 #[tauri::command]
 pub async fn set_model_download_url(app: AppHandle, url: Option<String>) -> Result<(), String> {
-    let store = app
-        .store(SETTINGS_STORE)
-        .map_err(|e| WhisperError::StoreError(e.to_string()))?;
-
-    match url {
-        Some(u) => {
-            store.set(MODEL_DOWNLOAD_URL_KEY, serde_json::Value::String(u));
-        }
-        None => {
-            store.delete(MODEL_DOWNLOAD_URL_KEY);
-        }
-    }
-
-    Ok(())
+    settings::set_or_delete_string(&app, MODEL_DOWNLOAD_URL_KEY, url).map_err(Into::into)
 }
 
 /// Returns the path to the VAD model file.
 ///
 /// # Errors
 ///
-/// Returns `WhisperError::PathError` if the models directory path cannot
-/// be constructed.
+/// Returns an error if the models directory path cannot be constructed.
 pub fn vad_model_path(app_data_dir: &Path) -> Result<PathBuf, WhisperError> {
     let dir = models_dir(app_data_dir)?;
     Ok(dir.join(models::get_vad_model_filename()))
@@ -286,11 +248,11 @@ pub fn vad_model_path(app_data_dir: &Path) -> Result<PathBuf, WhisperError> {
 /// download fails.
 #[tauri::command]
 pub async fn ensure_vad_model(app: AppHandle) -> Result<String, String> {
-    let app_data_dir = resolve_app_data_dir(&app)?;
+    let app_data_dir = paths::app_data_dir(&app)?;
     let path = vad_model_path(&app_data_dir)?;
 
     if path.exists() {
-        return path_to_string(&path).map_err(Into::into);
+        return paths::path_to_owned_string(&path).map_err(Into::into);
     }
 
     let dir = models_dir(&app_data_dir)?;
@@ -307,7 +269,7 @@ pub async fn ensure_vad_model(app: AppHandle) -> Result<String, String> {
         .await
         .map_err(WhisperError::from)?;
 
-    path_to_string(&path).map_err(Into::into)
+    paths::path_to_owned_string(&path).map_err(Into::into)
 }
 
 /// Transcribes a WAV audio file using the specified Whisper model.

@@ -33,14 +33,6 @@ pub enum TextProcessingError {
     #[error("HTTP error: {0}")]
     Http(#[from] reqwest::Error),
 
-    /// A path resolution error occurred.
-    #[error("Path error: {0}")]
-    PathError(String),
-
-    /// A store operation error occurred.
-    #[error("Store error: {0}")]
-    StoreError(String),
-
     /// A JSON parsing error occurred.
     #[error("JSON error: {0}")]
     JsonError(String),
@@ -96,18 +88,6 @@ mod tests {
     fn error_display_cancelled() {
         let err = TextProcessingError::Cancelled;
         assert_eq!(err.to_string(), "Inference cancelled");
-    }
-
-    #[test]
-    fn error_display_path_error() {
-        let err = TextProcessingError::PathError("invalid".to_string());
-        assert_eq!(err.to_string(), "Path error: invalid");
-    }
-
-    #[test]
-    fn error_display_store_error() {
-        let err = TextProcessingError::StoreError("access denied".to_string());
-        assert_eq!(err.to_string(), "Store error: access denied");
     }
 
     #[test]

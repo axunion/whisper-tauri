@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 
-use tauri::{AppHandle, Emitter, Manager, State};
-use tauri_plugin_store::StoreExt;
+use tauri::{AppHandle, Emitter, State};
+
+use crate::paths;
+use crate::settings;
 
 use super::error::TextProcessingError;
 use super::inference;
@@ -9,21 +11,11 @@ use super::models;
 use super::server::LlamaServerManager;
 use super::types::{InferenceProgress, ServerStatus, TextDownloadProgress, TextModelInfo};
 
-/// Store filename for settings.
-const SETTINGS_STORE: &str = "settings.json";
-
 /// Store key for custom text model download URL.
 const TEXT_MODEL_URL_KEY: &str = "textModelDownloadBaseUrl";
 
 /// Store key for custom llama-server download URL.
 const TEXT_SERVER_URL_KEY: &str = "textServerDownloadUrl";
-
-/// Resolves the app data directory from a Tauri `AppHandle`.
-fn resolve_app_data_dir(app: &AppHandle) -> Result<PathBuf, TextProcessingError> {
-    app.path()
-        .app_data_dir()
-        .map_err(|e| TextProcessingError::PathError(e.to_string()))
-}
 
 /// Returns available text models with download status.
 ///
@@ -32,7 +24,7 @@ fn resolve_app_data_dir(app: &AppHandle) -> Result<PathBuf, TextProcessingError>
 /// Returns an error string if the operation fails.
 #[tauri::command]
 pub async fn text_processing_list_models(app: AppHandle) -> Result<Vec<TextModelInfo>, String> {
-    let app_data_dir = resolve_app_data_dir(&app)?;
+    let app_data_dir = paths::app_data_dir(&app)?;
     let mut model_list = models::get_model_list();
 
     for model in &mut model_list {
@@ -62,7 +54,7 @@ pub async fn text_processing_download_model(
         return Err(TextProcessingError::ModelNotFound(model_id).into());
     }
 
-    let app_data_dir = resolve_app_data_dir(&app)?;
+    let app_data_dir = paths::app_data_dir(&app)?;
     let dir = models::text_models_dir(&app_data_dir);
     std::fs::create_dir_all(&dir).map_err(TextProcessingError::from)?;
 
@@ -107,10 +99,7 @@ pub async fn text_processing_download_model(
         },
     );
 
-    final_path
-        .to_str()
-        .map(std::string::ToString::to_string)
-        .ok_or_else(|| TextProcessingError::PathError("Invalid path encoding".to_string()).into())
+    paths::path_to_owned_string(&final_path).map_err(Into::into)
 }
 
 /// Deletes a downloaded text model file.
@@ -120,7 +109,7 @@ pub async fn text_processing_download_model(
 /// Returns an error string if the operation fails.
 #[tauri::command]
 pub async fn text_processing_delete_model(app: AppHandle, model_id: String) -> Result<(), String> {
-    let app_data_dir = resolve_app_data_dir(&app)?;
+    let app_data_dir = paths::app_data_dir(&app)?;
     if let Some(path) = models::text_model_path(&app_data_dir, &model_id) {
         if path.exists() {
             std::fs::remove_file(&path).map_err(TextProcessingError::from)?;
@@ -136,9 +125,9 @@ pub async fn text_processing_delete_model(app: AppHandle, model_id: String) -> R
 /// Returns an error string if the operation fails.
 #[tauri::command]
 pub async fn text_processing_download_server(app: AppHandle) -> Result<String, String> {
-    let app_data_dir = resolve_app_data_dir(&app)?;
+    let app_data_dir = paths::app_data_dir(&app)?;
 
-    let custom_url = get_custom_server_url(&app)?;
+    let custom_url = settings::get_string(&app, TEXT_SERVER_URL_KEY)?;
     let url = custom_url
         .as_deref()
         .unwrap_or_else(|| models::get_default_server_url());
@@ -176,10 +165,7 @@ pub async fn text_processing_download_server(app: AppHandle) -> Result<String, S
 
     models::write_server_version(&app_data_dir).map_err(TextProcessingError::from)?;
 
-    final_path
-        .to_str()
-        .map(std::string::ToString::to_string)
-        .ok_or_else(|| TextProcessingError::PathError("Invalid path encoding".to_string()).into())
+    paths::path_to_owned_string(&final_path).map_err(Into::into)
 }
 
 /// Deletes the llama-server binary.
@@ -189,7 +175,7 @@ pub async fn text_processing_download_server(app: AppHandle) -> Result<String, S
 /// Returns an error string if the operation fails.
 #[tauri::command]
 pub async fn text_processing_delete_server(app: AppHandle) -> Result<(), String> {
-    let app_data_dir = resolve_app_data_dir(&app)?;
+    let app_data_dir = paths::app_data_dir(&app)?;
     let bin_dir = app_data_dir.join("bin");
 
     let path = models::llama_server_path(&app_data_dir);
@@ -220,7 +206,7 @@ pub async fn text_processing_delete_server(app: AppHandle) -> Result<(), String>
 /// Returns an error string if the operation fails.
 #[tauri::command]
 pub async fn text_processing_check_server(app: AppHandle) -> Result<bool, String> {
-    let app_data_dir = resolve_app_data_dir(&app)?;
+    let app_data_dir = paths::app_data_dir(&app)?;
     let exists = models::llama_server_path(&app_data_dir).exists()
         && models::is_server_version_current(&app_data_dir);
     Ok(exists)
@@ -455,13 +441,7 @@ impl Drop for TaskGuard {
 /// Returns an error string if the operation fails.
 #[tauri::command]
 pub async fn get_text_processing_model_url(app: AppHandle) -> Result<Option<String>, String> {
-    let store = app
-        .store(SETTINGS_STORE)
-        .map_err(|e| TextProcessingError::StoreError(e.to_string()))?;
-    let value = store
-        .get(TEXT_MODEL_URL_KEY)
-        .and_then(|v| v.as_str().map(std::string::ToString::to_string));
-    Ok(value)
+    settings::get_string(&app, TEXT_MODEL_URL_KEY).map_err(Into::into)
 }
 
 /// Sets or clears the custom text model download URL.
@@ -474,16 +454,7 @@ pub async fn set_text_processing_model_url(
     app: AppHandle,
     url: Option<String>,
 ) -> Result<(), String> {
-    let store = app
-        .store(SETTINGS_STORE)
-        .map_err(|e| TextProcessingError::StoreError(e.to_string()))?;
-    match url {
-        Some(u) => store.set(TEXT_MODEL_URL_KEY, serde_json::Value::String(u)),
-        None => {
-            store.delete(TEXT_MODEL_URL_KEY);
-        }
-    }
-    Ok(())
+    settings::set_or_delete_string(&app, TEXT_MODEL_URL_KEY, url).map_err(Into::into)
 }
 
 /// Gets the custom llama-server download URL from settings.
@@ -493,13 +464,7 @@ pub async fn set_text_processing_model_url(
 /// Returns an error string if the operation fails.
 #[tauri::command]
 pub async fn get_text_processing_server_url(app: AppHandle) -> Result<Option<String>, String> {
-    let store = app
-        .store(SETTINGS_STORE)
-        .map_err(|e| TextProcessingError::StoreError(e.to_string()))?;
-    let value = store
-        .get(TEXT_SERVER_URL_KEY)
-        .and_then(|v| v.as_str().map(std::string::ToString::to_string));
-    Ok(value)
+    settings::get_string(&app, TEXT_SERVER_URL_KEY).map_err(Into::into)
 }
 
 /// Sets or clears the custom llama-server download URL.
@@ -512,16 +477,7 @@ pub async fn set_text_processing_server_url(
     app: AppHandle,
     url: Option<String>,
 ) -> Result<(), String> {
-    let store = app
-        .store(SETTINGS_STORE)
-        .map_err(|e| TextProcessingError::StoreError(e.to_string()))?;
-    match url {
-        Some(u) => store.set(TEXT_SERVER_URL_KEY, serde_json::Value::String(u)),
-        None => {
-            store.delete(TEXT_SERVER_URL_KEY);
-        }
-    }
-    Ok(())
+    settings::set_or_delete_string(&app, TEXT_SERVER_URL_KEY, url).map_err(Into::into)
 }
 
 // --- Helper functions ---
@@ -532,7 +488,7 @@ async fn ensure_server_running(
     manager: &State<'_, tokio::sync::Mutex<LlamaServerManager>>,
     model_id: Option<&str>,
 ) -> Result<u16, String> {
-    let app_data_dir = resolve_app_data_dir(app)?;
+    let app_data_dir = paths::app_data_dir(app)?;
 
     let model_id = if let Some(id) = model_id {
         id.to_string()
@@ -620,17 +576,6 @@ async fn download_file(url: &str, output_path: &Path, app: &AppHandle) -> Result
     )
     .await
     .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())
-}
-
-/// Gets the custom server URL from settings store.
-fn get_custom_server_url(app: &AppHandle) -> Result<Option<String>, String> {
-    let store = app
-        .store(SETTINGS_STORE)
-        .map_err(|e| TextProcessingError::StoreError(e.to_string()))?;
-    let value = store
-        .get(TEXT_SERVER_URL_KEY)
-        .and_then(|v| v.as_str().map(std::string::ToString::to_string));
-    Ok(value)
 }
 
 /// Target binary name for the current platform.

@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 
-use tauri::{AppHandle, Emitter, Manager};
-use tauri_plugin_store::StoreExt;
+use tauri::{AppHandle, Emitter};
+
+use crate::paths;
+use crate::settings;
 
 use super::downloader;
 use super::duration;
@@ -9,18 +11,8 @@ use super::error::ConverterError;
 use super::ffmpeg;
 use super::types::{ConversionResult, FfmpegDownloadProgress, SupportedFormat};
 
-/// Store filename for settings.
-const SETTINGS_STORE: &str = "settings.json";
-
 /// Store key for custom ffmpeg download URL.
 const FFMPEG_DOWNLOAD_URL_KEY: &str = "ffmpegDownloadUrl";
-
-/// Resolves the app data directory from a Tauri `AppHandle`.
-fn resolve_app_data_dir(app: &AppHandle) -> Result<PathBuf, ConverterError> {
-    app.path()
-        .app_data_dir()
-        .map_err(|e| ConverterError::PathError(e.to_string()))
-}
 
 /// Resolves the bundled ffmpeg binary path.
 ///
@@ -43,7 +35,7 @@ fn resolve_ffmpeg_path(app_data_dir: &Path) -> Result<PathBuf, ConverterError> {
 /// Returns an error if the app data directory cannot be resolved.
 #[tauri::command]
 pub async fn check_ffmpeg_bundled(app: AppHandle) -> Result<bool, String> {
-    let app_data_dir = resolve_app_data_dir(&app)?;
+    let app_data_dir = paths::app_data_dir(&app)?;
     let bundled_path = downloader::get_ffmpeg_path(&app_data_dir);
     Ok(ffmpeg::check_available(&bundled_path).is_ok())
 }
@@ -58,7 +50,7 @@ pub async fn check_ffmpeg_bundled(app: AppHandle) -> Result<bool, String> {
 /// Returns an error if the app data directory cannot be resolved.
 #[tauri::command]
 pub async fn check_ffmpeg_needs_update(app: AppHandle) -> Result<bool, String> {
-    let app_data_dir = resolve_app_data_dir(&app)?;
+    let app_data_dir = paths::app_data_dir(&app)?;
     Ok(downloader::ffmpeg_needs_update(&app_data_dir))
 }
 
@@ -70,7 +62,7 @@ pub async fn check_ffmpeg_needs_update(app: AppHandle) -> Result<bool, String> {
 /// the file cannot be deleted.
 #[tauri::command]
 pub async fn delete_ffmpeg(app: AppHandle) -> Result<(), String> {
-    let app_data_dir = resolve_app_data_dir(&app)?;
+    let app_data_dir = paths::app_data_dir(&app)?;
     let bundled_path = downloader::get_ffmpeg_path(&app_data_dir);
 
     if bundled_path.exists() {
@@ -91,10 +83,9 @@ pub async fn delete_ffmpeg(app: AppHandle) -> Result<(), String> {
 /// Returns an error if the download fails.
 #[tauri::command]
 pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
-    let app_data_dir = resolve_app_data_dir(&app)?;
+    let app_data_dir = paths::app_data_dir(&app)?;
 
-    // Get custom URL if configured
-    let custom_url = get_ffmpeg_download_url_internal(&app)?;
+    let custom_url = settings::get_string(&app, FFMPEG_DOWNLOAD_URL_KEY)?;
 
     let app_clone = app.clone();
     let path = downloader::download_ffmpeg(
@@ -114,22 +105,7 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
     .await
     .map_err::<String, _>(Into::into)?;
 
-    path.to_str()
-        .map(std::string::ToString::to_string)
-        .ok_or_else(|| ConverterError::PathError("Invalid path encoding".to_string()).into())
-}
-
-/// Gets the custom ffmpeg download URL from settings.
-fn get_ffmpeg_download_url_internal(app: &AppHandle) -> Result<Option<String>, String> {
-    let store = app
-        .store(SETTINGS_STORE)
-        .map_err(|e| ConverterError::StoreError(e.to_string()))?;
-
-    let value = store
-        .get(FFMPEG_DOWNLOAD_URL_KEY)
-        .and_then(|v| v.as_str().map(std::string::ToString::to_string));
-
-    Ok(value)
+    paths::path_to_owned_string(&path).map_err(Into::into)
 }
 
 /// Gets the custom ffmpeg download base URL from settings.
@@ -139,7 +115,7 @@ fn get_ffmpeg_download_url_internal(app: &AppHandle) -> Result<Option<String>, S
 /// Returns an error if the settings store cannot be accessed.
 #[tauri::command]
 pub async fn get_ffmpeg_download_url(app: AppHandle) -> Result<Option<String>, String> {
-    get_ffmpeg_download_url_internal(&app)
+    settings::get_string(&app, FFMPEG_DOWNLOAD_URL_KEY).map_err(Into::into)
 }
 
 /// Sets or clears the custom ffmpeg download base URL in settings.
@@ -149,20 +125,7 @@ pub async fn get_ffmpeg_download_url(app: AppHandle) -> Result<Option<String>, S
 /// Returns an error if the settings store cannot be accessed.
 #[tauri::command]
 pub async fn set_ffmpeg_download_url(app: AppHandle, url: Option<String>) -> Result<(), String> {
-    let store = app
-        .store(SETTINGS_STORE)
-        .map_err(|e| ConverterError::StoreError(e.to_string()))?;
-
-    match url {
-        Some(u) => {
-            store.set(FFMPEG_DOWNLOAD_URL_KEY, serde_json::Value::String(u));
-        }
-        None => {
-            store.delete(FFMPEG_DOWNLOAD_URL_KEY);
-        }
-    }
-
-    Ok(())
+    settings::set_or_delete_string(&app, FFMPEG_DOWNLOAD_URL_KEY, url).map_err(Into::into)
 }
 
 /// Gets the duration of an audio/video file in milliseconds.
@@ -176,7 +139,7 @@ pub async fn set_ffmpeg_download_url(app: AppHandle, url: Option<String>) -> Res
 #[tauri::command]
 pub async fn get_audio_duration(app: AppHandle, file_path: String) -> Result<u64, String> {
     let input_path = PathBuf::from(&file_path);
-    let app_data_dir = resolve_app_data_dir(&app)?;
+    let app_data_dir = paths::app_data_dir(&app)?;
 
     tokio::task::spawn_blocking(move || {
         // Try Symphonia first (pure Rust, no external dependencies)
@@ -210,7 +173,7 @@ pub async fn convert_audio_file(
     app: AppHandle,
     input_path: String,
 ) -> Result<ConversionResult, String> {
-    let app_data_dir = resolve_app_data_dir(&app)?;
+    let app_data_dir = paths::app_data_dir(&app)?;
     let ffmpeg_path = resolve_ffmpeg_path(&app_data_dir)?;
 
     let input = std::path::Path::new(&input_path);
@@ -250,10 +213,7 @@ pub async fn convert_audio_file(
     .map_err(|e| format!("Task join error: {e}"))?
     .map_err::<String, _>(Into::into)?;
 
-    let output_str = output_path
-        .to_str()
-        .map(std::string::ToString::to_string)
-        .ok_or_else(|| ConverterError::PathError("Invalid output path encoding".to_string()))?;
+    let output_str = paths::path_to_owned_string(&output_path)?;
 
     Ok(ConversionResult {
         output_path: output_str,

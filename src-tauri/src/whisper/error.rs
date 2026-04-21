@@ -17,14 +17,6 @@ pub enum WhisperError {
     #[error("HTTP error: {0}")]
     Http(#[from] reqwest::Error),
 
-    /// A path resolution error occurred.
-    #[error("Path error: {0}")]
-    PathError(String),
-
-    /// A store operation error occurred.
-    #[error("Store error: {0}")]
-    StoreError(String),
-
     /// The specified file was not found.
     #[error("File not found: {0}")]
     FileNotFound(String),
@@ -106,18 +98,6 @@ mod tests {
     fn error_display_download_failed() {
         let err = WhisperError::DownloadFailed("timeout".to_string());
         assert_eq!(err.to_string(), "Download failed: timeout");
-    }
-
-    #[test]
-    fn error_display_path_error() {
-        let err = WhisperError::PathError("invalid".to_string());
-        assert_eq!(err.to_string(), "Path error: invalid");
-    }
-
-    #[test]
-    fn error_display_store_error() {
-        let err = WhisperError::StoreError("access denied".to_string());
-        assert_eq!(err.to_string(), "Store error: access denied");
     }
 
     #[test]
