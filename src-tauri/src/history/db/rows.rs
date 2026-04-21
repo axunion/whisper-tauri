@@ -2,21 +2,29 @@ use super::super::error::HistoryError;
 use super::super::types::{AiContent, HistoryMeta};
 use super::compression::decompress_text;
 
-/// Row type returned by [`meta_row_mapper`].
-pub type MetaRow = (String, String, String, String, String, u64, Vec<u8>);
+/// Row shape for the list/meta query against the `history` table.
+pub struct MetaRow {
+    pub(super) id: String,
+    pub(super) created_at: String,
+    pub(super) file_name: String,
+    pub(super) language: String,
+    pub(super) model_id: String,
+    pub(super) duration: u64,
+    pub(super) text_compressed: Vec<u8>,
+}
 
-/// Row type returned by [`ai_content_row_mapper`].
-pub type AiContentRow = (
-    String,
-    String,
-    String,
-    String,
-    Vec<u8>,
-    Option<String>,
-    String,
-);
+/// Row shape for a query against the `ai_content` table.
+pub struct AiContentRow {
+    pub(super) id: String,
+    pub(super) history_id: String,
+    pub(super) content_type: String,
+    pub(super) created_at: String,
+    pub(super) text_compressed: Vec<u8>,
+    pub(super) options_json: Option<String>,
+    pub(super) text_model_id: String,
+}
 
-/// Extracts a [`MetaRow`] tuple from a rusqlite row.
+/// Extracts a [`MetaRow`] from a rusqlite row.
 ///
 /// Expects columns: `id(0)`, `created_at(1)`, `file_name(2)`, `language(3)`,
 /// `model_id(4)`, `duration(5)`, `text_compressed(6)`.
@@ -25,15 +33,15 @@ pub type AiContentRow = (
 ///
 /// Returns an error if any column extraction fails.
 pub fn meta_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<MetaRow> {
-    Ok((
-        row.get::<_, String>(0)?,
-        row.get::<_, String>(1)?,
-        row.get::<_, String>(2)?,
-        row.get::<_, String>(3)?,
-        row.get::<_, String>(4)?,
-        row.get::<_, u64>(5)?,
-        row.get::<_, Vec<u8>>(6)?,
-    ))
+    Ok(MetaRow {
+        id: row.get(0)?,
+        created_at: row.get(1)?,
+        file_name: row.get(2)?,
+        language: row.get(3)?,
+        model_id: row.get(4)?,
+        duration: row.get(5)?,
+        text_compressed: row.get(6)?,
+    })
 }
 
 /// Converts a [`MetaRow`] into a [`HistoryMeta`], decompressing text for preview.
@@ -42,21 +50,20 @@ pub fn meta_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<MetaRow> {
 ///
 /// Returns an error if text decompression fails.
 pub fn meta_from_row(row: MetaRow) -> Result<HistoryMeta, HistoryError> {
-    let (id, created_at, file_name, language, model_id, duration, text_compressed) = row;
-    let text = decompress_text(&text_compressed)?;
+    let text = decompress_text(&row.text_compressed)?;
     let preview = text_preview(&text, 100);
     Ok(HistoryMeta {
-        id,
-        created_at,
-        file_name,
-        language,
-        model_id,
-        duration,
+        id: row.id,
+        created_at: row.created_at,
+        file_name: row.file_name,
+        language: row.language,
+        model_id: row.model_id,
+        duration: row.duration,
         text_preview: preview,
     })
 }
 
-/// Extracts an [`AiContentRow`] tuple from a rusqlite row.
+/// Extracts an [`AiContentRow`] from a rusqlite row.
 ///
 /// Expects columns: `id(0)`, `history_id(1)`, `content_type(2)`, `created_at(3)`,
 /// `text_compressed(4)`, `options_json(5)`, `text_model_id(6)`.
@@ -65,15 +72,15 @@ pub fn meta_from_row(row: MetaRow) -> Result<HistoryMeta, HistoryError> {
 ///
 /// Returns an error if column extraction fails.
 pub fn ai_content_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<AiContentRow> {
-    Ok((
-        row.get::<_, String>(0)?,
-        row.get::<_, String>(1)?,
-        row.get::<_, String>(2)?,
-        row.get::<_, String>(3)?,
-        row.get::<_, Vec<u8>>(4)?,
-        row.get::<_, Option<String>>(5)?,
-        row.get::<_, String>(6)?,
-    ))
+    Ok(AiContentRow {
+        id: row.get(0)?,
+        history_id: row.get(1)?,
+        content_type: row.get(2)?,
+        created_at: row.get(3)?,
+        text_compressed: row.get(4)?,
+        options_json: row.get(5)?,
+        text_model_id: row.get(6)?,
+    })
 }
 
 /// Converts an [`AiContentRow`] into an [`AiContent`], decompressing text.
@@ -82,17 +89,15 @@ pub fn ai_content_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<AiContentR
 ///
 /// Returns an error if text decompression fails.
 pub fn ai_content_from_row(row: AiContentRow) -> Result<AiContent, HistoryError> {
-    let (id, history_id, content_type, created_at, text_compressed, options_json, text_model_id) =
-        row;
-    let text = decompress_text(&text_compressed)?;
+    let text = decompress_text(&row.text_compressed)?;
     Ok(AiContent {
-        id,
-        history_id,
-        content_type,
-        created_at,
+        id: row.id,
+        history_id: row.history_id,
+        content_type: row.content_type,
+        created_at: row.created_at,
         text,
-        options_json,
-        text_model_id,
+        options_json: row.options_json,
+        text_model_id: row.text_model_id,
     })
 }
 

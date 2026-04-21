@@ -18,6 +18,61 @@ use super::types::{TranscriptionProgress, TranscriptionResult, TranscriptionSegm
 /// Target sample rate for Whisper (16 kHz).
 const WHISPER_SAMPLE_RATE: u32 = 16_000;
 
+/// Converts a sample count to milliseconds at the given sample rate.
+#[inline]
+#[must_use]
+fn samples_to_ms(samples: usize, sample_rate: u32) -> u64 {
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        clippy::cast_precision_loss
+    )]
+    {
+        (samples as f64 / f64::from(sample_rate) * 1000.0) as u64
+    }
+}
+
+/// Converts milliseconds to a sample count at the given sample rate.
+#[inline]
+#[must_use]
+fn ms_to_samples(ms: u64, sample_rate: u32) -> usize {
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        clippy::cast_precision_loss
+    )]
+    {
+        (ms as f64 / 1000.0 * f64::from(sample_rate)) as usize
+    }
+}
+
+/// Converts centiseconds (1cs = 10ms) to a sample count at the given sample rate.
+#[inline]
+#[must_use]
+fn centiseconds_to_samples<T: Into<f64>>(cs: T, sample_rate: u32) -> usize {
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        clippy::cast_precision_loss
+    )]
+    {
+        (cs.into() / 100.0 * f64::from(sample_rate)) as usize
+    }
+}
+
+/// Converts centiseconds (Whisper segment timestamps) to milliseconds.
+///
+/// Negative values are clamped to 0 — Whisper occasionally reports slightly
+/// negative timestamps at the very start of an utterance.
+#[inline]
+#[must_use]
+fn centiseconds_to_ms(cs: i64) -> u64 {
+    #[allow(clippy::cast_sign_loss)]
+    {
+        (cs * 10).max(0) as u64
+    }
+}
+
 /// Token for cancelling an in-progress transcription.
 pub struct CancellationToken {
     cancelled: AtomicBool,
@@ -236,34 +291,18 @@ struct TimestampMap {
 impl TimestampMap {
     /// Converts a millisecond timestamp in the concatenated buffer to the original timeline.
     fn to_original_ms(&self, concat_ms: u64) -> u64 {
-        #[allow(
-            clippy::cast_precision_loss,
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss
-        )]
-        let concat_sample = (concat_ms as f64 / 1000.0 * f64::from(WHISPER_SAMPLE_RATE)) as usize;
+        let concat_sample = ms_to_samples(concat_ms, WHISPER_SAMPLE_RATE);
         let mut acc = 0_usize;
         for &(_, orig_start, len) in &self.segments {
             if concat_sample < acc + len {
                 let offset = concat_sample - acc;
-                #[allow(
-                    clippy::cast_possible_truncation,
-                    clippy::cast_sign_loss,
-                    clippy::cast_precision_loss
-                )]
-                return ((orig_start + offset) as f64 / f64::from(WHISPER_SAMPLE_RATE) * 1000.0)
-                    as u64;
+                return samples_to_ms(orig_start + offset, WHISPER_SAMPLE_RATE);
             }
             acc += len;
         }
         // Past end — return end of last segment
         if let Some(&(_, orig_start, len)) = self.segments.last() {
-            #[allow(
-                clippy::cast_possible_truncation,
-                clippy::cast_sign_loss,
-                clippy::cast_precision_loss
-            )]
-            return ((orig_start + len) as f64 / f64::from(WHISPER_SAMPLE_RATE) * 1000.0) as u64;
+            return samples_to_ms(orig_start + len, WHISPER_SAMPLE_RATE);
         }
         concat_ms
     }
@@ -293,19 +332,8 @@ fn preprocess_with_vad(
 
     for seg in vad_segments {
         // VAD timestamps are in centiseconds (1cs = 10ms).
-        #[allow(
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss,
-            clippy::cast_precision_loss
-        )]
-        let start_sample = (f64::from(seg.start) / 100.0 * f64::from(WHISPER_SAMPLE_RATE)) as usize;
-        #[allow(
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss,
-            clippy::cast_precision_loss
-        )]
-        let end_sample = ((f64::from(seg.end) / 100.0 * f64::from(WHISPER_SAMPLE_RATE)) as usize)
-            .min(samples.len());
+        let start_sample = centiseconds_to_samples(seg.start, WHISPER_SAMPLE_RATE);
+        let end_sample = centiseconds_to_samples(seg.end, WHISPER_SAMPLE_RATE).min(samples.len());
 
         if start_sample >= end_sample || start_sample >= samples.len() {
             continue;
@@ -350,12 +378,7 @@ pub fn transcribe(
                 (Cow::Owned(extracted), Some(map))
             } else {
                 // No speech detected — return empty result
-                #[allow(
-                    clippy::cast_possible_truncation,
-                    clippy::cast_sign_loss,
-                    clippy::cast_precision_loss
-                )]
-                let dur = (samples.len() as f64 / f64::from(WHISPER_SAMPLE_RATE) * 1000.0) as u64;
+                let dur = samples_to_ms(samples.len(), WHISPER_SAMPLE_RATE);
                 return Ok(TranscriptionResult {
                     task_id: task_id.to_string(),
                     text: String::new(),
@@ -441,12 +464,7 @@ pub fn transcribe(
         .to_string();
 
     // Audio duration from ORIGINAL sample count (not the VAD-filtered audio)
-    #[allow(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        clippy::cast_precision_loss
-    )]
-    let audio_duration_ms = (samples.len() as f64 / f64::from(WHISPER_SAMPLE_RATE) * 1000.0) as u64;
+    let audio_duration_ms = samples_to_ms(samples.len(), WHISPER_SAMPLE_RATE);
 
     Ok(TranscriptionResult {
         task_id: task_id.to_string(),
@@ -479,11 +497,8 @@ fn collect_segments(
 
         full_text.push_str(&text);
 
-        // Convert centiseconds to milliseconds
-        #[allow(clippy::cast_sign_loss)]
-        let start_ms = (t0 * 10).max(0) as u64;
-        #[allow(clippy::cast_sign_loss)]
-        let end_ms = (t1 * 10).max(0) as u64;
+        let start_ms = centiseconds_to_ms(t0);
+        let end_ms = centiseconds_to_ms(t1);
 
         segments.push(TranscriptionSegment {
             start: start_ms,
