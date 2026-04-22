@@ -55,14 +55,14 @@ export function WelcomeStep(props: WelcomeStepProps) {
             data-pressed={props.settings.language() === "ja"}
             onClick={() => handleLanguageChange("ja")}
           >
-            日本語
+            {t("settings.languageJa")}
           </ToggleGroupItem>
           <ToggleGroupItem
             value="en"
             data-pressed={props.settings.language() === "en"}
             onClick={() => handleLanguageChange("en")}
           >
-            English
+            {t("settings.languageEn")}
           </ToggleGroupItem>
         </ToggleGroup>
       </div>

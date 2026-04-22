@@ -39,7 +39,6 @@ export function LlmTester(props: LlmTesterProps) {
 
   return (
     <div class="space-y-4">
-      {/* Prerequisite warning */}
       <Show when={!isReady()}>
         <div class="rounded-md border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-700 dark:text-yellow-300">
           <Show when={!props.textProcessing.serverAvailable()}>
@@ -52,12 +51,11 @@ export function LlmTester(props: LlmTesterProps) {
           >
             {" / "}
           </Show>
-          <Show when={!hasDownloadedModel()}>Model</Show>{" "}
+          <Show when={!hasDownloadedModel()}>{t("transcription.model")}</Show>{" "}
           {t("dev.prerequisiteWarning")}
         </div>
       </Show>
 
-      {/* Input + Send */}
       <div class="space-y-2">
         <textarea
           class="w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -102,7 +100,6 @@ export function LlmTester(props: LlmTesterProps) {
         </div>
       </div>
 
-      {/* Error */}
       <Show when={props.textProcessing.error()}>
         {(err) => (
           <div class="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -118,7 +115,6 @@ export function LlmTester(props: LlmTesterProps) {
         )}
       </Show>
 
-      {/* Result */}
       <Show when={resultText()}>
         <pre class="max-h-[300px] overflow-auto whitespace-pre-wrap rounded-md border bg-muted/50 p-3 text-sm">
           {resultText()}

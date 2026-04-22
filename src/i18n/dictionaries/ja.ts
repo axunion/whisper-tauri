@@ -25,7 +25,6 @@ export const ja: Dictionary = {
     dev: "開発",
   },
   dashboard: {
-    title: "ダッシュボード",
     quickActionFile: "ファイルを選択",
     quickActionFileDesc: "音声・動画ファイルを文字起こし",
     quickActionRecord: "録音して文字起こし",
@@ -37,11 +36,8 @@ export const ja: Dictionary = {
     viewAll: "すべて表示",
   },
   transcription: {
-    title: "文字起こし",
-    audioFile: "音声ファイル",
     model: "モデル",
     converting: "ファイルを変換中...",
-    transcribing: "文字起こし中...",
     startTranscription: "文字起こしを開始",
     languageLabel: "音声の言語",
     noModelsWarning:
@@ -54,8 +50,6 @@ export const ja: Dictionary = {
     languageFr: "フランス語",
     languageDe: "ドイツ語",
     languageEs: "スペイン語",
-    newFile: "新しいファイル",
-    rerun: "再実行",
     selectAudioFile: "クリックして音声ファイルを選択",
     changeFile: "ファイルを変更",
     supportedFormats: "WAV, MP3, M4A, FLAC, OGG, AAC, MP4, MOV など",
@@ -67,19 +61,13 @@ export const ja: Dictionary = {
     cancelling: "キャンセル中...",
   },
   history: {
-    title: "履歴",
-    transcriptionHistory: "文字起こし履歴",
     detail: "詳細",
-    detailDescription: "文字起こしの詳細表示",
     noEntries: "履歴が見つかりません。",
-    selectAll: "すべて選択",
-    deselectAll: "選択解除",
     deleteCount: "削除 ({count})",
     deleteSelected: "選択した履歴を削除",
     deleteConfirmation:
       "{count} 件の履歴が完全に削除されます。この操作は取り消せません。",
     deletedToast: "履歴を削除しました",
-    modelLabel: "モデル:",
     searchPlaceholder: "キーワードで検索",
     searchNoResults: "検索結果が見つかりません。",
     filterLast7days: "7日間",
@@ -148,15 +136,9 @@ export const ja: Dictionary = {
     selectDevice: "入力デバイスを選択",
     defaultDevice: "デフォルト",
     startRecording: "録音開始",
-    stopRecording: "録音停止",
     recording: "録音中...",
     noDevices: "入力デバイスが見つかりません",
-    permissionDenied: "マイクへのアクセスが拒否されました",
-    transcribeRecording: "録音を文字起こし",
     discardRecording: "録音を破棄",
-    discardConfirmTitle: "録音を破棄しますか？",
-    discardConfirmDescription:
-      "録音データは完全に削除されます。この操作は取り消せません。",
     saveAsWav: "WAVとして保存",
     fileTab: "ファイル",
     recordTab: "録音",
@@ -164,13 +146,6 @@ export const ja: Dictionary = {
   textProcessing: {
     summarize: "要約",
     summarizing: "要約中...",
-    summaryResult: "要約結果",
-    serverStarting: "サーバーを起動中...",
-    serverNotReady: "サーバーが起動していません",
-    downloadServerFirst:
-      "テキスト処理を使用するには、設定画面でllama-serverをダウンロードしてください。",
-    downloadModelFirst:
-      "テキスト処理を使用するには、設定画面で言語モデルをダウンロードしてください。",
     aiSetupRequired: "AI機能の準備が必要です",
     aiSetupDescription:
       "要約などのAI機能を使用するには、設定画面からAI用の言語モデルをダウンロードしてください。",
@@ -186,10 +161,7 @@ export const ja: Dictionary = {
       "llama-serverが削除されます。この操作は取り消せません。",
     serverDeletedToast: "llama-serverを削除しました",
     modelDownloadedToast: "言語モデルをダウンロードしました",
-    copyResult: "結果をコピー",
-    replaceText: "テキストを差し替え",
     summarizeCompletedToast: "要約が完了しました",
-    cancelledToast: "処理をキャンセルしました",
     settingUp: "セットアップ中...",
     cleanText: "整文",
     cleaningText: "整文中...",
@@ -213,17 +185,8 @@ export const ja: Dictionary = {
     },
   },
   onboarding: {
-    stepOf: "ステップ {current} / {total}",
-    skip: "スキップ",
-    skipTitle: "セットアップをスキップしますか？",
-    skipDescription:
-      "後から設定画面でモデルのダウンロードや各種設定を行えます。",
-    skipConfirm: "スキップする",
-    skipNoModel:
-      "Whisperモデルがダウンロードされていません。文字起こしにはモデルが必要です。",
     next: "次へ",
     back: "戻る",
-    getStarted: "始める",
     welcomeTitle: "Whisper Tauri へようこそ",
     welcomeSubtitle: "安全・ローカルで高精度な文字起こし",
     privacyMessage: "音声データは端末外に送信されません",
@@ -234,8 +197,6 @@ export const ja: Dictionary = {
     modelReady: "準備完了",
     modelDownloadLater: "設定画面で後からモデルを追加できます",
     modelRequired: "少なくとも1つのモデルをダウンロードしてください",
-    optionalTitle: "オプション機能",
-    optionalSubtitle: "必要に応じて追加ツールをセットアップできます",
     ffmpegTitle: "FFmpeg（音声変換）",
     ffmpegDescription:
       "MP3やM4Aなど、WAV以外の音声ファイルを変換するために使用します",
@@ -251,7 +212,6 @@ export const ja: Dictionary = {
     startTranscribing: "さあ、始めましょう！",
   },
   dev: {
-    title: "開発メニュー",
     dataReset: "データリセット",
     devOnlyMessage: "このページは開発モードでのみ表示されます。",
     clearHistory: "履歴クリア",
@@ -263,12 +223,7 @@ export const ja: Dictionary = {
     deleteModel: "モデルの削除",
     deleteModelConfirmation:
       "{name} が削除されます。この操作は取り消せません。",
-    deleteAllModels: "すべてのモデルを削除",
-    deletingAll: "全削除中...",
-    deleteAllModelsConfirmation:
-      "ダウンロード済みの {count} モデルがすべて削除されます。この操作は取り消せません。",
     modelDeletedToast: "モデルを削除しました",
-    allModelsDeletedToast: "すべてのモデルを削除しました",
     deleteFfmpeg: "FFmpegの削除",
     deleteFfmpegConfirmation:
       "アプリで管理するFFmpegが削除されます。この操作は取り消せません。",
@@ -278,7 +233,6 @@ export const ja: Dictionary = {
       "オンボーディング状態がリセットされ、次回起動時にセットアップ画面が表示されます。",
     llmTester: "LLMテスト",
     defaultInput: "あなたの特徴を説明してください。",
-    inputPlaceholder: "メッセージを入力...",
     send: "テスト",
     prerequisiteWarning: "が未ダウンロードです",
     resetOnboarding: "オンボーディング",

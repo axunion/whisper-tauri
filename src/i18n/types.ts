@@ -25,7 +25,6 @@ export interface Dictionary {
     dev: string;
   };
   dashboard: {
-    title: string;
     quickActionFile: string;
     quickActionFileDesc: string;
     quickActionRecord: string;
@@ -37,11 +36,8 @@ export interface Dictionary {
     viewAll: string;
   };
   transcription: {
-    title: string;
-    audioFile: string;
     model: string;
     converting: string;
-    transcribing: string;
     startTranscription: string;
     languageLabel: string;
     noModelsWarning: string;
@@ -53,8 +49,6 @@ export interface Dictionary {
     languageFr: string;
     languageDe: string;
     languageEs: string;
-    newFile: string;
-    rerun: string;
     selectAudioFile: string;
     changeFile: string;
     supportedFormats: string;
@@ -66,18 +60,12 @@ export interface Dictionary {
     cancelling: string;
   };
   history: {
-    title: string;
-    transcriptionHistory: string;
     detail: string;
-    detailDescription: string;
     noEntries: string;
-    selectAll: string;
-    deselectAll: string;
     deleteCount: string;
     deleteSelected: string;
     deleteConfirmation: string;
     deletedToast: string;
-    modelLabel: string;
     searchPlaceholder: string;
     searchNoResults: string;
     filterLast7days: string;
@@ -144,14 +132,9 @@ export interface Dictionary {
     selectDevice: string;
     defaultDevice: string;
     startRecording: string;
-    stopRecording: string;
     recording: string;
     noDevices: string;
-    permissionDenied: string;
-    transcribeRecording: string;
     discardRecording: string;
-    discardConfirmTitle: string;
-    discardConfirmDescription: string;
     saveAsWav: string;
     fileTab: string;
     recordTab: string;
@@ -159,11 +142,6 @@ export interface Dictionary {
   textProcessing: {
     summarize: string;
     summarizing: string;
-    summaryResult: string;
-    serverStarting: string;
-    serverNotReady: string;
-    downloadServerFirst: string;
-    downloadModelFirst: string;
     aiSetupRequired: string;
     aiSetupDescription: string;
     modelManagement: string;
@@ -176,10 +154,7 @@ export interface Dictionary {
     deleteServerConfirmation: string;
     serverDeletedToast: string;
     modelDownloadedToast: string;
-    copyResult: string;
-    replaceText: string;
     summarizeCompletedToast: string;
-    cancelledToast: string;
     settingUp: string;
     cleanText: string;
     cleaningText: string;
@@ -202,15 +177,8 @@ export interface Dictionary {
     };
   };
   onboarding: {
-    stepOf: string;
-    skip: string;
-    skipTitle: string;
-    skipDescription: string;
-    skipConfirm: string;
-    skipNoModel: string;
     next: string;
     back: string;
-    getStarted: string;
     welcomeTitle: string;
     welcomeSubtitle: string;
     privacyMessage: string;
@@ -221,8 +189,6 @@ export interface Dictionary {
     modelReady: string;
     modelDownloadLater: string;
     modelRequired: string;
-    optionalTitle: string;
-    optionalSubtitle: string;
     ffmpegTitle: string;
     ffmpegDescription: string;
     llmTitle: string;
@@ -237,7 +203,6 @@ export interface Dictionary {
     startTranscribing: string;
   };
   dev: {
-    title: string;
     dataReset: string;
     devOnlyMessage: string;
     clearHistory: string;
@@ -247,11 +212,7 @@ export interface Dictionary {
     noDownloadedModels: string;
     deleteModel: string;
     deleteModelConfirmation: string;
-    deleteAllModels: string;
-    deletingAll: string;
-    deleteAllModelsConfirmation: string;
     modelDeletedToast: string;
-    allModelsDeletedToast: string;
     deleteFfmpeg: string;
     deleteFfmpegConfirmation: string;
     ffmpegDeletedToast: string;
@@ -259,7 +220,6 @@ export interface Dictionary {
     resetOnboardingConfirmDescription: string;
     llmTester: string;
     defaultInput: string;
-    inputPlaceholder: string;
     send: string;
     prerequisiteWarning: string;
     resetOnboarding: string;

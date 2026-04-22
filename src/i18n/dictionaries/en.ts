@@ -25,7 +25,6 @@ export const en: Dictionary = {
     dev: "Dev",
   },
   dashboard: {
-    title: "Dashboard",
     quickActionFile: "Select File",
     quickActionFileDesc: "Transcribe audio or video files",
     quickActionRecord: "Record & Transcribe",
@@ -37,11 +36,8 @@ export const en: Dictionary = {
     viewAll: "View All",
   },
   transcription: {
-    title: "Transcription",
-    audioFile: "Audio File",
     model: "Model",
     converting: "Converting file...",
-    transcribing: "Transcribing...",
     startTranscription: "Start Transcription",
     languageLabel: "Audio Language",
     noModelsWarning: "No models available. Please download one from Settings.",
@@ -53,8 +49,6 @@ export const en: Dictionary = {
     languageFr: "French",
     languageDe: "German",
     languageEs: "Spanish",
-    newFile: "New File",
-    rerun: "Re-run",
     selectAudioFile: "Click to select an audio file",
     changeFile: "Change file",
     supportedFormats: "WAV, MP3, M4A, FLAC, OGG, AAC, MP4, MOV, etc.",
@@ -66,19 +60,13 @@ export const en: Dictionary = {
     cancelling: "Cancelling...",
   },
   history: {
-    title: "History",
-    transcriptionHistory: "Transcription History",
     detail: "Detail",
-    detailDescription: "Transcription detail view",
     noEntries: "No history entries found.",
-    selectAll: "Select All",
-    deselectAll: "Deselect All",
     deleteCount: "Delete ({count})",
     deleteSelected: "Delete Selected",
     deleteConfirmation:
       "{count} entries will be permanently deleted. This action cannot be undone.",
     deletedToast: "History deleted",
-    modelLabel: "Model:",
     searchPlaceholder: "Search by keyword",
     searchNoResults: "No search results found.",
     filterLast7days: "7 Days",
@@ -147,15 +135,9 @@ export const en: Dictionary = {
     selectDevice: "Select input device",
     defaultDevice: "Default",
     startRecording: "Start Recording",
-    stopRecording: "Stop Recording",
     recording: "Recording...",
     noDevices: "No input devices found",
-    permissionDenied: "Microphone access denied",
-    transcribeRecording: "Transcribe Recording",
     discardRecording: "Discard Recording",
-    discardConfirmTitle: "Discard recording?",
-    discardConfirmDescription:
-      "The recording data will be permanently deleted. This action cannot be undone.",
     saveAsWav: "Save as WAV",
     fileTab: "File",
     recordTab: "Record",
@@ -163,13 +145,6 @@ export const en: Dictionary = {
   textProcessing: {
     summarize: "Summarize",
     summarizing: "Summarizing...",
-    summaryResult: "Summary Result",
-    serverStarting: "Starting server...",
-    serverNotReady: "Server not running",
-    downloadServerFirst:
-      "To use text processing, please download llama-server from Settings.",
-    downloadModelFirst:
-      "To use text processing, please download a language model from Settings.",
     aiSetupRequired: "AI Setup Required",
     aiSetupDescription:
       "To use AI features like summarization, please download an AI language model from Settings.",
@@ -185,10 +160,7 @@ export const en: Dictionary = {
       "llama-server will be deleted. This action cannot be undone.",
     serverDeletedToast: "llama-server deleted",
     modelDownloadedToast: "Language model downloaded",
-    copyResult: "Copy Result",
-    replaceText: "Replace Text",
     summarizeCompletedToast: "Summarization completed",
-    cancelledToast: "Processing cancelled",
     settingUp: "Setting up...",
     cleanText: "Rewrite",
     cleaningText: "Rewriting...",
@@ -217,17 +189,8 @@ export const en: Dictionary = {
     },
   },
   onboarding: {
-    stepOf: "Step {current} / {total}",
-    skip: "Skip",
-    skipTitle: "Skip setup?",
-    skipDescription:
-      "You can download models and configure settings later from the Settings page.",
-    skipConfirm: "Skip Setup",
-    skipNoModel:
-      "No Whisper model has been downloaded. A model is required for transcription.",
     next: "Next",
     back: "Back",
-    getStarted: "Get Started",
     welcomeTitle: "Welcome to Whisper Tauri",
     welcomeSubtitle: "Secure, local, high-accuracy transcription",
     privacyMessage: "Your audio data never leaves your device",
@@ -238,8 +201,6 @@ export const en: Dictionary = {
     modelReady: "Ready",
     modelDownloadLater: "You can add more models later from Settings",
     modelRequired: "Please download at least one model",
-    optionalTitle: "Optional Features",
-    optionalSubtitle: "Set up additional tools as needed",
     ffmpegTitle: "FFmpeg (Audio Conversion)",
     ffmpegDescription:
       "Used to convert audio files other than WAV, such as MP3 and M4A",
@@ -256,7 +217,6 @@ export const en: Dictionary = {
     startTranscribing: "Let's Get Started!",
   },
   dev: {
-    title: "Dev Menu",
     dataReset: "Data Reset",
     devOnlyMessage: "This page is only available in development mode.",
     clearHistory: "Clear History",
@@ -268,12 +228,7 @@ export const en: Dictionary = {
     deleteModel: "Delete Model",
     deleteModelConfirmation:
       "{name} will be deleted. This action cannot be undone.",
-    deleteAllModels: "Delete All Models",
-    deletingAll: "Deleting All...",
-    deleteAllModelsConfirmation:
-      "All {count} downloaded models will be deleted. This action cannot be undone.",
     modelDeletedToast: "Model deleted",
-    allModelsDeletedToast: "All models deleted",
     deleteFfmpeg: "Delete FFmpeg",
     deleteFfmpegConfirmation:
       "The app-managed FFmpeg will be deleted. This action cannot be undone.",
@@ -283,11 +238,10 @@ export const en: Dictionary = {
       "Onboarding will be reset. The setup screen will appear on next launch.",
     llmTester: "LLM Tester",
     defaultInput: "Describe your key features.",
-    inputPlaceholder: "Enter a message...",
     send: "Test",
     prerequisiteWarning: "not downloaded",
     resetOnboarding: "Onboarding",
     reset: "Reset",
-    onboardingResetToast: "Onboarding has been reset",
+    onboardingResetToast: "Onboarding reset",
   },
 };
