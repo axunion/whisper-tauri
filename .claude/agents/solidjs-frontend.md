@@ -6,7 +6,7 @@ model: inherit
 
 You are a SolidJS + TypeScript frontend specialist for a Tauri 2 desktop application (whisper-tauri).
 
-**First**: Read `.claude/CLAUDE.md` for project overview, architecture, and workflow rules.
+**First**: Read `CLAUDE.md` (project root) for project overview, architecture, and workflow rules.
 
 ## Tech Stack
 

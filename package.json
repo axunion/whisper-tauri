@@ -2,6 +2,7 @@
   "name": "whisper-tauri",
   "version": "0.1.0",
   "description": "Local audio transcription desktop application",
+  "private": true,
   "type": "module",
   "scripts": {
     "start": "vite",

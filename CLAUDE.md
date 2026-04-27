@@ -7,7 +7,7 @@ Whisper Tauri - ローカル音声文字起こしデスクトップアプリ。W
 ## Tech Stack
 
 - **Frontend**: SolidJS + TypeScript + Vite + Tailwind CSS v4
-- **UI**: solid-ui (Kobalte + Corvu、コピー＆ペースト方式) — https://www.solid-ui.com/docs
+- **UI**: solid-ui (Kobalte ベース、コピー＆ペースト方式) — https://www.solid-ui.com/docs
 - **Backend**: Rust + Tauri 2 + whisper-rs
 - **State**: SolidJS Primitives (createSignal, createStore)
 - **Persistence**: tauri-plugin-store / SQLite (履歴)
@@ -17,7 +17,7 @@ Whisper Tauri - ローカル音声文字起こしデスクトップアプリ。W
 
 ```bash
 pnpm tauri dev                  # 開発サーバー
-pnpm test / cargo test          # テスト (src-tauri/ で実行)
+pnpm test:run / cargo test      # テスト（pnpm test は対話モード、単発実行は test:run）
 pnpm lint / cargo clippy        # Lint
 pnpm format / cargo fmt         # Format
 pnpm typecheck                  # 型チェック (tsc --noEmit)
@@ -35,8 +35,8 @@ pnpm tauri build                # ビルド
 
 ```
 src/
-├── components/    # ui/, layout/, dashboard/, dev/, history/, transcription/
-├── pages/         # Dashboard, Transcription, History, Settings, DevMenu
+├── components/    # ui, layout, dashboard, onboarding, settings, history, transcription, text-processing, dev
+├── pages/         # Transcription, History, Settings, DevMenu
 ├── primitives/    # 状態管理プリミティブ
 ├── i18n/          # 多言語対応（日/英）
 ├── lib/           # ユーティリティ
