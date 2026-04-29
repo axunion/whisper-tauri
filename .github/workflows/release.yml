@@ -19,6 +19,8 @@ jobs:
   release:
     permissions:
       contents: write
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || format('v{0}-test', github.run_number) }}
     strategy:
       fail-fast: false
       matrix:
@@ -88,9 +90,50 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
-          tagName: ${{ github.event_name == 'push' && github.ref_name || format('v{0}-test', github.run_number) }}
-          releaseName: "Whisper Tauri ${{ github.event_name == 'push' && github.ref_name || format('v{0}-test', github.run_number) }}"
-          releaseBody: "See the assets to download and install this version."
+          tagName: ${{ env.RELEASE_TAG }}
+          releaseName: "Whisper Tauri ${{ env.RELEASE_TAG }}"
+          releaseBody: |
+            ## Installation
+
+            ### macOS (Apple Silicon)
+            1. Download `Whisper-Tauri-aarch64.zip`
+            2. Double-click to extract — a folder "Whisper Tauri Installer" appears
+            3. Open the folder and double-click `Install.command`
+            4. Confirm in Terminal — the app installs to `/Applications` and launches
+
+            ### Windows / Linux
+            See the assets below.
+
+            See [docs/install.md](https://github.com/${{ github.repository }}/blob/main/docs/install.md) for troubleshooting and uninstall instructions.
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Create installer zip (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          APP_NAME=$(jq -r .productName src-tauri/tauri.conf.json)
+          APP_BUNDLE="$APP_NAME.app"
+          BUNDLE_DIR="src-tauri/target/aarch64-apple-darwin/release/bundle/macos"
+          if [ ! -d "$BUNDLE_DIR/$APP_BUNDLE" ]; then
+            echo "App bundle not found at $BUNDLE_DIR/$APP_BUNDLE"
+            ls -la "$BUNDLE_DIR" || true
+            exit 1
+          fi
+          STAGING=$(mktemp -d)
+          PKG_NAME="$APP_NAME Installer"
+          PKG_DIR="$STAGING/$PKG_NAME"
+          mkdir -p "$PKG_DIR"
+          cp -R "$BUNDLE_DIR/$APP_BUNDLE" "$PKG_DIR/"
+          cp src-tauri/scripts/Install.command "$PKG_DIR/"
+          chmod +x "$PKG_DIR/Install.command"
+          ZIP_PATH="$RUNNER_TEMP/Whisper-Tauri-aarch64.zip"
+          (cd "$STAGING" && ditto -c -k --keepParent "$PKG_NAME" "$ZIP_PATH")
+          echo "ZIP_PATH=$ZIP_PATH" >> "$GITHUB_ENV"
+          ls -lh "$ZIP_PATH"
+
+      - name: Upload installer zip to release (macOS)
+        if: matrix.platform == 'macos-latest' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'release'))
+        run: gh release upload "$RELEASE_TAG" "$ZIP_PATH" --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
