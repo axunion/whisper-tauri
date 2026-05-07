@@ -1,4 +1,5 @@
 import type { RouteSectionProps } from "@solidjs/router";
+import { useLocation } from "@solidjs/router";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { createEffect, on, onMount, Show } from "solid-js";
 import { Onboarding } from "~/components/onboarding";
@@ -19,10 +20,22 @@ async function showWindow(): Promise<void> {
 
 export function AppLayout(props: RouteSectionProps) {
   const settings = createSettings();
+  const location = useLocation();
+  let mainRef: HTMLElement | undefined;
 
   onMount(() => {
     settings.load();
   });
+
+  createEffect(
+    on(
+      () => location.pathname,
+      () => {
+        mainRef?.scrollTo({ top: 0, behavior: "instant" });
+      },
+      { defer: true },
+    ),
+  );
 
   // Show window once settings are loaded and onboarding is completed.
   // (Onboarding handles its own resize + show.)
@@ -49,7 +62,10 @@ export function AppLayout(props: RouteSectionProps) {
           fallback={
             <SidebarProvider>
               <AppSidebar />
-              <main class="main-scroll flex min-h-0 flex-1 flex-col p-6">
+              <main
+                ref={mainRef}
+                class="main-scroll flex min-h-0 flex-1 flex-col p-6"
+              >
                 {props.children}
               </main>
             </SidebarProvider>
