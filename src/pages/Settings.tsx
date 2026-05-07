@@ -1,7 +1,11 @@
 import { FiMusic, FiSettings } from "solid-icons/fi";
 import { onMount } from "solid-js";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
-import { FfmpegManager, SettingsSelect } from "~/components/settings";
+import {
+  FfmpegManager,
+  NotionIntegration,
+  SettingsSelect,
+} from "~/components/settings";
 import { TextModelManager } from "~/components/text-processing";
 import {
   Card,
@@ -127,6 +131,9 @@ export default function Settings() {
 
       {/* FFmpeg */}
       <FfmpegManager />
+
+      {/* Notion Integration */}
+      <NotionIntegration />
 
       <ErrorDisplay
         error={whisper.error()}

@@ -15,6 +15,7 @@ use tauri::Manager;
 pub mod converter;
 pub mod download;
 pub mod history;
+pub mod notion;
 pub mod paths;
 pub mod recording;
 pub mod settings;
@@ -98,6 +99,10 @@ pub fn run() {
             text_processing::commands::set_text_processing_model_url,
             text_processing::commands::get_text_processing_server_url,
             text_processing::commands::set_text_processing_server_url,
+            notion::commands::notion_get_settings,
+            notion::commands::notion_set_settings,
+            notion::commands::notion_test_connection,
+            notion::commands::notion_create_page,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

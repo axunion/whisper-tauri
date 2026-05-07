@@ -11,9 +11,12 @@ import { exportResult, getExtension } from "~/lib/export";
 import { toast } from "~/lib/toast";
 import { createAiActions } from "~/primitives/createAiActions";
 import { createAiSession } from "~/primitives/createAiSession";
+import { createNotionSettings } from "~/primitives/createNotionSettings";
+import { createNotionShare } from "~/primitives/createNotionShare";
 import { createTextProcessing } from "~/primitives/createTextProcessing";
 import type { TranscriptionResult } from "~/types";
 import { AiActionDialogs } from "./AiActionDialogs";
+import { NotionShareDialog } from "./NotionShareDialog";
 import { ResultCleanTextTab } from "./ResultCleanTextTab";
 import { ResultSummaryTab } from "./ResultSummaryTab";
 import { ResultTextTab } from "./ResultTextTab";
@@ -24,6 +27,7 @@ import { ResultToolbar } from "./ResultToolbar";
 interface ResultViewerProps {
   result: TranscriptionResult;
   fileName?: JSX.Element | undefined;
+  fileNameText: string;
   historyId?: string | undefined;
   onClose?: (() => void) | undefined;
   onTitleGenerated?: ((title: string) => void) | undefined;
@@ -38,6 +42,8 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
   const [cleanTextTabRequested, setCleanTextTabRequested] = createSignal(false);
   const tp = createTextProcessing();
   const session = createAiSession(() => props.historyId);
+  const notion = createNotionSettings();
+  const notionShare = createNotionShare();
 
   const actions = createAiActions({
     session,
@@ -67,6 +73,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
   onMount(() => {
     tp.checkServer();
     tp.loadModels();
+    void notion.load();
   });
 
   function getCopyText(): string {
@@ -107,6 +114,18 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     }
   }
 
+  async function handleShareToNotion() {
+    const text = getCopyText();
+    if (!text.trim()) {
+      toast.error(t("notionShare.emptyContentToast"));
+      return;
+    }
+    await notionShare.share({
+      title: props.fileNameText.trim() || "Untitled",
+      bodyText: text,
+    });
+  }
+
   return (
     <div class="flex min-h-0 flex-1 flex-col gap-3">
       <ResultToolbar
@@ -118,8 +137,13 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         onSummarize={actions.onSummarize}
         onCleanText={actions.onCleanText}
         onGenerateTitle={actions.onGenerateTitle}
+        onShareToNotion={() => {
+          void handleShareToNotion();
+        }}
         isProcessing={session.isProcessing()}
         isGeneratingTitle={session.isGeneratingTitle()}
+        isNotionConnected={notion.isConfigured()}
+        isSharingToNotion={notionShare.state().kind === "sending"}
       />
       <Tabs
         value={activeTab()}
@@ -182,6 +206,14 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
           if (!open) actions.cancelPending();
         }}
         onConfirmOverwrite={actions.confirmOverwrite}
+      />
+
+      <NotionShareDialog
+        state={notionShare.state}
+        onClose={notionShare.reset}
+        onRetry={() => {
+          void handleShareToNotion();
+        }}
       />
     </div>
   );

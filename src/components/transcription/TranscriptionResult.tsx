@@ -66,6 +66,7 @@ export function TranscriptionResult(props: TranscriptionResultProps) {
       </div>
       <ResultViewer
         result={props.result}
+        fileNameText={props.fileName}
         historyId={props.historyId ?? undefined}
         onClose={props.onClose}
         onTitleGenerated={title.startEditing}

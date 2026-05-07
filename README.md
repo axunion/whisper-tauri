@@ -9,13 +9,14 @@ A privacy-first desktop app for local audio transcription. All inference runs on
 - **Silero VAD** for skipping silence during transcription, significantly reducing processing time
 - **AI text post-processing** via local LLM — summarization, transcript cleanup, automatic title generation
 - **History management** with full-text search, AI-content reuse, and export
+- **Notion export** — send transcripts or AI-generated text to a Notion database as new pages, using your own integration token
 - **Internationalization** (Japanese / English) with system locale detection
 
 ## Privacy & Architecture
 
 Whisper Tauri is designed around an **offline-first** principle: there is no telemetry, no cloud transcription, no external LLM API. The only network traffic is one-time downloads of the Whisper / VAD / LLM model files and supporting binaries (FFmpeg, `llama-server`).
 
-After initial setup, the app runs fully offline.
+After initial setup, the app runs fully offline. The optional **Notion export** is the only feature that contacts an external service — and it only does so when the user explicitly clicks "Send to Notion", using the user's own integration token stored locally on the device.
 
 ## Tech Stack
 
@@ -113,7 +114,8 @@ src-tauri/                 # Rust backend
     ├── recording/         # Microphone capture (cpal) and sleep prevention
     ├── converter/         # Audio format conversion via FFmpeg
     ├── history/           # SQLite history database with full-text search
-    └── text_processing/   # llama-server lifecycle and LLM inference
+    ├── text_processing/   # llama-server lifecycle and LLM inference
+    └── notion/            # Notion API client for exporting pages
 
 docs/                      # End-user and contributor documentation
 ```

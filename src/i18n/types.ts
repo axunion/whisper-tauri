@@ -105,6 +105,22 @@ export interface Dictionary {
     update: string;
     vadEnabled: string;
     vadDescription: string;
+    notionIntegration: string;
+    notionConnect: string;
+    notionConnectAndTest: string;
+    notionConnected: string;
+    notionEditConnection: string;
+    notionDisconnect: string;
+    notionDisconnectConfirmTitle: string;
+    notionDisconnectConfirmDescription: string;
+    notionToken: string;
+    notionTokenStorageNote: string;
+    notionDatabaseId: string;
+    notionDatabaseIdHelp: string;
+    notionTesting: string;
+    notionConnectionFailed: string;
+    notionShowToken: string;
+    notionHideToken: string;
   };
   errors: {
     file: string;
@@ -126,6 +142,16 @@ export interface Dictionary {
     timelineTab: string;
     summaryTab: string;
     cleanTextTab: string;
+    shareToNotion: string;
+  };
+  notionShare: {
+    dialogTitle: string;
+    sending: string;
+    successTitle: string;
+    successDescription: string;
+    openInNotion: string;
+    failureTitle: string;
+    emptyContentToast: string;
   };
   recording: {
     title: string;

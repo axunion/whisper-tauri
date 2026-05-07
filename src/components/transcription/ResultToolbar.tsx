@@ -10,6 +10,7 @@ import {
   FiGlobe,
   FiType,
 } from "solid-icons/fi";
+import { SiNotion } from "solid-icons/si";
 import { TbSparkles, TbSubtask } from "solid-icons/tb";
 import type { Component, JSX } from "solid-js";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
@@ -40,8 +41,11 @@ interface ResultToolbarProps {
   onSummarize: () => void;
   onCleanText: () => void;
   onGenerateTitle: () => void;
+  onShareToNotion: () => void;
   isProcessing: boolean;
   isGeneratingTitle: boolean;
+  isNotionConnected: boolean;
+  isSharingToNotion: boolean;
 }
 
 const ResultToolbar: Component<ResultToolbarProps> = (props) => {
@@ -198,6 +202,20 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
               </div>
             </Show>
           </div>
+        </Show>
+
+        <Show when={props.isNotionConnected}>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-8"
+            disabled={props.isSharingToNotion}
+            onClick={props.onShareToNotion}
+            aria-label={t("result.shareToNotion")}
+            title={t("result.shareToNotion")}
+          >
+            <SiNotion class="size-4" />
+          </Button>
         </Show>
 
         {/* Copy */}

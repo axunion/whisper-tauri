@@ -149,6 +149,7 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
         <ResultViewer
           result={result()}
           fileName={metadataJSX()}
+          fileNameText={props.entry.fileName}
           historyId={props.entry.id}
           onTitleGenerated={(title) => startSuggestion(title)}
           onGeneratingTitleChange={setIsGeneratingTitle}

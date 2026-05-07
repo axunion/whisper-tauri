@@ -34,6 +34,8 @@ const PREFIX_MAP: readonly [string, ErrorCodeType][] = [
   ["Transcription error:", ErrorCode.TRANSCRIPTION_ERROR],
   ["Conversion failed:", ErrorCode.TRANSCRIPTION_ERROR],
   ["HTTP error:", ErrorCode.NETWORK_ERROR],
+  ["Notion API error", ErrorCode.NETWORK_ERROR],
+  ["Invalid response from Notion API", ErrorCode.NETWORK_ERROR],
   ["Server start failed:", ErrorCode.NETWORK_ERROR],
   ["Server not running", ErrorCode.NETWORK_ERROR],
   ["Inference error:", ErrorCode.TRANSCRIPTION_ERROR],

@@ -109,6 +109,25 @@ export const ja: Dictionary = {
     update: "更新",
     vadEnabled: "音声区間検出（VAD）",
     vadDescription: "無音区間をスキップして文字起こしを高速化",
+    notionIntegration: "Notion 連携",
+    notionConnect: "連携",
+    notionConnectAndTest: "接続して連携",
+    notionConnected: "連携済み",
+    notionEditConnection: "設定を変更",
+    notionDisconnect: "連携を解除",
+    notionDisconnectConfirmTitle: "Notion 連携を解除しますか？",
+    notionDisconnectConfirmDescription:
+      "保存されたトークンとデータベース設定が削除されます。再度連携するにはトークンと ID を入力し直す必要があります。",
+    notionToken: "API トークン",
+    notionTokenStorageNote:
+      "トークンはこの端末のローカル設定にのみ保存され、外部に送信されることはありません。",
+    notionDatabaseId: "データベース ID",
+    notionDatabaseIdHelp:
+      "Notion で対象データベースを開き、URL の末尾にある ID をコピーしてください。連携 (Integration) を該当 DB に共有することも忘れずに。",
+    notionTesting: "接続中...",
+    notionConnectionFailed: "接続に失敗しました: {message}",
+    notionShowToken: "トークンを表示",
+    notionHideToken: "トークンを隠す",
   },
   errors: {
     file: "ファイル",
@@ -130,6 +149,16 @@ export const ja: Dictionary = {
     timelineTab: "タイムライン",
     summaryTab: "要約",
     cleanTextTab: "整文",
+    shareToNotion: "Notion に送信",
+  },
+  notionShare: {
+    dialogTitle: "Notion に送信",
+    sending: "送信中...",
+    successTitle: "Notion に保存しました",
+    successDescription: "Notion 上に新しいページが作成されました。",
+    openInNotion: "Notion で開く",
+    failureTitle: "送信に失敗しました",
+    emptyContentToast: "送信する内容がありません",
   },
   recording: {
     title: "録音",

@@ -58,6 +58,53 @@ pub fn set_or_delete_string(
     Ok(())
 }
 
+/// Reads multiple string values from the settings store with a single open.
+///
+/// Returns a vector aligned to `keys` where each entry is `Some` if the key
+/// exists and is a string, otherwise `None`.
+///
+/// # Errors
+///
+/// Returns [`SettingsError::Store`] if the store cannot be opened.
+pub fn get_strings(app: &AppHandle, keys: &[&str]) -> Result<Vec<Option<String>>, SettingsError> {
+    let store = app
+        .store(SETTINGS_STORE)
+        .map_err(|e| SettingsError::Store(e.to_string()))?;
+    Ok(keys
+        .iter()
+        .map(|k| {
+            store
+                .get(*k)
+                .and_then(|v| v.as_str().map(std::string::ToString::to_string))
+        })
+        .collect())
+}
+
+/// Sets or deletes multiple string values in the settings store with a single open.
+///
+/// For each entry, `Some` writes the string and `None` removes the key.
+///
+/// # Errors
+///
+/// Returns [`SettingsError::Store`] if the store cannot be opened.
+pub fn set_or_delete_strings(
+    app: &AppHandle,
+    entries: &[(&str, Option<String>)],
+) -> Result<(), SettingsError> {
+    let store = app
+        .store(SETTINGS_STORE)
+        .map_err(|e| SettingsError::Store(e.to_string()))?;
+    for (key, value) in entries {
+        match value {
+            Some(v) => store.set(*key, serde_json::Value::String(v.clone())),
+            None => {
+                store.delete(*key);
+            }
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

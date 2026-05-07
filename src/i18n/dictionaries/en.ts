@@ -108,6 +108,25 @@ export const en: Dictionary = {
     update: "Update",
     vadEnabled: "Voice Activity Detection (VAD)",
     vadDescription: "Skip silent sections to speed up transcription",
+    notionIntegration: "Notion Integration",
+    notionConnect: "Connect",
+    notionConnectAndTest: "Connect",
+    notionConnected: "Connected",
+    notionEditConnection: "Edit settings",
+    notionDisconnect: "Disconnect",
+    notionDisconnectConfirmTitle: "Disconnect Notion?",
+    notionDisconnectConfirmDescription:
+      "The saved token and database settings will be removed. You'll need to re-enter them to reconnect.",
+    notionToken: "API Token",
+    notionTokenStorageNote:
+      "Your token is stored only on this device and never sent anywhere else.",
+    notionDatabaseId: "Database ID",
+    notionDatabaseIdHelp:
+      "Open the target database in Notion and copy the ID from the URL. Don't forget to share your integration with that database.",
+    notionTesting: "Connecting...",
+    notionConnectionFailed: "Connection failed: {message}",
+    notionShowToken: "Show token",
+    notionHideToken: "Hide token",
   },
   errors: {
     file: "File",
@@ -129,6 +148,16 @@ export const en: Dictionary = {
     timelineTab: "Timeline",
     summaryTab: "Summary",
     cleanTextTab: "Rewrite",
+    shareToNotion: "Send to Notion",
+  },
+  notionShare: {
+    dialogTitle: "Send to Notion",
+    sending: "Sending...",
+    successTitle: "Sent to Notion",
+    successDescription: "A new page has been created in your Notion database.",
+    openInNotion: "Open in Notion",
+    failureTitle: "Failed to send",
+    emptyContentToast: "Nothing to send",
   },
   recording: {
     title: "Recording",

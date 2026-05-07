@@ -23,6 +23,7 @@ describe("ResultViewer", () => {
       <ResultViewer
         result={mockResult}
         fileName="test-audio.wav"
+        fileNameText="test-audio.wav"
         onClose={noop}
       />
     ));
@@ -36,6 +37,7 @@ describe("ResultViewer", () => {
       <ResultViewer
         result={mockResult}
         fileName="test-audio.wav"
+        fileNameText="test-audio.wav"
         onClose={noop}
       />
     ));

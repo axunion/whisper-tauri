@@ -54,7 +54,8 @@ src-tauri/src/
 ├── converter/        # ファイル変換（ffmpeg）
 ├── history/          # 履歴管理（SQLite）
 ├── recording/        # リアルタイム録音（cpal）
-└── text_processing/  # テキスト処理（llama-server + LLM）
+├── text_processing/  # テキスト処理（llama-server + LLM）
+└── notion/           # Notion API 連携（reqwest）
 ```
 
 各モジュールは `commands.rs` / `types.rs` / `error.rs` / `mod.rs` の共通構成。

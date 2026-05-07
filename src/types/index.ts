@@ -19,6 +19,12 @@ export type {
   SortOrder,
 } from "./history";
 export type {
+  NotionDatabaseInfo,
+  NotionPagePayload,
+  NotionPageRef,
+  NotionSettings,
+} from "./notion";
+export type {
   AudioDevice,
   RecordingLevel,
   RecordingStopResult,
