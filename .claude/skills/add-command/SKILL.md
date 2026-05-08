@@ -1,31 +1,33 @@
 ---
 name: add-command
-description: 新しいTauriコマンドをRust+TypeScript両側に追加する。コマンド定義、型定義、エラー型、lib.rsへの登録、フロントエンド型、invoke呼び出しまで一貫して生成する。新機能追加やバックエンドAPIの追加時に使用すること。
-argument-hint: "<モジュール名> <コマンド名> [説明]"
+description: Add a new Tauri command on both Rust and TypeScript sides — command definition, types, error variants, lib.rs registration, frontend types, and invoke calls in one pass. Use when adding any IPC entry point, new backend API, action handler, or anything callable from the frontend via invoke(). For introducing a new domain module, run /add-module first.
+argument-hint: "<module> <command-name> [description]"
 user-invocable: true
 ---
 
-# /add-command — Tauri コマンド追加
+# /add-command — Add a Tauri Command
 
-`$ARGUMENTS` で指定されたモジュールとコマンド名に基づいて、Rust バックエンドから TypeScript フロントエンドまで一貫してコマンドを追加する。
+Add a command end-to-end (Rust backend → TypeScript frontend) for the given module and command name in `$ARGUMENTS`.
+
+All user-facing output and confirmations are in **Japanese**.
 
 ## Argument Parsing
 
-`$ARGUMENTS` から以下を抽出する:
+Extract from `$ARGUMENTS`:
 
-- **モジュール名**: 既存モジュール（`whisper`, `converter`, `history`, `recording`, `text_processing`）またはリネーム
-- **コマンド名**: snake_case で指定（例: `get_status`, `save_entry`）
-- **説明**（任意）: コマンドの目的
+- **module**: an existing module (`whisper`, `converter`, `history`, `recording`, `text_processing`, `notion`)
+- **command name**: snake_case (e.g. `get_status`, `save_entry`)
+- **description** (optional): purpose of the command
 
-不明な場合は `AskUserQuestion` で確認する。
+If unclear, confirm via `AskUserQuestion`.
 
-## 既存モジュールへの追加
+## Phase 0 — Module Existence Check
 
-既存モジュールにコマンドを追加する場合の手順。
+If the requested module does **not** exist under `src-tauri/src/`, stop and tell the user to run `/add-module <module>` first. Do not attempt to scaffold a new module here — module creation is the responsibility of `/add-module`.
 
-### Step 1: 型定義（Rust）
+## Step 1 — Type Definitions (Rust)
 
-`src-tauri/src/<module>/types.rs` にリクエスト/レスポンス型を追加する。
+Add request/response types to `src-tauri/src/<module>/types.rs`.
 
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -35,63 +37,64 @@ pub struct MyParams {
 }
 ```
 
-規約:
-- `#[serde(rename_all = "camelCase")]` は必須
-- Optional フィールドには `#[serde(skip_serializing_if = "Option::is_none")]`
-- doc コメントで各フィールドを説明
+Conventions:
+- `#[serde(rename_all = "camelCase")]` is required
+- Optional fields: `#[serde(skip_serializing_if = "Option::is_none")]`
+- Doc comments on each field
 
-### Step 2: エラー型（Rust）
+## Step 2 — Error Type (Rust)
 
-必要に応じて `src-tauri/src/<module>/error.rs` にバリアントを追加する。
+Extend `src-tauri/src/<module>/error.rs` with a variant when needed.
 
 ```rust
 #[error("Prefix message: {0}")]
 NewVariant(String),
 ```
 
-規約:
-- エラーメッセージは `"Prefix: {0}"` 形式（フロントエンドの PREFIX_MAP でマッチングされる）
-- 新しいプレフィックスを追加した場合、Step 5 で `src/lib/errors.ts` の PREFIX_MAP にも追加する
+Conventions:
+- Error message format: `"Prefix: {0}"` (the frontend `PREFIX_MAP` matches by prefix)
+- If a new prefix is introduced, also update `src/lib/errors.ts` in Step 6
+- See `.claude/rules/error-handling.md` for the full sync rules
 
-### Step 3: コマンド実装（Rust）
+## Step 3 — Command Implementation (Rust)
 
-`src-tauri/src/<module>/commands.rs` にコマンド関数を追加する。
+Add the command function to `src-tauri/src/<module>/commands.rs`.
 
 ```rust
-/// コマンドの説明
+/// Description of the command.
 ///
 /// # Errors
 ///
 /// Returns an error if ...
 #[tauri::command]
 pub async fn my_command(app: AppHandle, params: MyParams) -> Result<MyResult, String> {
-    // 実装
+    // implementation
 }
 ```
 
-規約:
-- `#[tauri::command]` 属性
-- 戻り値は `Result<T, String>`
-- `AppHandle` が必要な場合のみ第一引数に指定
-- doc コメントに `# Errors` セクション
-- エラー変換は `.map_err(Into::into)` または `.map_err(|e| ...)`
+Conventions:
+- `#[tauri::command]` attribute
+- Return `Result<T, String>`
+- `AppHandle` only as the first argument when actually needed
+- `# Errors` section in the doc comment
+- Convert errors with `.map_err(Into::into)` or `.map_err(|e| ...)`
 
-### Step 4: コマンド登録
+## Step 4 — Command Registration
 
-`src-tauri/src/lib.rs` の `invoke_handler` にコマンドを登録する。
+Register the command in `src-tauri/src/lib.rs` under `invoke_handler`.
 
 ```rust
 .invoke_handler(tauri::generate_handler![
-    // ... 既存コマンド
-    module::commands::my_command,  // ← 追加
+    // ... existing commands
+    module::commands::my_command,  // ← add
 ])
 ```
 
-該当モジュールの他のコマンドの近くに配置する。
+Place it near the module's other commands.
 
-### Step 5: TypeScript 型定義
+## Step 5 — TypeScript Types
 
-`src/types/<module>.ts` に対応する型を追加する。
+Add the matching types to `src/types/<module>.ts`.
 
 ```typescript
 export interface MyParams {
@@ -99,21 +102,23 @@ export interface MyParams {
 }
 ```
 
-規約:
-- Rust の `snake_case` フィールドは TypeScript では `camelCase`
-- `src/types/index.ts` から export する
+Conventions:
+- Rust `snake_case` fields become TypeScript `camelCase`
+- Re-export from `src/types/index.ts`
 
-### Step 6: エラーマッピング（必要な場合）
+## Step 6 — Error Mapping (when needed)
 
-Step 2 で新しいエラープレフィックスを追加した場合、`src/lib/errors.ts` を更新する:
+When Step 2 introduced a new error prefix, update `src/lib/errors.ts`:
 
-- `PREFIX_MAP` にプレフィックスと `ErrorCode` のマッピングを追加
-- 必要に応じて `ErrorCode` enum に新しいコードを追加（`src/types/errors.ts`）
-- `CATEGORY_MAP`, `MESSAGE_MAP` にも対応するエントリを追加
+- Add `[<rust-prefix>, ErrorCode]` to `PREFIX_MAP`
+- If a new `ErrorCode` is needed, add it to `src/types/errors.ts` and add corresponding entries to `CATEGORY_MAP` and `MESSAGE_MAP`
+- For non-recoverable errors, add to the `NON_RECOVERABLE` set
 
-### Step 7: フロントエンド呼び出し
+See `.claude/rules/error-handling.md` for the full procedure.
 
-`src/primitives/` または呼び出し元で `invoke` を使用する。
+## Step 7 — Frontend Invocation
+
+Use `invoke` in `src/primitives/` or at the call site.
 
 ```typescript
 import { invoke } from "@tauri-apps/api/core";
@@ -122,36 +127,14 @@ import { parseError } from "~/lib/errors";
 const result = await invoke<MyResult>("my_command", { params });
 ```
 
-規約:
-- コマンド名は Rust の関数名そのまま（snake_case）
-- `invoke<ReturnType>` でジェネリクス指定
-- try/catch で囲み、`parseError()` でエラーを変換
+Conventions:
+- Command name matches the Rust function name (snake_case)
+- Use the `invoke<ReturnType>` generic
+- Wrap in try/catch and convert errors with `parseError()`
 
-## 新規モジュールの作成
+## Verify
 
-既存モジュールに該当しない場合、新規モジュールを作成する。
-
-### ディレクトリ構成
-
-```
-src-tauri/src/<module>/
-├── mod.rs        — サブモジュール宣言
-├── commands.rs   — #[tauri::command] 関数
-├── types.rs      — Serde 型定義
-└── error.rs      — thiserror エラー型 + From<Error> for String
-```
-
-### 追加手順
-
-1. 上記4ファイルを作成
-2. `src-tauri/src/lib.rs` に `pub mod <module>;` を追加
-3. `invoke_handler` にコマンドを登録
-4. `src/types/<module>.ts` を作成し `src/types/index.ts` から export
-5. 必要に応じて `src/lib/errors.ts` を更新
-
-## 検証
-
-全ステップ完了後、以下を実行する:
+After all steps, run both:
 
 ```bash
 cd src-tauri && cargo fmt && cargo clippy -- -D warnings && cargo test
@@ -161,4 +144,4 @@ cd src-tauri && cargo fmt && cargo clippy -- -D warnings && cargo test
 pnpm lint && pnpm typecheck && pnpm test:run
 ```
 
-両方パスするまで修正を繰り返す。
+Or use `/verify all`. Repeat fixes until both pass.

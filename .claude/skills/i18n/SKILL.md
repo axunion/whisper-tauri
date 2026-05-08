@@ -1,137 +1,135 @@
 ---
 name: i18n
-description: i18n辞書（ja/en）の品質を包括チェックし改善する。構造整合性、プレースホルダー一致、日本語表現の自然さ、翻訳品質、ハードコード文字列の検出を行う。翻訳の追加・修正、UI文言の調整、新機能追加後のi18n対応漏れチェック時に使用すること。
+description: Audit and improve i18n dictionaries (ja/en). Checks structural consistency, placeholder parity, Japanese expression quality, translation quality, and detects hardcoded UI strings. Use after adding/modifying translations or when adding features that touch UI text.
 user-invocable: true
 ---
 
-# /i18n — i18n品質チェック＆改善
+# /i18n — i18n Audit & Fix
 
-辞書ファイル（`src/i18n/dictionaries/`）と使用箇所の品質を包括的にチェックし、問題を修正する。
+Comprehensively audits the dictionary files in `src/i18n/dictionaries/` and their usage sites, then fixes the issues found.
 
-## 基本方針
+All user-facing output and confirmations are in **Japanese**.
 
-- **日本語がマスター**: 日本語の表現を基準とし、他言語はそこから翻訳する
-- **曖昧な翻訳はユーザーに確認**: 日本語のニュアンスが複数解釈できる場合や、翻訳に自信がない場合は `AskUserQuestion` で確認を取る
-- **拡張性**: 将来の言語追加を見据え、すべてのロケールファイルを対象にチェックする
+## Principles
 
-## チェック項目
+- **Japanese is the master language**: take Japanese as the source of truth and translate from there
+- **Confirm ambiguous translations**: when Japanese has multiple plausible interpretations or you are unsure of a translation, confirm with `AskUserQuestion`
+- **Future-proofing**: every locale file must be checked, not just ja/en — the codebase is set up to extend
 
-### 1. 構造整合性チェック
+## Checks
 
-すべてのロケール辞書が同一のキー構造を持つか検証する。
+### 1. Structural Consistency
 
-- **キーの過不足**: あるロケールに存在するキーが別のロケールに欠けていないか
-- **型定義との一致**: `src/i18n/types.ts` の `Dictionary` インターフェースと各辞書ファイルのキーが一致するか
-- **空文字列**: 値が空文字列 `""` になっていないか
+Verify that all locale dictionaries share the same key structure.
 
-### 2. プレースホルダー整合性チェック
+- **Missing keys**: keys present in one locale but absent in another
+- **Type alignment**: keys must match the `Dictionary` interface in `src/i18n/types.ts`
+- **Empty strings**: no values should be `""`
 
-`{param}` 形式のプレースホルダーがすべてのロケール間で一致するか検証する。
+### 2. Placeholder Parity
 
-- 例: `ja` に `{count}` があるなら `en` にも `{count}` が同じキーに存在するか
-- プレースホルダーの個数と名前が一致するか
+Verify that `{param}`-style placeholders are consistent across locales for the same key.
 
-### 3. 日本語表現の品質チェック
+- Example: if `ja` has `{count}`, `en` must also have `{count}` for the same key
+- Both placeholder count and names must match
 
-日本語辞書（`ja.ts`）の自然さと一貫性を検証する。
+### 3. Japanese Expression Quality
 
-- **敬体（です・ます調）の統一**: UIテキスト内で敬体が混在していないか
-  - ボタンラベル・短い名詞句は体言止めでOK（例: "キャンセル", "文字起こし"）
-  - 説明文・確認メッセージは「です・ます」調で統一
-- **トースト通知の文体統一**: 完了系トーストは「〜しました」で統一
-- **確認ダイアログの文体統一**: 危険操作の確認は「〜されます。この操作は取り消せません。」パターンで統一
-- **冗長な表現**: 不自然に長い表現や、より簡潔に言い換えられるものがないか
-- **用語の統一**: 同じ概念に異なる日本語が使われていないか（例: "削除" と "消去" の混在）
+Check the naturalness and consistency of `ja.ts`.
 
-### 4. 翻訳品質チェック
+- **Honorific endings (です/ます調)**: consistent within UI text
+  - Button labels and short noun phrases may use bare form (e.g., 「キャンセル」「文字起こし」)
+  - Descriptions and confirmation messages: です/ます style
+- **Toast notifications**: completion toasts use the 「〜しました」 pattern
+- **Confirmation dialogs**: destructive-action confirmations use the 「〜されます。この操作は取り消せません。」 pattern
+- **Verbosity**: prefer concise wording where the meaning is preserved
+- **Terminology**: same concept should not have multiple Japanese renderings (e.g., 「削除」 vs 「消去」)
 
-日本語を基準に、他の各ロケール辞書の翻訳品質を検証する。
+### 4. Translation Quality
 
-- **意味の正確性**: 日本語のニュアンスが正しく伝わる翻訳か
-- **文体の統一**: 英語の場合、タイトルケース/センテンスケースの統一
-  - ボタンラベル・見出し: タイトルケース（例: "Start Transcription"）
-  - 説明文・通知: センテンスケース（例: "Transcription completed"）
-- **簡潔さ**: 不要に冗長な翻訳がないか
-- **技術用語の一貫性**: モデル名、ツール名など固有名詞の統一
+Audit each non-master locale against the Japanese source.
 
-### 5. 使用箇所チェック
+- **Semantic accuracy**: the Japanese nuance is conveyed
+- **Style consistency** (for English):
+  - Button labels and headings: Title Case (e.g., "Start Transcription")
+  - Descriptions and notifications: Sentence case (e.g., "Transcription completed")
+- **Conciseness**: no unnecessarily verbose translations
+- **Technical-term consistency**: model names, tool names, proper nouns are uniform
 
-コンポーネント内でi18nが適切に使われているか検証する。
+### 5. Usage Sites
 
-- **ハードコードされた文字列**: コンポーネント（`src/components/`, `src/pages/`）内にi18n化されていない日本語・英語の表示文字列がないか
-  - aria属性、title、placeholder、ボタンラベル、見出し等が対象
-  - CSS クラス名、テスト用文字列、技術的な文字列（URL、ファイルパス等）は除外
-- **未使用キー**: 辞書に定義されているがコードで使われていないキーがないか
+Verify that components use i18n properly.
 
-## 実行手順
+- **Hardcoded strings**: any user-visible Japanese or English string in `src/components/` or `src/pages/` that bypasses i18n
+  - Includes `aria-label`, `title`, `placeholder`, button labels, headings
+  - Excludes CSS class names, test fixtures, technical strings (URLs, file paths)
+- **Unused keys**: keys defined in dictionaries but not referenced in code
 
-### Phase 1: 情報収集
+## Procedure
 
-1. `src/i18n/types.ts` を読み込み、`Dictionary` の構造を把握する
-2. `src/i18n/dictionaries/` 内のすべてのロケールファイルを読み込む
-3. `src/components/` と `src/pages/` 内でi18nキーの使用箇所を検索する
-   - パターン: `t("...")`、`t('...')`
+### Phase 1 — Information Gathering
 
-### Phase 2: チェック実行
+1. Read `src/i18n/types.ts` to learn the `Dictionary` shape
+2. Read all locale files under `src/i18n/dictionaries/`
+3. Search for i18n key usage in `src/components/` and `src/pages/`
+   - Pattern: `t("...")`, `t('...')`
 
-上記チェック項目を順番に実行し、問題を一覧にまとめる。
+### Phase 2 — Run Checks
 
-問題は以下の形式で整理する:
+Execute each check above and collect findings into a list. Format each issue as:
 
 ```
-[カテゴリ] ファイル:行 — 問題の説明
-  現在: <現在の値>
-  提案: <修正案>
+[category] file:line — issue description
+  current:  <current value>
+  proposed: <suggested fix>
 ```
 
-### Phase 3: ユーザー確認（必要な場合のみ）
+### Phase 3 — Confirm with User (when needed)
 
-以下の場合は `AskUserQuestion` でユーザーに確認を取る:
+Use `AskUserQuestion` when:
 
-- 日本語の表現に複数の自然な言い回しがあり、どちらが適切か判断できない場合
-- 日本語の意図が曖昧で、翻訳の方向性が定まらない場合
-- 既存の表現を大きく変更する場合（単なる誤字修正ではない場合）
+- Multiple natural Japanese phrasings exist and the right choice is unclear
+- The Japanese intent is ambiguous, blocking translation
+- Substantial rewording (not a typo fix) is proposed
 
-以下の場合は確認不要で自動修正する:
+Auto-fix without confirmation when:
 
-- 明らかな誤字・脱字
-- プレースホルダーの不整合
-- キーの過不足（型定義に基づく機械的な修正）
-- 文体の不統一（確立されたパターンへの統一）
+- Obvious typos
+- Placeholder mismatches
+- Missing keys (mechanical, type-driven)
+- Style inconsistencies that match an established pattern
 
-### Phase 4: 修正適用
+### Phase 4 — Apply Fixes
 
-1. 問題をまとめてユーザーに報告する
-2. 日本語の表現を調整する（マスター言語を先に確定）
-3. 日本語を基に他のロケール辞書を更新する
-4. 型定義（`types.ts`）の更新が必要な場合は更新する
+1. Report the consolidated issue list to the user
+2. Adjust Japanese first (master language)
+3. Update other locale dictionaries based on the master
+4. Update `types.ts` if keys changed shape
 
-### Phase 5: 検証
-
-修正後に以下を実行して問題がないことを確認する:
+### Phase 5 — Verify
 
 ```bash
 pnpm lint && pnpm typecheck && pnpm test:run
 ```
 
-失敗があれば修正し、全パスするまで繰り返す。
+Repeat fixes until everything passes.
 
-## 判断基準
+## Decision Reference
 
-### 自動修正してよいケース
+### Auto-fix without asking
 
-| 種別 | 例 |
-|------|-----|
-| 誤字・脱字 | 「文字お起こし」→「文字起こし」 |
-| プレースホルダー不整合 | ja: `{count}` / en: `{num}` → en: `{count}` |
-| 文体不統一 | トースト: 「削除された」→「削除しました」 |
-| キー過不足 | 型にあるが辞書にないキーの追加 |
+| Type | Example |
+|------|---------|
+| Typo | 「文字お起こし」→「文字起こし」 |
+| Placeholder mismatch | ja: `{count}` / en: `{num}` → en: `{count}` |
+| Style consistency | toast: 「削除された」→「削除しました」 |
+| Missing keys | type defines a key the dictionary lacks → add it |
 
-### ユーザーに確認すべきケース
+### Confirm with user
 
-| 種別 | 例 |
-|------|-----|
-| 意味の曖昧さ | 「処理」→ "Process" or "Processing" or "Operation"? |
-| 表現の選択 | 「文字起こしを開始」→ "Start Transcription" or "Begin Transcription"? |
-| 大幅な表現変更 | 確認ダイアログの文面を大きく書き換える場合 |
-| 新規キー追加時の翻訳 | ハードコード文字列のi18n化で新キーを追加する場合 |
+| Type | Example |
+|------|---------|
+| Semantic ambiguity | 「処理」→ "Process" or "Processing" or "Operation"? |
+| Phrasing choice | 「文字起こしを開始」→ "Start Transcription" or "Begin Transcription"? |
+| Substantial rewording | rewriting a confirmation dialog body |
+| New-key translation | translating newly-added keys when migrating hardcoded strings |

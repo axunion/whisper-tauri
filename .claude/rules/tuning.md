@@ -1,34 +1,33 @@
-# 設定・チューニングの方針
+# Configuration & Tuning Policy
 
-モデルやライブラリの弱点を隠すための独自チューニング・後処理・入力加工は原則避ける。
-一般的な設定で十分でなければ、その弱点は仕様として許容する。
+Avoid bespoke tuning, post-processing, and input preprocessing whose only purpose is to mask weaknesses in the model or the library. If standard settings are not good enough, accept the weakness as a specification rather than working around it.
 
-## 原則
+## Principles
 
-- **汎用的・一般的な設定を優先する**。ライブラリ CLI のデフォルト値や公式推奨値に揃える。
-- パラメータを明示するときは、標準値と同じなら**未指定（デフォルト委譲）を優先**する。書かない方が将来のアップデートに追従しやすい。
-- **後処理フィルタ・初期プロンプト注入・音声パディング・通常外の閾値設定は特に慎重に**。保守負担が重く、モデル/ライブラリ更新で逆効果になりやすい。
+- **Prefer general, standard settings**. Match the library CLI defaults or the official recommended values.
+- When parameters are made explicit, **prefer leaving them unspecified (defer to defaults)** if the value is identical to the standard. Not writing it makes future upgrades easier to track.
+- Be **especially careful with post-processing filters, initial-prompt injection, audio padding, and unusual threshold settings**. These carry heavy maintenance burden and tend to become counter-productive after model/library updates.
 
-## 理由
+## Reasoning
 
-- 独自チューニングはモデル/ライブラリのアップデートで意味を失ったり、逆効果になったりしやすい。
-- 保守負担とトレードオフが見合わないケースが多い。
-- 品質が必要ならチューニングではなく**モデル自体を変える方**を検討する。
+- Bespoke tuning loses meaning — or actively backfires — across model/library updates.
+- Maintenance burden rarely matches the trade-off.
+- When better quality is needed, **changing the model itself** is preferable to tuning.
 
-## 新しい設定を検討するとき
+## When Considering a New Setting
 
-- 「これは**一般的な設定**か、それとも**弱点を隠すチューニング**か」を提案時に明示する。
-- 弱点隠しに相当する選択肢は非推奨側に置くか、そもそも提案しない。
-- 「仕様として許容する」「別モデルを使う」「デフォルトに戻す」は常に有効な選択肢として提示する。
+- State explicitly whether the setting is **standard practice** or **a workaround for a weakness**.
+- Place workaround-shaped options on the not-recommended side, or do not propose them at all.
+- "Accept as specification", "use a different model", and "go back to defaults" should always be on the table as valid options.
 
-## 調整を許容するケース
+## When Tuning Is Acceptable
 
-一般設定が想定用途（日本語音声・講演音声など）に明確に合わないと実験で確認できた場合は、調整してよい。ただし：
+If experimentation confirms that standard settings are clearly unsuitable for the intended use case (Japanese speech, lecture audio, etc.), tuning is acceptable, but:
 
-- 調整理由（どの挙動が問題で、どんな使用ケースで再現するか）をコメント・コミットメッセージ・memory のいずれかに残す。
-- 将来のライブラリ更新後に再検証できるようにしておく。
+- Record the rationale (what behavior fails, in what use case it reproduces) in code comments, the commit message, or memory.
+- Make it possible to re-evaluate the choice after future library updates.
 
-### 現時点の調整例
+### Current Tuning Examples
 
-- Silero VAD `threshold=0.3` / `speech_pad=100`: デフォルト `0.5 / 30` は講演音声で音声を大量に見落とす／発話冒頭を切る、と実験で確認済み。
-- whisper-rs 0.16 `set_abort_callback_safe` の `Box<dyn FnMut()>` ラップ: FFI 型不一致バグへのワークアラウンド（詳細は `workarounds.md`）。
+- Silero VAD `threshold=0.3` / `speech_pad=100`: The defaults `0.5 / 30` were experimentally confirmed to lose substantial speech and clip the start of utterances on lecture audio.
+- whisper-rs 0.16 `set_abort_callback_safe` wrapped in `Box<dyn FnMut()>`: Workaround for an FFI type-mismatch bug. See `workarounds.md`.

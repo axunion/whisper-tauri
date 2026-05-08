@@ -1,120 +1,120 @@
 ---
 name: verify
-description: lint・型チェック・テスト・ビルドを一括検証する。コミット前や機能実装・リファクタリング完了後に必ず使用すること。自動修正可能なエラーは自動修正し、独立チェックは並行実行で高速処理する。
+description: Run all validation checks (lint, type check, tests, build) in a single pass. Auto-fixes correctable errors and runs independent checks in parallel. Use before commits, after feature implementation or refactoring, or whenever the user asks "is everything green?", "does it pass?", "run the checks", or expresses any uncertainty about CI readiness.
 argument-hint: "[frontend|backend|all]"
 user-invocable: true
 ---
 
-# /verify - 検証スキル
+# /verify — Validation Skill
 
-フェーズ制で検証チェックを実行する。自動修正可能なエラーは修正し、独立したチェックは並行実行する。
+Runs validation in phases. Auto-fixes recoverable errors and parallelizes independent checks.
 
 ## Argument Parsing
 
-`$ARGUMENTS` からターゲットを決定する:
-- `frontend` or `fe` → Frontend のみ
-- `backend` or `be` → Backend のみ
-- `all` or 空 → Frontend + Backend 両方
+Determine target from `$ARGUMENTS`:
+- `frontend` or `fe` → frontend only
+- `backend` or `be` → backend only
+- `all` or empty → both frontend and backend
 
-不正な引数の場合はエラーメッセージを表示して停止。
+For invalid arguments, print an error and stop.
 
-## ターゲット別コマンドマップ
+## Command Map by Target
 
 | Phase | Frontend (`fe`) | Backend (`be`) | All |
 |-------|----------------|----------------|-----|
-| 0: Auto-fix | `pnpm lint:fix` | `cargo fmt` | 両方並行 |
-| 1: Static Analysis | `pnpm lint` + `pnpm typecheck` (並行) | `cargo fmt --check` + `cargo clippy --all-targets -- -D warnings` (並行) | 4つ並行 |
-| 2: Tests | `pnpm test:run` | `cargo test` | 両方並行 |
-| 3: Build | `pnpm build` | (なし) | `pnpm build` |
+| 0: Auto-fix | `pnpm lint:fix` | `cargo fmt` | both in parallel |
+| 1: Static analysis | `pnpm lint` + `pnpm typecheck` (parallel) | `cargo fmt --check` + `cargo clippy --all-targets -- -D warnings` (parallel) | all four in parallel |
+| 2: Tests | `pnpm test:run` | `cargo test` | both in parallel |
+| 3: Build | `pnpm build` | (none) | `pnpm build` |
 
-## フェーズ実行ルール
+## Phase Rules
 
 ### Phase 0: Auto-fix
 
-ファイルを自動修正するフェーズ。対象コマンドを**並行**で実行する。
+Phase that mutates files. Run target commands **in parallel**.
 
-- Frontend: `pnpm lint:fix`（Biome の lint + format 自動修正。`pnpm format` の上位互換）
-- Backend: `cargo fmt`（Rust フォーマット自動修正）
+- Frontend: `pnpm lint:fix` (Biome lint + format auto-fix; superset of `pnpm format`)
+- Backend: `cargo fmt` (Rust formatter)
 
-このフェーズは常に成功扱い（修正を適用するだけ）。
+This phase is always treated as success (it just applies fixes).
 
 ### Phase 1: Static Analysis
 
-読み取り専用の静的解析フェーズ。対象コマンドを**すべて並行**で実行する。
+Read-only static analysis. Run all target commands **in parallel**.
 
 - Frontend: `pnpm lint` + `pnpm typecheck`
 - Backend: `cargo fmt --check` + `cargo clippy --all-targets -- -D warnings`
 
-**失敗時の自動修正（最大2回リトライ）:**
+**Auto-fix on failure (max 2 retries):**
 
-1. 失敗したチェックのエラー出力を確認する
-2. 自動修正を試みる:
-   - `pnpm lint` 失敗 → `pnpm lint:fix` を再実行し、再チェック
-   - `cargo fmt --check` 失敗 → `cargo fmt` を再実行し、再チェック
-   - `pnpm typecheck` 失敗 → エラー出力を読み、**明確な修正**ならコードを修正して再チェック
-   - `cargo clippy` 失敗 → 警告を読み、**明確な修正**ならコードを修正して再チェック
-3. 再チェックは**失敗したチェックのみ**を対象とする（成功済みのチェックは再実行しない）
-4. 2回リトライしても失敗する場合は停止してエラー報告
+1. Read the failing check's error output
+2. Attempt auto-fix:
+   - `pnpm lint` failed → re-run `pnpm lint:fix`, then re-check
+   - `cargo fmt --check` failed → re-run `cargo fmt`, then re-check
+   - `pnpm typecheck` failed → read errors; if the fix is **clear**, edit code and re-check
+   - `cargo clippy` failed → read warnings; if the fix is **clear**, edit code and re-check
+3. Re-check **only the failed check** (do not re-run already-passing checks)
+4. After 2 retries, stop and report
 
 ### Phase 2: Tests
 
-Phase 1 が全パスした後に実行。対象コマンドを**並行**で実行する。
+Runs after Phase 1 fully passes. Run target commands **in parallel**.
 
 - Frontend: `pnpm test:run`
 - Backend: `cargo test`
 
-**失敗時の自動修正（最大1回リトライ）:**
+**Auto-fix on failure (max 1 retry):**
 
-1. 失敗したテストのエラー出力を確認する
-2. **明確な修正**ならコードを修正して再テスト
-3. 1回リトライしても失敗する場合は停止してエラー報告
+1. Read the failing test output
+2. If the fix is **clear**, edit code and re-test
+3. After 1 retry, stop and report
 
 ### Phase 3: Build
 
-Phase 2 が全パスした後に実行。
+Runs after Phase 2 fully passes.
 
 - Frontend: `pnpm build`
 
-**失敗時**: 修正せずエラー報告して停止。
+**On failure**: report and stop without attempting fixes.
 
-## 「明確な修正」の判断基準
+## What Counts as a "Clear Fix"
 
-以下に該当するエラーは自動修正してよい:
-- unused import / unused variable の除去
-- 型不一致（missing field、wrong type、`undefined` の扱い等）
-- missing `override` キーワード
-- clippy の suggestion に従った修正（redundant clone、unnecessary `&` 等）
-- フォーマットの問題
+Auto-fix is appropriate for:
+- Removing unused imports / unused variables
+- Type mismatches (missing field, wrong type, `undefined` handling, etc.)
+- Missing `override` keyword
+- Following clippy suggestions (redundant clone, unnecessary `&`, etc.)
+- Formatting issues
 
-以下は自動修正**しない**（ユーザーに報告して停止）:
-- アーキテクチャ変更が必要なエラー
-- ビジネスロジックの判断が必要なエラー
-- テストの期待値自体が間違っている可能性があるケース
-- 修正方法が複数ある曖昧なエラー
+Do **not** auto-fix (report and stop):
+- Errors requiring architectural changes
+- Errors requiring business-logic decisions
+- Cases where the test expectation may itself be wrong
+- Errors with multiple ambiguous fix paths
 
-## 実行手順
+## Procedure
 
-1. **タスクリスト作成**: ターゲットに応じた全ステップを TaskCreate で作成する
-2. **Phase 0 実行**: 対象の auto-fix コマンドを並行で実行。タスクを in_progress → completed に更新
-3. **Phase 1 実行**: 対象の静的解析コマンドを並行で実行。失敗があれば自動修正ルールに従いリトライ
-4. **Phase 2 実行**: 対象のテストコマンドを並行で実行。失敗があれば自動修正ルールに従いリトライ
-5. **Phase 3 実行**: ビルドコマンドを実行
-6. **結果報告**: サマリーを表示
+1. **Build task list**: create all steps via TaskCreate based on the target
+2. **Run Phase 0**: run target auto-fix commands in parallel; flip task in_progress → completed
+3. **Run Phase 1**: run target static analysis in parallel; on failure follow auto-fix rules
+4. **Run Phase 2**: run target tests in parallel; on failure follow auto-fix rules
+5. **Run Phase 3**: run the build command
+6. **Report**: print summary
 
-## 結果報告フォーマット
+## Report Format
 
-全パス時:
+All passed:
 ```
 ✅ All checks passed
 ```
 
-自動修正で回復した場合:
+Recovered via auto-fix:
 ```
-✅ All checks passed (auto-fixed: <修正内容の要約>)
+✅ All checks passed (auto-fixed: <summary of fixes>)
 ```
 
-失敗時:
+Failed:
 ```
-❌ Failed at: <Phase名 — チェック名>
-<エラー出力の要約>
+❌ Failed at: <Phase name — check name>
+<error output summary>
 ```

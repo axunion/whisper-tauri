@@ -5,13 +5,13 @@ paths:
   - "src-tauri/src/*/commands.rs"
 ---
 
-# IPC イベント (Rust → TypeScript)
+# IPC Events (Rust → TypeScript)
 
-| イベント | 用途 |
-|---------|------|
-| `whisper:progress` | 文字起こし進捗 |
-| `model:download-progress` | Whisperモデル DL進捗 |
-| `ffmpeg:download-progress` | ffmpeg DL進捗 |
-| `recording:level` | 録音レベル (50ms間隔) |
-| `text-processing:download-progress` | テキストモデル/llama-server DL進捗 |
-| `text-processing:inference-progress` | 推論進捗（ストリーミングトークン） |
+| Event | Purpose |
+|-------|---------|
+| `whisper:progress` | Transcription progress |
+| `model:download-progress` | Whisper model download progress |
+| `ffmpeg:download-progress` | ffmpeg download progress |
+| `recording:level` | Recording level (50ms interval) |
+| `text-processing:download-progress` | Text-processing model / llama-server download progress |
+| `text-processing:inference-progress` | Inference progress (streaming tokens) |

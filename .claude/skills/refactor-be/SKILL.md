@@ -1,83 +1,64 @@
 ---
 name: refactor-be
-description: Rust/Tauri 2バックエンドコードをプロジェクト規約に基づいてリファクタリングする。エラーハンドリング統一、型定義整理、モジュール構成、clippy警告解消、pub最小化など。src-tauri/配下のコード品質改善やリファクタリング依頼時に使用すること。
+description: Refactor Rust/Tauri 2 code under src-tauri/ — extraction, consolidation, pub minimization, dead-code removal, unwrap/expect eradication. Use proactively when modifying backend files for cleanup, when a feature implementation has settled and needs a polishing pass, or when the user asks for refactoring without specifying the target.
 argument-hint: "<file or description>"
 user-invocable: true
 ---
 
-# /refactor-be — バックエンドリファクタリング
+# /refactor-be — Backend Refactoring
 
-`$ARGUMENTS` で指定されたファイルまたは対象を、プロジェクト規約に基づいてリファクタリングする。
+Refactor the file or target specified by `$ARGUMENTS` against project conventions.
 
-## プロジェクト規約
+**Conventions**: see `.claude/agents/rust-backend.md` (Rust patterns, error handling, module structure, Tauri commands) and `CLAUDE.md` (architecture, type definitions). This skill does not duplicate them; it focuses on the **refactoring decisions** below. For error mapping specifics, see `.claude/rules/error-handling.md`.
 
-### エラーハンドリング
+## Refactoring Decisions
 
-- `unwrap()` / `expect()` は禁止。`?` 演算子または `map_err` を使用する
-- `unsafe` コードは全面禁止（`unsafe_code = "forbid"`）
-- エラー型は `thiserror` で定義し、`From<XxxError> for String` を実装する
-- エラーメッセージは `"Prefix: {0}"` 形式。フロント側 `src/lib/errors.ts` の `PREFIX_MAP` と同期する
+### Dead-Code Removal
 
-```rust
-// ✅ Good
-#[derive(Debug, thiserror::Error)]
-pub enum WhisperError {
-    #[error("File not found: {0}")]
-    FileNotFound(String),
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
-}
+- Remove unused `use`, variables, functions, type definitions
+- Do **not** suppress with `#[allow(dead_code)]` — delete the code instead
+- Drop backwards-compatibility re-exports and stale `// removed: ...` comments
 
-impl From<WhisperError> for String {
-    fn from(err: WhisperError) -> Self {
-        err.to_string()
-    }
-}
-```
+### Function Granularity
 
-### 型定義
+- One function = one responsibility
+- Long functions: extract helpers
+- Do **not** split aggressively if helpers gain no reuse
 
-- `#[serde(rename_all = "camelCase")]` 必須 — TypeScript 側と camelCase で同期
-- Optional フィールド: `#[serde(skip_serializing_if = "Option::is_none")]`
-- TypeScript 側の型定義 (`src/types/`) と一致させる
+### Code Duplication
 
-### Tauri コマンド
+- Extract a shared helper when the same logic appears in 2+ places
+- Do **not** merge code that only looks similar but has different context
 
-- `#[tauri::command]` で定義し `Result<T, String>` を返す
-- `AppHandle` は引数で受け取る
+### Simplification
 
-### モジュール構成
+- Remove unnecessary `.clone()`
+- Flatten redundant pattern matches
+- Drop redundant type annotations
+- Prefer `?` over `match { Err(e) => return Err(e), ... }`
 
-- `commands.rs` — Tauri コマンド
-- `types.rs` — 型定義（Serde 対応）
-- `error.rs` — エラー型（thiserror）
-- `mod.rs` — 再エクスポート
+### `pub` Minimization
 
-### コード整理
+Visibility is API surface. Anything `pub` is something a future change has to preserve, document, or break. Keep that surface as small as the call graph requires.
 
-- **未使用コードの除去**: 未使用の `use`、変数、関数、型定義を削除する。`#[allow(dead_code)]` で抑制しない
-- **関数の粒度**: 1つの関数は1つの責務に絞る。長い関数はヘルパーに分離する
-- **重複コードの統合**: 同一ロジックが2箇所以上にあれば共通関数に抽出する。ただし、文脈が異なるコードを無理に統合しない
-- **冗長な記述の簡素化**: 不要な `.clone()`、冗長なパターンマッチ、過剰な型アノテーションを整理する
-- **pub の最小化**: モジュール外から不要な `pub` を除去する
+- Remove `pub` on items not used outside the module
+- Prefer `pub(crate)` over `pub` when the item must cross module boundaries but does not need to be public to external consumers — this keeps the crate boundary as the contract surface
+- Module-private types should not be `pub`
 
-### Clippy 設定
+### unwrap / expect Eradication
 
-- `all = warn`, `pedantic = warn` が有効
-- `unwrap_used = warn`, `expect_used = warn`
+- `unwrap_used` / `expect_used` are `warn` in `Cargo.toml`
+- Replace residual hits with `?` propagation, `map_err`, or pattern matching
+- Acceptable only inside `#[cfg(test)]` blocks
 
-### スタイルガイド
+## Procedure
 
-- `rustfmt` 準拠、インデント幅 4
-
-## 手順
-
-1. 対象ファイルを読み込み、規約違反を特定する
-2. リファクタリングを実施する
-3. 検証コマンドを `src-tauri/` 内で実行する:
+1. Read the target file(s) and identify violations
+2. Apply refactoring
+3. Verify in `src-tauri/`:
 
 ```bash
 cd src-tauri && cargo fmt --check && cargo clippy -- -D warnings && cargo test
 ```
 
-4. 失敗があれば修正し、全パスするまで繰り返す
+4. If anything fails, fix and repeat until everything passes.

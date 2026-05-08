@@ -5,29 +5,29 @@ paths:
   - "src-tauri/Cargo.toml"
 ---
 
-# 既知の問題・ワークアラウンド
+# Known Issues & Workarounds
 
-## whisper-rs 0.15.1〜0.16.0: `set_abort_callback_safe` の UB バグ
+## whisper-rs 0.15.1–0.16.0: `set_abort_callback_safe` UB Bug
 
-`set_abort_callback_safe` に直接クロージャを渡すと、FFI トランポリン関数の型不一致により未定義動作が発生する。0.16.0 のソース (`whisper_params.rs:621-655`) でも同一バグが残存していることを確認済み（trampoline が `trampoline::<F>` で単態化されているのに対し、user_data は `Box<dyn FnMut() -> bool>` を指す）。なお `set_progress_callback_safe` は `trampoline::<Box<dyn FnMut(i32)>>` で正しく単態化されているため安全。
+Passing a closure directly to `set_abort_callback_safe` triggers undefined behavior because of a type mismatch in the FFI trampoline. The bug is still present in 0.16.0 source (`whisper_params.rs:621-655`): the trampoline is monomorphized as `trampoline::<F>`, but `user_data` points to a `Box<dyn FnMut() -> bool>`. By contrast, `set_progress_callback_safe` is correctly monomorphized as `trampoline::<Box<dyn FnMut(i32)>>` and is safe.
 
-**ワークアラウンド** (`src-tauri/src/whisper/process.rs`):
+**Workaround** (`src-tauri/src/whisper/process.rs`):
 
 ```rust
 // NG: UB
 params.set_abort_callback_safe(move || token.is_cancelled());
 
-// OK: Box<dyn> にすることでトランポリンの型が一致
+// OK: boxing into Box<dyn> aligns the trampoline type
 let abort_fn: Box<dyn FnMut() -> bool> = Box::new(move || token.is_cancelled());
 params.set_abort_callback_safe(abort_fn);
 ```
 
-**解消条件**: whisper-rs の修正版リリース後に除去可能。
+**Removal condition**: drop once whisper-rs ships a fixed release.
 
-## CI ビルド: GGML_NATIVE と SOURCE_DATE_EPOCH
+## CI Build: GGML_NATIVE and SOURCE_DATE_EPOCH
 
-CI ランナーで `GGML_NATIVE=ON`（デフォルト）が新しい命令セットを有効化しコンパイルエラーになる。
+On CI runners, `GGML_NATIVE=ON` (the default) enables newer instruction sets and produces compile errors.
 
-**ワークアラウンド** (`.github/workflows/release.yml`): `SOURCE_DATE_EPOCH` 環境変数を設定 → ggml が `GGML_NATIVE` をOFFにする。
+**Workaround** (`.github/workflows/release.yml`): set the `SOURCE_DATE_EPOCH` environment variable — ggml then forces `GGML_NATIVE=OFF` internally.
 
-**注意**: `GGML_NATIVE=OFF` 環境変数や `CFLAGS` では解決しない（cmake-rs の制約）。ローカルビルドはデフォルトのままで良い。
+**Note**: setting `GGML_NATIVE=OFF` directly via environment variable or `CFLAGS` does not work due to cmake-rs limitations. Local builds can stay on the defaults.

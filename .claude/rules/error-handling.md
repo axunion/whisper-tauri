@@ -5,32 +5,32 @@ paths:
   - "src/types/errors.ts"
 ---
 
-# エラー定義・同期ルール
+# Error Definition & Sync Rules
 
-Rust 側のエラーは文字列化されてフロントに渡る。プレフィックスマッチでフロント側の `ErrorCode` に変換するため、両側を必ず同期させる。
+Rust-side errors are stringified before crossing into the frontend. The frontend matches by prefix to convert them into `ErrorCode` values, so both sides must stay in sync.
 
-## Rust 側 (`src-tauri/src/*/error.rs`)
+## Rust side (`src-tauri/src/*/error.rs`)
 
-- `thiserror::Error` を派生した enum で定義する
-- メッセージは `"Prefix: {0}"` 形式（バリアントなしの場合は `"Prefix"` のみ）。プレフィックスは大文字始まり
-- 既存プレフィックス（`File not found:` / `IO error:` / `HTTP error:` / `Download failed:` / `Cancelled` 系など）と同義のものは新設せず再利用する
-- `From<XxxError> for String` を必ず実装する（`#[tauri::command]` が `Result<T, String>` を返すため）
-- `From<std::io::Error>` / `From<reqwest::Error>` / `From<crate::download::DownloadError>` などは `#[from]` または手書き `From` で吸収する
-- 各バリアントの `Display` 出力を確認する単体テストを書く（既存 `error.rs` の `#[cfg(test)] mod tests` を踏襲）
+- Define an enum that derives `thiserror::Error`
+- Message format: `"Prefix: {0}"` (or just `"Prefix"` for variants without payload). Prefixes start with an uppercase letter
+- Do not introduce a new prefix that is synonymous with an existing one (`File not found:`, `IO error:`, `HTTP error:`, `Download failed:`, `Cancelled` family, etc.) — reuse instead
+- Always implement `From<XxxError> for String` (because `#[tauri::command]` returns `Result<T, String>`)
+- Absorb upstream errors via `#[from]` or hand-written `From` (e.g., `From<std::io::Error>`, `From<reqwest::Error>`, `From<crate::download::DownloadError>`)
+- Add a unit test that exercises each variant's `Display` output (mirror the existing `#[cfg(test)] mod tests` block in any current `error.rs`)
 
-## フロント側 (`src/lib/errors.ts` / `src/types/errors.ts`)
+## Frontend side (`src/lib/errors.ts` / `src/types/errors.ts`)
 
-新しいエラーメッセージプレフィックスを Rust 側に追加したら、以下を必ず更新する:
+When a new error message prefix is introduced on the Rust side, update all of the following:
 
-1. `src/types/errors.ts` の `ErrorCode` に対応する識別子があるか確認。なければ追加
-2. `src/types/errors.ts` の `ErrorCategory` に該当カテゴリがあるか確認
-3. `src/lib/errors.ts` の `PREFIX_MAP` に `[Rust 側プレフィックス文字列, ErrorCode]` を追加
-   - **キー文字列は Rust 側の `#[error("...")]` の prefix と完全一致させる**（コロンの有無まで含めて）
-   - `startsWith` でマッチするため、より長いプレフィックスを先に並べる
-4. 新しい `ErrorCode` を追加した場合は `CATEGORY_MAP` / `MESSAGE_MAP` のエントリも追加（`Record<ErrorCodeType, ...>` のため網羅必須）
-5. 復帰不可能なエラーは `NON_RECOVERABLE` セットに追加する
+1. Confirm `ErrorCode` in `src/types/errors.ts` has a matching identifier; add one if not
+2. Confirm `ErrorCategory` in `src/types/errors.ts` has the appropriate category; add one if not
+3. Add `[<rust-prefix>, ErrorCode]` to `PREFIX_MAP` in `src/lib/errors.ts`
+   - **The key string must match the Rust `#[error("...")]` prefix exactly** (including the colon)
+   - Matching uses `startsWith`, so place longer prefixes earlier
+4. When a new `ErrorCode` is added, add corresponding entries to `CATEGORY_MAP` and `MESSAGE_MAP` (these are `Record<ErrorCodeType, ...>` and require exhaustive coverage)
+5. If the error is non-recoverable, add it to the `NON_RECOVERABLE` set
 
-## 同期忘れの典型症状
+## Symptoms of Forgetting to Sync
 
-- Rust 側でエラーが出ているのにフロントが `UNKNOWN_ERROR`（「予期しないエラー」）として表示する → `PREFIX_MAP` にプレフィックスが未登録
-- 新 `ErrorCode` を追加したが `CATEGORY_MAP` / `MESSAGE_MAP` が型エラー → `Record` の網羅性チェックが効いている。両 Map を埋める
+- Rust raises an error but the frontend shows `UNKNOWN_ERROR` ("予期しないエラー") → the prefix is missing from `PREFIX_MAP`
+- A new `ErrorCode` is added and `CATEGORY_MAP` / `MESSAGE_MAP` produce type errors → the `Record` exhaustiveness check is enforcing coverage; fill in both maps

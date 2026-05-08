@@ -5,15 +5,15 @@ paths:
   - "src/styles/**"
 ---
 
-# UI デザインルール
+# UI Design Rules
 
-## グラスモーフィズム
+## Glassmorphism
 
-- パープル/バイオレット系アクセント + 半透明 + backdrop-blur
-- レイヤー構造: 背景(メッシュグラデーション) → サイドバー(blur-xl) → カード(blur-lg) → コンテンツ(不透明)
+- Purple/violet accents + translucency + `backdrop-blur`
+- Layer structure: background (mesh gradient) → sidebar (`blur-xl`) → card (`blur-lg`) → content (opaque)
 
-## コンポーネント規約
+## Component Conventions
 
-- **見出しタグ不使用**: `<h1>`〜`<h6>` は使わない。`CardTitle` は `<div>` でレンダリング
-- **カード高さの統一**: Card に固定高さ + 内部を flex レイアウト（`flex-1`）で制御。条件分岐でピクセル高さを切り替えない
-- **solid-ui**: コピー＆ペースト方式（npmパッケージではない）
+- **No heading tags**: do not use `<h1>`–`<h6>`. `CardTitle` renders as a `<div>`.
+- **Uniform card height**: assign a fixed height to `Card` and let an inner flex layout (`flex-1`) drive sizing. Do not switch pixel heights based on conditional branches.
+- **solid-ui**: copy-paste model (not an npm package).

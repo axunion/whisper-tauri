@@ -1,77 +1,65 @@
 ---
 name: refactor-fe
-description: SolidJS/TypeScriptフロントエンドコードをプロジェクト規約に基づいてリファクタリングする。importパス整理、Tailwindクラス結合、エラーハンドリング統一、コンポーネント分割、未使用コード除去など。src/配下のコード品質改善やリファクタリング依頼時に使用すること。
+description: Refactor SolidJS/TypeScript code under src/ — extraction, consolidation, dead-code removal, error-handling consolidation, Tailwind class organization. Use proactively when modifying frontend files for cleanup, when a feature implementation has settled and needs a polishing pass, or when the user asks for refactoring without specifying the target.
 argument-hint: "<file or description>"
 user-invocable: true
 ---
 
-# /refactor-fe — フロントエンドリファクタリング
+# /refactor-fe — Frontend Refactoring
 
-`$ARGUMENTS` で指定されたファイルまたは対象を、プロジェクト規約に基づいてリファクタリングする。
+Refactor the file or target specified by `$ARGUMENTS` against project conventions.
 
-## プロジェクト規約
+**Conventions**: see `.claude/agents/solidjs-frontend.md` (stack, SolidJS patterns, IPC, UI library) and `CLAUDE.md` (architecture, TypeScript strict flags). This skill does not duplicate them; it focuses on the **refactoring decisions** below.
 
-### import パス
+## Refactoring Decisions
 
-- `~/` エイリアス（`src/` にマップ）を使用する。相対パス `../` は同一モジュール内でのみ許容
-- 型は `import type` で import する
+### Dead-Code Removal
 
-```typescript
-// ✅ Good
-import { cn } from "~/lib/utils";
-import type { AppError } from "~/types/errors";
+- Remove unused imports, variables, functions, type definitions
+- No backwards-compatibility re-exports, no `_`-prefixed placeholder variables
+- Remove `// removed: ...` comments instead of leaving them
 
-// ❌ Bad
-import { cn } from "../../lib/utils";
-import { AppError } from "~/types/errors";  // 型なのに import type でない
-```
+### Function Granularity
 
-### Tailwind クラス結合
+- One function = one responsibility
+- Functions exceeding ~30 lines: consider splitting — long functions usually braid orchestration with leaf logic, and a reader cannot hold the whole flow in head at once
+- Do **not** split aggressively if the inner steps have no other caller — premature extraction makes navigation worse than inline code
 
-- `cn()` (`~/lib/utils`) で結合する。文字列テンプレートや手動結合は避ける
+### Component Granularity
 
-### エラーハンドリング
+- Split components that contain multiple independent UI blocks
+- Do **not** split tiny single-use elements just for hierarchy aesthetics
 
-- プリミティブ内: `parseError()` で `AppError` に統一し `setError()` で保持
-- コンポーネント層: `ErrorDisplay` でエラー表示、`toast` で操作結果フィードバック
-- ErrorDisplay と toast の重複回避
+### Code Duplication
 
-### 状態管理
+- Extract a shared helper when the same logic appears in 2+ places
+- Do **not** force-merge code that only looks similar but has different context
 
-- `createSignal` / `createStore` を使用。外部状態管理ライブラリは不使用
-- イベントリスナーは `onCleanup()` で解除する
+### Simplification
 
-### コンポーネントパターン
+- Remove unnecessary intermediate variables
+- Flatten redundant conditionals
+- Reduce excessive nesting (early returns, guard clauses)
 
-- solid-ui コンポーネントは `splitProps` で props を分割
-- variant は `class-variance-authority` (`cva`) で定義
+### Tailwind Class Organization
 
-### 型安全
+- Use `cn()` from `~/lib/utils` for class composition (no template strings, no manual concatenation)
+- Group related utility classes (layout / spacing / color / state) for readability
 
-- `noUncheckedIndexedAccess` 有効 — 配列アクセスは `undefined` チェック必須
-- `exactOptionalPropertyTypes` 有効 — `undefined` と省略を区別
+### Error Handling Consolidation
 
-### コード整理
+- In primitives: unify errors via `parseError()` into `AppError`, store with `setError()`
+- In components: display via `ErrorDisplay` and use `toast` for action feedback
+- Avoid double-surfacing the same error (ErrorDisplay + toast)
 
-- **未使用コードの除去**: 未使用の import、変数、関数、型定義を削除する。後方互換のための re-export や `_` 変数は不要
-- **関数の粒度**: 1つの関数は1つの責務に絞る。30行を超える関数はロジックの分離を検討する
-- **コンポーネントの粒度**: 複数の独立した UI ブロックを含むコンポーネントは分割を検討する。ただし、1箇所でしか使わない小さな要素を過度に分割しない
-- **重複コードの統合**: 同一ロジックが2箇所以上にあれば共通関数に抽出する。ただし、似ているだけで文脈が異なるコードを無理に統合しない
-- **冗長な記述の簡素化**: 不要な中間変数、冗長な条件分岐、過剰なネストを整理する
+## Procedure
 
-### スタイルガイド
-
-- Biome: ダブルクォート、セミコロン必須、インデント幅 2
-- Tailwind CSS v4 を使用
-
-## 手順
-
-1. 対象ファイルを読み込み、規約違反を特定する
-2. リファクタリングを実施する
-3. 検証コマンドを実行する:
+1. Read the target file(s) and identify violations
+2. Apply refactoring
+3. Verify:
 
 ```bash
 pnpm lint && pnpm typecheck && pnpm test:run
 ```
 
-4. 失敗があれば修正し、全パスするまで繰り返す
+4. If anything fails, fix and repeat until everything passes.

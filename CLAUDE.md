@@ -26,7 +26,10 @@ pnpm tauri build                # ビルド
 /verify [frontend|backend|all]  # 検証（コミット前に必ず実行）
 /refactor-fe <対象>              # FEリファクタリング
 /refactor-be <対象>              # BEリファクタリング
+/add-command <mod> <cmd>        # Tauriコマンド追加（FE/BE一貫生成）
+/add-module <name>              # 新規バックエンドモジュール作成
 /i18n                            # i18n品質チェック
+/release [version]              # リリースドライブ（タグpush→CI監視）
 ```
 
 ## アーキテクチャ
@@ -67,7 +70,5 @@ TypeScript型 (`src/types/`) と Rust型 (`src-tauri/src/*/types.rs`) は一致�
 
 ## ワークフロールール
 
-1. **実装完了時**: ユーザー確認 → `/verify` → コミット
-2. **コミット**: 勝手にしない。英語で記述
-3. **TDD遵守**: テスト可能な実装では先にテストを書く。UIの視覚確認は例外
-4. **TypeScript Strict**: `noUncheckedIndexedAccess` / `noImplicitOverride` / `exactOptionalPropertyTypes` 有効
+- **TDD遵守**: テスト可能な実装では先にテストを書く。UIの視覚確認は例外
+- **TypeScript Strict**: `noUncheckedIndexedAccess` / `noImplicitOverride` / `exactOptionalPropertyTypes` 有効
