@@ -6,25 +6,11 @@
     </linearGradient>
   </defs>
 
-  <!-- Main circle -->
-  <circle cx="256" cy="256" r="230" fill="url(#bg)"/>
+  <!-- Full-bleed background (OS applies platform mask: macOS squircle, Win/Linux square) -->
+  <rect width="512" height="512" fill="url(#bg)"/>
 
-  <!-- Ripple arcs — 120° fan arcs from origin (165, 256)
-       Equal visual gaps of 30px at widest point -->
-  <path d="M 192 208 A 55 55 0 0 1 192 304"
-        fill="none" stroke="#e9d5ff" stroke-width="14"
-        stroke-linecap="round" opacity="0.95"/>
-  <path d="M 214 171 A 98 98 0 0 1 214 341"
-        fill="none" stroke="#ddd6fe" stroke-width="12"
-        stroke-linecap="round" opacity="0.7"/>
-  <path d="M 234 136 A 139 139 0 0 1 234 376"
-        fill="none" stroke="#c4b5fd" stroke-width="10"
-        stroke-linecap="round" opacity="0.45"/>
-  <path d="M 254 102 A 178 178 0 0 1 254 410"
-        fill="none" stroke="#c4b5fd" stroke-width="8"
-        stroke-linecap="round" opacity="0.22"/>
-
-  <!-- Center origin point -->
-  <circle cx="165" cy="256" r="18" fill="#f5f3ff" opacity="0.9"/>
-  <circle cx="165" cy="256" r="10" fill="#ffffff"/>
+  <!-- Single flowing waveform: ECG / speech-like, left-to-right -->
+  <polyline points="50,256 70,230 92,285 116,230 138,205 160,220 196,106 220,406 248,220 268,305 296,200 320,320 348,195 376,290 412,235 444,272 462,256"
+            fill="none" stroke="#e9d5ff" stroke-width="16"
+            stroke-linejoin="round" stroke-linecap="round" opacity="0.95"/>
 </svg>
