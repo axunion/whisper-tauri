@@ -102,7 +102,8 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     try {
       const ext = getExtension(fmt);
       const filePath = await save({
-        filters: [{ name: fmt.toUpperCase(), extensions: [fmt] }],
+        title: t("dialog.saveTranscriptionTitle"),
+        filters: [{ name: t(`dialog.${fmt}Filter`), extensions: [fmt] }],
         defaultPath: `transcription${ext}`,
       });
       if (!filePath) return;

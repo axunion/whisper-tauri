@@ -12,9 +12,10 @@ export function QuickActions() {
   async function handleFileSelect() {
     const selected = await open({
       multiple: false,
+      title: t("dialog.openAudioTitle"),
       filters: [
         {
-          name: t("transcription.audioFilesFilter"),
+          name: t("dialog.audioFilter"),
           extensions: AUDIO_EXTENSIONS,
         },
       ],

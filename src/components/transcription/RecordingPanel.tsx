@@ -39,8 +39,9 @@ const RecordingPanel: Component<RecordingPanelProps> = (props) => {
   async function handleSaveWav() {
     if (!props.tempFilePath) return;
     const savePath = await save({
+      title: t("dialog.saveWavTitle"),
       defaultPath: "recording.wav",
-      filters: [{ name: "WAV", extensions: ["wav"] }],
+      filters: [{ name: t("dialog.wavFilter"), extensions: ["wav"] }],
     });
     if (savePath) {
       try {

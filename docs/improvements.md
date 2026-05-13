@@ -25,7 +25,7 @@
 | #  | Cat | 項目                                       | 優先 | Status   | メモ |
 |----|-----|--------------------------------------------|------|----------|------|
 | 1  | A   | アプリアイコン正方形化                     | 高   | 完了 (2026-05-12) | 工数小、見栄えに直結 |
-| 2  | A   | ファイル選択ダイアログの言語整合           | 中   | 未着手   | Info.plist 未宣言が原因。標準対応で解決可 |
+| 2  | A   | ファイル選択ダイアログの言語整合           | 中   | 完了 (2026-05-13) | Info.plist にローカライズ宣言追加 + dialog.* に i18n 集約 |
 | 3  | A   | 設定/開発ページのレイアウト統一            | 高   | 未着手   | 他改善 (#7, #8) の土台 |
 | 4  | A   | アプリ全体の用語ヘルプ (`?` ポップオーバー) | 中   | 未着手   | 専門略語に概念解説。#3 と分業 |
 | 5  | A   | 共有メニュー化 (Notion 等)                 | 中   | 未着手   | 出力先が増える前にやっておく |
@@ -121,7 +121,17 @@
 3. `/i18n` で品質チェック → `/verify` → コミット。
 4. リリースビルドで Gatekeeper / 公証フローに副作用がないか release.yml の手動 dispatch で1回確認。
 
-**Status:** 未着手
+### 実施結果 (2026-05-13)
+
+- **Info.plist**: `CFBundleDevelopmentRegion=en` と `CFBundleLocalizations=[en, ja]` を追加。`NSMicrophoneUsageDescription` は維持。macOS のシステム言語に NSOpenPanel/NSSavePanel が追従する標準対応に揃えた。
+- **i18n 集約**: `Dictionary` に `dialog` 名前空間を新設し、`transcription.audioFilesFilter` を `dialog.audioFilter` へ移行。新規キー: `wavFilter` / `txtFilter` / `srtFilter` / `vttFilter` / `openAudioTitle` / `saveWavTitle` / `saveTranscriptionTitle`。ja/en 両ロケールに反映。
+- **呼び出し側 4 箇所**: `FileSelector.tsx` / `QuickActions.tsx` / `RecordingPanel.tsx` / `ResultViewer.tsx` のフィルタ名ハードコードを除去し、すべて `title:` を追加。`ResultViewer.tsx` は `t(\`dialog.${fmt}Filter\`)` のテンプレートリテラルで `ExportFormat` 別に切替。
+- **defaultPath**: `"recording.wav"` / `\`transcription${ext}\`` の英文字は維持 (文字化けリスク回避)。
+- **検証**: `/verify` の lint / typecheck / FE 265 tests / BE 325 tests / build 全通過。`/i18n` 監査で英語版タイトルを Title Case に揃えた (`Select an Audio File` 等、既存 `Send to Notion` / `Start Transcription` と整合)。
+- **Windows / Linux ダイアログ**: OS ロケール追従のため Info.plist 相当の対応不要。フロントの i18n 化でフィルタ名/タイトルは対応済み。実機確認は #14 に委譲。
+- **アプリ内言語と OS 言語のズレ**: 強制揃えはしない。OS=英語 + アプリ内=日本語のケースはダイアログ英語のまま (Apple HIG 準拠の仕様許容)。
+
+**Status:** 完了 (2026-05-13)
 
 ---
 

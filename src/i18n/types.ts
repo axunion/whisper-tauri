@@ -52,7 +52,6 @@ export interface Dictionary {
     selectAudioFile: string;
     changeFile: string;
     supportedFormats: string;
-    audioFilesFilter: string;
     completedToast: string;
     estimatedTime: string;
     remainingTime: string;
@@ -164,6 +163,16 @@ export interface Dictionary {
     saveAsWav: string;
     fileTab: string;
     recordTab: string;
+  };
+  dialog: {
+    audioFilter: string;
+    wavFilter: string;
+    txtFilter: string;
+    srtFilter: string;
+    vttFilter: string;
+    openAudioTitle: string;
+    saveWavTitle: string;
+    saveTranscriptionTitle: string;
   };
   textProcessing: {
     summarize: string;
