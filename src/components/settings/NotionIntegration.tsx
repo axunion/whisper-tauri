@@ -22,6 +22,7 @@ import {
   CardHeader,
   CardTitleWithIcon,
 } from "~/components/ui/Card";
+import { SectionRow } from "~/components/ui/SectionRow";
 import { useI18n } from "~/i18n";
 import { parseError } from "~/lib/errors";
 import { cn } from "~/lib/utils";
@@ -112,45 +113,56 @@ export default function NotionIntegration() {
           <Show
             when={notion.isConfigured()}
             fallback={
-              <div class="rounded-lg border border-border/40 bg-muted/30 p-4">
-                <div class="flex justify-end">
+              <SectionRow
+                title={
+                  <span class="text-muted-foreground">
+                    {t("settings.notionNotConnected")}
+                  </span>
+                }
+                right={
                   <Button size="sm" class="w-28" onClick={startEdit}>
                     <FiLink class="size-4" />
                     {t("settings.notionConnect")}
                   </Button>
-                </div>
-              </div>
+                }
+              />
             }
           >
-            <div class="flex items-center gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3">
-              <FiCheck class="size-5 shrink-0 text-emerald-500" />
-              <div class="min-w-0 flex-1 text-sm font-medium">
-                {t("settings.notionConnected")}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                class="w-28"
-                onClick={startEdit}
-              >
-                <FiEdit2 class="size-4" />
-                {t("settings.notionEditConnection")}
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                class="w-28"
-                onClick={() => setDisconnectOpen(true)}
-              >
-                <FiTrash2 class="size-4" />
-                {t("settings.notionDisconnect")}
-              </Button>
-            </div>
+            <SectionRow
+              title={
+                <>
+                  {t("settings.notionConnected")}
+                  <FiCheck class="size-5 text-emerald-500" />
+                </>
+              }
+              right={
+                <div class="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    class="w-28"
+                    onClick={startEdit}
+                  >
+                    <FiEdit2 class="size-4" />
+                    {t("settings.notionEditConnection")}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    class="w-28"
+                    onClick={() => setDisconnectOpen(true)}
+                  >
+                    <FiTrash2 class="size-4" />
+                    {t("settings.notionDisconnect")}
+                  </Button>
+                </div>
+              }
+            />
           </Show>
         </Show>
 
         <Show when={editMode()}>
-          <div class="space-y-4 rounded-lg border border-border/40 bg-muted/30 p-4">
+          <div class="space-y-4">
             <div class="space-y-1.5">
               <div class="text-sm font-medium">{t("settings.notionToken")}</div>
               <div class="relative">

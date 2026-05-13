@@ -14,6 +14,7 @@ import {
   CardTitleWithIcon,
 } from "~/components/ui/Card";
 import { Checkbox } from "~/components/ui/Checkbox";
+import { SectionRow } from "~/components/ui/SectionRow";
 import { Separator } from "~/components/ui/Separator";
 import { WhisperModelList } from "~/components/ui/WhisperModelList";
 import { useI18n } from "~/i18n";
@@ -89,20 +90,18 @@ export default function Settings() {
 
           <Separator />
 
-          <div class="flex items-center justify-between">
-            <div class="space-y-0.5">
-              <div class="text-sm font-medium">{t("settings.vadEnabled")}</div>
-              <p class="text-sm text-muted-foreground">
-                {t("settings.vadDescription")}
-              </p>
-            </div>
-            <Checkbox
-              checked={settings.vadEnabled()}
-              onChange={(checked: boolean) => {
-                settings.update({ vadEnabled: checked });
-              }}
-            />
-          </div>
+          <SectionRow
+            title={t("settings.vadEnabled")}
+            description={t("settings.vadDescription")}
+            right={
+              <Checkbox
+                checked={settings.vadEnabled()}
+                onChange={(checked: boolean) => {
+                  settings.update({ vadEnabled: checked });
+                }}
+              />
+            }
+          />
         </CardContent>
       </Card>
 

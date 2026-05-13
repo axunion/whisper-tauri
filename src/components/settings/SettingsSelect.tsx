@@ -1,4 +1,4 @@
-import { Label } from "~/components/ui/Label";
+import { SectionRow } from "~/components/ui/SectionRow";
 import {
   Select,
   SelectContent,
@@ -19,33 +19,33 @@ export function SettingsSelect<T extends { value: string; label: string }>(
   props: SettingsSelectProps<T>,
 ) {
   return (
-    <div class="flex items-center justify-between">
-      <div class="space-y-0.5">
-        <Label>{props.label}</Label>
-        <p class="text-sm text-muted-foreground">{props.description}</p>
-      </div>
-      <Select<T>
-        multiple={false}
-        value={props.value}
-        onChange={(val) => {
-          if (val) props.onChange(val);
-        }}
-        options={props.options}
-        optionValue="value"
-        optionTextValue="label"
-        itemComponent={(itemProps) => (
-          <SelectItem item={itemProps.item}>
-            {itemProps.item.rawValue.label}
-          </SelectItem>
-        )}
-      >
-        <SelectTrigger class="w-48">
-          <SelectValue<T>>
-            {(state) => state.selectedOption().label}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent />
-      </Select>
-    </div>
+    <SectionRow
+      title={props.label}
+      description={props.description}
+      right={
+        <Select<T>
+          multiple={false}
+          value={props.value}
+          onChange={(val) => {
+            if (val) props.onChange(val);
+          }}
+          options={props.options}
+          optionValue="value"
+          optionTextValue="label"
+          itemComponent={(itemProps) => (
+            <SelectItem item={itemProps.item}>
+              {itemProps.item.rawValue.label}
+            </SelectItem>
+          )}
+        >
+          <SelectTrigger class="w-48">
+            <SelectValue<T>>
+              {(state) => state.selectedOption().label}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent />
+        </Select>
+      }
+    />
   );
 }

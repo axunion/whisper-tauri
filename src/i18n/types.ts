@@ -108,6 +108,7 @@ export interface Dictionary {
     notionConnect: string;
     notionConnectAndTest: string;
     notionConnected: string;
+    notionNotConnected: string;
     notionEditConnection: string;
     notionDisconnect: string;
     notionDisconnectConfirmTitle: string;

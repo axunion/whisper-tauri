@@ -10,6 +10,7 @@ import {
 import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { ModelListItem } from "~/components/ui/ModelListItem";
+import { SectionRow } from "~/components/ui/SectionRow";
 import { useI18n } from "~/i18n";
 import type { DictionaryKey } from "~/i18n/types";
 import { getModelDescription } from "~/lib/modelDescription";
@@ -175,62 +176,62 @@ export default function TextModelManager(props: TextModelManagerProps) {
             </CardTitleWithIcon>
           </CardHeader>
           <CardContent>
-            <div class="flex items-center justify-between rounded-lg border p-4">
-              <div class="flex items-center gap-2">
-                <span class="font-medium">llama-server</span>
-              </div>
-              <Show
-                when={tp.serverAvailable()}
-                fallback={
-                  <Show
-                    when={
-                      tp.downloadPhase() === "server" &&
-                      !tp.downloadingModelId()
+            <SectionRow
+              title="llama-server"
+              right={
+                <Show
+                  when={tp.serverAvailable()}
+                  fallback={
+                    <Show
+                      when={
+                        tp.downloadPhase() === "server" &&
+                        !tp.downloadingModelId()
+                      }
+                      fallback={
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          class="w-28"
+                          onClick={handleDownloadServer}
+                          disabled={tp.isDownloading()}
+                        >
+                          <FiDownload />
+                          {t("common.download")}
+                        </Button>
+                      }
+                    >
+                      <DownloadProgress
+                        progress={tp.downloadProgress()?.progress ?? 0}
+                      />
+                    </Show>
+                  }
+                >
+                  <ConfirmDialog
+                    title={t("textProcessing.deleteServer")}
+                    description={t("textProcessing.deleteServerConfirmation")}
+                    confirmLabel={
+                      <>
+                        <FiTrash2 />
+                        {t("common.delete")}
+                      </>
                     }
-                    fallback={
+                    onConfirm={handleDeleteServer}
+                  >
+                    {(openDialog) => (
                       <Button
-                        variant="outline"
+                        variant="destructive"
                         size="sm"
                         class="w-28"
-                        onClick={handleDownloadServer}
-                        disabled={tp.isDownloading()}
+                        onClick={openDialog}
                       >
-                        <FiDownload />
-                        {t("common.download")}
+                        <FiTrash2 />
+                        {t("common.delete")}
                       </Button>
-                    }
-                  >
-                    <DownloadProgress
-                      progress={tp.downloadProgress()?.progress ?? 0}
-                    />
-                  </Show>
-                }
-              >
-                <ConfirmDialog
-                  title={t("textProcessing.deleteServer")}
-                  description={t("textProcessing.deleteServerConfirmation")}
-                  confirmLabel={
-                    <>
-                      <FiTrash2 />
-                      {t("common.delete")}
-                    </>
-                  }
-                  onConfirm={handleDeleteServer}
-                >
-                  {(openDialog) => (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      class="w-28"
-                      onClick={openDialog}
-                    >
-                      <FiTrash2 />
-                      {t("common.delete")}
-                    </Button>
-                  )}
-                </ConfirmDialog>
-              </Show>
-            </div>
+                    )}
+                  </ConfirmDialog>
+                </Show>
+              }
+            />
           </CardContent>
         </Card>
       </Show>

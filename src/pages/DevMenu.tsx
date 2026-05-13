@@ -18,6 +18,8 @@ import {
 } from "~/components/ui/Card";
 import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { FfmpegControl } from "~/components/ui/FfmpegControl";
+import { SectionRow } from "~/components/ui/SectionRow";
+import { Separator } from "~/components/ui/Separator";
 import { WhisperModelList } from "~/components/ui/WhisperModelList";
 import { useI18n } from "~/i18n";
 import { combineErrorProviders } from "~/lib/errors";
@@ -113,37 +115,40 @@ function DevMenuContent() {
             {t("dev.dataReset")}
           </CardTitleWithIcon>
         </CardHeader>
-        <CardContent class="space-y-4">
+        <CardContent class="space-y-6">
           <CacheClear history={history} />
-          <div class="flex items-center justify-between rounded-lg border p-4">
-            <span class="text-sm font-medium">{t("dev.resetOnboarding")}</span>
-            <ConfirmDialog
-              title={t("dev.resetOnboardingConfirmTitle")}
-              description={t("dev.resetOnboardingConfirmDescription")}
-              confirmLabel={
-                <>
-                  <FiRotateCcw />
-                  {t("dev.reset")}
-                </>
-              }
-              onConfirm={async () => {
-                await devSettings.update({ onboardingCompleted: false });
-                toast.success(t("dev.onboardingResetToast"));
-              }}
-            >
-              {(openDialog) => (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  class="w-28"
-                  onClick={openDialog}
-                >
-                  <FiRotateCcw />
-                  {t("dev.reset")}
-                </Button>
-              )}
-            </ConfirmDialog>
-          </div>
+          <Separator />
+          <SectionRow
+            title={t("dev.resetOnboarding")}
+            right={
+              <ConfirmDialog
+                title={t("dev.resetOnboardingConfirmTitle")}
+                description={t("dev.resetOnboardingConfirmDescription")}
+                confirmLabel={
+                  <>
+                    <FiRotateCcw />
+                    {t("dev.reset")}
+                  </>
+                }
+                onConfirm={async () => {
+                  await devSettings.update({ onboardingCompleted: false });
+                  toast.success(t("dev.onboardingResetToast"));
+                }}
+              >
+                {(openDialog) => (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    class="w-28"
+                    onClick={openDialog}
+                  >
+                    <FiRotateCcw />
+                    {t("dev.reset")}
+                  </Button>
+                )}
+              </ConfirmDialog>
+            }
+          />
         </CardContent>
       </Card>
 
