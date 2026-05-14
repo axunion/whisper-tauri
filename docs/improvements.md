@@ -515,7 +515,7 @@
 - **PR チェックワークフロー (`.github/workflows/ci.yml` 新設)** を追加:
   - トリガ: `pull_request` (main 宛) と `push` (main)。
   - ジョブ:
-    1. **frontend**: `pnpm lint` / `pnpm typecheck` / `pnpm test:run` (Node + pnpm のみ。Rust 不要なので速い)
+    1. **frontend**: `pnpm check` / `pnpm test:run` (Node + pnpm のみ。Rust 不要なので速い)
     2. **backend**: `cargo fmt --check` / `cargo clippy -- -D warnings` / `cargo test`
     3. **build smoke** (任意): `pnpm tauri build --debug` を ubuntu のみで回し、ビルドが通ることを確認。フルビルドは時間がかかるので OS 縛り + デバッグビルドで節約。
   - キャッシュ: `swatinem/rust-cache` と pnpm store cache を使う。

@@ -86,9 +86,9 @@ pnpm tauri dev          # Start the dev server (hot reload for both Rust and TS)
 pnpm tauri build        # Production build
 
 pnpm test:run           # Frontend tests (single run)
-pnpm typecheck          # tsc --noEmit
-pnpm lint               # Biome lint
-pnpm format             # Biome format
+pnpm check              # Biome (lint + format) + tsc --noEmit
+pnpm fix                # Biome auto-fix
+pnpm typecheck          # tsc --noEmit (standalone)
 
 cargo test --manifest-path src-tauri/Cargo.toml
 cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings

@@ -22,8 +22,8 @@ For invalid arguments, print an error and stop.
 
 | Phase | Frontend (`fe`) | Backend (`be`) | All |
 |-------|----------------|----------------|-----|
-| 0: Auto-fix | `pnpm lint:fix` | `cargo fmt` | both in parallel |
-| 1: Static analysis | `pnpm lint` + `pnpm typecheck` (parallel) | `cargo fmt --check` + `cargo clippy --all-targets -- -D warnings` (parallel) | all four in parallel |
+| 0: Auto-fix | `pnpm fix` | `cargo fmt` | both in parallel |
+| 1: Static analysis | `pnpm check` (Biome + tsc) | `cargo fmt --check` + `cargo clippy --all-targets -- -D warnings` (parallel) | FE + both BE in parallel |
 | 2: Tests | `pnpm test:run` | `cargo test` | both in parallel |
 | 3: Build | `pnpm build` | (none) | `pnpm build` |
 
@@ -33,7 +33,7 @@ For invalid arguments, print an error and stop.
 
 Phase that mutates files. Run target commands **in parallel**.
 
-- Frontend: `pnpm lint:fix` (Biome lint + format auto-fix; superset of `pnpm format`)
+- Frontend: `pnpm fix` (Biome lint + format auto-fix)
 - Backend: `cargo fmt` (Rust formatter)
 
 This phase is always treated as success (it just applies fixes).
@@ -42,16 +42,16 @@ This phase is always treated as success (it just applies fixes).
 
 Read-only static analysis. Run all target commands **in parallel**.
 
-- Frontend: `pnpm lint` + `pnpm typecheck`
+- Frontend: `pnpm check` (Biome + tsc; runs sequentially internally — Biome first, then tsc)
 - Backend: `cargo fmt --check` + `cargo clippy --all-targets -- -D warnings`
 
 **Auto-fix on failure (max 2 retries):**
 
 1. Read the failing check's error output
 2. Attempt auto-fix:
-   - `pnpm lint` failed → re-run `pnpm lint:fix`, then re-check
+   - `pnpm check` failed at the **Biome** step → re-run `pnpm fix`, then re-check
+   - `pnpm check` failed at the **tsc** step → read errors; if the fix is **clear**, edit code and re-check
    - `cargo fmt --check` failed → re-run `cargo fmt`, then re-check
-   - `pnpm typecheck` failed → read errors; if the fix is **clear**, edit code and re-check
    - `cargo clippy` failed → read warnings; if the fix is **clear**, edit code and re-check
 3. Re-check **only the failed check** (do not re-run already-passing checks)
 4. After 2 retries, stop and report

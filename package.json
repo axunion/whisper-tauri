@@ -12,9 +12,8 @@
     "tauri": "tauri",
     "test": "vitest",
     "test:run": "vitest run",
-    "lint": "biome check src/",
-    "lint:fix": "biome check --write src/",
-    "format": "biome format --write src/",
+    "check": "biome check src/ && tsc --noEmit",
+    "fix": "biome check --write src/",
     "typecheck": "tsc --noEmit"
   },
   "packageManager": "pnpm@10.20.0",

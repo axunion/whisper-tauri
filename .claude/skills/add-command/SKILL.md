@@ -141,7 +141,7 @@ cd src-tauri && cargo fmt && cargo clippy -- -D warnings && cargo test
 ```
 
 ```bash
-pnpm lint && pnpm typecheck && pnpm test:run
+pnpm check && pnpm test:run
 ```
 
 Or use `/verify all`. Repeat fixes until both pass.

@@ -18,9 +18,9 @@ Whisper Tauri - ローカル音声文字起こしデスクトップアプリ。W
 ```bash
 pnpm tauri dev                  # 開発サーバー
 pnpm test:run / cargo test      # テスト（pnpm test は対話モード、単発実行は test:run）
-pnpm lint / cargo clippy        # Lint
-pnpm format / cargo fmt         # Format
-pnpm typecheck                  # 型チェック (tsc --noEmit)
+pnpm check / cargo clippy       # Biome (lint + format) + tsc / Rust lint
+pnpm fix / cargo fmt            # 自動修正
+pnpm typecheck                  # 型チェック単体 (tsc --noEmit)
 pnpm tauri build                # ビルド
 
 /verify [frontend|backend|all]  # 検証（コミット前に必ず実行）

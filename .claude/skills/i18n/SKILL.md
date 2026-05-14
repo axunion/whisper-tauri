@@ -109,7 +109,7 @@ Auto-fix without confirmation when:
 ### Phase 5 — Verify
 
 ```bash
-pnpm lint && pnpm typecheck && pnpm test:run
+pnpm check && pnpm test:run
 ```
 
 Repeat fixes until everything passes.

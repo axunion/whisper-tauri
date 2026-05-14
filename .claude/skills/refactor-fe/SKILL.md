@@ -59,7 +59,7 @@ Refactor the file or target specified by `$ARGUMENTS` against project convention
 3. Verify:
 
 ```bash
-pnpm lint && pnpm typecheck && pnpm test:run
+pnpm check && pnpm test:run
 ```
 
 4. If anything fails, fix and repeat until everything passes.
