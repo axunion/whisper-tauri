@@ -16,6 +16,7 @@ export interface Dictionary {
     downloadingFfmpeg: string;
     downloadingTextModel: string;
     downloadingServer: string;
+    helpHintLabel: string;
   };
   nav: {
     dashboard: string;
@@ -237,6 +238,14 @@ export interface Dictionary {
     summaryReady: string;
     summaryNotInstalled: string;
     startTranscribing: string;
+  };
+  glossary: {
+    vad: { title: string; body: string };
+    llm: { title: string; body: string };
+    whisper: { title: string; body: string };
+    ffmpeg: { title: string; body: string };
+    notionDatabaseId: { title: string; body: string };
+    notionToken: { title: string; body: string };
   };
   dev: {
     dataReset: string;

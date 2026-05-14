@@ -9,6 +9,7 @@ import {
 } from "~/components/ui/Card";
 import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { DownloadProgress } from "~/components/ui/DownloadProgress";
+import { HelpHint } from "~/components/ui/HelpHint";
 import { ModelListItem } from "~/components/ui/ModelListItem";
 import { SectionRow } from "~/components/ui/SectionRow";
 import { useI18n } from "~/i18n";
@@ -81,7 +82,14 @@ export default function TextModelManager(props: TextModelManagerProps) {
     <>
       <Card>
         <CardHeader>
-          <CardTitleWithIcon icon={() => <FiCpu class="size-4" />}>
+          <CardTitleWithIcon
+            icon={() => <FiCpu class="size-4" />}
+            trailing={
+              <Show when={!props.devMode}>
+                <HelpHint term="llm" />
+              </Show>
+            }
+          >
             {t("textProcessing.modelManagement")}
           </CardTitleWithIcon>
         </CardHeader>

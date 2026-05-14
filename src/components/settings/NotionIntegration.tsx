@@ -22,6 +22,7 @@ import {
   CardHeader,
   CardTitleWithIcon,
 } from "~/components/ui/Card";
+import { HelpHint } from "~/components/ui/HelpHint";
 import { SectionRow } from "~/components/ui/SectionRow";
 import { useI18n } from "~/i18n";
 import { parseError } from "~/lib/errors";
@@ -164,7 +165,10 @@ export default function NotionIntegration() {
         <Show when={editMode()}>
           <div class="space-y-4">
             <div class="space-y-1.5">
-              <div class="text-sm font-medium">{t("settings.notionToken")}</div>
+              <div class="flex items-center gap-2 text-sm font-medium">
+                {t("settings.notionToken")}
+                <HelpHint term="notionToken" />
+              </div>
               <div class="relative">
                 <input
                   type={showToken() ? "text" : "password"}
@@ -195,8 +199,9 @@ export default function NotionIntegration() {
             </div>
 
             <div class="space-y-1.5">
-              <div class="text-sm font-medium">
+              <div class="flex items-center gap-2 text-sm font-medium">
                 {t("settings.notionDatabaseId")}
+                <HelpHint term="notionDatabaseId" />
               </div>
               <input
                 type="text"

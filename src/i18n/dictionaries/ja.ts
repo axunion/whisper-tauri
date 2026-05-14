@@ -16,6 +16,7 @@ export const ja: Dictionary = {
     downloadingFfmpeg: "FFmpegをダウンロード中",
     downloadingTextModel: "言語モデルをダウンロード中",
     downloadingServer: "llama-serverをダウンロード中",
+    helpHintLabel: "用語の説明を表示",
   },
   nav: {
     dashboard: "ダッシュボード",
@@ -106,9 +107,8 @@ export const ja: Dictionary = {
     ffmpegDownloadedToast: "FFmpegをダウンロードしました",
     ffmpegUpdateAvailable: "新しいバージョンがあります",
     update: "更新",
-    vadEnabled: "音声区間検出（VAD）",
-    vadDescription:
-      "無音区間をスキップして処理を高速化。歌唱・朗読や、無音時間も含めて記録したい場合は無効化を推奨。",
+    vadEnabled: "VAD",
+    vadDescription: "無音をスキップして文字起こしを高速化します。",
     notionIntegration: "Notion 連携",
     notionConnect: "連携",
     notionConnectAndTest: "接続して連携",
@@ -250,6 +250,32 @@ export const ja: Dictionary = {
     summaryReady: "準備完了",
     summaryNotInstalled: "未インストール",
     startTranscribing: "さあ、始めましょう！",
+  },
+  glossary: {
+    vad: {
+      title: "VAD（音声区間検出）",
+      body: "音声から発話区間だけを取り出す処理です。無音を除外して文字起こしを高速化できますが、歌唱・朗読や、発話が極端に小さい録音、無音区間も結果に残したい場合は無効化してください。",
+    },
+    llm: {
+      title: "LLM（大規模言語モデル）",
+      body: "文章を理解・生成できる AI モデルです。要約や整文に使用します。モデル・入力・生成結果はすべて端末内で処理され、外部に送信されることはありません。",
+    },
+    whisper: {
+      title: "Whisper（音声認識モデル）",
+      body: "OpenAI が公開する多言語対応の音声認識モデルです。端末内で実行されるため、音声データが外部に送信されることはありません。",
+    },
+    ffmpeg: {
+      title: "FFmpeg（音声変換ツール）",
+      body: "音声・動画ファイルの形式変換に使うオープンソースのツールです。MP3 / M4A / MP4 などを Whisper が扱える WAV 形式 (16kHz) に自動変換します。",
+    },
+    notionDatabaseId: {
+      title: "Notion データベース ID",
+      body: "送信先 Notion データベースを識別する文字列です。データベースの URL 末尾の英数字部分がそれにあたります。インテグレーション設定から、該当データベースへの接続権限を共有しておく必要があります。",
+    },
+    notionToken: {
+      title: "Notion API トークン",
+      body: "Notion インテグレーション設定で発行する認証キーです。Notion API 経由でページを作成するために使用し、この端末にのみ保存されます。",
+    },
   },
   dev: {
     dataReset: "データリセット",

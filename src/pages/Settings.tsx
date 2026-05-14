@@ -14,6 +14,7 @@ import {
   CardTitleWithIcon,
 } from "~/components/ui/Card";
 import { Checkbox } from "~/components/ui/Checkbox";
+import { HelpHint } from "~/components/ui/HelpHint";
 import { SectionRow } from "~/components/ui/SectionRow";
 import { Separator } from "~/components/ui/Separator";
 import { WhisperModelList } from "~/components/ui/WhisperModelList";
@@ -91,7 +92,12 @@ export default function Settings() {
           <Separator />
 
           <SectionRow
-            title={t("settings.vadEnabled")}
+            title={
+              <>
+                {t("settings.vadEnabled")}
+                <HelpHint term="vad" />
+              </>
+            }
             description={t("settings.vadDescription")}
             right={
               <Checkbox
@@ -108,7 +114,10 @@ export default function Settings() {
       {/* Whisper Model Management */}
       <Card>
         <CardHeader>
-          <CardTitleWithIcon icon={() => <FiMusic class="size-4" />}>
+          <CardTitleWithIcon
+            icon={() => <FiMusic class="size-4" />}
+            trailing={<HelpHint term="whisper" />}
+          >
             {t("settings.modelManagement")}
           </CardTitleWithIcon>
         </CardHeader>

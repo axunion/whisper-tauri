@@ -16,6 +16,7 @@ export const en: Dictionary = {
     downloadingFfmpeg: "Downloading FFmpeg",
     downloadingTextModel: "Downloading language model",
     downloadingServer: "Downloading llama-server",
+    helpHintLabel: "Show term description",
   },
   nav: {
     dashboard: "Dashboard",
@@ -105,9 +106,8 @@ export const en: Dictionary = {
     ffmpegDownloadedToast: "FFmpeg downloaded",
     ffmpegUpdateAvailable: "Update available",
     update: "Update",
-    vadEnabled: "Voice Activity Detection (VAD)",
-    vadDescription:
-      "Skip silent sections to speed up transcription. Recommended off for singing, narration, or when you want to preserve silent periods.",
+    vadEnabled: "VAD",
+    vadDescription: "Skip silent sections to speed up transcription.",
     notionIntegration: "Notion Integration",
     notionConnect: "Connect",
     notionConnectAndTest: "Connect",
@@ -255,6 +255,32 @@ export const en: Dictionary = {
     summaryReady: "Ready",
     summaryNotInstalled: "Not installed",
     startTranscribing: "Let's Get Started!",
+  },
+  glossary: {
+    vad: {
+      title: "VAD (Voice Activity Detection)",
+      body: "Extracts only the speech sections from audio. Skipping silence speeds up transcription, but turn it off for singing or narration, very quiet recordings, or when you want to keep silent periods in the result.",
+    },
+    llm: {
+      title: "LLM (Large Language Model)",
+      body: "An AI model that understands and generates text. Used for summarization and rewriting. The model, your inputs, and the generated outputs all stay on your device.",
+    },
+    whisper: {
+      title: "Whisper (Speech Recognition Model)",
+      body: "An open multilingual speech recognition model from OpenAI. Runs entirely on your device, so audio is never sent anywhere else.",
+    },
+    ffmpeg: {
+      title: "FFmpeg (Audio Conversion Tool)",
+      body: "An open-source tool for converting audio and video formats. Used to convert MP3 / M4A / MP4 and others into the WAV (16 kHz) format Whisper accepts.",
+    },
+    notionDatabaseId: {
+      title: "Notion Database ID",
+      body: "A string that identifies the destination Notion database — the alphanumeric part at the end of the database URL. You also need to grant the integration access to that database.",
+    },
+    notionToken: {
+      title: "Notion API Token",
+      body: "An authentication key issued from your Notion integration settings. Used to create pages via the Notion API, and kept only on this device.",
+    },
   },
   dev: {
     dataReset: "Data Reset",

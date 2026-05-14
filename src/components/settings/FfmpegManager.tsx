@@ -7,6 +7,7 @@ import {
   CardTitleWithIcon,
 } from "~/components/ui/Card";
 import { FfmpegControl } from "~/components/ui/FfmpegControl";
+import { HelpHint } from "~/components/ui/HelpHint";
 import { useI18n } from "~/i18n";
 import { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
 
@@ -21,7 +22,10 @@ export default function FfmpegManager() {
   return (
     <Card>
       <CardHeader>
-        <CardTitleWithIcon icon={() => <FiTool class="size-4" />}>
+        <CardTitleWithIcon
+          icon={() => <FiTool class="size-4" />}
+          trailing={<HelpHint term="ffmpeg" />}
+        >
           {t("settings.toolManagement")}
         </CardTitleWithIcon>
       </CardHeader>

@@ -27,7 +27,7 @@
 | 1  | A   | アプリアイコン正方形化                     | 高   | 完了 (2026-05-12) | 工数小、見栄えに直結 |
 | 2  | A   | ファイル選択ダイアログの言語整合           | 中   | 完了 (2026-05-13) | Info.plist にローカライズ宣言追加 + dialog.* に i18n 集約 |
 | 3  | A   | 設定/開発ページのレイアウト統一            | 高   | 完了 (2026-05-14) | SectionRow 共通化 + 二重枠除去 + VAD 説明文拡充 |
-| 4  | A   | アプリ全体の用語ヘルプ (`?` ポップオーバー) | 中   | 未着手   | 専門略語に概念解説。#3 と分業 |
+| 4  | A   | アプリ全体の用語ヘルプ (`?` ポップオーバー) | 中   | 完了 (2026-05-14) | HelpHint 新設 + glossary 6 用語を Settings に配置 |
 | 5  | A   | 共有メニュー化 (Notion 等)                 | 中   | 未着手   | 出力先が増える前にやっておく |
 | 6  | A   | 履歴メタ情報の拡充 (VAD ON/OFF)            | 中   | 未着手   | 履歴に VAD 状態が無い。#10 のメタ基盤と共通化 |
 | 7  | B   | Whisper モデルを small/turbo に絞る        | 高   | 未着手   | 後方互換問題が肥大化する前に |
@@ -232,7 +232,24 @@
 4. `/i18n` 品質チェック → `/verify` → コミット。
 5. 任意用語 (モデル名、FTS5 等) は後追いで段階的に追加。
 
-**Status:** 未着手
+### 実施結果 (2026-05-14)
+
+- **HelpHint コンポーネント**: `src/components/ui/HelpHint.tsx` を新設。`@kobalte/core/popover` を直接使用 (リポジトリに Popover ラッパー無し)。`<HelpHint term="..." />` の term キー方式 (typed union `GlossaryTerm`)、`?` アイコンは `FiHelpCircle` (size-3.5、薄いグレー → ホバーでアクセント)、Popover content は `w-72` で title (太字) + body (text-xs muted)。クリック/キーボード (Enter/Space/Esc) は Kobalte 標準対応。`aria-label` は `common.helpHintLabel` から取得。
+- **i18n**: `Dictionary` に `glossary` 名前空間を追加し、必須 6 用語 (vad / llm / whisper / ffmpeg / notionDatabaseId / notionToken) × title/body × ja/en で 24 文字列を実装。`common.helpHintLabel` も ja/en に追加。タイトルは「VAD（音声区間検出）」のように略語先頭で統一し、ja の `settings.vadEnabled` ラベルも同じ表記に合わせた。body は 2-4 行の概念解説。日本語 body は既存 `notionTokenStorageNote` 等のですます体に文体を揃え、英語 body は sentence case。
+- **配置 6 用語** (一般ユーザー向けの Settings ページに限定):
+  - Settings.tsx: VAD 行 (`vad`)、Whisper Model Management Card (`whisper`)
+  - NotionIntegration.tsx: 編集モードの Token / Database ID ラベル (`notionToken` / `notionDatabaseId`)
+  - FfmpegManager.tsx: Tool Management Card (`ffmpeg`)
+  - TextModelManager.tsx: Language Model Management Card (`llm`) — `<Show when={!props.devMode}>` でガードし、Settings でのみ表示
+- **開発メニュー (`/dev`) には HelpHint を置かない**: 開発者は GGML / llama.cpp / whisper.cpp 等の用語を熟知している前提。当初計画にあった `ggml` / `llamaCpp` 用語と DevMenu / dev モード TextModelManager への配置は撤回し、i18n キーも削除。`TextModelManager` は Settings/DevMenu 共用コンポーネントなので、`llm` HelpHint を `!devMode` でガードして dev 側にも漏れないようにした。
+- **whisper.body から実装名を除去**: 「ローカル実行版（whisper.cpp）」のような実装側用語は一般ユーザーには不要なので、機能と「端末内で実行されるため外部送信なし」の安心感だけに整理。
+- **body の文体方針**: 「本アプリ」「The app」のような自明な主語表現を全用語から削除し、機能・用途・プライバシー的な含意の 3 点に絞って簡潔化。
+- **CardTitleWithIcon との組み合わせ**: children に `<span class="flex items-center gap-2">text<HelpHint /></span>` を入れることで、icon と「タイトル + `?`」が gap-3 で離れ、タイトルと `?` は近接 (gap-2) する自然な配置に。
+- **#3 ⇄ #4 の役割分担 (運用ルール)**: 設定行の `description` = 操作の指針 (短く) / `?` ヘルプ = 概念解説。今後の機能追加でブレないよう本実施結果に明記。
+- **スコープ外として残した項目**: 後追い用語 (`large-v3-turbo` / `small` / FTS5 / `wav`)、履歴/オンボーディング画面への展開、TranscriptionOptionsBar の Model ラベル横 (Settings 側の `whisper` ヘルプと重複)、外部リンク (オフライン前提のため本文に閉じる)、開発メニューへのヘルプ追加 (上記理由のため)。
+- **検証**: `/verify` の lint / typecheck / FE 265 tests / build 全通過。視覚確認 (Popover 開閉、Tab/Enter/Esc、ja/en 切替、モバイル幅) はリリース前の通し確認時に併せて実施。
+
+**Status:** 完了 (2026-05-14)
 
 ---
 

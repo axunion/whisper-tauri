@@ -56,15 +56,21 @@ const CardFooter: Component<ComponentProps<"div">> = (props) => {
 };
 
 const CardTitleWithIcon: Component<
-  ComponentProps<"div"> & { icon: () => JSX.Element }
+  ComponentProps<"div"> & {
+    icon: () => JSX.Element;
+    trailing?: JSX.Element;
+  }
 > = (props) => {
-  const [local, others] = splitProps(props, ["icon", "children"]);
+  const [local, others] = splitProps(props, ["icon", "trailing", "children"]);
   return (
     <CardTitle class="flex items-center gap-3" {...others}>
       <span class="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
         {local.icon()}
       </span>
-      {local.children}
+      <span class="flex items-center gap-2">
+        {local.children}
+        {local.trailing}
+      </span>
     </CardTitle>
   );
 };
