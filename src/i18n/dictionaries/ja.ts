@@ -150,7 +150,9 @@ export const ja: Dictionary = {
     timelineTab: "タイムライン",
     summaryTab: "要約",
     cleanTextTab: "整文",
+    shareMenu: "共有",
     shareToNotion: "Notion に送信",
+    shareNotionSetupHint: "Notion 連携を設定する",
   },
   notionShare: {
     dialogTitle: "Notion に送信",

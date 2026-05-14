@@ -143,7 +143,9 @@ export interface Dictionary {
     timelineTab: string;
     summaryTab: string;
     cleanTextTab: string;
+    shareMenu: string;
     shareToNotion: string;
+    shareNotionSetupHint: string;
   };
   notionShare: {
     dialogTitle: string;

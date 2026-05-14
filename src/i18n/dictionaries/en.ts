@@ -149,7 +149,9 @@ export const en: Dictionary = {
     timelineTab: "Timeline",
     summaryTab: "Summary",
     cleanTextTab: "Rewrite",
+    shareMenu: "Share",
     shareToNotion: "Send to Notion",
+    shareNotionSetupHint: "Set up Notion Integration",
   },
   notionShare: {
     dialogTitle: "Send to Notion",

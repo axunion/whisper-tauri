@@ -8,6 +8,8 @@ import {
   FiFileText,
   FiFilm,
   FiGlobe,
+  FiSettings,
+  FiShare2,
   FiType,
 } from "solid-icons/fi";
 import { SiNotion } from "solid-icons/si";
@@ -42,6 +44,7 @@ interface ResultToolbarProps {
   onCleanText: () => void;
   onGenerateTitle: () => void;
   onShareToNotion: () => void;
+  onOpenNotionSetup: () => void;
   isProcessing: boolean;
   isGeneratingTitle: boolean;
   isNotionConnected: boolean;
@@ -53,12 +56,14 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
   const [copied, setCopied] = createSignal(false);
   const [saveOpen, setSaveOpen] = createSignal(false);
   const [aiOpen, setAiOpen] = createSignal(false);
+  const [shareOpen, setShareOpen] = createSignal(false);
   let saveRef: HTMLDivElement | undefined;
   let aiRef: HTMLDivElement | undefined;
+  let shareRef: HTMLDivElement | undefined;
 
   // Close dropdowns on outside click
   createEffect(() => {
-    if (!saveOpen() && !aiOpen()) return;
+    if (!saveOpen() && !aiOpen() && !shareOpen()) return;
     function handler(e: PointerEvent) {
       const target = e.target as Node;
       if (saveOpen() && saveRef && !saveRef.contains(target)) {
@@ -66,6 +71,9 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
       }
       if (aiOpen() && aiRef && !aiRef.contains(target)) {
         setAiOpen(false);
+      }
+      if (shareOpen() && shareRef && !shareRef.contains(target)) {
+        setShareOpen(false);
       }
     }
     document.addEventListener("pointerdown", handler);
@@ -174,6 +182,65 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
           </Show>
         </div>
 
+        {/* Share menu */}
+        <div ref={shareRef} class="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-8"
+            disabled={props.isSharingToNotion}
+            onClick={() => setShareOpen(!shareOpen())}
+            aria-label={t("result.shareMenu")}
+            title={t("result.shareMenu")}
+          >
+            <FiShare2 class="size-4" />
+          </Button>
+          <Show when={shareOpen()}>
+            <div class={dropdownMenuClass}>
+              <Show
+                when={props.isNotionConnected}
+                fallback={
+                  <>
+                    <button
+                      type="button"
+                      class={cn(dropdownItemClass, "opacity-50")}
+                      disabled
+                    >
+                      <SiNotion class={dropdownIconClass} />
+                      {t("result.shareToNotion")}
+                    </button>
+                    <div class="my-1 border-t border-border/30" />
+                    <button
+                      type="button"
+                      class={dropdownItemClass}
+                      onClick={() => {
+                        setShareOpen(false);
+                        props.onOpenNotionSetup();
+                      }}
+                    >
+                      <FiSettings class={dropdownIconClass} />
+                      {t("result.shareNotionSetupHint")}
+                    </button>
+                  </>
+                }
+              >
+                <button
+                  type="button"
+                  class={dropdownItemClass}
+                  disabled={props.isSharingToNotion}
+                  onClick={() => {
+                    setShareOpen(false);
+                    props.onShareToNotion();
+                  }}
+                >
+                  <SiNotion class={dropdownIconClass} />
+                  {t("result.shareToNotion")}
+                </button>
+              </Show>
+            </div>
+          </Show>
+        </div>
+
         {/* Save with format flyout (only for text/timeline) */}
         <Show when={!isTextProcessingTab()}>
           <div ref={saveRef} class="relative">
@@ -202,20 +269,6 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
               </div>
             </Show>
           </div>
-        </Show>
-
-        <Show when={props.isNotionConnected}>
-          <Button
-            variant="ghost"
-            size="icon"
-            class="size-8"
-            disabled={props.isSharingToNotion}
-            onClick={props.onShareToNotion}
-            aria-label={t("result.shareToNotion")}
-            title={t("result.shareToNotion")}
-          >
-            <SiNotion class="size-4" />
-          </Button>
         </Show>
 
         {/* Copy */}

@@ -141,6 +141,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         onShareToNotion={() => {
           void handleShareToNotion();
         }}
+        onOpenNotionSetup={() => navigate("/settings")}
         isProcessing={session.isProcessing()}
         isGeneratingTitle={session.isGeneratingTitle()}
         isNotionConnected={notion.isConfigured()}

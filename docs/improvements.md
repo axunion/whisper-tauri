@@ -28,7 +28,7 @@
 | 2  | A   | ファイル選択ダイアログの言語整合           | 中   | 完了 (2026-05-13) | Info.plist にローカライズ宣言追加 + dialog.* に i18n 集約 |
 | 3  | A   | 設定/開発ページのレイアウト統一            | 高   | 完了 (2026-05-14) | SectionRow 共通化 + 二重枠除去 + VAD 説明文拡充 |
 | 4  | A   | アプリ全体の用語ヘルプ (`?` ポップオーバー) | 中   | 完了 (2026-05-14) | HelpHint 新設 + glossary 6 用語を Settings に配置 |
-| 5  | A   | 共有メニュー化 (Notion 等)                 | 中   | 未着手   | 出力先が増える前にやっておく |
+| 5  | A   | 共有メニュー化 (Notion 等)                 | 中   | 完了 (2026-05-14) | 共有メニュー (FiShare2) 新設 + 未接続時の設定リンク導線 |
 | 6  | A   | 履歴メタ情報の拡充 (VAD ON/OFF)            | 中   | 未着手   | 履歴に VAD 状態が無い。#10 のメタ基盤と共通化 |
 | 7  | B   | Whisper モデルを small/turbo に絞る        | 高   | 未着手   | 後方互換問題が肥大化する前に |
 | 8  | B   | 不要モデルのクリーンアップ                 | 中   | 未着手   | #7 の影響を吸収するために必要 |
@@ -271,7 +271,19 @@
 - アクセシビリティ: ドロップダウン内ボタンは `aria-label` ではなくテキストラベル化する。
 - 履歴ページ (`History`) 側にも同じ共有メニューを移植するか。今は履歴に共有導線がなければスコープ外。
 
-**Status:** 未着手
+### 実施結果 (2026-05-14)
+
+- **スコープの絞り込み**: 「外部連携メニュー」として位置付け、Notion + 将来の Slack/Email 等の足場のみを対象。Copy / Save (txt/srt/vtt) は「ローカル保存・取り出し」と性質が違うため統合せず現状維持。
+- **`ResultToolbar.tsx` 変更**: 旧 `SiNotion` 単独ボタン (Notion 接続時のみ表示) を、`FiShare2` を起点とする共有 DropdownMenu に置換。実装は既存 AI/Save flyout と同じ手書きパターン (`createSignal` + `pointerdown` で outside-close、`shareOpen` を outside-close ハンドラへ統合)。Kobalte DropdownMenu への全面置換は別タスク。
+- **ボタン並び順の調整**: 右側アクションを `AI / Save / Share / Copy` から `AI / Share / Save / Copy` に変更。「外部送信 (Share) → ローカル保存 (Save) → クリップボード (Copy)」の順で右に行くほど距離が近く・即時性が高くなるグラデーションに整理。Save と Share が直接隣接して原則が混ざる違和感を解消した。
+- **未接続時の導線**: メニュー自体は常時表示。Notion 項目をグレーアウト (`opacity-50` + `aria-disabled`) + `<Separator>` + `FiSettings` アイコン付きの「Notion 連携を設定する」ボタンで `/settings` へ `navigate`。未接続ユーザーへの導線を改善 (旧実装ではボタン自体が消えて共有手段が無いように見えていた)。
+- **`useNavigate` の持ち込み**: `ResultToolbar` 内で `@solidjs/router` の `useNavigate` を直接使用。テストは既に `renderWithRouter` でラップ済みのため変更不要。
+- **i18n 追加**: `result.shareMenu` (共有 / Share)、`result.shareNotionSetupHint` (Notion 連携を設定する / Set up Notion Integration) を ja/en に追加。既存 `result.shareToNotion` はメニュー項目ラベルとして再利用。
+- **履歴詳細への自動反映**: `ResultViewer` は `TranscriptionResult` と `HistoryDetail` の両方で使用されているため、Toolbar 変更により履歴詳細にも自動で共有メニューが反映される (追加作業なし)。履歴一覧 (`History.tsx`) には独立した共有導線が無いためスコープ外。
+- **スコープ外として残した項目**: Kobalte DropdownMenu への全面置換 (既存 AI/Save 含めた整合作業として別タスク)、最近使った1件のトップレベル固定表示、Copy/Save の共有メニュー統合 (出力先が増えてから再検討)、履歴一覧への共有導線追加。
+- **検証**: `/verify` の lint / typecheck / FE 265 tests / BE 325 tests / build 全通過。
+
+**Status:** 完了 (2026-05-14)
 
 ---
 
