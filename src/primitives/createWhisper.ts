@@ -32,6 +32,8 @@ const {
   setIsDownloading,
   language,
   setLanguage,
+  vadEnabledOverride,
+  setVadEnabledOverride,
   error,
   setError,
   currentTaskId,
@@ -51,6 +53,9 @@ const {
   const [isProcessing, setIsProcessing] = createSignal(false);
   const [isDownloading, setIsDownloading] = createSignal(false);
   const [language, setLanguage] = createSignal<string | null>(null);
+  const [vadEnabledOverride, setVadEnabledOverride] = createSignal<
+    boolean | null
+  >(null);
   const [error, setError] = createSignal<AppError | null>(null);
 
   // Internal state for cancellation
@@ -75,6 +80,8 @@ const {
     setIsDownloading,
     language,
     setLanguage,
+    vadEnabledOverride,
+    setVadEnabledOverride,
     error,
     setError,
     currentTaskId,
@@ -91,6 +98,14 @@ listen<TranscriptionProgress>("whisper:progress", (event) => {
 listen<DownloadProgress>("model:download-progress", (event) => {
   setDownloadProgress(event.payload);
 }).catch(console.error);
+
+function vadEnabled(): boolean {
+  return vadEnabledOverride() ?? createSettings().vadEnabled();
+}
+
+function setVadEnabled(enabled: boolean): void {
+  setVadEnabledOverride(enabled);
+}
 
 function autoSelectModel(): void {
   if (selectedModel()) return;
@@ -189,7 +204,7 @@ async function startTranscription(overrideAudioPath?: string): Promise<void> {
   });
   try {
     let vadModelPath: string | null = null;
-    if (createSettings().vadEnabled()) {
+    if (vadEnabled()) {
       vadModelPath = await invoke<string>("ensure_vad_model");
     }
 
@@ -232,6 +247,7 @@ const whisperInstance = {
   selectedModel,
   file,
   language,
+  vadEnabled,
   progress,
   downloadProgress,
   result,
@@ -245,6 +261,7 @@ const whisperInstance = {
   selectFile,
   setFile,
   setLanguage,
+  setVadEnabled,
   downloadModel,
   deleteModel,
   startTranscription,
@@ -268,6 +285,7 @@ export function _resetWhisperForTesting(): void {
   setIsProcessing(false);
   setIsDownloading(false);
   setLanguage(null);
+  setVadEnabledOverride(null);
   setError(null);
   setCurrentTaskId(null);
 }

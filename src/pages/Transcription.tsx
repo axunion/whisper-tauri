@@ -169,7 +169,7 @@ export default function Transcription() {
         duration: transcriptionResult.duration,
         text: transcriptionResult.text,
         segments: transcriptionResult.segments,
-        vadEnabled: settings.vadEnabled(),
+        vadEnabled: whisper.vadEnabled(),
       });
       if (id) setHistoryId(id);
     }
@@ -288,6 +288,7 @@ export default function Transcription() {
                       downloadedModels={downloadedModels()}
                       selectedModel={whisper.selectedModel()}
                       language={whisper.language()}
+                      vadEnabled={whisper.vadEnabled()}
                       canStart={
                         activeTab() === "file"
                           ? canStartFile()
@@ -298,6 +299,7 @@ export default function Transcription() {
                         whisper.setLanguage(lang);
                         settings.update({ whisperLanguage: lang });
                       }}
+                      onVadChange={whisper.setVadEnabled}
                       onStart={
                         activeTab() === "file"
                           ? handleStartFile

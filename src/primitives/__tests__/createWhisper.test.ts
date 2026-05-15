@@ -420,6 +420,50 @@ describe("createWhisper", () => {
     });
   });
 
+  describe("vadEnabled", () => {
+    it("should default to settings value (true) when no override set", () => {
+      createRoot((dispose) => {
+        const whisper = createWhisper();
+        expect(whisper.vadEnabled()).toBe(true);
+        dispose();
+      });
+    });
+
+    it("should reflect explicit override", () => {
+      createRoot((dispose) => {
+        const whisper = createWhisper();
+        whisper.setVadEnabled(false);
+        expect(whisper.vadEnabled()).toBe(false);
+        whisper.setVadEnabled(true);
+        expect(whisper.vadEnabled()).toBe(true);
+        dispose();
+      });
+    });
+
+    it("should skip ensure_vad_model when override is false", async () => {
+      vi.mocked(invoke).mockResolvedValue(mockResult);
+
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        const model = mockModel();
+        whisper.selectModel(model);
+        whisper.setFile(mockFile);
+        whisper.setVadEnabled(false);
+
+        await whisper.startTranscription();
+
+        expect(invoke).not.toHaveBeenCalledWith("ensure_vad_model");
+        expect(invoke).toHaveBeenCalledWith("transcribe_audio", {
+          audioPath: mockFile.path,
+          modelPath: model.path,
+          language: null,
+          vadModelPath: null,
+        });
+        dispose();
+      });
+    });
+  });
+
   describe("cancelTranscription", () => {
     it("should invoke cancel_transcription with task id", async () => {
       vi.mocked(invoke).mockResolvedValue(undefined);

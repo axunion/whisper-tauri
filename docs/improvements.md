@@ -30,7 +30,7 @@
 | 4  | A   | アプリ全体の用語ヘルプ (`?` ポップオーバー) | 中   | 完了 (2026-05-14) | HelpHint 新設 + glossary 6 用語を Settings に配置 |
 | 5  | A   | 共有メニュー化 (Notion 等)                 | 中   | 完了 (2026-05-14) | 共有メニュー (FiShare2) 新設 + 未接続時の設定リンク導線 |
 | 6  | A   | 履歴メタ情報の拡充 (VAD ON/OFF)            | 中   | 完了 (2026-05-15) | 履歴に vad_enabled 列追加 + 詳細メタ行表示。#10 のメタ基盤として再利用可 |
-| 15 | A   | 文字起こし時の VAD ON/OFF 選択             | 中   | 未着手   | 設定はデフォルト値として残し、実行時もトグル可能に。#6 と関連 |
+| 15 | A   | 文字起こし時の VAD ON/OFF 選択             | 中   | 完了 (2026-05-15) | createWhisper に override signal 新設 + Bar に Checkbox 列。設定は起動時デフォルトとして機能継続 |
 | 7  | B   | Whisper モデルを small/turbo に絞る        | 高   | 未着手   | 後方互換問題が肥大化する前に |
 | 8  | B   | 不要モデルのクリーンアップ                 | 中   | 未着手   | #7 の影響を吸収するために必要 |
 | 9  | C   | 要約の充実                                 | 中   | 未着手   | #10 の前提 |
@@ -389,7 +389,18 @@
 4. `Transcription.tsx::saveToHistory` で履歴に渡す `vadEnabled` も実行時値に差し替え。
 5. i18n キー (新設 or 流用) を決めて反映 → `/i18n` → `/verify` → コミット。
 
-**Status:** 未着手
+### 実施結果 (2026-05-15)
+
+- **状態管理: override + fallback**: `createWhisper.ts` の module-level `createRoot` 内に `vadEnabledOverride: boolean | null` signal を新設。getter `vadEnabled()` は `override() ?? createSettings().vadEnabled()` で解決。初期値 `null` 時は設定値、Bar 操作後は override 固定で以降 Settings 変更が伝播しなくなる挙動。doc の「設定をいじってもオプションバーは触らない」を満たす最小実装。
+- **シンク方針**: Bar → Settings の自動同期は意図的に実装しない。`onVadChange` は `whisper.setVadEnabled` のみを呼び `settings.update` には触らない。「Settings = 起動時デフォルト / Bar = 今回の選択」の役割分担を維持。
+- **`saveToHistory` 置換**: `settings.vadEnabled()` → `whisper.vadEnabled()`。履歴の `vadEnabled` 列が「実行時に実際に使われた値」を反映するようになり、#6 の意味が拡張。
+- **Checkbox ラッパー拡張**: optional `children` を `CheckboxPrimitive.Label` で wrap (ラベルクリックで toggle される a11y 標準動作)。副次修正として `items-top` (Tailwind に存在しない無効クラス) → `items-center`。Kobalte の render-prop children 型はラッパーレベルで `JSX.Element` に絞り、Settings.tsx の既存利用 (children なし) は影響なし。
+- **UI**: grid `[2fr_2fr_3fr]` → `[2fr_2fr_auto_3fr]`、Language と Start の間に Checkbox + 'VAD' inline を `h-11 self-end` で配置 (Select trigger と垂直中央が揃う)。詳細オプションアコーディオン化は素直さ優先で却下。
+- **i18n**: 新規追加なし。`t("settings.vadEnabled")` を流用 (表示文字列 "VAD" が一致するため doc が認めた DRY 案)。
+- **テスト**: `createWhisper.test.ts` に override 動作の 3 ケース追加 (デフォルト値、override 反映、override false で `ensure_vad_model` をスキップ)。
+- **検証**: `/verify` 全通過 (FE 268 / BE 330 / build)。`/i18n` 構造整合性 OK。
+
+**Status:** 完了 (2026-05-15)
 
 ---
 

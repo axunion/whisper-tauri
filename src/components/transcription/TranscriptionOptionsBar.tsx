@@ -1,6 +1,7 @@
 import { FiPlay } from "solid-icons/fi";
 import { Show } from "solid-js";
 import { Button } from "~/components/ui/Button";
+import { Checkbox } from "~/components/ui/Checkbox";
 import {
   Select,
   SelectContent,
@@ -20,9 +21,11 @@ interface TranscriptionOptionsBarProps {
   downloadedModels: ModelInfo[];
   selectedModel: ModelInfo | null;
   language: string | null;
+  vadEnabled: boolean;
   canStart: boolean;
   onSelectModel: (model: ModelInfo) => void;
   onLanguageChange: (language: string | null) => void;
+  onVadChange: (enabled: boolean) => void;
   onStart: () => void;
 }
 
@@ -50,7 +53,7 @@ export function TranscriptionOptionsBar(props: TranscriptionOptionsBarProps) {
           </p>
         }
       >
-        <div class="grid grid-cols-[2fr_2fr_3fr] gap-3">
+        <div class="grid grid-cols-[2fr_2fr_auto_3fr] gap-3">
           <div class="space-y-3">
             <span class="text-xs font-medium text-muted-foreground">
               {t("transcription.model")}
@@ -120,6 +123,11 @@ export function TranscriptionOptionsBar(props: TranscriptionOptionsBarProps) {
               </SelectTrigger>
               <SelectContent />
             </Select>
+          </div>
+          <div class="flex h-11 items-center self-end">
+            <Checkbox checked={props.vadEnabled} onChange={props.onVadChange}>
+              {t("settings.vadEnabled")}
+            </Checkbox>
           </div>
           <div class="flex items-end">
             <Button

@@ -2,7 +2,7 @@ import * as CheckboxPrimitive from "@kobalte/core/checkbox";
 import type { PolymorphicProps } from "@kobalte/core/polymorphic";
 import type { VariantProps } from "class-variance-authority";
 import { cva } from "class-variance-authority";
-import type { ValidComponent } from "solid-js";
+import type { JSX, ValidComponent } from "solid-js";
 import { splitProps } from "solid-js";
 
 import { cn } from "~/lib/utils";
@@ -28,11 +28,14 @@ const checkboxControlVariants = cva(
   },
 );
 
-type CheckboxRootProps<T extends ValidComponent = "div"> =
-  CheckboxPrimitive.CheckboxRootProps<T> &
-    VariantProps<typeof checkboxControlVariants> & {
-      class?: string | undefined;
-    };
+type CheckboxRootProps<T extends ValidComponent = "div"> = Omit<
+  CheckboxPrimitive.CheckboxRootProps<T>,
+  "children"
+> &
+  VariantProps<typeof checkboxControlVariants> & {
+    class?: string | undefined;
+    children?: JSX.Element;
+  };
 
 const Checkbox = <T extends ValidComponent = "div">(
   props: PolymorphicProps<T, CheckboxRootProps<T>>,
@@ -40,10 +43,11 @@ const Checkbox = <T extends ValidComponent = "div">(
   const [local, others] = splitProps(props as CheckboxRootProps, [
     "class",
     "colorScheme",
+    "children",
   ]);
   return (
     <CheckboxPrimitive.Root
-      class={cn("items-top flex space-x-2", local.class)}
+      class={cn("flex items-center space-x-2", local.class)}
       {...others}
     >
       <CheckboxPrimitive.Input class="peer" />
@@ -67,6 +71,11 @@ const Checkbox = <T extends ValidComponent = "div">(
           </svg>
         </CheckboxPrimitive.Indicator>
       </CheckboxPrimitive.Control>
+      {local.children !== undefined && (
+        <CheckboxPrimitive.Label class="cursor-pointer select-none text-sm leading-none">
+          {local.children}
+        </CheckboxPrimitive.Label>
+      )}
     </CheckboxPrimitive.Root>
   );
 };
