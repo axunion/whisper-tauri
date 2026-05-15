@@ -28,6 +28,7 @@ export interface HistoryMeta {
   duration: number;
   /** Preview of the transcribed text */
   textPreview: string;
+  vadEnabled: boolean | null;
 }
 
 /**
@@ -50,6 +51,7 @@ export interface HistoryEntry {
   text: string;
   /** Segments with timing information */
   segments: HistorySegment[];
+  vadEnabled: boolean | null;
 }
 
 /**
@@ -68,6 +70,7 @@ export interface HistorySaveParams {
   text: string;
   /** Segments with timing information */
   segments: HistorySegment[];
+  vadEnabled?: boolean;
 }
 
 /** Sort order for history listing. */

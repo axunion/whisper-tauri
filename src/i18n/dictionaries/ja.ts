@@ -80,6 +80,8 @@ export const ja: Dictionary = {
     sortDesc: "降順に並べ替え",
     select: "選択",
     selectedCount: "{count}件選択中",
+    vadEnabledLabel: "VAD: ON",
+    vadDisabledLabel: "VAD: OFF",
   },
   settings: {
     title: "設定",

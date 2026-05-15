@@ -56,8 +56,8 @@ pub fn save_entry(db_path: &Path, params: &HistorySaveParams) -> Result<String, 
     let tx = conn.unchecked_transaction()?;
 
     tx.execute(
-        "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed, vad_enabled)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         rusqlite::params![
             id,
             created_at,
@@ -67,6 +67,7 @@ pub fn save_entry(db_path: &Path, params: &HistorySaveParams) -> Result<String, 
             params.duration,
             text_compressed,
             segments_compressed,
+            params.vad_enabled,
         ],
     )?;
 
@@ -89,7 +90,7 @@ pub fn list_entries(
     let conn = Connection::open(db_path)?;
 
     let mut sql =
-        String::from("SELECT id, created_at, file_name, language, model_id, duration, text_compressed FROM history");
+        String::from("SELECT id, created_at, file_name, language, model_id, duration, text_compressed, vad_enabled FROM history");
     let mut conditions = Vec::new();
     let mut params_vec: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
 
@@ -141,7 +142,7 @@ pub fn get_entry(db_path: &Path, id: &str) -> Result<HistoryEntry, HistoryError>
     let conn = Connection::open(db_path)?;
 
     let mut stmt = conn.prepare(
-        "SELECT id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed
+        "SELECT id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed, vad_enabled
          FROM history WHERE id = ?1",
     )?;
 
@@ -156,6 +157,7 @@ pub fn get_entry(db_path: &Path, id: &str) -> Result<HistoryEntry, HistoryError>
                 row.get::<_, u64>(5)?,
                 row.get::<_, Vec<u8>>(6)?,
                 row.get::<_, Vec<u8>>(7)?,
+                row.get::<_, Option<bool>>(8)?,
             ))
         })
         .map_err(|e| match e {
@@ -172,6 +174,7 @@ pub fn get_entry(db_path: &Path, id: &str) -> Result<HistoryEntry, HistoryError>
         duration,
         text_compressed,
         segments_compressed,
+        vad_enabled,
     ) = entry;
     let text = decompress_text(&text_compressed)?;
     let segments_json = decompress_text(&segments_compressed)?;
@@ -187,6 +190,7 @@ pub fn get_entry(db_path: &Path, id: &str) -> Result<HistoryEntry, HistoryError>
         duration,
         text,
         segments,
+        vad_enabled,
     })
 }
 
@@ -299,6 +303,55 @@ mod tests {
         assert_eq!(entry.segments.len(), 2);
         assert_eq!(entry.segments[0].text, "This is a test");
         assert_eq!(entry.segments[1].text, "transcription.");
+        assert_eq!(entry.vad_enabled, Some(true));
+    }
+
+    #[test]
+    fn save_entry_persists_vad_enabled_false() {
+        let (_dir, path) = setup_db();
+        let mut params = sample_params();
+        params.vad_enabled = Some(false);
+
+        let id = save_entry(&path, &params).expect("Failed to save");
+        let entry = get_entry(&path, &id).expect("Failed to get");
+        assert_eq!(entry.vad_enabled, Some(false));
+
+        let metas = list_entries(&path, &HistoryFilter::default()).expect("list");
+        assert_eq!(metas.len(), 1);
+        assert_eq!(metas[0].vad_enabled, Some(false));
+    }
+
+    #[test]
+    fn get_entry_returns_none_for_legacy_rows_without_vad_enabled() {
+        let (_dir, path) = setup_db();
+
+        let conn = Connection::open(&path).expect("open db");
+        let text_compressed = compress_text("legacy").expect("compress text");
+        let segments_compressed = compress_text("[]").expect("compress segments");
+
+        conn.execute(
+            "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            rusqlite::params![
+                "legacy-entry",
+                "2026-01-15T10:00:00",
+                "legacy.wav",
+                "ja",
+                "small",
+                10000_i64,
+                text_compressed,
+                segments_compressed,
+            ],
+        )
+        .expect("insert legacy");
+        drop(conn);
+
+        let entry = get_entry(&path, "legacy-entry").expect("get");
+        assert_eq!(entry.vad_enabled, None);
+
+        let metas = list_entries(&path, &HistoryFilter::default()).expect("list");
+        assert_eq!(metas.len(), 1);
+        assert_eq!(metas[0].vad_enabled, None);
     }
 
     #[test]

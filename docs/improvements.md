@@ -29,7 +29,8 @@
 | 3  | A   | 設定/開発ページのレイアウト統一            | 高   | 完了 (2026-05-14) | SectionRow 共通化 + 二重枠除去 + VAD 説明文拡充 |
 | 4  | A   | アプリ全体の用語ヘルプ (`?` ポップオーバー) | 中   | 完了 (2026-05-14) | HelpHint 新設 + glossary 6 用語を Settings に配置 |
 | 5  | A   | 共有メニュー化 (Notion 等)                 | 中   | 完了 (2026-05-14) | 共有メニュー (FiShare2) 新設 + 未接続時の設定リンク導線 |
-| 6  | A   | 履歴メタ情報の拡充 (VAD ON/OFF)            | 中   | 未着手   | 履歴に VAD 状態が無い。#10 のメタ基盤と共通化 |
+| 6  | A   | 履歴メタ情報の拡充 (VAD ON/OFF)            | 中   | 完了 (2026-05-15) | 履歴に vad_enabled 列追加 + 詳細メタ行表示。#10 のメタ基盤として再利用可 |
+| 15 | A   | 文字起こし時の VAD ON/OFF 選択             | 中   | 未着手   | 設定はデフォルト値として残し、実行時もトグル可能に。#6 と関連 |
 | 7  | B   | Whisper モデルを small/turbo に絞る        | 高   | 未着手   | 後方互換問題が肥大化する前に |
 | 8  | B   | 不要モデルのクリーンアップ                 | 中   | 未着手   | #7 の影響を吸収するために必要 |
 | 9  | C   | 要約の充実                                 | 中   | 未着手   | #10 の前提 |
@@ -325,6 +326,68 @@
 3. TS: `src/types/history.ts` の型同期、`createWhisper.ts` の save 呼び出しに `vadEnabled` を渡すよう変更。
 4. UI: 履歴詳細にメタ情報セクションを追加し VAD 状態を表示。一覧表示の有無はユーザー確認 (実装時に画面を見せて判断)。
 5. i18n キー追加 → `/i18n` 品質チェック → `/verify` → コミット。
+
+### 実施結果 (2026-05-15)
+
+- **DB スキーマ**: `history` テーブルに `vad_enabled INTEGER` (NULL 許容) を追加。既存履歴は NULL のまま (= 不明) を維持し、データの嘘を作らない方針。新規保存は必ず `0/1` のいずれか。
+- **冪等 migration**: `db/mod.rs::init_db` に `add_column_if_missing` ヘルパーを新設し `PRAGMA table_info` で列存在を確認してから `ALTER TABLE` を実行。新規 DB は `CREATE TABLE` 側で初めから列を持ち、旧 DB は再起動時に列が追加される。`init_db_adds_vad_enabled_column_to_old_schema` テストで旧スキーマ → 新スキーマ移行を検証。
+- **Rust types**: `HistoryEntry` / `HistoryMeta` / `HistorySaveParams` の3構造体に `vad_enabled: Option<bool>` を追加。`HistorySaveParams` のみ `#[serde(default, skip_serializing_if = "Option::is_none")]` を付与し、フロントから省略可 (= NULL になる) を維持。シリアライゼーション round-trip を types テストで確認。
+- **保存・取得パス**: `entries.rs::save_entry` (INSERT)、`list_entries` (SELECT)、`get_entry` (SELECT)、`search.rs::search_entries` (SELECT、`meta_row_mapper` を再利用するため必須)、`rows.rs::MetaRow` / `meta_row_mapper` / `meta_from_row` の全経路を更新。`save_entry_persists_vad_enabled_false` と `get_entry_returns_none_for_legacy_rows_without_vad_enabled` で round-trip と既存行 NULL 動作を検証。
+- **TS 型同期**: `src/types/history.ts` の3 interface に `vadEnabled` を追加。`HistoryMeta` / `HistoryEntry` は `boolean | null` (必須)、`HistorySaveParams` は `boolean` (optional) で fail-safe に。
+- **保存呼び出し**: `pages/Transcription.tsx::saveToHistory` で `createSettings().vadEnabled()` を `HistorySaveParams` に渡すよう変更 (唯一の保存箇所)。`createWhisper.ts` は変更不要 (履歴保存は持っていない)。
+- **HistoryMeta に含めるか**: SELECT に列を1つ加えるだけのコスト差で将来 (例: 一覧バッジ・絞り込み) の DB 再変更を避けられるため、**含める方針**を採用。一覧 UI は密度を維持するため変更しない (詳細でのみ表示)。
+- **表示**: `HistoryDetail.tsx::metadataJSX` および `HistoryList.tsx` の Row 3 メタ行に `FiActivity` アイコン付き要素を追加。`vadEnabled !== null` のときのみ表示 (NULL は非表示)、`true` で「VAD: ON」、`false` で「VAD: OFF」。`vadUnknown` ラベルは作らないシンプル設計。一覧では日付 / モデル / VAD を左に集約し、長さは引き続き `ml-auto` で右端固定。
+- **i18n**: `Dictionary.history` に `vadEnabledLabel` / `vadDisabledLabel` を追加。ja/en 共通で「VAD: ON / VAD: OFF」(ユーザー判断で状態識別子として大文字統一)。`settings.vadEnabled = "VAD"` (チェックボックスラベル) や `glossary.vad.title = "VAD（音声区間検出）"` (用語解説タイトル) とは役割が異なるため衝突なし。`/i18n` 監査クリア。
+- **フィクスチャ更新**: `createHistory.test.ts` の `mockMeta` / `mockEntry` に `vadEnabled: true` を追加。
+- **アイコン色での状態表現を試して却下**: アクセント色 (`text-primary` violet) で有効/無効を区別する案を試したが、テキスト「有効/無効」のままだと違和感があるとの判断で取り下げ。最終的にラベルを「VAD: ON / VAD: OFF」に変更し、アイコン色は親継承 (`text-muted-foreground`) のままで他メタと統一感を維持。
+- **スコープ外として残した項目**: VAD threshold / speech_pad_ms / language ヒント等の他メタ (本タスクは VAD ON/OFF に限定、`tuning.md` の方針通り)、Notion メタブロック (#10) との連携 (本タスクは履歴側の足場のみ)。
+- **検証**: `/verify` の lint / typecheck / FE 265 tests / BE 330 tests / build 全通過。`/i18n` 構造・プレースホルダ・表記・使用箇所すべてクリア。
+
+**Status:** 完了 (2026-05-15)
+
+---
+
+## 15. 文字起こし時の VAD ON/OFF 選択
+
+### 背景
+- 現状: VAD の ON/OFF は **設定画面でグローバル切替**のみ (`settings.vadEnabled`)。文字起こしを開始する瞬間にこの設定値が読まれて挙動が決まる (`createWhisper.ts::startTranscription` で `settings.vadEnabled()` を見て `vad_model_path` を渡すか判定)。
+- 結果として「普段は VAD ON で使っているが、この録音だけは無音区間を残したい / VAD で削られたか確かめたい」というケースで、設定 → トグル OFF → 文字起こし → 設定に戻して再 ON、という往復が必要。
+- #6 (履歴メタ拡充) で実行時の VAD 状態を履歴に残せるようになったが、その元データは設定値のスナップショットでしかない。実行時に都度選べるなら、履歴と UX の両方で意味が増す。
+
+### 案
+- **`TranscriptionOptionsBar.tsx` に VAD トグルを追加**:
+  - 既存のモデル選択 / 言語選択と同じ行に配置。
+  - solid-ui の `Switch` (Kobalte ベース、設定画面で使用中のもの) を流用。
+  - 初期値は `createSettings().vadEnabled()` から取得 (= 設定はデフォルト値として残す)。
+- **状態保持**:
+  - `createWhisper` にローカル signal `vadEnabledOverride: boolean | null` を持たせ、ユーザーが触ったら override、null のままなら設定値を採用、という形が素直。
+  - もしくは `createSettings().vadEnabled()` を毎回読み直すだけで十分なら override 不要。実行ごとに「設定値で初期化、トグルで上書き」というスナップショット方式が分かりやすい。
+- **既存設定との関係**:
+  - 設定画面の `settings.vadEnabled` は **デフォルト値**として残す (削除しない)。
+  - 「常に VAD ON で使う人」は設定 1 回で済む、「都度切り替えたい人」はオプションバーで操作、の使い分け。
+
+### 検討事項
+- **UI 配置と密度**:
+  - オプションバーは現状すでにモデル / 言語 / (開始ボタン) があり、ここに VAD トグルを足すと密度上昇。
+  - 上級者向けと判断して「詳細オプション」アコーディオン配下に置くのも選択肢。ただし VAD は今回 #4 で用語ヘルプも整備済みなので、一般ユーザーにも見える位置で OK と判断する素直さの方が `tuning.md` の方針に近い。
+- **i18n キー命名**:
+  - トグルラベルは `settings.vadEnabled = "VAD"` をそのまま流用する案と、`transcription.vadEnabled` を新設する案がある。表示文字列が同じなら流用が DRY、ただし用途文脈が違うので将来ラベル変更しやすさを取って新設する手もある。
+  - 用語ヘルプ (`HelpHint term="vad"`) もオプションバー側に置くか検討 (Settings の Whisper Card に既にあるので重複を避ける選択も妥当)。
+- **VAD トグル切替時のフィードバック**:
+  - トグル変更で即座に処理が始まるわけではないので、切り替え自体は静かに反映するだけで OK。「次回の文字起こしから適用」というヒントは過剰。
+- **設定値とオプションバー値のシンク**:
+  - **シンクしない方針が素直**。設定 = デフォルト (起動時 / 新規セッション開始時の初期値)、オプションバー = 今回の選択。設定をいじってもオプションバーは触らない。
+  - 双方向シンクすると「設定で OFF → オプションバーで ON → 別ファイルを開いて文字起こし」のような流れで設定が暗黙に書き換わって混乱する。
+- **#6 (履歴メタ) との関係**:
+  - 履歴保存パス (`Transcription.tsx::saveToHistory`) で渡す `vadEnabled` を、設定値ではなく**実際に文字起こし時に使った値** (= オプションバーの値) に切り替える。
+  - これで履歴の vad_enabled が真に「この実行で使われた値」を反映する。#6 完了時点では実質一致しているが、本タスク以降は意味が変わる。
+
+### 実装ステップ案
+1. `createWhisper.ts` に「実行時の VAD 状態」を持たせる (signal or 引数)。設定値で初期化。
+2. `TranscriptionOptionsBar.tsx` に Switch を追加し、状態と双方向バインド。
+3. `startTranscription` 内で `settings.vadEnabled()` ではなく実行時値を使うように変更。
+4. `Transcription.tsx::saveToHistory` で履歴に渡す `vadEnabled` も実行時値に差し替え。
+5. i18n キー (新設 or 流用) を決めて反映 → `/i18n` → `/verify` → コミット。
 
 **Status:** 未着手
 

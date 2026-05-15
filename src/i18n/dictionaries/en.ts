@@ -79,6 +79,8 @@ export const en: Dictionary = {
     sortDesc: "Sort descending",
     select: "Select",
     selectedCount: "{count} selected",
+    vadEnabledLabel: "VAD: ON",
+    vadDisabledLabel: "VAD: OFF",
   },
   settings: {
     title: "Settings",

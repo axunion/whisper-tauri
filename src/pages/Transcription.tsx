@@ -169,6 +169,7 @@ export default function Transcription() {
         duration: transcriptionResult.duration,
         text: transcriptionResult.text,
         segments: transcriptionResult.segments,
+        vadEnabled: settings.vadEnabled(),
       });
       if (id) setHistoryId(id);
     }

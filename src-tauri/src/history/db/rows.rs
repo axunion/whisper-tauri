@@ -11,6 +11,7 @@ pub struct MetaRow {
     pub(super) model_id: String,
     pub(super) duration: u64,
     pub(super) text_compressed: Vec<u8>,
+    pub(super) vad_enabled: Option<bool>,
 }
 
 /// Row shape for a query against the `ai_content` table.
@@ -27,7 +28,7 @@ pub struct AiContentRow {
 /// Extracts a [`MetaRow`] from a rusqlite row.
 ///
 /// Expects columns: `id(0)`, `created_at(1)`, `file_name(2)`, `language(3)`,
-/// `model_id(4)`, `duration(5)`, `text_compressed(6)`.
+/// `model_id(4)`, `duration(5)`, `text_compressed(6)`, `vad_enabled(7)`.
 ///
 /// # Errors
 ///
@@ -41,6 +42,7 @@ pub fn meta_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<MetaRow> {
         model_id: row.get(4)?,
         duration: row.get(5)?,
         text_compressed: row.get(6)?,
+        vad_enabled: row.get(7)?,
     })
 }
 
@@ -60,6 +62,7 @@ pub fn meta_from_row(row: MetaRow) -> Result<HistoryMeta, HistoryError> {
         model_id: row.model_id,
         duration: row.duration,
         text_preview: preview,
+        vad_enabled: row.vad_enabled,
     })
 }
 

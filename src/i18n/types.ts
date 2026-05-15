@@ -78,6 +78,8 @@ export interface Dictionary {
     sortDesc: string;
     select: string;
     selectedCount: string;
+    vadEnabledLabel: string;
+    vadDisabledLabel: string;
   };
   settings: {
     title: string;

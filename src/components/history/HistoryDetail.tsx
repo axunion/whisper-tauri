@@ -8,6 +8,7 @@ import {
 } from "solid-icons/fi";
 import type { Component } from "solid-js";
 import { createSignal, Show } from "solid-js";
+import { VadBadge } from "~/components/history/VadBadge";
 import { ResultViewer } from "~/components/transcription/ResultViewer";
 import { useI18n } from "~/i18n";
 import { formatDate, formatDuration } from "~/lib/format";
@@ -74,6 +75,7 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
         <FiMusic class="size-3" />
         {props.entry.modelId}
       </span>
+      <VadBadge vadEnabled={props.entry.vadEnabled} />
     </span>
   );
 

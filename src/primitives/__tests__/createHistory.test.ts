@@ -17,6 +17,7 @@ const mockMeta = (overrides?: Partial<HistoryMeta>): HistoryMeta => ({
   modelId: "large-v3",
   duration: 60000,
   textPreview: "This is a test transcription...",
+  vadEnabled: true,
   ...overrides,
 });
 
@@ -32,6 +33,7 @@ const mockEntry: HistoryEntry = {
     { start: 0, end: 3000, text: "This is a test" },
     { start: 3000, end: 5000, text: "transcription." },
   ],
+  vadEnabled: true,
 };
 
 const mockSaveParams: HistorySaveParams = {

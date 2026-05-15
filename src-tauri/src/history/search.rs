@@ -91,7 +91,7 @@ pub fn search_entries(
     }
 
     let mut sql = String::from(
-        "SELECT h.id, h.created_at, h.file_name, h.language, h.model_id, h.duration, h.text_compressed
+        "SELECT h.id, h.created_at, h.file_name, h.language, h.model_id, h.duration, h.text_compressed, h.vad_enabled
          FROM history_fts f
          JOIN history h ON h.id = f.history_id
          WHERE history_fts MATCH ?1",

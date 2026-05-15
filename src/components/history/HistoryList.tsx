@@ -9,6 +9,7 @@ import {
 import type { Component, JSX } from "solid-js";
 import { For, Show } from "solid-js";
 import { CheckIndicator } from "~/components/history/CheckIndicator";
+import { VadBadge } from "~/components/history/VadBadge";
 import { useI18n } from "~/i18n";
 import { formatDate, formatDuration } from "~/lib/format";
 import type { HistoryMeta } from "~/types";
@@ -95,7 +96,6 @@ const HistoryList: Component<HistoryListProps> = (props) => {
                 <p class="mt-2.5 line-clamp-2 text-xs text-muted-foreground">
                   {entry.textPreview}
                 </p>
-                {/* Row 3: Date (left) + Model (center) + Duration (right) */}
                 <div class="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
                   <span class="inline-flex items-center gap-1">
                     <FiCalendar class="size-3" />
@@ -105,6 +105,7 @@ const HistoryList: Component<HistoryListProps> = (props) => {
                     <FiMusic class="size-3" />
                     {entry.modelId}
                   </span>
+                  <VadBadge vadEnabled={entry.vadEnabled} />
                   <span class="ml-auto inline-flex items-center gap-1">
                     <FiClock class="size-3" />
                     {formatDuration(entry.duration)}

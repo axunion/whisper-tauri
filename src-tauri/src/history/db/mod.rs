@@ -24,6 +24,28 @@ pub fn db_path(app_data_dir: &Path) -> PathBuf {
     app_data_dir.join("history.db")
 }
 
+fn add_column_if_missing(
+    conn: &Connection,
+    table: &str,
+    column: &str,
+    column_type: &str,
+) -> Result<(), HistoryError> {
+    let mut stmt = conn.prepare(&format!("PRAGMA table_info({table})"))?;
+    let exists = stmt
+        .query_map([], |row| row.get::<_, String>(1))?
+        .filter_map(Result::ok)
+        .any(|name| name == column);
+
+    if !exists {
+        conn.execute(
+            &format!("ALTER TABLE {table} ADD COLUMN {column} {column_type}"),
+            [],
+        )?;
+    }
+
+    Ok(())
+}
+
 /// Initializes the history database, creating tables and indices if they don't exist.
 /// Also initializes the FTS5 index and migrates existing data if needed.
 ///
@@ -41,10 +63,13 @@ pub fn init_db(db_path: &Path) -> Result<(), HistoryError> {
             model_id TEXT NOT NULL,
             duration INTEGER NOT NULL,
             text_compressed BLOB NOT NULL,
-            segments_compressed BLOB NOT NULL
+            segments_compressed BLOB NOT NULL,
+            vad_enabled INTEGER
         );
         CREATE INDEX IF NOT EXISTS idx_history_created_at ON history(created_at);",
     )?;
+
+    add_column_if_missing(&conn, "history", "vad_enabled", "INTEGER")?;
 
     super::search::init_fts(&conn)?;
 
@@ -104,6 +129,7 @@ pub(crate) mod test_helpers {
                     text: "transcription.".to_string(),
                 },
             ],
+            vad_enabled: Some(true),
         }
     }
 }
@@ -131,6 +157,41 @@ mod tests {
     fn init_db_is_idempotent() {
         let (_dir, path) = setup_db();
         init_db(&path).expect("Second init should succeed");
+    }
+
+    #[test]
+    fn init_db_adds_vad_enabled_column_to_old_schema() {
+        let dir = tempfile::TempDir::new().expect("create temp dir");
+        let path = dir.path().join("history.db");
+
+        let conn = Connection::open(&path).expect("open");
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS history (
+                id TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL,
+                file_name TEXT NOT NULL,
+                language TEXT NOT NULL,
+                model_id TEXT NOT NULL,
+                duration INTEGER NOT NULL,
+                text_compressed BLOB NOT NULL,
+                segments_compressed BLOB NOT NULL
+            );",
+        )
+        .expect("create old table");
+        drop(conn);
+
+        init_db(&path).expect("init db with migration");
+
+        let conn = Connection::open(&path).expect("open");
+        let mut stmt = conn
+            .prepare("PRAGMA table_info(history)")
+            .expect("prepare pragma");
+        let names: Vec<String> = stmt
+            .query_map([], |row| row.get::<_, String>(1))
+            .expect("query")
+            .filter_map(Result::ok)
+            .collect();
+        assert!(names.contains(&"vad_enabled".to_string()));
     }
 
     #[test]

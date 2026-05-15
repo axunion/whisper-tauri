@@ -49,6 +49,7 @@ pub struct HistoryMeta {
     pub duration: u64,
     /// Preview of the transcribed text
     pub text_preview: String,
+    pub vad_enabled: Option<bool>,
 }
 
 /// Full history entry including text and segments.
@@ -71,6 +72,7 @@ pub struct HistoryEntry {
     pub text: String,
     /// Segments with timing information
     pub segments: Vec<HistorySegment>,
+    pub vad_enabled: Option<bool>,
 }
 
 /// Parameters for saving a new history entry.
@@ -89,6 +91,8 @@ pub struct HistorySaveParams {
     pub text: String,
     /// Segments with timing information
     pub segments: Vec<HistorySegment>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vad_enabled: Option<bool>,
 }
 
 /// Filter for listing history entries.
@@ -188,12 +192,14 @@ mod tests {
             model_id: "large-v3".to_string(),
             duration: 60000,
             text_preview: "Hello world...".to_string(),
+            vad_enabled: Some(true),
         };
         let json = serde_json::to_string(&meta).expect("Failed to serialize");
         assert!(json.contains("\"createdAt\":\"2026-01-15T10:30:00Z\""));
         assert!(json.contains("\"fileName\":\"audio.wav\""));
         assert!(json.contains("\"modelId\":\"large-v3\""));
         assert!(json.contains("\"textPreview\":\"Hello world...\""));
+        assert!(json.contains("\"vadEnabled\":true"));
     }
 
     #[test]
@@ -211,10 +217,12 @@ mod tests {
                 end: 2000,
                 text: "Hello world".to_string(),
             }],
+            vad_enabled: Some(false),
         };
         let json = serde_json::to_string(&entry).expect("Failed to serialize");
         assert!(json.contains("\"segments\":["));
         assert!(json.contains("\"text\":\"Hello world\""));
+        assert!(json.contains("\"vadEnabled\":false"));
     }
 
     #[test]
@@ -226,10 +234,34 @@ mod tests {
             duration: 30000,
             text: "Test text".to_string(),
             segments: vec![],
+            vad_enabled: Some(true),
         };
         let json = serde_json::to_string(&params).expect("Failed to serialize");
         assert!(json.contains("\"fileName\":\"test.wav\""));
         assert!(json.contains("\"modelId\":\"small\""));
+        assert!(json.contains("\"vadEnabled\":true"));
+    }
+
+    #[test]
+    fn history_save_params_skips_vad_enabled_when_none() {
+        let params = HistorySaveParams {
+            file_name: "test.wav".to_string(),
+            language: "en".to_string(),
+            model_id: "small".to_string(),
+            duration: 30000,
+            text: "Test text".to_string(),
+            segments: vec![],
+            vad_enabled: None,
+        };
+        let json = serde_json::to_string(&params).expect("Failed to serialize");
+        assert!(!json.contains("vadEnabled"));
+    }
+
+    #[test]
+    fn history_save_params_deserializes_without_vad_enabled() {
+        let json = r#"{"fileName":"test.wav","language":"en","modelId":"small","duration":30000,"text":"Test text","segments":[]}"#;
+        let params: HistorySaveParams = serde_json::from_str(json).expect("Failed to deserialize");
+        assert_eq!(params.vad_enabled, None);
     }
 
     #[test]
