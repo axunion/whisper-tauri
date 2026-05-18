@@ -6,7 +6,10 @@ import {
   NotionIntegration,
   SettingsSelect,
 } from "~/components/settings";
-import { TextModelManager } from "~/components/text-processing";
+import {
+  LegacyTextModelList,
+  TextModelManager,
+} from "~/components/text-processing";
 import {
   Card,
   CardContent,
@@ -17,6 +20,7 @@ import { Checkbox } from "~/components/ui/Checkbox";
 import { HelpHint } from "~/components/ui/HelpHint";
 import { SectionRow } from "~/components/ui/SectionRow";
 import { Separator } from "~/components/ui/Separator";
+import { TotalSizeFooter } from "~/components/ui/TotalSizeFooter";
 import { WhisperModelList } from "~/components/ui/WhisperModelList";
 import { useI18n } from "~/i18n";
 import { createSettings } from "~/primitives/createSettings";
@@ -121,7 +125,7 @@ export default function Settings() {
             {t("settings.modelManagement")}
           </CardTitleWithIcon>
         </CardHeader>
-        <CardContent>
+        <CardContent class="space-y-4">
           <WhisperModelList
             whisper={whisper}
             labels={{
@@ -131,11 +135,15 @@ export default function Settings() {
               emptyState: "settings.loadingModels",
             }}
           />
+          <TotalSizeFooter bytes={whisper.totalSizeBytes()} />
         </CardContent>
       </Card>
 
       {/* Text Model Management */}
       <TextModelManager />
+
+      {/* Legacy (Deprecated) Text Models */}
+      <LegacyTextModelList />
 
       {/* FFmpeg */}
       <FfmpegManager />

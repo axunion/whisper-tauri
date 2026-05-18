@@ -12,6 +12,7 @@ import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { HelpHint } from "~/components/ui/HelpHint";
 import { ModelListItem } from "~/components/ui/ModelListItem";
 import { SectionRow } from "~/components/ui/SectionRow";
+import { TotalSizeFooter } from "~/components/ui/TotalSizeFooter";
 import { useI18n } from "~/i18n";
 import type { DictionaryKey } from "~/i18n/types";
 import { getModelDescription } from "~/lib/modelDescription";
@@ -93,86 +94,92 @@ export default function TextModelManager(props: TextModelManagerProps) {
             {t("textProcessing.modelManagement")}
           </CardTitleWithIcon>
         </CardHeader>
-        <CardContent class="space-y-4" role="radiogroup">
-          <For each={tp.models()}>
-            {(model) => (
-              <ModelListItem
-                name={model.name}
-                size={model.size}
-                description={getModelDescription(
-                  t,
-                  model.id,
-                  model.description,
-                )}
-                downloaded={model.downloaded}
-                selected={isSelected(model.id)}
-                onSelect={() => tp.selectModel(model.id)}
-                actionSlot={
-                  <Show
-                    when={model.downloaded}
-                    fallback={
-                      <Show
-                        when={
-                          tp.isDownloading() &&
-                          tp.downloadingModelId() === model.id
+        <CardContent class="space-y-4">
+          <div class="space-y-4" role="radiogroup">
+            <For each={tp.models()}>
+              {(model) => (
+                <ModelListItem
+                  name={model.name}
+                  size={model.size}
+                  description={getModelDescription(
+                    t,
+                    model.id,
+                    model.description,
+                  )}
+                  downloaded={model.downloaded}
+                  selected={isSelected(model.id)}
+                  onSelect={() => tp.selectModel(model.id)}
+                  actionSlot={
+                    <Show
+                      when={model.downloaded}
+                      fallback={
+                        <Show
+                          when={
+                            tp.isDownloading() &&
+                            tp.downloadingModelId() === model.id
+                          }
+                          fallback={
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              class="w-28"
+                              onClick={() => handleDownloadModel(model.id)}
+                              disabled={tp.isDownloading()}
+                            >
+                              <FiDownload />
+                              {t("common.download")}
+                            </Button>
+                          }
+                        >
+                          <DownloadProgress
+                            progress={tp.downloadProgress()?.progress ?? 0}
+                            label={
+                              tp.downloadPhase() === "server"
+                                ? t("textProcessing.settingUp")
+                                : undefined
+                            }
+                          />
+                        </Show>
+                      }
+                    >
+                      <ConfirmDialog
+                        title={t("textProcessing.deleteModel")}
+                        description={t(
+                          "textProcessing.deleteModelConfirmation",
+                          {
+                            name: model.name,
+                          },
+                        )}
+                        confirmLabel={
+                          <>
+                            <FiTrash2 />
+                            {t("common.delete")}
+                          </>
                         }
-                        fallback={
+                        onConfirm={() => handleDeleteModel(model.id)}
+                      >
+                        {(openDialog) => (
                           <Button
-                            variant="outline"
+                            variant="destructive"
                             size="sm"
                             class="w-28"
-                            onClick={() => handleDownloadModel(model.id)}
-                            disabled={tp.isDownloading()}
+                            disabled={deletingModelId() === model.id}
+                            onClick={openDialog}
                           >
-                            <FiDownload />
-                            {t("common.download")}
+                            <FiTrash2 />
+                            {deletingModelId() === model.id
+                              ? t("common.deleting")
+                              : t("common.delete")}
                           </Button>
-                        }
-                      >
-                        <DownloadProgress
-                          progress={tp.downloadProgress()?.progress ?? 0}
-                          label={
-                            tp.downloadPhase() === "server"
-                              ? t("textProcessing.settingUp")
-                              : undefined
-                          }
-                        />
-                      </Show>
-                    }
-                  >
-                    <ConfirmDialog
-                      title={t("textProcessing.deleteModel")}
-                      description={t("textProcessing.deleteModelConfirmation", {
-                        name: model.name,
-                      })}
-                      confirmLabel={
-                        <>
-                          <FiTrash2 />
-                          {t("common.delete")}
-                        </>
-                      }
-                      onConfirm={() => handleDeleteModel(model.id)}
-                    >
-                      {(openDialog) => (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          class="w-28"
-                          disabled={deletingModelId() === model.id}
-                          onClick={openDialog}
-                        >
-                          <FiTrash2 />
-                          {deletingModelId() === model.id
-                            ? t("common.deleting")
-                            : t("common.delete")}
-                        </Button>
-                      )}
-                    </ConfirmDialog>
-                  </Show>
-                }
-              />
-            )}
-          </For>
+                        )}
+                      </ConfirmDialog>
+                    </Show>
+                  }
+                />
+              )}
+            </For>
+          </div>
+          <TotalSizeFooter bytes={tp.totalSizeBytes()} />
         </CardContent>
       </Card>
 

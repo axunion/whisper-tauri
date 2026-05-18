@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { batch, createRoot, createSignal } from "solid-js";
 import { parseError } from "~/lib/errors";
+import { sumDownloadedBytes } from "~/lib/format";
 import { createSettings } from "~/primitives/createSettings";
 import type {
   DownloadProgress,
@@ -135,6 +136,10 @@ async function loadModels(): Promise<void> {
   }
 }
 
+function totalSizeBytes(): number {
+  return sumDownloadedBytes(models());
+}
+
 function selectModel(model: ModelInfo): void {
   if (!model.downloaded) return;
   setSelectedModel(model);
@@ -244,6 +249,7 @@ function clearError(): void {
 const whisperInstance = {
   // State (Accessors)
   models,
+  totalSizeBytes,
   selectedModel,
   file,
   language,

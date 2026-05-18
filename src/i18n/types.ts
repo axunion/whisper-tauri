@@ -98,6 +98,7 @@ export interface Dictionary {
     deleteModelConfirmation: string;
     modelDeletedToast: string;
     loadingModels: string;
+    totalSize: string;
     toolManagement: string;
     deleteFfmpeg: string;
     deleteFfmpegConfirmation: string;
@@ -190,6 +191,11 @@ export interface Dictionary {
     deleteModel: string;
     deleteModelConfirmation: string;
     modelDeletedToast: string;
+    legacyModelsTitle: string;
+    legacyModelsDescription: string;
+    legacyModelBadge: string;
+    deleteLegacyModelConfirmation: string;
+    legacyModelDeletedToast: string;
     serverDownloadedToast: string;
     deleteServer: string;
     deleteServerConfirmation: string;

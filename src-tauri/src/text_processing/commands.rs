@@ -10,7 +10,9 @@ use super::extract;
 use super::inference;
 use super::models;
 use super::server::LlamaServerManager;
-use super::types::{InferenceProgress, ServerStatus, TextDownloadProgress, TextModelInfo};
+use super::types::{
+    InferenceProgress, LegacyTextModelInfo, ServerStatus, TextDownloadProgress, TextModelInfo,
+};
 
 /// Store key for custom text model download URL.
 const TEXT_MODEL_URL_KEY: &str = "textModelDownloadBaseUrl";
@@ -105,18 +107,61 @@ pub async fn text_processing_download_model(
 
 /// Deletes a downloaded text model file.
 ///
+/// Accepts both valid model IDs and legacy (retired) model IDs so users can
+/// reclaim disk space from models that are no longer offered.
+///
 /// # Errors
 ///
-/// Returns an error string if the operation fails.
+/// Returns [`TextProcessingError::ModelNotFound`] if `model_id` is unknown,
+/// or an IO error if removal fails.
 #[tauri::command]
 pub async fn text_processing_delete_model(app: AppHandle, model_id: String) -> Result<(), String> {
     let app_data_dir = paths::app_data_dir(&app)?;
-    if let Some(path) = models::text_model_path(&app_data_dir, &model_id) {
-        if path.exists() {
-            std::fs::remove_file(&path).map_err(TextProcessingError::from)?;
-        }
+    let path = models::known_model_path(&app_data_dir, &model_id)
+        .ok_or_else(|| TextProcessingError::ModelNotFound(model_id.clone()).to_string())?;
+
+    if path.exists() {
+        std::fs::remove_file(&path).map_err(TextProcessingError::from)?;
     }
     Ok(())
+}
+
+/// Returns legacy (retired) text model files present on disk.
+///
+/// Only IDs registered in [`models::legacy_model_ids`] are considered. An
+/// empty vector is returned when no legacy files exist.
+///
+/// # Errors
+///
+/// Returns an error if the app data directory cannot be resolved or a
+/// model file's metadata cannot be read.
+#[tauri::command]
+pub async fn text_processing_get_legacy_models(
+    app: AppHandle,
+) -> Result<Vec<LegacyTextModelInfo>, String> {
+    let app_data_dir = paths::app_data_dir(&app)?;
+    scan_legacy_text_models(&app_data_dir)
+}
+
+/// Scans the text-models directory for legacy (retired) text model files.
+fn scan_legacy_text_models(app_data_dir: &Path) -> Result<Vec<LegacyTextModelInfo>, String> {
+    let mut results = Vec::new();
+    for &id in models::legacy_model_ids() {
+        let Some(path) = models::known_model_path(app_data_dir, id) else {
+            continue;
+        };
+        let metadata = match std::fs::metadata(&path) {
+            Ok(m) => m,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(e) => return Err(TextProcessingError::from(e).into()),
+        };
+        results.push(LegacyTextModelInfo {
+            id: id.to_string(),
+            size_bytes: metadata.len(),
+            path: paths::path_to_owned_string(&path)?,
+        });
+    }
+    Ok(results)
 }
 
 /// Downloads the llama-server binary.
@@ -607,5 +652,19 @@ mod tests {
         let app_data = Path::new("/tmp/test-app-data");
         let path = models::llama_server_path(app_data);
         assert!(path.starts_with("/tmp/test-app-data/bin"));
+    }
+
+    #[test]
+    fn scan_legacy_text_models_is_empty_when_none_retired() {
+        // LEGACY_MODEL_IDS is empty by default, so an empty vector is expected
+        // even when other files exist in the directory.
+        let tmp = tempfile::TempDir::new().expect("tempdir");
+        let dir = tmp.path().join("text-models");
+        std::fs::create_dir_all(&dir).unwrap();
+        // Valid (current) model file — must not be returned.
+        std::fs::write(dir.join("google_gemma-4-E2B-it-Q4_K_M.gguf"), b"x").unwrap();
+
+        let results = scan_legacy_text_models(tmp.path()).unwrap();
+        assert!(results.is_empty());
     }
 }

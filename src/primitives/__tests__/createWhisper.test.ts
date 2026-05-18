@@ -605,6 +605,33 @@ describe("createWhisper", () => {
     });
   });
 
+  describe("totalSizeBytes", () => {
+    it("should sum downloaded model bytes only", async () => {
+      const models = [
+        mockModel({ id: "small", sizeBytes: 500, downloaded: true }),
+        mockModel({ id: "large-v3-turbo", sizeBytes: 1_500, downloaded: true }),
+        mockModel({ id: "unused", sizeBytes: 999, downloaded: false }),
+      ];
+      vi.mocked(invoke).mockResolvedValueOnce(models);
+
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        await whisper.loadModels();
+
+        expect(whisper.totalSizeBytes()).toBe(500 + 1_500);
+        dispose();
+      });
+    });
+
+    it("should return 0 when no models are present", () => {
+      createRoot((dispose) => {
+        const whisper = createWhisper();
+        expect(whisper.totalSizeBytes()).toBe(0);
+        dispose();
+      });
+    });
+  });
+
   describe("clearError", () => {
     it("should set error to null", async () => {
       vi.mocked(invoke).mockRejectedValueOnce(new Error("Some error"));

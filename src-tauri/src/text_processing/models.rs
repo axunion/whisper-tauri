@@ -8,11 +8,23 @@ pub const LLAMA_SERVER_VERSION: &str = "b8672";
 /// Valid text model IDs.
 const VALID_MODEL_IDS: [&str; 2] = ["gemma-4-e2b", "qwen3.5-4b"];
 
+/// Text model IDs that are kept reachable for cleanup but no longer offered
+/// for download. Pair each entry with a [`legacy_model_filename`] match arm.
+const LEGACY_MODEL_IDS: &[&str] = &[];
+
 /// Model filenames (GGUF `Q4_K_M` quantization).
 fn get_model_filename(model_id: &str) -> Option<&'static str> {
     match model_id {
         "gemma-4-e2b" => Some("google_gemma-4-E2B-it-Q4_K_M.gguf"),
         "qwen3.5-4b" => Some("Qwen3.5-4B-Q4_K_M.gguf"),
+        _ => None,
+    }
+}
+
+/// Filenames for legacy (retired) text models. Pair with [`LEGACY_MODEL_IDS`].
+#[allow(clippy::match_single_binding)]
+fn legacy_model_filename(model_id: &str) -> Option<&'static str> {
+    match model_id {
         _ => None,
     }
 }
@@ -32,6 +44,40 @@ fn get_default_model_base_url(model_id: &str) -> Option<&'static str> {
 #[must_use]
 pub fn is_valid_model_id(model_id: &str) -> bool {
     VALID_MODEL_IDS.contains(&model_id)
+}
+
+/// Returns whether the given model ID is a legacy (retired) text model.
+///
+/// Legacy models cannot be downloaded but can still be deleted when their
+/// files remain on disk from earlier app versions.
+#[must_use]
+pub fn is_legacy_model_id(model_id: &str) -> bool {
+    LEGACY_MODEL_IDS.contains(&model_id)
+}
+
+/// Returns whether the given model ID is either a valid or legacy text model.
+#[must_use]
+pub fn is_known_model_id(model_id: &str) -> bool {
+    is_valid_model_id(model_id) || is_legacy_model_id(model_id)
+}
+
+/// Returns the list of legacy text model IDs.
+#[must_use]
+pub fn legacy_model_ids() -> &'static [&'static str] {
+    LEGACY_MODEL_IDS
+}
+
+/// Returns the filename for a valid or legacy text model ID, if any.
+#[must_use]
+pub fn known_model_filename(model_id: &str) -> Option<&'static str> {
+    get_model_filename(model_id).or_else(|| legacy_model_filename(model_id))
+}
+
+/// Returns the on-disk path for a valid or legacy text model ID.
+#[must_use]
+pub fn known_model_path(app_data_dir: &Path, model_id: &str) -> Option<PathBuf> {
+    let filename = known_model_filename(model_id)?;
+    Some(text_models_dir(app_data_dir).join(filename))
 }
 
 /// Returns the download URL for a given model ID and optional custom base URL.
@@ -222,6 +268,57 @@ mod tests {
     fn is_valid_model_id_rejects_unknown() {
         assert!(!is_valid_model_id("llama-3"));
         assert!(!is_valid_model_id(""));
+    }
+
+    #[test]
+    fn legacy_model_ids_is_currently_empty() {
+        // Bookkeeping: when this assertion fails, also update the legacy UI
+        // path tests and ensure `legacy_model_filename` returns a filename
+        // for the newly retired ID.
+        assert!(legacy_model_ids().is_empty());
+    }
+
+    #[test]
+    fn is_legacy_model_id_rejects_valid_and_unknown() {
+        assert!(!is_legacy_model_id("gemma-4-e2b"));
+        assert!(!is_legacy_model_id("qwen3.5-4b"));
+        assert!(!is_legacy_model_id("nonexistent"));
+    }
+
+    #[test]
+    fn is_known_model_id_accepts_valid_only_for_now() {
+        assert!(is_known_model_id("gemma-4-e2b"));
+        assert!(is_known_model_id("qwen3.5-4b"));
+        assert!(!is_known_model_id("nonexistent"));
+    }
+
+    #[test]
+    fn known_model_filename_returns_for_valid() {
+        assert_eq!(
+            known_model_filename("qwen3.5-4b"),
+            Some("Qwen3.5-4B-Q4_K_M.gguf")
+        );
+    }
+
+    #[test]
+    fn known_model_filename_returns_none_for_unknown() {
+        assert!(known_model_filename("unknown").is_none());
+    }
+
+    #[test]
+    fn known_model_path_returns_for_valid() {
+        let path = known_model_path(Path::new("/app-data"), "qwen3.5-4b");
+        assert_eq!(
+            path,
+            Some(PathBuf::from(
+                "/app-data/text-models/Qwen3.5-4B-Q4_K_M.gguf"
+            ))
+        );
+    }
+
+    #[test]
+    fn known_model_path_returns_none_for_unknown() {
+        assert!(known_model_path(Path::new("/app-data"), "unknown").is_none());
     }
 
     #[test]

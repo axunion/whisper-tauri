@@ -101,6 +101,7 @@ export const ja: Dictionary = {
       "{name} が削除されます。この操作は取り消せません。",
     modelDeletedToast: "モデルを削除しました",
     loadingModels: "モデル情報を読み込み中...",
+    totalSize: "合計: {size}",
     toolManagement: "ツール管理",
     deleteFfmpeg: "FFmpegの削除",
     deleteFfmpegConfirmation:
@@ -199,6 +200,13 @@ export const ja: Dictionary = {
     deleteModelConfirmation:
       "{name} が削除されます。この操作は取り消せません。",
     modelDeletedToast: "言語モデルを削除しました",
+    legacyModelsTitle: "廃止済みモデル",
+    legacyModelsDescription:
+      "現在は提供していない言語モデルです。ディスク容量を解放するには削除してください。",
+    legacyModelBadge: "廃止済み",
+    deleteLegacyModelConfirmation:
+      "{id} を削除します。このモデルは再ダウンロードできません。",
+    legacyModelDeletedToast: "{id} を削除しました",
     serverDownloadedToast: "llama-serverをダウンロードしました",
     deleteServer: "サーバーの削除",
     deleteServerConfirmation:

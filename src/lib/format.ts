@@ -50,3 +50,42 @@ export function formatDateShort(isoString: string, locale: string): string {
     day: "2-digit",
   });
 }
+
+/** Sums `sizeBytes` over downloaded items only. */
+export function sumDownloadedBytes<
+  T extends { downloaded: boolean; sizeBytes: number },
+>(items: readonly T[]): number {
+  return items.reduce((sum, m) => (m.downloaded ? sum + m.sizeBytes : sum), 0);
+}
+
+/** Sums `sizeBytes` over all items. */
+export function sumBytes<T extends { sizeBytes: number }>(
+  items: readonly T[],
+): number {
+  return items.reduce((sum, m) => sum + m.sizeBytes, 0);
+}
+
+const BYTE_UNITS = ["KB", "MB", "GB", "TB"] as const;
+const BYTE_UNIT_BASE = 1024;
+
+/**
+ * Format a byte count as a human-readable string (e.g. "466 MB", "1.6 GB").
+ *
+ * Uses 1024-base steps with `KB`/`MB`/`GB`/`TB` labels to match the existing
+ * Rust-side size strings shipped in `ModelInfo.size`. Values < 1 KB render as
+ * `B`; values >= 100 in the chosen unit drop the decimal.
+ */
+export function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  if (bytes < BYTE_UNIT_BASE) return `${Math.round(bytes)} B`;
+
+  let value = bytes / BYTE_UNIT_BASE;
+  let unitIndex = 0;
+  while (value >= BYTE_UNIT_BASE && unitIndex < BYTE_UNITS.length - 1) {
+    value /= BYTE_UNIT_BASE;
+    unitIndex += 1;
+  }
+  const formatted =
+    value >= 100 ? Math.round(value).toString() : value.toFixed(1);
+  return `${formatted} ${BYTE_UNITS[unitIndex]}`;
+}

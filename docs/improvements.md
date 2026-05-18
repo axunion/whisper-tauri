@@ -32,7 +32,7 @@
 | 6  | A   | 履歴メタ情報の拡充 (VAD ON/OFF)            | 中   | 完了 (2026-05-15) | 履歴に vad_enabled 列追加 + 詳細メタ行表示。#10 のメタ基盤として再利用可 |
 | 15 | A   | 文字起こし時の VAD ON/OFF 選択             | 中   | 完了 (2026-05-15) | createWhisper に override signal 新設 + Bar に Checkbox 列。設定は起動時デフォルトとして機能継続 |
 | 7  | B   | Whisper モデルを small/turbo に絞る        | 高   | 完了 (2026-05-18) | medium / large-v3 を完全削除し、turbo に統合 |
-| 8  | B   | 不要モデルのクリーンアップ                 | 中   | 未着手   | #7 の影響を吸収するために必要 |
+| 8  | B   | 不要モデルのクリーンアップ                 | 中   | 完了 (2026-05-19) | 廃止モデル機構を LLM 側にだけ実装。合計サイズ表示は Whisper / LLM 両方に |
 | 9  | C   | 要約の充実                                 | 中   | 未着手   | #10 の前提 |
 | 10 | C   | Notion ブロック送信 + メタデータ           | 中   | 未着手   | 主要連携の品質向上。履歴メタ (#6) と共通基盤 |
 | 11 | D   | バイナリ更新フロー (ffmpeg/llama)          | 低   | 未着手   | ポリシー策定優先 |
@@ -460,7 +460,133 @@
 - LLM モデルファイルは `text_processing/models.rs` の管理対象。Whisper との UI を統一して同じセクションに並べるのが自然。
 - 削除直後に再ダウンロードが必要になるケースの導線 (1クリックで再取得) も用意。
 
-**Status:** 未着手
+### 実施結果 (2026-05-19)
+
+#### 経緯
+- 当初は Whisper / LLM 両方に「廃止モデル検出 + 削除導線 + 合計サイズ表示」(中スコープ) を実装したが、レビューで「Whisper モデルは `small` / `large-v3-turbo` で完結し今後廃止候補が出ない。一方 LLM は良いモデルが出るたびにアップデート/追加していく」との方針が出たため、**廃止モデル機構を Whisper 側から取り下げ、LLM 側にのみ移植**する形に修正。
+- `.claude/rules/tuning.md` の「過剰機能を避け仕様として許容する側に倒す」方針に整合。
+
+#### 最終構成
+
+- **Whisper 側**: 廃止モデル機構は持たない。`delete_model` は元の `is_valid_model_id` 厳格チェック。既存の medium / large-v3 ファイル (本機ディスク上で約 4.6 GB) はユーザーが手動削除する。
+- **LLM 側**: 廃止概念のインフラを導入。現状 `LEGACY_MODEL_IDS` は **空配列**で、次回 LLM をアップデート/廃止する際に ID を追加するだけで Settings の「廃止済みモデル」Card が自動で機能する。
+- **合計サイズ表示**: Whisper / LLM 両方の Card 末尾に「合計: X.X GB」を表示 (`formatBytes` ユーティリティを汎用化)。
+
+#### Rust 側
+
+- `text_processing/models.rs`:
+  - `LEGACY_MODEL_IDS: &[&str] = &[]` (空配列、将来用)
+  - `legacy_model_filename(id) -> Option<&'static str>` (match arm を追加することで廃止 ID とファイル名を対応付け。clippy `match_single_binding` は `#[allow]` で抑制し将来の arm 追加に備えた形を維持)
+  - `is_legacy_model_id` / `is_known_model_id` / `legacy_model_ids()` 公開関数
+  - `known_model_filename` / `known_model_path` の統合ヘルパー (valid または legacy を許容)
+- `text_processing/types.rs`: `LegacyTextModelInfo { id, sizeBytes, path }`
+- `text_processing/commands.rs`:
+  - `text_processing_delete_model` を `known_model_path` ベースに緩和、未知 ID は `TextProcessingError::ModelNotFound` で早期エラー
+  - 新規 `text_processing_get_legacy_models` コマンド (`scan_legacy_text_models` 純粋関数を内部で呼ぶ)
+  - `scan_legacy_text_models` は `fs::metadata` の `ErrorKind::NotFound` で「ファイル無し」を吸収し、`exists()` + `metadata()` の 2 syscall + TOCTOU を回避
+- `lib.rs` の `invoke_handler!` に登録
+- BE 単体テスト: `legacy_model_ids_is_currently_empty` で「現在は空」を明示、`scan_legacy_text_models_is_empty_when_none_retired` で valid モデルファイルが混入しないことを確認、`LegacyTextModelInfo` シリアライゼーション、`known_model_filename` / `known_model_path` の 4 ケース。BE 全 335 件通過。
+- 新規エラーバリアントは追加せず既存 `TextProcessingError::ModelNotFound` / `Io` のみで完結。
+
+#### フロント側
+
+- `src/types/text-processing.ts` に `LegacyTextModelInfo` 追加、`src/types/index.ts` に re-export
+- `src/lib/format.ts`:
+  - `formatBytes(bytes)` — 1024-base + 小数 1 桁 (100 以上は整数)。Rust 側既存表記 (`"466MB"` = MiB、`"1.6GB"` = GiB) と数字が一致
+  - `sumDownloadedBytes(items)` / `sumBytes(items)` — `filter(downloaded).reduce(sizeBytes)` の重複を共通化 (Whisper / LLM の `totalSizeBytes` で共有)
+  - `format.test.ts` で `formatBytes` の境界値 8 ケース
+- `createTextProcessing.ts`:
+  - `legacyModels` signal、`loadLegacyModels()` / `deleteLegacyModel()` action
+  - `totalSizeBytes()` = `sumDownloadedBytes(models()) + sumBytes(legacyModels())`
+  - `_resetTextProcessingForTesting()` に `setLegacyModels([])` 追加
+- `createWhisper.ts`:
+  - `totalSizeBytes()` = `sumDownloadedBytes(models())` (legacy は持たない)
+- 新規 `src/components/text-processing/LegacyTextModelList.tsx` (~100 行)
+  - `<Show when={legacyModels().length > 0}>` で条件レンダの独立 Card
+  - `onMount` で `tp.loadLegacyModels()` を自己完結で呼ぶ → 親が legacy 読み込みを意識する必要なし
+  - `Badge variant="outline"` で「廃止済み」、`FiArchive` アイコン、`SectionRow` + `ConfirmDialog` で削除導線
+- 新規 `src/components/ui/TotalSizeFooter.tsx`
+  - `<Show when={bytes > 0}><p>合計: <formatted></p></Show>` の共通化
+  - `formatBytes` と `settings.totalSize` i18n キーを内部に隠蔽
+- `Settings.tsx`:
+  - Whisper Card の `CardContent` 末尾に `<TotalSizeFooter bytes={whisper.totalSizeBytes()} />`
+  - TextModelManager の後ろに `<LegacyTextModelList />` を挿入
+- `TextModelManager.tsx`: `CardContent` 末尾に `<TotalSizeFooter bytes={tp.totalSizeBytes()} />` (legacy 含む)。`role="radiogroup"` は内側 `<div>` に移し合計サイズ行を a11y 上分離
+
+#### i18n (`textProcessing.*` 名前空間)
+
+| キー | ja | en |
+|---|---|---|
+| `legacyModelsTitle` | 廃止済みモデル | Deprecated Models |
+| `legacyModelsDescription` | 現在は提供していない言語モデルです。ディスク容量を解放するには削除してください。 | These language models are no longer offered. Delete them to free up disk space. |
+| `legacyModelBadge` | 廃止済み | Deprecated |
+| `deleteLegacyModelConfirmation` | {id} を削除します。このモデルは再ダウンロードできません。 | {id} will be deleted. This model cannot be re-downloaded. |
+| `legacyModelDeletedToast` | {id} を削除しました | Deleted {id} |
+
+`settings.totalSize` (汎用、Whisper / LLM 両方で使用) も同時に追加。
+
+#### スコープ外として残した項目
+
+- 最終使用日時の集計 (`history` の `model_id` を使った aggregate)
+- 不要モデル強調表示
+- 削除直後の 1 クリック再取得導線
+- 複数選択一括削除
+- 起動時バナー
+- Whisper 側の廃止モデル UI (今後廃止候補が出ない方針のため不採用)
+
+#### 動作確認のタイミング
+
+- **Whisper 側 (合計サイズ表示)**: 即時確認可能。`pnpm tauri dev` で Settings → Whisper Model Management Card 末尾に「合計: X.X GB」が表示される。
+- **LLM 側 (廃止モデル UI)**: 現状 `LEGACY_MODEL_IDS` が空のため Card 非表示が正常状態。実環境動作確認は **次回 LLM 廃止モデル発生時** に持ち越し。下記「次回 LLM 廃止時の運用手順」を参照。
+- **LLM 側 (合計サイズ表示)**: 即時確認可能。Settings → Language Model Management Card 末尾に表示。
+
+#### Whisper 既存ファイルの手動削除 (本機作業)
+
+本機 (`com.whisper-tauri.desktop`) には #7 以前にダウンロードされた廃止 Whisper モデルファイルが残っている。アプリ側の UI は持たないため手動削除:
+
+```bash
+ls -la "~/Library/Application Support/com.whisper-tauri.desktop/models/"
+# ggml-medium.bin   約 1.5 GB
+# ggml-large-v3.bin 約 3.1 GB
+rm "~/Library/Application Support/com.whisper-tauri.desktop/models/ggml-medium.bin"
+rm "~/Library/Application Support/com.whisper-tauri.desktop/models/ggml-large-v3.bin"
+```
+
+`ggml-small.bin` / `ggml-large-v3-turbo.bin` / `ggml-silero-v5.1.2.bin` は現役なので残す。
+
+#### 次回 LLM 廃止時の運用手順
+
+良いモデルが出て旧モデルを廃止する際は、以下の 3 ステップで Settings の「廃止済みモデル」Card が自動で機能する:
+
+1. **`src-tauri/src/text_processing/models.rs::VALID_MODEL_IDS`** から廃止する ID を削除
+2. **`LEGACY_MODEL_IDS`** に同じ ID を追加 (例: `const LEGACY_MODEL_IDS: &[&str] = &["gemma-4-e2b"];`)
+3. **`legacy_model_filename`** の match arm に該当 ID とファイル名を追加:
+   ```rust
+   match model_id {
+       "gemma-4-e2b" => Some("google_gemma-4-E2B-it-Q4_K_M.gguf"),
+       _ => None,
+   }
+   ```
+
+その他必要に応じて:
+- `models.rs` の `get_model_list()` から該当エントリを削除
+- `i18n/dictionaries/{ja,en}.ts` の `models.text.<id>` 説明文を削除
+- `models.rs::tests::legacy_model_ids_is_currently_empty` の `assert!(is_empty())` を「廃止 ID が含まれる」前提のテストに更新
+- BE/FE 既存テストの fixture (もし `gemma-4-e2b` 等を使っていれば) を新モデルに置換
+
+廃止後、`pnpm tauri dev` で Settings を開けば、旧モデルファイルが残っているマシンでは「廃止済みモデル」Card が自動表示され削除ボタンが機能する (UI/コマンド/型はすでに揃っているため追加実装は不要)。
+
+#### 検証
+
+- Biome lint / `tsc --noEmit` 全通過
+- FE 278 tests (新規 +8: `formatBytes` 8 ケース)、BE 335 tests (新規 +8)
+- Tauri build (debug) 通過
+- `/i18n` 監査 — 構造・プレースホルダ・表記・使用箇所すべてクリア
+- `cargo clippy --all-targets` clean (`legacy_model_filename` の単一 arm match は `#[allow(clippy::match_single_binding)]` で意図的に suppress)
+- `/simplify` レビュー (3 agent 並列) — `TotalSizeFooter` / `sumDownloadedBytes` の共通化、`fs::metadata` の `NotFound` 吸収、コメントの WHY 化を反映済み
+- 手動動作確認: 上記「動作確認のタイミング」を参照
+
+**Status:** 完了 (2026-05-19) — LLM 側の実環境動作確認は次回廃止モデル発生時に行う
 
 ---
 

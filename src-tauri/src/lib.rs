@@ -86,6 +86,7 @@ pub fn run() {
             text_processing::commands::text_processing_list_models,
             text_processing::commands::text_processing_download_model,
             text_processing::commands::text_processing_delete_model,
+            text_processing::commands::text_processing_get_legacy_models,
             text_processing::commands::text_processing_download_server,
             text_processing::commands::text_processing_delete_server,
             text_processing::commands::text_processing_check_server,
