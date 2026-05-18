@@ -114,7 +114,7 @@ pub(crate) mod test_helpers {
         HistorySaveParams {
             file_name: "test_audio.wav".to_string(),
             language: "ja".to_string(),
-            model_id: "large-v3".to_string(),
+            model_id: "large-v3-turbo".to_string(),
             duration: 60000,
             text: "This is a test transcription.".to_string(),
             segments: vec![
@@ -225,7 +225,7 @@ mod tests {
                 "2026-02-20T10:00:00",
                 "test.wav",
                 "ja",
-                "large-v3",
+                "large-v3-turbo",
                 60000_i64,
                 text_compressed,
                 segments_compressed,

@@ -5,7 +5,7 @@ A privacy-first desktop app for local audio transcription. All inference runs on
 ## Features
 
 - **Transcription** from audio files (MP3, M4A, FLAC, OGG, AAC, MP4, MKV, WAV) and direct microphone recording
-- **On-device Whisper inference** with model selection from `small` to `large-v3` (Metal acceleration on Apple Silicon)
+- **On-device Whisper inference** with model selection between `small` and `large-v3-turbo` (Metal acceleration on Apple Silicon)
 - **Silero VAD** for skipping silence during transcription, significantly reducing processing time
 - **AI text post-processing** via local LLM — summarization, transcript cleanup, automatic title generation
 - **History management** with full-text search, AI-content reuse, and export
@@ -57,9 +57,7 @@ These components are downloaded into the app's data directory on first use, not 
 | ID | Size | Notes |
 | --- | --- | --- |
 | `small` | ~466 MB | Lightweight, fast |
-| `medium` | ~1.4 GB | Balanced accuracy and speed |
-| `large-v3-turbo` | ~1.6 GB | Distilled — fast with good accuracy |
-| `large-v3` | ~2.9 GB | Highest accuracy, best for demanding multilingual use |
+| `large-v3-turbo` | ~1.6 GB | Distilled — fast with high accuracy |
 
 Apple Silicon Metal acceleration delivers roughly 10× the throughput of x86_64 CPU inference for the same model.
 

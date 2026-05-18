@@ -208,7 +208,7 @@ mod tests {
                 created_at,
                 "test.wav",
                 "ja",
-                "large-v3",
+                "large-v3-turbo",
                 60000_i64,
                 text_compressed,
                 segments_compressed,

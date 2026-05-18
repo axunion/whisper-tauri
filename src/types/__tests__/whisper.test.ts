@@ -12,22 +12,22 @@ describe("Whisper Types", () => {
   describe("ModelInfo", () => {
     it("should have required properties", () => {
       const model: ModelInfo = {
-        id: "large-v3",
-        name: "Large v3",
-        size: "2.9GB",
-        sizeBytes: 3_095_033_483,
-        description: "High transcription accuracy",
+        id: "large-v3-turbo",
+        name: "Large v3 Turbo",
+        size: "1.6GB",
+        sizeBytes: 1_739_587_584,
+        description: "Fast and accurate. Distilled model",
         downloaded: true,
         bundled: false,
-        speedSecondsPerMinuteLow: 5.0,
-        speedSecondsPerMinuteHigh: 15.0,
+        speedSecondsPerMinuteLow: 3.0,
+        speedSecondsPerMinuteHigh: 7.0,
       };
 
-      expect(model.id).toBe("large-v3");
-      expect(model.name).toBe("Large v3");
-      expect(model.size).toBe("2.9GB");
-      expect(model.sizeBytes).toBe(3_095_033_483);
-      expect(model.description).toBe("High transcription accuracy");
+      expect(model.id).toBe("large-v3-turbo");
+      expect(model.name).toBe("Large v3 Turbo");
+      expect(model.size).toBe("1.6GB");
+      expect(model.sizeBytes).toBe(1_739_587_584);
+      expect(model.description).toBe("Fast and accurate. Distilled model");
       expect(model.downloaded).toBe(true);
       expect(model.bundled).toBe(false);
     });

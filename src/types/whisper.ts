@@ -2,7 +2,7 @@
  * Whisper model information.
  */
 export interface ModelInfo {
-  /** Model identifier (e.g., "small", "medium", "large-v3") */
+  /** Model identifier (e.g., "small", "large-v3-turbo") */
   id: string;
   /** Display name */
   name: string;

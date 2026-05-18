@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelInfo {
-    /// Model identifier (e.g., "small", "medium", "large-v3")
+    /// Model identifier (e.g., "small", "large-v3-turbo")
     pub id: String,
     /// Display name
     pub name: String,

@@ -12,16 +12,16 @@ import type {
 import { _resetWhisperForTesting, createWhisper } from "../createWhisper";
 
 const mockModel = (overrides?: Partial<ModelInfo>): ModelInfo => ({
-  id: "large-v3",
-  name: "Large v3",
-  size: "2.9GB",
-  sizeBytes: 3_095_033_483,
+  id: "large-v3-turbo",
+  name: "Large v3 Turbo",
+  size: "1.6GB",
+  sizeBytes: 1_739_587_584,
   description: "Recommended",
   downloaded: true,
   bundled: false,
-  speedSecondsPerMinuteLow: 5.0,
-  speedSecondsPerMinuteHigh: 15.0,
-  path: "/models/ggml-large-v3.bin",
+  speedSecondsPerMinuteLow: 3.0,
+  speedSecondsPerMinuteHigh: 7.0,
+  path: "/models/ggml-large-v3-turbo.bin",
   ...overrides,
 });
 
@@ -158,8 +158,8 @@ describe("createWhisper", () => {
           downloaded: true,
         }),
         mockModel({
-          id: "large-v3",
-          name: "Large v3",
+          id: "large-v3-turbo",
+          name: "Large v3 Turbo",
           downloaded: true,
         }),
       ];
@@ -255,10 +255,10 @@ describe("createWhisper", () => {
 
       await createRoot(async (dispose) => {
         const whisper = createWhisper();
-        await whisper.downloadModel("large-v3");
+        await whisper.downloadModel("large-v3-turbo");
 
         expect(invoke).toHaveBeenCalledWith("download_model", {
-          modelId: "large-v3",
+          modelId: "large-v3-turbo",
         });
         expect(invoke).toHaveBeenCalledWith("get_available_models");
         expect(whisper.models()).toEqual(models);
@@ -268,7 +268,7 @@ describe("createWhisper", () => {
 
     it("should auto-select model after download if none selected", async () => {
       const downloadedModel = mockModel({
-        id: "large-v3",
+        id: "large-v3-turbo",
         downloaded: true,
       });
       vi.mocked(invoke)
@@ -279,7 +279,7 @@ describe("createWhisper", () => {
         const whisper = createWhisper();
         expect(whisper.selectedModel()).toBeNull();
 
-        await whisper.downloadModel("large-v3");
+        await whisper.downloadModel("large-v3-turbo");
 
         expect(whisper.selectedModel()).toEqual(downloadedModel);
         dispose();
@@ -289,7 +289,7 @@ describe("createWhisper", () => {
     it("should not auto-select if a model is already selected", async () => {
       const existingModel = mockModel({ id: "small", name: "Small" });
       const downloadedModel = mockModel({
-        id: "large-v3",
+        id: "large-v3-turbo",
         downloaded: true,
       });
       vi.mocked(invoke)
@@ -300,7 +300,7 @@ describe("createWhisper", () => {
         const whisper = createWhisper();
         whisper.selectModel(existingModel);
 
-        await whisper.downloadModel("large-v3");
+        await whisper.downloadModel("large-v3-turbo");
 
         expect(whisper.selectedModel()).toEqual(existingModel);
         dispose();
@@ -321,7 +321,7 @@ describe("createWhisper", () => {
 
         expect(whisper.isDownloading()).toBe(false);
 
-        const promise = whisper.downloadModel("large-v3");
+        const promise = whisper.downloadModel("large-v3-turbo");
 
         expect(whisper.isDownloading()).toBe(true);
 
@@ -525,10 +525,10 @@ describe("createWhisper", () => {
 
       await createRoot(async (dispose) => {
         const whisper = createWhisper();
-        await whisper.deleteModel("large-v3");
+        await whisper.deleteModel("large-v3-turbo");
 
         expect(invoke).toHaveBeenCalledWith("delete_model", {
-          modelId: "large-v3",
+          modelId: "large-v3-turbo",
         });
         expect(invoke).toHaveBeenCalledWith("get_available_models");
         expect(whisper.models()).toEqual(models);
@@ -538,7 +538,7 @@ describe("createWhisper", () => {
 
     it("should clear selectedModel and auto-select if deleted model was selected", async () => {
       const turboModel = mockModel({
-        id: "large-v3",
+        id: "large-v3-turbo",
         downloaded: true,
       });
       const smallModel = mockModel({
@@ -554,9 +554,9 @@ describe("createWhisper", () => {
       await createRoot(async (dispose) => {
         const whisper = createWhisper();
         whisper.selectModel(turboModel);
-        expect(whisper.selectedModel()?.id).toBe("large-v3");
+        expect(whisper.selectedModel()?.id).toBe("large-v3-turbo");
 
-        await whisper.deleteModel("large-v3");
+        await whisper.deleteModel("large-v3-turbo");
 
         // Should have auto-selected the remaining model
         expect(whisper.selectedModel()?.id).toBe("small");
@@ -566,7 +566,7 @@ describe("createWhisper", () => {
 
     it("should not affect selectedModel if a different model was deleted", async () => {
       const turboModel = mockModel({
-        id: "large-v3",
+        id: "large-v3-turbo",
         downloaded: true,
       });
 
@@ -580,7 +580,7 @@ describe("createWhisper", () => {
 
         await whisper.deleteModel("small");
 
-        expect(whisper.selectedModel()?.id).toBe("large-v3");
+        expect(whisper.selectedModel()?.id).toBe("large-v3-turbo");
         dispose();
       });
     });
@@ -592,7 +592,7 @@ describe("createWhisper", () => {
 
       await createRoot(async (dispose) => {
         const whisper = createWhisper();
-        await whisper.deleteModel("large-v3");
+        await whisper.deleteModel("large-v3-turbo");
 
         expect(whisper.error()).toEqual(
           expect.objectContaining({
@@ -661,7 +661,7 @@ describe("createWhisper", () => {
       expect(callback).toBeDefined();
 
       const downloadData: DownloadProgress = {
-        modelId: "large-v3",
+        modelId: "large-v3-turbo",
         downloadedBytes: 500000000,
         totalBytes: 1_739_587_584,
         progress: 28.7,

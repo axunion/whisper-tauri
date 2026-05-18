@@ -207,9 +207,7 @@ export interface Dictionary {
   };
   models: {
     whisper: {
-      largeV3: { description: string };
       largeV3Turbo: { description: string };
-      medium: { description: string };
       small: { description: string };
     };
     text: {

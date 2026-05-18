@@ -286,7 +286,7 @@ mod tests {
         assert_eq!(entries[0].id, id);
         assert_eq!(entries[0].file_name, "test_audio.wav");
         assert_eq!(entries[0].language, "ja");
-        assert_eq!(entries[0].model_id, "large-v3");
+        assert_eq!(entries[0].model_id, "large-v3-turbo");
         assert_eq!(entries[0].duration, 60000);
     }
 
@@ -449,7 +449,7 @@ mod tests {
                 "2026-06-15T10:00:00",
                 "new.wav",
                 "ja",
-                "large-v3",
+                "large-v3-turbo",
                 60000_i64,
                 text_compressed2,
                 segments_compressed2,

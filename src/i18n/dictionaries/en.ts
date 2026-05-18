@@ -217,9 +217,7 @@ export const en: Dictionary = {
   },
   models: {
     whisper: {
-      largeV3: { description: "High transcription accuracy" },
       largeV3Turbo: { description: "Fast and accurate. Distilled model" },
-      medium: { description: "Balanced accuracy and speed" },
       small: { description: "Lightweight and fast. Saves storage" },
     },
     text: {

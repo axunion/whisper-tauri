@@ -14,7 +14,7 @@ const mockMeta = (overrides?: Partial<HistoryMeta>): HistoryMeta => ({
   createdAt: "2026-02-20T10:00:00",
   fileName: "audio.wav",
   language: "ja",
-  modelId: "large-v3",
+  modelId: "large-v3-turbo",
   duration: 60000,
   textPreview: "This is a test transcription...",
   vadEnabled: true,
@@ -26,7 +26,7 @@ const mockEntry: HistoryEntry = {
   createdAt: "2026-02-20T10:00:00",
   fileName: "audio.wav",
   language: "ja",
-  modelId: "large-v3",
+  modelId: "large-v3-turbo",
   duration: 60000,
   text: "This is a test transcription.",
   segments: [
@@ -39,7 +39,7 @@ const mockEntry: HistoryEntry = {
 const mockSaveParams: HistorySaveParams = {
   fileName: "audio.wav",
   language: "ja",
-  modelId: "large-v3",
+  modelId: "large-v3-turbo",
   duration: 60000,
   text: "This is a test transcription.",
   segments: [

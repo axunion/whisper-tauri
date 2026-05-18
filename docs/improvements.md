@@ -31,7 +31,7 @@
 | 5  | A   | 共有メニュー化 (Notion 等)                 | 中   | 完了 (2026-05-14) | 共有メニュー (FiShare2) 新設 + 未接続時の設定リンク導線 |
 | 6  | A   | 履歴メタ情報の拡充 (VAD ON/OFF)            | 中   | 完了 (2026-05-15) | 履歴に vad_enabled 列追加 + 詳細メタ行表示。#10 のメタ基盤として再利用可 |
 | 15 | A   | 文字起こし時の VAD ON/OFF 選択             | 中   | 完了 (2026-05-15) | createWhisper に override signal 新設 + Bar に Checkbox 列。設定は起動時デフォルトとして機能継続 |
-| 7  | B   | Whisper モデルを small/turbo に絞る        | 高   | 未着手   | 後方互換問題が肥大化する前に |
+| 7  | B   | Whisper モデルを small/turbo に絞る        | 高   | 完了 (2026-05-18) | medium / large-v3 を完全削除し、turbo に統合 |
 | 8  | B   | 不要モデルのクリーンアップ                 | 中   | 未着手   | #7 の影響を吸収するために必要 |
 | 9  | C   | 要約の充実                                 | 中   | 未着手   | #10 の前提 |
 | 10 | C   | Notion ブロック送信 + メタデータ           | 中   | 未着手   | 主要連携の品質向上。履歴メタ (#6) と共通基盤 |
@@ -427,7 +427,17 @@
 - 検証ログ (どの音声で turbo が large-v3 と同等以上だったか) を `docs/` 配下に残しておくと意思決定の根拠になる。
 - 現状のユニットテスト / `model_path` の "small" 想定は変更不要。
 
-**Status:** 未着手
+### 実施結果 (2026-05-18)
+
+- **採用方針: 完全削除**。`VALID_MODEL_IDS` を `["small", "large-v3-turbo"]` に縮め、`get_model_list` も同じ 2 件のみ返す形に変更。`is_valid_model_id` が廃止 ID を弾くため `model_path` / `model_exists` / `download_model` / `delete_model` は同時に拒否され、API レベルで一貫した状態に。検討事項にあった「カスタム base URL 経由で medium / large-v3 を取得可能」案は、`is_valid_model_id` の縮小と両立できないため意図的に見送り。
+- **プレリリース前提でシンプル化**: 当初は `Settings.whisperModelId` が廃止 ID だった場合の自動切替 + トースト通知 (`MigrationNoticeWatcher` / `migrationNotice` signal / 専用 i18n キー) を実装したが、リリース前で実ユーザーがいないため不要と判断して全削除。`autoSelectModel` は元の「saved があれば復元、なければ downloaded[0]」のロジックに戻した。
+- **i18n**: `models.whisper.medium.description` / `models.whisper.largeV3.description` を `Dictionary` 型と ja/en 辞書から削除。`/i18n` クリア。
+- **テスト**: `models.rs` ユニットテストを 2 モデル前提に改修。`is_valid_model_id_rejects_unknown_models` と `get_speed_factors_unknown_model` に `"medium"` / `"large-v3"` を追加して、廃止 ID も「未知 ID」と同列に扱う形に集約。`get_model_list_excludes_legacy_models` でも turbo 以外が含まれないことを確認。`history/*` のテスト fixture は `"large-v3"` をすべて `"large-v3-turbo"` へ機械置換。Frontend では fixture を turbo 表記に揃えるのみで新規テストはなし。
+- **Docs**: `README.md` のモデル表を 2 行に縮め、機能サマリーも turbo へ変更。`docs/install.md` はモデル ID への言及なしで変更不要。
+- **スコープ外として残した項目**: カスタム base URL 経由での廃止モデル再取得、`ModelInfo` への `deprecated` フラグ追加、Storage 集約 UI / 自動クリーンアップ機能 (#8 へ委譲)。
+- **検証**: `/verify` の lint / typecheck / FE 268 tests / BE 328 tests / build 全通過。
+
+**Status:** 完了 (2026-05-18)
 
 ---
 

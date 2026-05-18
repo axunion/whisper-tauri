@@ -218,9 +218,7 @@ export const ja: Dictionary = {
   },
   models: {
     whisper: {
-      largeV3: { description: "文字起こし精度が高い" },
       largeV3Turbo: { description: "高精度で処理が速い。蒸留モデル" },
-      medium: { description: "精度と速度のバランスが良い" },
       small: { description: "軽量で処理が速い。容量を節約できる" },
     },
     text: {
