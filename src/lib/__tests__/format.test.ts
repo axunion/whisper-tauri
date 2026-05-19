@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { formatBytes } from "../format";
+import type { StructuredSummary } from "~/types";
+import { formatBytes, formatSummaryAsText } from "../format";
 
 describe("formatBytes", () => {
   it("returns 0 B for zero", () => {
@@ -39,5 +40,59 @@ describe("formatBytes", () => {
 
   it("steps into TB for very large values", () => {
     expect(formatBytes(2 * 1024 ** 4)).toBe("2.0 TB");
+  });
+});
+
+describe("formatSummaryAsText", () => {
+  const fullSummary: StructuredSummary = {
+    headline: "Weekly sync",
+    tldr: "Discussed backend progress and frontend review timing.",
+    keywords: ["backend", "frontend"],
+    actionItems: [
+      { what: "Finalize design", due: "Friday" },
+      { what: "Send notes" },
+    ],
+    keyPoints: ["API completed"],
+  };
+
+  it("includes all populated sections in order", () => {
+    const out = formatSummaryAsText(fullSummary);
+    expect(out).toContain("# Weekly sync");
+    expect(out).toContain(
+      "## TL;DR\nDiscussed backend progress and frontend review timing.",
+    );
+    expect(out.indexOf("## TL;DR")).toBeLessThan(out.indexOf("## Key Points"));
+    expect(out.indexOf("## Key Points")).toBeLessThan(
+      out.indexOf("## Action Items"),
+    );
+    expect(out.indexOf("## Action Items")).toBeLessThan(
+      out.indexOf("## Keywords"),
+    );
+    expect(out).toContain("- Finalize design (due: Friday)");
+    expect(out).toContain("- Send notes");
+    expect(out).toContain("backend, frontend");
+  });
+
+  it("omits sections backed by empty content", () => {
+    const out = formatSummaryAsText({
+      headline: "",
+      tldr: "",
+      keywords: [],
+      actionItems: [],
+      keyPoints: ["only this"],
+    });
+    expect(out).toBe("## Key Points\n- only this");
+  });
+
+  it("returns empty string when nothing is populated", () => {
+    expect(
+      formatSummaryAsText({
+        headline: "",
+        tldr: "",
+        keywords: [],
+        actionItems: [],
+        keyPoints: [],
+      }),
+    ).toBe("");
   });
 });

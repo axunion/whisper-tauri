@@ -3,12 +3,17 @@ import type { Accessor } from "solid-js";
 import { createSignal, onCleanup } from "solid-js";
 import { parseError } from "~/lib/errors";
 import { createTextProcessing } from "~/primitives/createTextProcessing";
-import type { AiContent, AiContentType, InferenceProgress } from "~/types";
+import type {
+  AiContent,
+  AiContentType,
+  InferenceProgress,
+  StructuredSummary,
+} from "~/types";
 import type { AppError } from "~/types/errors";
 
 export interface AiSession {
   // State
-  summaryResult: Accessor<string | null>;
+  summaryResult: Accessor<StructuredSummary | null>;
   cleanTextResult: Accessor<string | null>;
   titleResult: Accessor<string | null>;
   isProcessing: Accessor<boolean>;
@@ -19,11 +24,58 @@ export interface AiSession {
   error: Accessor<AppError | null>;
 
   // Actions
-  summarize: (text: string) => Promise<string | null>;
+  summarize: (text: string) => Promise<StructuredSummary | null>;
   cleanText: (text: string) => Promise<string | null>;
   generateTitle: (text: string) => Promise<string | null>;
   cancel: () => Promise<void>;
   clearError: () => void;
+}
+
+/**
+ * Parses persisted summary content from the history DB.
+ *
+ * History stores summaries as JSON strings under `ai_content.text`. When the
+ * stored value cannot be parsed (corrupted entry, or a legacy plain-text
+ * summary written before structured output landed), we surface the raw text
+ * inside `tldr` so the user can still see what was saved.
+ */
+export function parseSummaryContent(text: string): StructuredSummary {
+  try {
+    const parsed = JSON.parse(text) as Record<string, unknown>;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const tldrRaw = parsed.tldr;
+      return {
+        headline: typeof parsed.headline === "string" ? parsed.headline : "",
+        // Tolerate older entries that stored tldr as an array.
+        tldr:
+          typeof tldrRaw === "string"
+            ? tldrRaw
+            : Array.isArray(tldrRaw)
+              ? tldrRaw
+                  .filter((x): x is string => typeof x === "string")
+                  .join(" ")
+              : "",
+        keywords: Array.isArray(parsed.keywords)
+          ? parsed.keywords.filter((x): x is string => typeof x === "string")
+          : [],
+        actionItems: Array.isArray(parsed.actionItems)
+          ? (parsed.actionItems as StructuredSummary["actionItems"])
+          : [],
+        keyPoints: Array.isArray(parsed.keyPoints)
+          ? parsed.keyPoints.filter((x): x is string => typeof x === "string")
+          : [],
+      };
+    }
+  } catch {
+    // Fall through to plain-text fallback.
+  }
+  return {
+    headline: "",
+    tldr: text,
+    keywords: [],
+    actionItems: [],
+    keyPoints: [],
+  };
 }
 
 /**
@@ -36,7 +88,8 @@ export function createAiSession(
 ): AiSession {
   const tp = createTextProcessing();
 
-  const [summaryResult, setSummaryResult] = createSignal<string | null>(null);
+  const [summaryResult, setSummaryResult] =
+    createSignal<StructuredSummary | null>(null);
   const [cleanTextResult, setCleanTextResult] = createSignal<string | null>(
     null,
   );
@@ -62,7 +115,7 @@ export function createAiSession(
     for (const c of content) {
       switch (c.contentType) {
         case "summary":
-          setSummaryResult(c.text);
+          setSummaryResult(parseSummaryContent(c.text));
           break;
         case "cleanText":
           setCleanTextResult(c.text);
@@ -113,23 +166,24 @@ export function createAiSession(
     }).catch(console.error);
   }
 
-  async function runExtraction(
+  async function runExtraction<TResult>(
     command: string,
     contentType: AiContentType,
     operation: "summary" | "cleanText",
-    setResult: (v: string | null) => void,
+    setResult: (v: TResult | null) => void,
     text: string,
-  ): Promise<string | null> {
+    serialize: (value: TResult) => string,
+  ): Promise<TResult | null> {
     if (isProcessing()) return null;
     setIsProcessing(true);
     setCurrentOperation(operation);
     setError(null);
     try {
       const modelId = tp.effectiveModelId();
-      const result = await invoke<string>(command, { text, modelId });
+      const result = await invoke<TResult>(command, { text, modelId });
       setResult(result);
-      if (result) {
-        saveToHistory(contentType, result, modelId ?? "unknown");
+      if (result !== null && result !== undefined) {
+        saveToHistory(contentType, serialize(result), modelId ?? "unknown");
       }
       return result;
     } catch (e) {
@@ -141,23 +195,25 @@ export function createAiSession(
     }
   }
 
-  async function summarize(text: string): Promise<string | null> {
-    return runExtraction(
+  async function summarize(text: string): Promise<StructuredSummary | null> {
+    return runExtraction<StructuredSummary>(
       "text_processing_summarize",
       "summary",
       "summary",
       setSummaryResult,
       text,
+      JSON.stringify,
     );
   }
 
   async function cleanText(text: string): Promise<string | null> {
-    return runExtraction(
+    return runExtraction<string>(
       "text_processing_clean_text",
       "cleanText",
       "cleanText",
       setCleanTextResult,
       text,
+      (v) => v,
     );
   }
 

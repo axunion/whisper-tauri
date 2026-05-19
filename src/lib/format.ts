@@ -51,6 +51,36 @@ export function formatDateShort(isoString: string, locale: string): string {
   });
 }
 
+/**
+ * Renders a [`StructuredSummary`](../types/text-processing.ts) as Markdown-ish
+ * plain text for clipboard copy and (future) Notion block fall-back. Empty
+ * sections are skipped so the output never contains lonely headings.
+ */
+export function formatSummaryAsText(
+  summary: import("~/types").StructuredSummary,
+): string {
+  const blocks: string[] = [];
+  if (summary.headline) blocks.push(`# ${summary.headline}`);
+  if (summary.tldr.length > 0) {
+    blocks.push(`## TL;DR\n${summary.tldr}`);
+  }
+  if (summary.keyPoints.length > 0) {
+    blocks.push(
+      `## Key Points\n${summary.keyPoints.map((s) => `- ${s}`).join("\n")}`,
+    );
+  }
+  if (summary.actionItems.length > 0) {
+    const lines = summary.actionItems.map((item) =>
+      item.due ? `- ${item.what} (due: ${item.due})` : `- ${item.what}`,
+    );
+    blocks.push(`## Action Items\n${lines.join("\n")}`);
+  }
+  if (summary.keywords.length > 0) {
+    blocks.push(`## Keywords\n${summary.keywords.join(", ")}`);
+  }
+  return blocks.join("\n\n");
+}
+
 /** Sums `sizeBytes` over downloaded items only. */
 export function sumDownloadedBytes<
   T extends { downloaded: boolean; sizeBytes: number },

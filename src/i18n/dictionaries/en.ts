@@ -222,6 +222,11 @@ export const en: Dictionary = {
     overwriteConfirmTitle: "Overwrite existing results?",
     overwriteConfirmDescription:
       "The existing results will be deleted and regenerated. This action cannot be undone.",
+    summaryTldr: "TL;DR",
+    summaryKeyPoints: "Key Points",
+    summaryKeywords: "Keywords",
+    summaryActionItems: "Action Items",
+    summaryActionDue: "Due",
   },
   models: {
     whisper: {

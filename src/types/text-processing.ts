@@ -69,3 +69,31 @@ export interface ServerStatus {
   /** The model ID loaded on the server */
   modelId?: string;
 }
+
+/**
+ * A single action item extracted from a transcription.
+ *
+ * Assignee inference is intentionally not supported — speaker identification
+ * is unreliable from transcripts. `due` is populated only when explicitly
+ * mentioned in the speech.
+ */
+export interface ActionItem {
+  what: string;
+  due?: string;
+}
+
+/**
+ * Structured summary returned by `text_processing_summarize`.
+ *
+ * `tldr` is a 1–2 sentence overall recap; `keyPoints` is the sub-topic
+ * bullet list. Arrays may be empty when the transcription does not yield
+ * that kind of content (e.g. a monologue with no action items). Sections
+ * backed by empty arrays / empty strings are hidden in the UI.
+ */
+export interface StructuredSummary {
+  headline: string;
+  tldr: string;
+  keywords: string[];
+  actionItems: ActionItem[];
+  keyPoints: string[];
+}

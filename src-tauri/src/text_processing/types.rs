@@ -85,6 +85,43 @@ pub struct ChatMessage {
     pub content: String,
 }
 
+/// A single action item extracted from a transcription.
+///
+/// Assignee inference is intentionally not supported — speaker identification
+/// is unreliable from transcripts alone. Only the task itself and an optional
+/// due date / timeframe are captured.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ActionItem {
+    /// The task itself.
+    pub what: String,
+    /// Due date or timeframe phrase. None when unspecified.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub due: Option<String>,
+}
+
+/// Structured summary returned by `text_processing_summarize`.
+///
+/// Every field is required in the JSON schema. `tldr` is a 1–2 sentence
+/// paragraph that summarises the whole transcription, while `keyPoints` is a
+/// bullet-style list of sub-topics. Arrays may be empty when the
+/// transcription does not yield that kind of content (e.g. a monologue with
+/// no action items).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct StructuredSummary {
+    /// Single-line title.
+    pub headline: String,
+    /// 1–2 sentence overall recap (lead paragraph).
+    pub tldr: String,
+    /// Salient keywords / topical noun phrases.
+    pub keywords: Vec<String>,
+    /// Extracted action items, possibly empty.
+    pub action_items: Vec<ActionItem>,
+    /// Sub-topic bullets, 2–5 entries detailing the body of the discussion.
+    pub key_points: Vec<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -202,5 +239,62 @@ mod tests {
         let json = serde_json::to_string(&msg).expect("Failed to serialize");
         assert!(json.contains("\"role\":\"system\""));
         assert!(json.contains("\"content\":\"You are a helpful assistant.\""));
+    }
+
+    #[test]
+    fn structured_summary_roundtrips_full() {
+        let summary = StructuredSummary {
+            headline: "週次ミーティング".to_string(),
+            tldr: "進捗共有と課題整理を行った会議。".to_string(),
+            keywords: vec!["進捗".to_string(), "課題".to_string()],
+            action_items: vec![ActionItem {
+                what: "資料をまとめる".to_string(),
+                due: Some("金曜".to_string()),
+            }],
+            key_points: vec!["バックエンド完了".to_string()],
+        };
+
+        let json = serde_json::to_string(&summary).expect("Failed to serialize");
+        assert!(json.contains("\"actionItems\""));
+        assert!(json.contains("\"keyPoints\""));
+        assert!(json.contains("\"tldr\":\"進捗共有と課題整理を行った会議。\""));
+
+        let parsed: StructuredSummary = serde_json::from_str(&json).expect("Failed to deserialize");
+        assert_eq!(parsed, summary);
+    }
+
+    #[test]
+    fn structured_summary_roundtrips_empty() {
+        let summary = StructuredSummary {
+            headline: String::new(),
+            tldr: String::new(),
+            keywords: Vec::new(),
+            action_items: Vec::new(),
+            key_points: Vec::new(),
+        };
+
+        let json = serde_json::to_string(&summary).expect("Failed to serialize");
+        let parsed: StructuredSummary = serde_json::from_str(&json).expect("Failed to deserialize");
+        assert_eq!(parsed, summary);
+    }
+
+    #[test]
+    fn action_item_omits_none_due() {
+        let item = ActionItem {
+            what: "後で確認".to_string(),
+            due: None,
+        };
+
+        let json = serde_json::to_string(&item).expect("Failed to serialize");
+        assert!(!json.contains("\"due\""));
+        assert!(json.contains("\"what\":\"後で確認\""));
+    }
+
+    #[test]
+    fn action_item_accepts_missing_due() {
+        let parsed: ActionItem =
+            serde_json::from_str(r#"{"what":"フォローアップ"}"#).expect("Failed to deserialize");
+        assert_eq!(parsed.what, "フォローアップ");
+        assert_eq!(parsed.due, None);
     }
 }

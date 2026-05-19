@@ -31,9 +31,11 @@
 | 5  | A   | 共有メニュー化 (Notion 等)                 | 中   | 完了 (2026-05-14) | 共有メニュー (FiShare2) 新設 + 未接続時の設定リンク導線 |
 | 6  | A   | 履歴メタ情報の拡充 (VAD ON/OFF)            | 中   | 完了 (2026-05-15) | 履歴に vad_enabled 列追加 + 詳細メタ行表示。#10 のメタ基盤として再利用可 |
 | 15 | A   | 文字起こし時の VAD ON/OFF 選択             | 中   | 完了 (2026-05-15) | createWhisper に override signal 新設 + Bar に Checkbox 列。設定は起動時デフォルトとして機能継続 |
+| 16 | A   | 要約・整文タブで保存ボタンを有効化         | 中   | 未着手   | 現状は隠されている。formatSummaryAsText 経由で .md / .txt 出力 |
+| 17 | A   | 要約処理中の履歴ナビゲーション制御         | 中   | 未着手   | 処理中に閉じられて再オープン時にタブ非表示。閉じる前確認 or 処理中状態の永続化 |
 | 7  | B   | Whisper モデルを small/turbo に絞る        | 高   | 完了 (2026-05-18) | medium / large-v3 を完全削除し、turbo に統合 |
 | 8  | B   | 不要モデルのクリーンアップ                 | 中   | 完了 (2026-05-19) | 廃止モデル機構を LLM 側にだけ実装。合計サイズ表示は Whisper / LLM 両方に |
-| 9  | C   | 要約の充実                                 | 中   | 未着手   | #10 の前提 |
+| 9  | C   | 要約の充実                                 | 中   | 進行中 (品質再検討) | 構造化要約は完成済み。tldr/keyPoints の役割分離と actionItems 厳格化を 2026-05-19 に追加 |
 | 10 | C   | Notion ブロック送信 + メタデータ           | 中   | 未着手   | 主要連携の品質向上。履歴メタ (#6) と共通基盤 |
 | 11 | D   | バイナリ更新フロー (ffmpeg/llama)          | 低   | 未着手   | ポリシー策定優先 |
 | 12 | D   | リアルタイム / 話者識別                    | 低   | 未着手   | VAD は導入済み。スコープ大 |
@@ -404,6 +406,104 @@
 
 ---
 
+## 16. 要約・整文タブで保存ボタンを有効化
+
+### 背景
+
+- 現状: `ResultToolbar.tsx:244-245` で Save ボタンは `<Show when={!isTextProcessingTab()}>` でラップされ、`activeTab === "summary"` または `"cleanText"` のとき非表示になる。
+- 設計理由: `ResultViewer.tsx::handleSave` が `exportResult(props.result, fmt)` で **元の `TranscriptionResult`** (= 元文字起こし) を txt/srt/vtt に書き出す実装。要約や整文後テキストには対応していないため、誤って元文字起こしが保存されるのを避けて隠す方針だった。
+- 利用者目線では「要約をダウンロードしたいのに Save ボタンが消える」のは違和感がある。#9 で `formatSummaryAsText` ヘルパが入り、要約 → Markdown 整形が可能になったので、要約タブ固有の保存パスを揃えるタイミングとして適切。
+
+### 案
+
+- **タブごとに保存内容と拡張子を切り替える**:
+  - text / timeline タブ: 現状通り `exportResult(props.result, fmt)` で **txt / srt / vtt** (flyout で format 選択)
+  - summary タブ: `formatSummaryAsText(summary)` を **`.md`** で保存 (Markdown 固定、flyout なし or "Markdown" のみ)
+  - cleanText タブ: `cleanTextResult` を **`.txt`** で保存 (format 固定)
+- ファイル名のデフォルト:
+  - summary: `{fileNameText}-summary.md`
+  - cleanText: `{fileNameText}-cleaned.txt`
+  - text / timeline: 既存の `transcription{ext}` を維持
+- `ResultViewer.tsx::handleSave` を tab 分岐に拡張、`ResultToolbar.tsx` の `<Show when={!isTextProcessingTab()}>` を外す。
+- i18n 追加: `dialog.mdFilter` (`Markdown` / `Markdown ファイル`)、保存ダイアログ title は既存 `dialog.saveTranscriptionTitle` を流用するか、summary 用に新設するか要検討。
+
+### 検討事項
+
+- **Save flyout のあり方**:
+  - 現状の Save flyout (txt/srt/vtt) は format 選択を含む。summary タブで format が 1 つ (md) だけなら flyout を出す意味はなく、単発ボタンにする方が素直。
+  - cleanText タブも format 1 つ (txt) → 単発ボタン。
+  - 結局 tab に応じて「flyout (text/timeline) / 単発ボタン (summary/cleanText)」を切り替える形になる。
+- **Notion へのシェアとの整合**:
+  - Share メニュー (Notion 送信) は `getCopyText()` 経由で active tab の整形済みテキストを送る。Save も同様に「active tab の中身を整形して書き出す」という統一原則にすると一貫性が出る。
+- **export.ts への追加**:
+  - `formatSummaryAsText` は `src/lib/format.ts` にある。`exportResult` 系と性質が違う (構造体 → string vs `TranscriptionResult` → 整形済み export) ため、無理に統合せず Save 側で `if (tab === "summary") ...` 分岐するのが素直。
+- **#9 (品質再検討中) との関係**: 要約構造体が変わるたびに保存形式も影響を受けるが、`formatSummaryAsText` を介すれば隠蔽できる。今回の改善はそのヘルパに依存するだけ。
+
+**Status:** 未着手
+
+---
+
+## 17. 要約処理中の履歴ナビゲーション制御
+
+### 背景
+
+- 現状: 履歴詳細を開いて「要約」ボタンを押すと処理が始まるが、処理中に履歴を閉じて一覧に戻ることが**できてしまう**。
+- 同じ履歴を再オープンしたとき、要約タブは表示されない (タブ自体が消えている)。「要約」ボタンを押し直すと要約タブが再表示され、**処理が継続していたことが分かる**。
+- 利用者から見ると:
+  - 処理中の視覚的フィードバックが履歴を閉じた時点で消える
+  - 再オープン時に「処理中」が分からないので、もう一度「要約」ボタンを押す動機が生まれる
+  - 結果として、内部で何が起きているか分からず混乱する
+
+### 原因の見立て
+
+- `ResultViewer.tsx::summaryTabVisible()`:
+  ```ts
+  summaryTabRequested() ||
+  session.summaryResult() !== null ||
+  (session.isProcessing() && session.currentOperation() === "summary")
+  ```
+- `summaryTabRequested` は signal で、コンポーネント再マウント (= 履歴再オープン) でリセットされる。
+- `session.summaryResult()` は履歴 (`ai_content` テーブル) から復元されるが、**処理がまだ完了していない時点では履歴に保存されていない**ため null。
+- `session.isProcessing()` は **新しい `createAiSession` インスタンスのローカル状態**で、前回セッション (履歴を閉じる前) とは別。再オープン時には false。
+- 結果として 3 条件すべて false で要約タブが非表示になる。
+- `onCleanup` で `cancelSession()` が呼ばれているはずだが、ユーザー報告では「続いている処理が見える」 → キャンセルが効いていないか、cancelSession 呼び出しの reach 自体に問題がある可能性。要確認。
+
+### 案 (方針別)
+
+- **方針 A (推奨・最小)**: 要約処理中は履歴を閉じる前に **確認ダイアログ**を出す。「処理中です。中断して閉じますか?」 → OK で cancel + close、Cancel で何もしない。
+  - 実装: `History.tsx` の「閉じる」アクションを `session.isProcessing()` で条件分岐。
+  - メリット: 状態管理を増やさず、混乱の原因 (静かに閉じられること) を断つ。
+  - デメリット: 「閉じて他の作業をしながら待つ」フローは不可能になる。
+- **方針 B (大きい)**: 処理中の状態をアプリ全体で永続化し、履歴を閉じても処理は継続。再オープン時に要約タブを「処理中」状態で復元。
+  - 実装: 処理中の `taskId` / `historyId` / `currentOperation` をグローバル primitive (例: `createActiveJobs`) で保持。`ResultViewer` 再マウント時にそこを見て継続表示。
+  - メリット: バックグラウンド処理を待ちながら他の履歴を見られる。
+  - デメリット: 状態管理が複雑化。複数履歴を同時処理可能にするか、1 件限定か、設計判断が要る。Tauri 側の taskId とフロント状態の同期も再設計。
+- **方針 C (穏当)**: 履歴を閉じる時点で **必ずキャンセル**し、トーストで「要約処理を中断しました」と通知。
+  - 実装: `onCleanup` で `cancelSession()` + `toast.info()`。
+  - メリット: 状態の嘘がなくなる (続いている "ように見える" 問題を解消)。
+  - デメリット: 利用者の意図せぬキャンセルが起きる。
+
+### 検討事項
+
+- **cancelSession が本当に効いていないのか確認**: もし effective なら方針 C は不要、A の確認ダイアログだけで「明示的にキャンセルする」フローが完結する。`text_processing_cancel` の挙動と `INFERENCE_TASK_MANAGER.cancel_task` がリクエスト本体に伝わっているかをまず確認する。
+- **方針 A での確認ダイアログ UX**:
+  - 既存の `ConfirmDialog` (削除確認などで使用) を流用。文言は「文字起こし整形 / 要約 / タイトル生成のいずれかが処理中です。中断して閉じますか?」。
+  - `currentOperation` で文言を出し分け (要約のみか cleanText 中かタイトル生成中か)。
+- **方針 B を取る場合のスコープ膨張**:
+  - グローバルな処理中ジョブの concept を入れると、Dashboard などからも見えるべきか、サイドバーに処理中インジケータを出すか、設計が広がる。プレリリース段階では過剰。
+- **#9 との関係**: 要約処理が `stream:false` の `run_inference_blocking` 経由になり、進捗トークン表示はスピナーのみ。途中状態を保存する必要はないので、キャンセルで失う情報は最小限。
+- **再現性**: 短い音声では処理が一瞬で終わるので確認しづらい。長文で再現 (チャンク要約 → 最終 structured 化のあいだの数十秒) を狙う。
+
+### 推奨進め方
+
+1. まず `text_processing_cancel` の挙動を実環境で確認 (cancelSession で効いているか)
+2. 方針 A (確認ダイアログ) を実装 — 最も影響範囲が小さい
+3. それでも UX が不十分なら方針 B (バックグラウンド処理永続化) を後追い検討
+
+**Status:** 未着手
+
+---
+
 # B. モデル管理
 
 公開モデルの取捨選択と利用者ディスクの整理。#7 → #8 の順で着手しないと、廃止モデルがディスクに残り続ける。
@@ -623,7 +723,95 @@ rm "~/Library/Application Support/com.whisper-tauri.desktop/models/ggml-large-v3
 - LLM モデルの能力差で出力 JSON が壊れることがある。`tuning.md` に従い、モデル側の弱点を隠す独自整形は最小限に留め、JSON モード or 構造化出力をサポートする llama.cpp の機能 (`grammar`) を素直に使う。
 - アクションアイテムは抽出が難しい (会議じゃない録音だと空配列になる)。空でも UI が破綻しないよう「該当なし」表示を用意。
 
-**Status:** 未着手
+### 実施結果 (2026-05-19)
+
+- **構造化方式**: HTTP リクエスト本体に `response_format: {type:"json_schema", json_schema:{name, schema, strict:true}}` を渡す方式に決定。llama-server 起動引数の `--grammar-file` は `clean_text` / `chat` / `title` にも影響するため採用せず、リクエスト単位で切り替えられる OpenAI 互換の `response_format` を使う。`.claude/rules/tuning.md` の「標準機能を素直に使う」方針通り。
+- **出力構造**: `StructuredSummary { headline, tldr[], keywords[], actionItems[], keyPoints[] }`。`ActionItem { who?, what, due? }` は `who` / `due` のみ optional (会議以外で欠落しやすい)。全配列は空許容で、空セクションは UI 側で非表示。
+- **ストリーミング扱い**: 要約だけ `stream:false` に切り替え、`run_inference_blocking` 新規追加。`clean_text` / `chat` / `generate_title` は SSE ストリーム維持。途中の壊れた JSON を progress text として描画する経路を回避し、UI は「処理中…」のスピナーだけにした。
+- **チャンキング**: 長文 (>4000 文字) は中間チャンク要約だけ平文に分け (`build_chunk_condense_messages` 新設、SSE で逐次)、最終 1 回だけ structured 出力。各チャンクで structured 出力する設計は過剰と判断。
+- **System prompt**: 旧マークダウン指示 (`### 見出し` + `<example>`) を削除し、各フィールドの意味だけ書く最小構成に。フォーマット指定はスキーマに任せて、モデルの弱点を独自整形で隠さない方針に統一。
+- **JSON schema**: `inference.rs::summary_json_schema` に定数化。`additionalProperties: false` + `strict: true` で型ずれを拒否。`required` は `[headline, tldr, keywords, actionItems, keyPoints]` の 5 フィールド、`actionItems.items.required` は `[what]` のみ。
+- **TS 型**: `StructuredSummary` / `ActionItem` を `src/types/text-processing.ts` に追加、`types/index.ts` で re-export。Rust 側と完全に対称。
+- **タブ構成**: 単一 Summary タブ内をセクション分割 (3 タブに分けない)。`headline → tldr → keyPoints → actionItems → keywords` の順で縦に並べ、空配列セクションは `<Show>` で非表示。`keywords` は chip 風 (`rounded-full bg-muted/60 px-2.5 py-0.5`)、`actionItems` は who/what/due の縦並びカード、`tldr` / `keyPoints` は既存の bullet スタイル流用。
+- **履歴データ形式**: 既存 `ai_content.text` に `JSON.stringify(structured)` をそのまま保存 (DB スキーマ変更なし)。復元時 (`loadFromAiContent` の `case "summary"`) は `parseSummaryContent` で `JSON.parse` を試み、失敗時は plain text として `tldr[0]` に流すフォールバック。プレリリースのため過去データ互換は不要だが、壊れた JSON / 旧形式 plain text の両方を吸収する形にした。
+- **コピー機能**: `src/lib/format.ts::formatSummaryAsText` を新設。Markdown 風 (`# Headline` / `## TL;DR` / `## Key Points` / `## Action Items` / `## Keywords`) に整形。空セクションはスキップ。`ResultViewer.getCopyText` の `tab === "summary"` 分岐で使用。#10 (Notion ブロック送信) でもこのヘルパを再利用する想定。
+- **createAiSession 型変更**: `summaryResult: Accessor<StructuredSummary | null>`、`summarize(text): Promise<StructuredSummary | null>`。`runExtraction` をジェネリクス化して `serialize: (v: T) => string` を受け取り、Summarize 側は `JSON.stringify`、CleanText 側は identity を渡す形に統一。
+- **clippy `too_many_arguments`**: `run_inference_blocking` が引数 8 つになり既存 `run_inference` (7) を超えたため `#[allow(clippy::too_many_arguments)]` を付与。リクエスト構造体への抽出は別タスクとして温存。
+- **i18n キー**: `textProcessing.*` に 6 件追加 (`summaryTldr` / `summaryKeyPoints` / `summaryKeywords` / `summaryActionItems` / `summaryActionWho` / `summaryActionDue`)。ja は「要点 / 重要トピック / キーワード / アクションアイテム / 担当 / 期日」、en は Title Case ("TL;DR" / "Key Points" / "Keywords" / "Action Items" / "Who" / "Due")。
+- **`formatSummaryAsText` の見出しは英語固定**: Markdown 規約として汎用性が高いことと、#10 Notion ブロック化で同じ文字列を再利用する想定のため、ロケール非依存にした。ロケール別翻訳は将来検討余地あり。
+- **テスト追加**: Rust 側に `structured_summary_roundtrips_full` / `structured_summary_roundtrips_empty_arrays` / `action_item_omits_none_fields` / `action_item_accepts_missing_optional_fields` / `summarize_system_describes_structured_fields` / `summary_json_schema_has_all_required_fields` / `summary_response_format_wraps_schema`。TS 側に `parseSummaryContent` の 5 ケース (`createAiSession.test.ts` 新規) と `formatSummaryAsText` の 3 ケース (`format.test.ts` に追加)。
+- **検証**: `/verify` の lint / typecheck / FE 286 tests / BE 341 tests / build 全通過。`/i18n` 構造・プレースホルダ・表記・使用箇所すべてクリア。
+- **動作確認のタイミング**: バックエンド単体テスト + フロント tsc/lint/test レベルでは検証済み。実 llama-server を起動した end-to-end (短い独白で `actionItems` 空・会議録で複数項目・英語入力・履歴復元・コピー貼り付け) は手動確認待ち。
+- **スコープ外として残した項目**:
+  - モデル別プロンプトチューニング (gemma-4-e2b vs qwen3.5-4b の差分は許容)
+  - ユーザーカスタムプロンプト
+  - 要約再生成の細粒度制御 (フィールド単位の再生成)
+  - Notion ブロック送信側マッピング (#10 で対応、`formatSummaryAsText` を再利用予定)
+  - 旧形式データの自動マイグレーション (プレリリース前提のため不要、`parseSummaryContent` のフォールバックで吸収)
+  - `chat` / `clean_text` / `generate_title` の structured 化
+  - 要約バージョニング (`optionsJson` に schemaVersion を持たせる拡張)
+  - llama-server 起動引数 (`--grammar-file`) の利用 — リクエスト単位の `response_format` で十分
+  - `run_inference_blocking` のリクエスト構造体抽出 (clippy `too_many_arguments` 抑制で対応)
+  - `formatSummaryAsText` のロケール対応 (Markdown 規約として英語固定)
+
+### 品質再検討 (2026-05-19, 同日)
+
+実環境で短文音声に対して試したところ、以下の品質問題が浮かんだ:
+
+1. **tldr と keyPoints の差が薄い**: 「2〜3 行の tldr」と「2〜5 個の keyPoints」が抽象度違いだけで内容が重複し、階層構造として意義が薄かった
+2. **actionItems の誤検出**: 独白・朗読・雑談など本来 actionItems が無い音声でも、LLM が 1 件無理に抽出してしまう傾向
+
+`.claude/rules/tuning.md` 方針 (workaround より仕様変更で対応) に従い、以下の構造変更で対応:
+
+- **tldr を `Vec<String>` → `String` に変更**: 1〜2 文 (80〜150文字程度) の「リード段落」に再定義。配列ではなく単一文字列で、箇条書きの体裁を捨てた
+- **keyPoints の位置づけを「サブトピック箱条書き」に明確化**: tldr の言い換えではなく、tldr で触れなかった**具体的な論点・話題・事実**を 1 件ずつ取り出す役割。プロンプトで「tldr と内容を重複させない」と明示
+- **actionItems プロンプトを厳格化**:
+  - 「多くの音声では空配列が正解。独白・朗読・講演・雑談・インタビュー・説明動画では必ず空配列」
+  - 「話題提示や感想は action item ではない。明確な指示・依頼・約束のみ」
+  - 「1 件だけ抽出するくらいなら空配列にする方が良い」
+  - 「who / due は発話で明示されているときのみ。文脈推測は不可」
+- **UI**: tldr を bullet list から段落 (`<p>`) 表示に変更
+- **`parseSummaryContent` の後方互換**: 旧形式の `tldr: string[]` データを `Array.join(" ")` で吸収
+
+スキーマ・JSON schema の変更:
+- `StructuredSummary.tldr`: `Vec<String>` → `String` (Rust) / `string[]` → `string` (TS)
+- `summary_json_schema`: `tldr` の type を `array` → `string`
+
+テスト更新:
+- `structured_summary_roundtrips_empty_arrays` → `structured_summary_roundtrips_empty` に名前変更 (tldr は配列ではなくなったため)
+- `summarize_system_describes_structured_fields` に「総括」「サブトピック」「空配列」の assertion 追加
+- `parseSummaryContent` の legacy array fallback ケースを `createAiSession.test.ts` に追加
+- `formatSummaryAsText` のテストを新 schema (`tldr: string`) に合わせて更新
+
+検証:
+- `/verify` の lint / typecheck / FE 287 tests / BE 341 tests / build 全通過
+- 実環境での品質検証 (短い独白で actionItems が本当に空になるか / 会議録で tldr と keyPoints が分離されるか) は次のセッションで確認
+
+### 品質再検討 第2弾 (2026-05-19, 同日)
+
+実環境での再試行で「アクションアイテムの担当者推定が信頼できない」「長い音声 (講演 / 1 時間超会議) で keyPoints が少なすぎる」というフィードバックが出たため、追加で以下を実装:
+
+- **`ActionItem.who` を完全削除**: スキーマ・Rust struct・TS interface・UI・i18n キー (`summaryActionWho`) を全削除。発話だけから担当者を特定するのは LLM の能力外と判断し、仕様として割り切る。`due` (期日) は明示発話があるときのみ抽出する形で温存
+- **ActionItems を箇条書き UI に変更**: 旧カード形式 (`<li class="rounded-md border ...">`) を keyPoints と同じ bullet スタイル (`• {what} (期日: {due})`) に統一。視覚的な「タスクの重さ」を減らし、tldr / keyPoints と並んで読める密度に
+- **入力長に応じた keyPoints 動的レンジ**:
+  - `inference::summary_params_for_length(text_chars: usize) -> SummaryParams` を新設。返り値は `(key_points_min, key_points_max, max_tokens)` の純粋関数
+  - バケット: `<1500: 2〜4 / 1500〜5000: 3〜6 / 5000〜15000: 5〜10 / >=15000: 7〜15`、max_tokens は `2048 / 2048 / 3072 / 4096` でスケール
+  - `build_summarize_messages` を `(text, min, max)` シグネチャに拡張し、`format!` でプロンプトに目安数を埋め込み
+  - `text_processing_summarize` で `text.chars().count()` を測って渡す。チャンク要約で短くなる前の **元の文字数ベース** で決める (ユーザーが触る指標と整合)
+- **重複時の減少を許容するプロンプト**: 「内容が重複する場合は項目数を下回ってよい — 同じ趣旨の項目を 2 つ以上書かない」を明示。LLM が範囲下限を埋めようとして水増しするのを防ぐ
+- **担当者推定オフのプロンプト記載**: 「担当者の推定は行わない (スキーマにも含まない)」を actionItems ルール 4 に明記。スキーマと文章の両方で off を表明
+
+検証:
+- `/verify` の lint / typecheck / FE 287 tests / BE 344 tests / build 全通過
+- 新規 Rust テスト 3 件追加 (`summary_params_scale_with_length` / `summary_params_bucket_boundaries` / `summarize_system_embeds_key_points_range`) + 既存テスト更新 (`action_item_omits_none_due` / `action_item_accepts_missing_due` に rename、`summary_json_schema_has_all_required_fields` に who absence の assertion)
+- TS 側 fixture も新型に統一 (`createAiSession.test.ts` / `format.test.ts`)
+
+スコープ外として残した項目 (品質再検討で新たに保留):
+- duration / segment 数を入力長として使う案 (今回は `text.chars().count()` のみ。`tldr` / `keyPoints` の質には文字数で十分)
+- バケット境界の微調整 (実環境フィードバック次第で調整)
+- 同じ意味の keyPoint を機械的に重複検出する後処理 (`tuning.md` の workaround 警告に抵触するため見送り。プロンプトでカバー)
+
+**Status:** 進行中 (品質再検討) — Rust/TS の構造化変更とプロンプト調整を 2026-05-19 同日に追加実装。次のセッションで実環境動作確認の上、結果に応じて完了 or さらなる調整を判断
 
 ---
 

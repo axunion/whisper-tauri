@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/Tabs";
 import { useI18n } from "~/i18n";
 import type { ExportFormat } from "~/lib/export";
 import { exportResult, getExtension } from "~/lib/export";
+import { formatSummaryAsText } from "~/lib/format";
 import { toast } from "~/lib/toast";
 import { createAiActions } from "~/primitives/createAiActions";
 import { createAiSession } from "~/primitives/createAiSession";
@@ -79,7 +80,8 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
   function getCopyText(): string {
     const tab = activeTab();
     if (tab === "summary") {
-      return session.summaryResult() ?? "";
+      const summary = session.summaryResult();
+      return summary ? formatSummaryAsText(summary) : "";
     }
     if (tab === "cleanText") {
       return session.cleanTextResult() ?? "";

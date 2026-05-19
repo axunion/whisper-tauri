@@ -210,6 +210,11 @@ export interface Dictionary {
     generateTitle: string;
     overwriteConfirmTitle: string;
     overwriteConfirmDescription: string;
+    summaryTldr: string;
+    summaryKeyPoints: string;
+    summaryKeywords: string;
+    summaryActionItems: string;
+    summaryActionDue: string;
   };
   models: {
     whisper: {

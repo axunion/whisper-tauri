@@ -11,7 +11,8 @@ use super::inference;
 use super::models;
 use super::server::LlamaServerManager;
 use super::types::{
-    InferenceProgress, LegacyTextModelInfo, ServerStatus, TextDownloadProgress, TextModelInfo,
+    InferenceProgress, LegacyTextModelInfo, ServerStatus, StructuredSummary, TextDownloadProgress,
+    TextModelInfo,
 };
 
 /// Store key for custom text model download URL.
@@ -307,18 +308,23 @@ pub async fn text_processing_chat(
 
     Ok(result)
 }
-/// Runs summarization on the given text.
+/// Runs structured summarization on the given text.
+///
+/// Long inputs are condensed chunk-by-chunk first (plain text), then a final
+/// structured pass produces the JSON object validated against
+/// [`inference::summary_json_schema`].
 ///
 /// # Errors
 ///
-/// Returns an error string if the operation fails.
+/// Returns an error string if the operation fails or the model returns JSON
+/// that does not match the schema.
 #[tauri::command]
 pub async fn text_processing_summarize(
     app: AppHandle,
     manager: State<'_, tokio::sync::Mutex<LlamaServerManager>>,
     text: String,
     model_id: Option<String>,
-) -> Result<String, String> {
+) -> Result<StructuredSummary, String> {
     let task_id = uuid::Uuid::new_v4().to_string();
     let token = inference::INFERENCE_TASK_MANAGER.create_task(&task_id);
     let _guard = TaskGuard {
@@ -332,13 +338,15 @@ pub async fn text_processing_summarize(
         return Err(TextProcessingError::Cancelled.into());
     }
 
+    // Scale the keyPoints target and max_tokens to the original transcript
+    // length — chunked condensation shortens the final structured-pass input,
+    // but the user-facing signal is still the raw transcript size.
+    let params = inference::summary_params_for_length(text.chars().count());
+
     let chunks = inference::chunk_text(&text, inference::default_max_chunk_chars());
 
-    let result = if chunks.len() == 1 {
-        let messages = inference::build_summarize_messages(&text);
-        inference::run_inference(port, &messages, 0.3, 1024, &task_id, &token, &app)
-            .await
-            .map_err::<String, _>(Into::into)?
+    let final_input = if chunks.len() == 1 {
+        text
     } else {
         let mut chunk_summaries = Vec::new();
         for chunk in &chunks {
@@ -346,22 +354,37 @@ pub async fn text_processing_summarize(
                 return Err(TextProcessingError::Cancelled.into());
             }
 
-            let messages = inference::build_summarize_messages(chunk);
+            let messages = inference::build_chunk_condense_messages(chunk);
             let summary =
                 inference::run_inference(port, &messages, 0.3, 1024, &task_id, &token, &app)
                     .await
                     .map_err::<String, _>(Into::into)?;
             chunk_summaries.push(summary);
         }
-
-        let combined = chunk_summaries.join("\n\n");
-        let messages = inference::build_summarize_messages(&combined);
-        inference::run_inference(port, &messages, 0.3, 1024, &task_id, &token, &app)
-            .await
-            .map_err::<String, _>(Into::into)?
+        chunk_summaries.join("\n\n")
     };
 
-    Ok(result)
+    let messages = inference::build_summarize_messages(
+        &final_input,
+        params.key_points_min,
+        params.key_points_max,
+    );
+    let json = inference::run_inference_blocking(
+        port,
+        &messages,
+        0.3,
+        params.max_tokens,
+        Some(inference::summary_response_format()),
+        &task_id,
+        &token,
+        &app,
+    )
+    .await
+    .map_err::<String, _>(Into::into)?;
+
+    serde_json::from_str::<StructuredSummary>(&json).map_err(|e| {
+        TextProcessingError::InferenceError(format!("summary JSON parse failed: {e}")).to_string()
+    })
 }
 
 /// Cancels an in-progress inference task.

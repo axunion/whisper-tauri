@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use once_cell::sync::Lazy;
+use serde_json::{json, Value};
 use tauri::{AppHandle, Emitter};
 
 use super::error::TextProcessingError;
@@ -30,28 +31,166 @@ pub fn build_chat_messages(text: &str) -> Vec<ChatMessage> {
     ]
 }
 
-/// Builds chat messages for summarization.
+/// Per-input tuning knobs for structured summarization.
+///
+/// Returned by [`summary_params_for_length`] so the prompt's `keyPoints` size
+/// hint and the request's `max_tokens` scale with the transcription length.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SummaryParams {
+    pub key_points_min: u32,
+    pub key_points_max: u32,
+    pub max_tokens: u32,
+}
+
+/// Derives [`SummaryParams`] from the original transcription length.
+///
+/// Long inputs naturally cover more sub-topics, so we widen the keyPoints
+/// range and grow `max_tokens` to fit the bigger JSON response. The buckets
+/// are coarse on purpose — finer tuning chases LLM noise rather than real
+/// signal.
 #[must_use]
-pub fn build_summarize_messages(text: &str) -> Vec<ChatMessage> {
+pub fn summary_params_for_length(text_chars: usize) -> SummaryParams {
+    if text_chars < 1_500 {
+        SummaryParams {
+            key_points_min: 2,
+            key_points_max: 4,
+            max_tokens: 2_048,
+        }
+    } else if text_chars < 5_000 {
+        SummaryParams {
+            key_points_min: 3,
+            key_points_max: 6,
+            max_tokens: 2_048,
+        }
+    } else if text_chars < 15_000 {
+        SummaryParams {
+            key_points_min: 5,
+            key_points_max: 10,
+            max_tokens: 3_072,
+        }
+    } else {
+        SummaryParams {
+            key_points_min: 7,
+            key_points_max: 15,
+            max_tokens: 4_096,
+        }
+    }
+}
+
+/// Builds chat messages for structured summarization.
+///
+/// The model is expected to return a JSON object matching [`summary_json_schema`].
+/// The system prompt only describes the semantic shape of each field — the
+/// formatting itself is enforced by `response_format` on the request body.
+///
+/// `key_points_min` / `key_points_max` are embedded into the prompt so the
+/// number of bullet points scales with input length (see
+/// [`summary_params_for_length`]).
+#[must_use]
+pub fn build_summarize_messages(
+    text: &str,
+    key_points_min: u32,
+    key_points_max: u32,
+) -> Vec<ChatMessage> {
+    let system = format!(
+        "あなたは文字起こしテキストを構造化要約にまとめる専門家です。指定された JSON スキーマに従って出力してください。各フィールドの役割と書き方:\n\
+        \n\
+        - headline: 内容を一言で表す短いタイトル (15〜30文字目安、文末記号なし)。\n\
+        \n\
+        - tldr: 全体を 1〜2 文 (合計 80〜150文字程度) でまとめた**総括の段落**。何の話だったかを最初の 1 文で要約し、必要なら 2 文目で補足する。読者がここだけ読めば概要が分かるリード文。箇条書きや改行は使わない。**keyPoints と内容を重複させない**: tldr は全体像、keyPoints は個別のサブトピック。\n\
+        \n\
+        - keyPoints: 議論や説明のサブトピックを箇条書きにした配列。各項目は名詞句または短い文 (30〜80文字程度)。**目安は {key_points_min}〜{key_points_max} 個**だが、入力に応じて自然に増減して構わない。**tldr の言い換えではなく、tldr では触れなかった具体的な論点・話題・事実を 1 件ずつ取り出す**。**内容が重複する場合は項目数を下回ってよい** — 同じ趣旨の項目を 2 つ以上書かない。\n\
+        \n\
+        - keywords: 重要な名詞句を 5〜8 個ほど含む配列。一般名詞より固有名詞や専門用語を優先する。\n\
+        \n\
+        - actionItems: **本当に明確に発話されたタスクや依頼のみ**を含む配列。次のルールを厳守する:\n\
+          1. **多くの音声では空配列が正解**。独白、朗読、講演、雑談、インタビュー、説明動画など、誰かに具体的な作業や納期を依頼していない録音では、必ず空配列 `[]` を返す。\n\
+          2. 「〜について話します」「〜を検討したい」「〜が課題だ」などの**話題提示や感想は actionItem ではない**。「〜をやってください」「〜を金曜までに送って」など、明確な指示・依頼・約束のみを抽出する。\n\
+          3. 1 件だけ抽出するくらいなら空配列にする方が良い。少しでも「これは action item か?」と迷う内容は含めない。\n\
+          4. what (タスク内容) は必須、due (期日) は発話で**明示されている場合のみ**埋める。文脈から推測した値や、不明な値は省略する。担当者の推定は行わない (スキーマにも含まない)。\n\
+        \n\
+        入力と同じ言語で出力してください。"
+    );
+
+    vec![
+        ChatMessage {
+            role: "system".to_string(),
+            content: system,
+        },
+        ChatMessage {
+            role: "user".to_string(),
+            content: text.to_string(),
+        },
+    ]
+}
+
+/// Returns the JSON schema enforced for structured summarization responses.
+///
+/// Used as the `json_schema` payload of OpenAI-compatible `response_format`.
+/// llama.cpp's server converts this into a grammar internally. Keep field
+/// names in sync with [`super::types::StructuredSummary`].
+#[must_use]
+pub fn summary_json_schema() -> Value {
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["headline", "tldr", "keywords", "actionItems", "keyPoints"],
+        "properties": {
+            "headline": { "type": "string" },
+            "tldr": { "type": "string" },
+            "keywords": {
+                "type": "array",
+                "items": { "type": "string" }
+            },
+            "actionItems": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["what"],
+                    "properties": {
+                        "what": { "type": "string" },
+                        "due": { "type": "string" }
+                    }
+                }
+            },
+            "keyPoints": {
+                "type": "array",
+                "items": { "type": "string" }
+            }
+        }
+    })
+}
+
+/// Builds the `response_format` payload for structured summarization.
+#[must_use]
+pub fn summary_response_format() -> Value {
+    json!({
+        "type": "json_schema",
+        "json_schema": {
+            "name": "structured_summary",
+            "strict": true,
+            "schema": summary_json_schema(),
+        }
+    })
+}
+
+/// Builds chat messages for condensing one chunk of a long transcription.
+///
+/// Used as the intermediate step of two-pass summarization: each chunk is
+/// reduced to a plain-text paragraph, then the combined output is fed to
+/// [`build_summarize_messages`] for the final structured pass.
+#[must_use]
+pub fn build_chunk_condense_messages(text: &str) -> Vec<ChatMessage> {
     vec![
         ChatMessage {
             role: "system".to_string(),
             content: concat!(
-                "あなたは文字起こしテキストを構造化された要約にまとめる専門家です。以下のルールに従ってください:\n",
-                "1. テキストの主要なトピックごとにセクションを作る\n",
-                "2. 各セクションは「### 見出し」で始める\n",
-                "3. 各セクションの下に重要ポイントを「- 」の箇条書きで書く\n",
-                "4. セクション数は2〜4個、各セクションのポイントは1〜3個\n",
-                "5. 要約のみ出力し、前置きや説明は不要\n",
-                "\n",
-                "<example>\n",
-                "### プロジェクトの進捗\n",
-                "- バックエンドAPIの実装が完了し、テスト環境へのデプロイが済んだ\n",
-                "- フロントエンドは来週中にデザインレビューを行う予定\n",
-                "\n",
-                "### 今後の課題\n",
-                "- パフォーマンス最適化が未着手のため優先度を上げる必要がある\n",
-                "</example>"
+                "あなたは文字起こしテキストの一部を簡潔な要旨にまとめる専門家です。以下のルールに従ってください:\n",
+                "1. 元のテキストの主要な事実・話題・依頼事項を残す\n",
+                "2. 不要な相づちや繰り返しは省く\n",
+                "3. 200〜400 文字程度の平文 (箇条書きや見出しなし) で出力する\n",
+                "4. 入力と同じ言語で出力する"
             )
             .to_string(),
         },
@@ -248,6 +387,93 @@ pub async fn run_inference(
     Ok(accumulated)
 }
 
+/// Runs a non-streaming inference request and returns the full response text.
+///
+/// Used for tasks where partial JSON output is meaningless (e.g. structured
+/// summarization). An optional `response_format` payload is forwarded
+/// verbatim to the llama-server `/v1/chat/completions` endpoint so the model
+/// is constrained to match a JSON schema. Progress events are emitted only at
+/// start (handled by the caller) and on completion.
+///
+/// # Errors
+///
+/// Returns an error if the HTTP request fails, the response status is not
+/// success, the body is not a valid OpenAI-compatible chat completion, or
+/// the task is cancelled.
+#[allow(clippy::too_many_arguments)]
+pub async fn run_inference_blocking(
+    port: u16,
+    messages: &[ChatMessage],
+    temperature: f64,
+    max_tokens: u32,
+    response_format: Option<Value>,
+    task_id: &str,
+    token: &Arc<CancellationToken>,
+    app: &AppHandle,
+) -> Result<String, TextProcessingError> {
+    if token.is_cancelled() {
+        return Err(TextProcessingError::Cancelled);
+    }
+
+    let url = format!("http://127.0.0.1:{port}/v1/chat/completions");
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(120))
+        .build()
+        .map_err(TextProcessingError::from)?;
+
+    let mut body = json!({
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": false,
+    });
+    if let Some(format) = response_format {
+        body["response_format"] = format;
+    }
+
+    let response = client
+        .post(&url)
+        .json(&body)
+        .send()
+        .await
+        .map_err(TextProcessingError::from)?;
+
+    if !response.status().is_success() {
+        return Err(TextProcessingError::InferenceError(format!(
+            "HTTP {}",
+            response.status()
+        )));
+    }
+
+    if token.is_cancelled() {
+        return Err(TextProcessingError::Cancelled);
+    }
+
+    let payload: Value = response.json().await.map_err(TextProcessingError::from)?;
+    let content = payload
+        .get("choices")
+        .and_then(|c| c.get(0))
+        .and_then(|c| c.get("message"))
+        .and_then(|m| m.get("content"))
+        .and_then(Value::as_str)
+        .ok_or_else(|| {
+            TextProcessingError::InferenceError("missing choices[0].message.content".to_string())
+        })?
+        .to_string();
+
+    let _ = app.emit(
+        "text-processing:inference-progress",
+        InferenceProgress {
+            task_id: task_id.to_string(),
+            token: String::new(),
+            accumulated_text: content.clone(),
+            done: true,
+        },
+    );
+
+    Ok(content)
+}
+
 /// Default chunk size for text processing.
 #[must_use]
 pub fn default_max_chunk_chars() -> usize {
@@ -290,7 +516,7 @@ mod tests {
 
     #[test]
     fn summarize_messages_has_system_and_user() {
-        let messages = build_summarize_messages("テスト文章");
+        let messages = build_summarize_messages("テスト文章", 2, 4);
         assert_eq!(messages.len(), 2);
         assert_eq!(messages[0].role, "system");
         assert_eq!(messages[1].role, "user");
@@ -298,12 +524,103 @@ mod tests {
     }
 
     #[test]
-    fn summarize_system_contains_structured_instructions() {
-        let messages = build_summarize_messages("text");
+    fn summarize_system_describes_structured_fields() {
+        let messages = build_summarize_messages("text", 2, 4);
         let system = &messages[0].content;
-        assert!(system.contains("構造化された要約"));
-        assert!(system.contains("### 見出し"));
-        assert!(system.contains("箇条書き"));
+        // The prompt defers formatting to the JSON schema and only describes
+        // the semantic shape of each field.
+        assert!(system.contains("headline"));
+        assert!(system.contains("tldr"));
+        assert!(system.contains("keywords"));
+        assert!(system.contains("actionItems"));
+        assert!(system.contains("keyPoints"));
+        // No more markdown-style instructions or example blocks.
+        assert!(!system.contains("### 見出し"));
+        assert!(!system.contains("<example>"));
+        // Quality guard: tldr / keyPoints are explicitly separated and
+        // actionItems is biased toward empty arrays.
+        assert!(system.contains("総括"));
+        assert!(system.contains("サブトピック"));
+        assert!(system.contains("空配列"));
+        // Assignee inference is explicitly off the table.
+        assert!(system.contains("担当者の推定は行わない"));
+    }
+
+    #[test]
+    fn summarize_system_embeds_key_points_range() {
+        let messages = build_summarize_messages("text", 5, 10);
+        assert!(messages[0].content.contains("5〜10 個"));
+    }
+
+    #[test]
+    fn summary_params_scale_with_length() {
+        // Below 1500 chars: 2–4 keyPoints, 2048 tokens.
+        let p = summary_params_for_length(500);
+        assert_eq!(p.key_points_min, 2);
+        assert_eq!(p.key_points_max, 4);
+        assert_eq!(p.max_tokens, 2_048);
+
+        // 1500–5000: 3–6, 2048.
+        let p = summary_params_for_length(3_000);
+        assert_eq!(p.key_points_min, 3);
+        assert_eq!(p.key_points_max, 6);
+        assert_eq!(p.max_tokens, 2_048);
+
+        // 5000–15000: 5–10, 3072.
+        let p = summary_params_for_length(10_000);
+        assert_eq!(p.key_points_min, 5);
+        assert_eq!(p.key_points_max, 10);
+        assert_eq!(p.max_tokens, 3_072);
+
+        // >=15000: 7–15, 4096.
+        let p = summary_params_for_length(50_000);
+        assert_eq!(p.key_points_min, 7);
+        assert_eq!(p.key_points_max, 15);
+        assert_eq!(p.max_tokens, 4_096);
+    }
+
+    #[test]
+    fn summary_params_bucket_boundaries() {
+        // Boundaries: <1500, <5000, <15000, >=15000.
+        assert_eq!(summary_params_for_length(0).max_tokens, 2_048);
+        assert_eq!(summary_params_for_length(1_499).key_points_max, 4);
+        assert_eq!(summary_params_for_length(1_500).key_points_max, 6);
+        assert_eq!(summary_params_for_length(4_999).key_points_max, 6);
+        assert_eq!(summary_params_for_length(5_000).key_points_max, 10);
+        assert_eq!(summary_params_for_length(14_999).key_points_max, 10);
+        assert_eq!(summary_params_for_length(15_000).key_points_max, 15);
+    }
+
+    #[test]
+    fn summary_json_schema_has_all_required_fields() {
+        let schema = summary_json_schema();
+        let required = schema["required"].as_array().expect("required array");
+        let names: Vec<&str> = required.iter().filter_map(Value::as_str).collect();
+        assert_eq!(
+            names,
+            vec!["headline", "tldr", "keywords", "actionItems", "keyPoints"]
+        );
+
+        let action_props = &schema["properties"]["actionItems"]["items"]["properties"];
+        assert!(action_props.get("who").is_none(), "who must not be present");
+        assert!(action_props.get("what").is_some());
+        assert!(action_props.get("due").is_some());
+
+        let action_required = schema["properties"]["actionItems"]["items"]["required"]
+            .as_array()
+            .expect("action_items required");
+        let action_required_names: Vec<&str> =
+            action_required.iter().filter_map(Value::as_str).collect();
+        assert_eq!(action_required_names, vec!["what"]);
+    }
+
+    #[test]
+    fn summary_response_format_wraps_schema() {
+        let format = summary_response_format();
+        assert_eq!(format["type"], "json_schema");
+        assert_eq!(format["json_schema"]["name"], "structured_summary");
+        assert_eq!(format["json_schema"]["strict"], true);
+        assert!(format["json_schema"]["schema"].is_object());
     }
 
     // --- chunk_text ---

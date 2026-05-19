@@ -223,6 +223,11 @@ export const ja: Dictionary = {
     overwriteConfirmTitle: "結果を上書きしますか？",
     overwriteConfirmDescription:
       "既存の結果が削除され、新しく生成されます。この操作は取り消せません。",
+    summaryTldr: "要点",
+    summaryKeyPoints: "重要トピック",
+    summaryKeywords: "キーワード",
+    summaryActionItems: "アクションアイテム",
+    summaryActionDue: "期日",
   },
   models: {
     whisper: {
