@@ -18,7 +18,7 @@ Refer to `src-tauri/Cargo.toml` for exact versions. Key dependencies:
 - **reqwest** — HTTP (stream feature)
 - **thiserror** — error types
 
-Do NOT suggest adding new crates unless absolutely necessary.
+Justify any new crate against existing alternatives before suggesting.
 
 ## Rust Patterns
 
@@ -41,4 +41,4 @@ Each module follows: `mod.rs` (submodule declarations) / `commands.rs` / `types.
 4. Write `#[cfg(test)]` unit tests for serialization and business logic
 5. Follow TDD: write tests first, then implement
 6. Match Rust types exactly with TypeScript counterparts in `src/types/`
-7. Do not add workarounds or temporary fixes — implement properly or flag the issue
+7. Prefer proper fixes; if a workaround is unavoidable, document it in `.claude/rules/workarounds.md` with removal conditions

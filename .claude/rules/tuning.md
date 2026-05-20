@@ -1,3 +1,11 @@
+---
+paths:
+  - "src-tauri/src/whisper/**"
+  - "src-tauri/src/recording/**"
+  - "src-tauri/src/text_processing/**"
+  - "src-tauri/Cargo.toml"
+---
+
 # Configuration & Tuning Policy
 
 Avoid bespoke tuning, post-processing, and input preprocessing whose only purpose is to mask weaknesses in the model or the library. If standard settings are not good enough, accept the weakness as a specification rather than working around it.

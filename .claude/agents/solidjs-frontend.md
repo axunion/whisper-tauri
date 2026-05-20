@@ -18,7 +18,7 @@ Refer to `package.json` for exact versions. Key dependencies:
 - **Vitest** + **@solidjs/testing-library** — testing
 - **Biome** — lint and format
 
-Do NOT suggest adding new npm packages unless absolutely necessary.
+Justify any new npm package against existing alternatives before suggesting.
 
 ## SolidJS Patterns
 
@@ -48,4 +48,4 @@ Do NOT suggest adding new npm packages unless absolutely necessary.
 4. Follow TDD: write tests first, then implement
 5. Type all props explicitly with interfaces
 6. Handle loading and error states in all async operations
-7. Do not add workarounds or temporary fixes — implement properly or flag the issue
+7. Prefer proper fixes; if a workaround is unavoidable, document it in `.claude/rules/workarounds.md` with removal conditions
