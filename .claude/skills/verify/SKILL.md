@@ -1,120 +1,95 @@
 ---
 name: verify
-description: Run all validation checks (lint, type check, tests, build) in a single pass. Auto-fixes correctable errors and runs independent checks in parallel. Use before commits, after feature implementation or refactoring, or whenever the user asks "is everything green?", "does it pass?", "run the checks", or expresses any uncertainty about CI readiness.
-argument-hint: "[frontend|backend|all]"
+description: Run all validation checks (lint, type check, tests, optionally build) in a single pass. Auto-fixes mechanical errors and runs independent checks in parallel. Use before commits, after feature implementation or refactoring, or whenever the user asks "is everything green?", "does it pass?", "run the checks", or expresses any uncertainty about CI readiness.
+argument-hint: "[frontend|backend|all] [--with-build]"
 user-invocable: true
 ---
 
 # /verify — Validation Skill
 
-Runs validation in phases. Auto-fixes recoverable errors and parallelizes independent checks.
+Runs static analysis and tests in parallel. Formatting is handled by the `.githooks/pre-commit` hook (`biome --write` + `cargo fmt` on staged files) so this skill does not mutate code preemptively — it only fixes on retry when a check fails.
 
 ## Argument Parsing
 
-Determine target from `$ARGUMENTS`:
-- `frontend` or `fe` → frontend only
-- `backend` or `be` → backend only
-- `all` or empty → both frontend and backend
+From `$ARGUMENTS`:
 
-For invalid arguments, print an error and stop.
+- target: `frontend` / `fe`, `backend` / `be`, `all` (default if empty)
+- flag: `--with-build` opts into Phase 3 (Vite build). Off by default — `tsc --noEmit` already covers types, and `pnpm build` is meaningful mainly before release.
 
-## Command Map by Target
+Reject any other token with an error and stop.
 
-| Phase | Frontend (`fe`) | Backend (`be`) | All |
-|-------|----------------|----------------|-----|
-| 0: Auto-fix | `pnpm fix` | `cargo fmt` | both in parallel |
-| 1: Static analysis | `pnpm check` (Biome + tsc) | `cargo fmt --check` + `cargo clippy --all-targets -- -D warnings` (parallel) | FE + both BE in parallel |
-| 2: Tests | `pnpm test:run` | `cargo test` | both in parallel |
-| 3: Build | `pnpm build` | (none) | `pnpm build` |
+## Phase 1 — Static Analysis (parallel)
 
-## Phase Rules
+Run the target's checks in parallel.
 
-### Phase 0: Auto-fix
+| Target | Commands |
+|--------|----------|
+| Frontend | `pnpm check` (Biome lint + `tsc --noEmit`) |
+| Backend  | `cd src-tauri && cargo fmt --check` and `cargo clippy --all-targets -- -D warnings` (parallel within backend) |
+| All      | Frontend and backend in parallel |
 
-Phase that mutates files. Run target commands **in parallel**.
+**Retry on failure (max 1 attempt per failing check):**
 
-- Frontend: `pnpm fix` (Biome lint + format auto-fix)
-- Backend: `cargo fmt` (Rust formatter)
+- Biome step in `pnpm check` failed → run `pnpm fix`, then re-run `pnpm check`
+- `cargo fmt --check` failed → run `cargo fmt`, then re-check
+- `tsc` / `cargo clippy` failed with a **mechanical** error → edit and re-check
+- Re-run only the failing check; do not re-run already-passing ones
+- After the single retry, stop and report
 
-This phase is always treated as success (it just applies fixes).
+## Phase 2 — Tests (parallel)
 
-### Phase 1: Static Analysis
+Runs only after Phase 1 fully passes.
 
-Read-only static analysis. Run all target commands **in parallel**.
+| Target | Command |
+|--------|---------|
+| Frontend | `pnpm test:run` |
+| Backend  | `cd src-tauri && cargo test` |
+| All      | Both in parallel |
 
-- Frontend: `pnpm check` (Biome + tsc; runs sequentially internally — Biome first, then tsc)
-- Backend: `cargo fmt --check` + `cargo clippy --all-targets -- -D warnings`
+On failure: if the fix is mechanical, edit and re-run once. Otherwise stop and report.
 
-**Auto-fix on failure (max 2 retries):**
+## Phase 3 — Build (opt-in via `--with-build`)
 
-1. Read the failing check's error output
-2. Attempt auto-fix:
-   - `pnpm check` failed at the **Biome** step → re-run `pnpm fix`, then re-check
-   - `pnpm check` failed at the **tsc** step → read errors; if the fix is **clear**, edit code and re-check
-   - `cargo fmt --check` failed → re-run `cargo fmt`, then re-check
-   - `cargo clippy` failed → read warnings; if the fix is **clear**, edit code and re-check
-3. Re-check **only the failed check** (do not re-run already-passing checks)
-4. After 2 retries, stop and report
+Only runs when the flag is present and the target includes frontend.
 
-### Phase 2: Tests
+- `pnpm build`
+- On failure: report and stop. No auto-fix attempts.
 
-Runs after Phase 1 fully passes. Run target commands **in parallel**.
+## What Counts as a "Mechanical" Fix
 
-- Frontend: `pnpm test:run`
-- Backend: `cargo test`
+Try to auto-fix:
 
-**Auto-fix on failure (max 1 retry):**
+- Unused imports / variables
+- Missing `override`, simple type mismatches, undefined-handling
+- Clippy suggestions (redundant clone, unnecessary `&`, `?` over verbose match)
+- Formatting drift
 
-1. Read the failing test output
-2. If the fix is **clear**, edit code and re-test
-3. After 1 retry, stop and report
+Do **not** auto-fix — report and stop:
 
-### Phase 3: Build
-
-Runs after Phase 2 fully passes.
-
-- Frontend: `pnpm build`
-
-**On failure**: report and stop without attempting fixes.
-
-## What Counts as a "Clear Fix"
-
-Auto-fix is appropriate for:
-- Removing unused imports / unused variables
-- Type mismatches (missing field, wrong type, `undefined` handling, etc.)
-- Missing `override` keyword
-- Following clippy suggestions (redundant clone, unnecessary `&`, etc.)
-- Formatting issues
-
-Do **not** auto-fix (report and stop):
-- Errors requiring architectural changes
-- Errors requiring business-logic decisions
-- Cases where the test expectation may itself be wrong
+- Changes that require architectural decisions
+- Changes that imply business-logic intent
+- Tests whose expectation itself may be wrong
 - Errors with multiple ambiguous fix paths
 
 ## Procedure
 
-1. **Build task list**: create all steps via TaskCreate based on the target
-2. **Run Phase 0**: run target auto-fix commands in parallel; flip task in_progress → completed
-3. **Run Phase 1**: run target static analysis in parallel; on failure follow auto-fix rules
-4. **Run Phase 2**: run target tests in parallel; on failure follow auto-fix rules
-5. **Run Phase 3**: run the build command
-6. **Report**: print summary
+1. Parse target + flag from `$ARGUMENTS`
+2. Run Phase 1 in parallel; apply the retry rule on any failure
+3. Run Phase 2 in parallel; apply the retry rule on any failure
+4. If `--with-build`, run Phase 3
+5. Report result
 
 ## Report Format
 
-All passed:
 ```
 ✅ All checks passed
 ```
 
-Recovered via auto-fix:
 ```
-✅ All checks passed (auto-fixed: <summary of fixes>)
+✅ All checks passed (auto-fixed: <one-line summary>)
 ```
 
-Failed:
 ```
-❌ Failed at: <Phase name — check name>
-<error output summary>
+❌ Failed at: <Phase — check>
+<error excerpt>
 ```

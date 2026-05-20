@@ -7,118 +7,79 @@ user-invocable: true
 
 # /add-command — Add a Tauri Command
 
-Add a command end-to-end (Rust backend → TypeScript frontend) for the given module and command name in `$ARGUMENTS`.
+Add a command end-to-end (Rust backend → TypeScript frontend) for the module and command name in `$ARGUMENTS`.
 
 All user-facing output and confirmations are in **Japanese**.
 
 ## Argument Parsing
 
-Extract from `$ARGUMENTS`:
-
 - **module**: an existing module (`whisper`, `converter`, `history`, `recording`, `text_processing`, `notion`)
 - **command name**: snake_case (e.g. `get_status`, `save_entry`)
-- **description** (optional): purpose of the command
+- **description** (optional)
 
 If unclear, confirm via `AskUserQuestion`.
 
 ## Phase 0 — Module Existence Check
 
-If the requested module does **not** exist under `src-tauri/src/`, stop and tell the user to run `/add-module <module>` first. Do not attempt to scaffold a new module here — module creation is the responsibility of `/add-module`.
+If `src-tauri/src/<module>/` doesn't exist, stop and tell the user to run `/add-module <module>` first. Do not scaffold modules here.
 
-## Step 1 — Type Definitions (Rust)
+## Step 1 — Rust Types
 
-Add request/response types to `src-tauri/src/<module>/types.rs`.
+Add request/response structs to `src-tauri/src/<module>/types.rs`. Requirements:
 
-```rust
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct MyParams {
-    pub some_field: String,
-}
-```
-
-Conventions:
-- `#[serde(rename_all = "camelCase")]` is required
+- `#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]` (drop `PartialEq` if not needed)
+- `#[serde(rename_all = "camelCase")]`
 - Optional fields: `#[serde(skip_serializing_if = "Option::is_none")]`
-- Doc comments on each field
+- One-line doc comment per non-obvious field
 
-## Step 2 — Error Type (Rust)
+## Step 2 — Error Variant (when needed)
 
-Extend `src-tauri/src/<module>/error.rs` with a variant when needed.
+Extend `src-tauri/src/<module>/error.rs`:
 
 ```rust
-#[error("Prefix message: {0}")]
+#[error("PREFIX: {0}")]
 NewVariant(String),
 ```
 
-Conventions:
-- Error message format: `"Prefix: {0}"` (the frontend `PREFIX_MAP` matches by prefix)
-- If a new prefix is introduced, also update `src/lib/errors.ts` in Step 6
-- See `.claude/rules/error-handling.md` for the full sync rules
+The frontend `PREFIX_MAP` matches by prefix. If a new prefix is introduced, also update `src/lib/errors.ts` in Step 6. See `.claude/rules/error-handling.md` for full sync rules.
 
-## Step 3 — Command Implementation (Rust)
+## Step 3 — Command Implementation
 
-Add the command function to `src-tauri/src/<module>/commands.rs`.
+Add to `src-tauri/src/<module>/commands.rs`:
 
 ```rust
-/// Description of the command.
-///
-/// # Errors
-///
-/// Returns an error if ...
 #[tauri::command]
-pub async fn my_command(app: AppHandle, params: MyParams) -> Result<MyResult, String> {
-    // implementation
-}
+pub async fn my_command(params: MyParams) -> Result<MyResult, String> { ... }
 ```
 
 Conventions:
-- `#[tauri::command]` attribute
+
 - Return `Result<T, String>`
-- `AppHandle` only as the first argument when actually needed
-- `# Errors` section in the doc comment
-- Convert errors with `.map_err(Into::into)` or `.map_err(|e| ...)`
+- Take `AppHandle` only when actually needed; place it first if used
+- Doc comment with `# Errors` section
+- Convert errors via `.map_err(Into::into)` or an explicit closure
 
-## Step 4 — Command Registration
+## Step 4 — Register the Command
 
-Register the command in `src-tauri/src/lib.rs` under `invoke_handler`.
-
-```rust
-.invoke_handler(tauri::generate_handler![
-    // ... existing commands
-    module::commands::my_command,  // ← add
-])
-```
-
-Place it near the module's other commands.
+In `src-tauri/src/lib.rs` add `module::commands::my_command` to the `tauri::generate_handler![...]` list, near the module's existing commands.
 
 ## Step 5 — TypeScript Types
 
-Add the matching types to `src/types/<module>.ts`.
+Mirror Rust types in `src/types/<module>.ts` (`camelCase` field names). Re-export through `src/types/index.ts` if not already.
 
-```typescript
-export interface MyParams {
-  someField: string;  // camelCase
-}
-```
+## Step 6 — Error Mapping (when Step 2 added a new prefix)
 
-Conventions:
-- Rust `snake_case` fields become TypeScript `camelCase`
-- Re-export from `src/types/index.ts`
-
-## Step 6 — Error Mapping (when needed)
-
-When Step 2 introduced a new error prefix, update `src/lib/errors.ts`:
+In `src/lib/errors.ts`:
 
 - Add `[<rust-prefix>, ErrorCode]` to `PREFIX_MAP`
-- If a new `ErrorCode` is needed, add it to `src/types/errors.ts` and add corresponding entries to `CATEGORY_MAP` and `MESSAGE_MAP`
+- Add the matching `ErrorCode` to `src/types/errors.ts` with `CATEGORY_MAP` / `MESSAGE_MAP` entries
 - For non-recoverable errors, add to the `NON_RECOVERABLE` set
 
 See `.claude/rules/error-handling.md` for the full procedure.
 
 ## Step 7 — Frontend Invocation
 
-Use `invoke` in `src/primitives/` or at the call site.
+In `src/primitives/` or at the call site:
 
 ```typescript
 import { invoke } from "@tauri-apps/api/core";
@@ -127,21 +88,9 @@ import { parseError } from "~/lib/errors";
 const result = await invoke<MyResult>("my_command", { params });
 ```
 
-Conventions:
-- Command name matches the Rust function name (snake_case)
-- Use the `invoke<ReturnType>` generic
-- Wrap in try/catch and convert errors with `parseError()`
+- Command name uses the Rust function's snake_case
+- Always pass error catches through `parseError()`
 
 ## Verify
 
-After all steps, run both:
-
-```bash
-cd src-tauri && cargo fmt && cargo clippy -- -D warnings && cargo test
-```
-
-```bash
-pnpm check && pnpm test:run
-```
-
-Or use `/verify all`. Repeat fixes until both pass.
+Recommend the user run `/verify all` (or `/verify all --with-build` if a release is imminent). Repeat fixes until checks pass.

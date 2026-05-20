@@ -54,9 +54,9 @@ If the requested version differs from the current version:
 
 ## Phase 3 — Verify Build Locally
 
-Recommend running `/verify all` before tagging. Ask the user whether to invoke it now or whether they have already done so. Do not proceed until they confirm.
+Recommend running `/verify all --with-build` before tagging — the `--with-build` flag runs `pnpm build`, which CI also runs and which catches Vite/asset issues `tsc` misses. Ask the user whether to invoke it now or whether they have already done so. Do not proceed until they confirm.
 
-This is intentionally manual — `/verify` is heavy (cargo build + pnpm build) and the user may have just run it.
+This is intentionally manual — the build step is slow and the user may have just run it.
 
 ## Phase 4 — Release Notes Draft
 

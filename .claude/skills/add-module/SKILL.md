@@ -15,154 +15,75 @@ All user-facing output and confirmations are in **Japanese**.
 
 `$ARGUMENTS` format: `<module-name> [description]`
 
-- **module-name**: required, snake_case, alphanumeric + underscore only. Reject `kebab-case`, `camelCase`, leading digits.
-- **description**: optional one-line summary used in doc comments and the error enum's doc comment.
+- **module-name**: required, snake_case (alphanumeric + underscore, no leading digit). Reject `kebab-case` / `camelCase`.
+- **description**: optional one-line summary used in doc comments.
 
 If absent or malformed, prompt via `AskUserQuestion`.
 
 ## Phase 0 — Conflict Check
 
-Abort on any of:
+Abort with a clear message on any of:
 
 - `src-tauri/src/<module>/` already exists
-- `<module>` is reserved (`whisper`, `converter`, `history`, `recording`, `text_processing`, `notion` already exist — but reuse is the wrong tool here; tell the user to use `/add-command` instead)
+- `<module>` matches an existing module (`whisper`, `converter`, `history`, `recording`, `text_processing`, `notion`) — tell the user to use `/add-command` instead
 - `src/types/<module>.ts` already exists
 
-Show what was found and stop.
+## Phase 1 — Read the Reference Module
 
-## Phase 1 — Reference Existing Module
+Read the four files of the `notion` module — it's the canonical small module and the source of truth for current conventions (this skill's templates can drift):
 
-Before generating, read the most-recently-added module as a structural reference. The `notion` module is the current canonical small module — read its four files and mirror the patterns:
+- `src-tauri/src/notion/{mod,types,error,commands}.rs`
 
-- `src-tauri/src/notion/mod.rs`
-- `src-tauri/src/notion/types.rs`
-- `src-tauri/src/notion/commands.rs`
-- `src-tauri/src/notion/error.rs`
-
-This step exists because the project conventions evolve and the existing module is the source of truth, not this skill's templates.
+Mirror its patterns in Phase 2.
 
 ## Phase 2 — Generate Backend Scaffold
 
-Create the four files. Templates below show the *minimum* — adapt to match what Phase 1 read from `notion`.
+Create the four files at `src-tauri/src/<module>/`. Match what Phase 1 read; the bullets below are the minimum every file must satisfy.
 
-### `src-tauri/src/<module>/mod.rs`
+- **`mod.rs`** — declare `pub mod commands; pub mod error; pub mod types;` and `pub use error::Error;`. Leading `//!` doc comment with the description.
+- **`types.rs`** — `use serde::{Deserialize, Serialize};`. Every struct crossing the IPC boundary uses `#[derive(Debug, Clone, Serialize, Deserialize)]` + `#[serde(rename_all = "camelCase")]`. Empty placeholder is fine; `/add-command` fills it in later.
+- **`error.rs`** — `thiserror::Error` enum + `impl From<Error> for String { fn from(e: Error) -> Self { e.to_string() } }`. Variant messages use the form `"<MODULE_PREFIX>_<KIND>: {0}"` so the frontend `PREFIX_MAP` in `src/lib/errors.ts` can dispatch on them. Empty enum is fine until commands need variants.
+- **`commands.rs`** — `#[allow(unused_imports)] use super::{error::Error, types::*};` placeholder. `/add-command` adds `#[tauri::command]` functions later.
 
-```rust
-//! <description>
-
-pub mod commands;
-pub mod error;
-pub mod types;
-
-pub use error::Error;
-```
-
-### `src-tauri/src/<module>/types.rs`
-
-```rust
-//! Types for the <module> module.
-
-use serde::{Deserialize, Serialize};
-
-// Add request/response types here. Every struct crossing the IPC boundary needs:
-// #[derive(Debug, Clone, Serialize, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-```
-
-### `src-tauri/src/<module>/error.rs`
-
-```rust
-//! Error type for the <module> module.
-
-use thiserror::Error;
-
-#[derive(Debug, Error)]
-pub enum Error {
-    // Variants use the format "<PREFIX>: {0}" so that the frontend
-    // PREFIX_MAP in src/lib/errors.ts can dispatch on them.
-    // Example:
-    // #[error("<MODULE>_NETWORK: {0}")]
-    // Network(String),
-}
-
-impl From<Error> for String {
-    fn from(err: Error) -> Self {
-        err.to_string()
-    }
-}
-```
-
-### `src-tauri/src/<module>/commands.rs`
-
-```rust
-//! Tauri commands for the <module> module.
-
-#[allow(unused_imports)]
-use super::{error::Error, types::*};
-
-// Add #[tauri::command] functions here. Each returns Result<T, String>.
-// Use /add-command to add commands following project conventions.
-```
-
-## Phase 3 — Register Module in lib.rs
+## Phase 3 — Register in lib.rs
 
 Edit `src-tauri/src/lib.rs`:
 
-1. Add `pub mod <module>;` to the module declaration block. Place it alphabetically among the existing `pub mod` lines.
-2. Do **not** add anything to `invoke_handler` yet — there are no commands to register. `/add-command` will add entries later.
+1. Add `pub mod <module>;` to the `pub mod` block, alphabetically.
+2. Do **not** touch `invoke_handler` — there are no commands yet. `/add-command` will register them.
 
 Show the diff and confirm.
 
 ## Phase 4 — TypeScript Types Scaffold
 
-### `src/types/<module>.ts`
+- **`src/types/<module>.ts`** — placeholder header comment explaining that it mirrors the Rust types; export `{}` so the file is a module. `/add-command` fills it in.
+- **`src/types/index.ts`** — add `export * from "./<module>";` alphabetically. Read the file first to match its existing style.
 
-```typescript
-// Types for the <module> module.
-// Mirror Rust structs in src-tauri/src/<module>/types.rs.
-// Field names use camelCase (Rust snake_case is transformed via #[serde(rename_all = "camelCase")]).
+## Phase 5 — Error Prefix (Optional, default skip)
 
-export {};
-```
+Skip unless the user explicitly asked. When they do:
 
-### `src/types/index.ts`
+1. Read `src/lib/errors.ts` to see the `PREFIX_MAP` / `CATEGORY_MAP` / `MESSAGE_MAP` shape.
+2. Add a placeholder `<MODULE>_GENERIC` entry mapped to a generic `ErrorCode`.
+3. Add the matching `ErrorCode` member to `src/types/errors.ts` if needed.
 
-Add a re-export. Read the existing file first to match its style (some projects use `export *`, others named exports). Insert alphabetically.
+When `/add-command` introduces the first variant it will surface this prompt again, so deferring is safe.
 
-```typescript
-export * from "./<module>";
-```
+## Phase 6 — Recommend Verification
 
-## Phase 5 — Error Prefix (Optional)
-
-If the user indicated the module will produce errors, prompt whether to register a prefix in `src/lib/errors.ts` now. If yes:
-
-1. Read `src/lib/errors.ts` to see the current `PREFIX_MAP` / `CATEGORY_MAP` / `MESSAGE_MAP` shape.
-2. Add a placeholder entry with `<MODULE>_GENERIC` mapped to a generic error code.
-3. Add corresponding entry to `src/types/errors.ts` `ErrorCode` enum.
-
-Show the diff and confirm.
-
-If no, skip — `/add-command` will surface the prompt again when the first command introduces an error variant.
-
-## Phase 6 — Verify
-
-After all files exist, recommend the user run:
+Print the recommendation (do not auto-run):
 
 ```
-/verify all
+次のアクション:
+1. /add-command <module> <command-name> で最初のコマンドを追加
+2. /verify all で検証
 ```
 
-This catches:
-- Missing imports / unused imports
-- Module registration errors in `lib.rs`
-- `src/types/index.ts` syntax errors
-
-Do not auto-run `/verify` — the user may want to add commands first.
+`/verify all` catches missing imports, lib.rs registration mistakes, and `types/index.ts` syntax errors.
 
 ## Output Format
 
-Phase-by-phase progress in Japanese. End with:
+Phase headers in Japanese. End with:
 
 ```
 ## モジュール追加完了
@@ -170,8 +91,4 @@ Phase-by-phase progress in Japanese. End with:
 - 登録: src-tauri/src/lib.rs (pub mod <module>)
 - フロントエンド: src/types/<module>.ts + src/types/index.ts
 - エラープレフィックス: <登録 or 未登録>
-
-次のアクション:
-1. /add-command <module> <command-name> で最初のコマンドを追加
-2. /verify all で検証
 ```
