@@ -183,9 +183,12 @@ export const en: Dictionary = {
     txtFilter: "Text",
     srtFilter: "SRT Subtitles",
     vttFilter: "VTT Subtitles",
+    mdFilter: "Markdown",
     openAudioTitle: "Select an Audio File",
     saveWavTitle: "Save Recording",
     saveTranscriptionTitle: "Save Transcription",
+    saveSummaryTitle: "Save Summary",
+    saveCleanTextTitle: "Save Cleaned Text",
   },
   textProcessing: {
     summarize: "Summarize",

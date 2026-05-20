@@ -100,22 +100,80 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     }
   }
 
-  async function handleSave(fmt: ExportFormat) {
+  async function performSave(opts: {
+    title: string;
+    filter: string;
+    ext: string;
+    defaultPath: string;
+    content: string;
+  }) {
     try {
-      const ext = getExtension(fmt);
       const filePath = await save({
-        title: t("dialog.saveTranscriptionTitle"),
-        filters: [{ name: t(`dialog.${fmt}Filter`), extensions: [fmt] }],
-        defaultPath: `transcription${ext}`,
+        title: opts.title,
+        filters: [{ name: opts.filter, extensions: [opts.ext] }],
+        defaultPath: opts.defaultPath,
       });
       if (!filePath) return;
-      const content = exportResult(props.result, fmt);
-      await writeTextFile(filePath, content);
+      await writeTextFile(filePath, opts.content);
       toast.success(t("result.savedToast"));
     } catch {
       toast.error(t("result.saveFailedToast"));
     }
   }
+
+  async function handleSave(fmt: ExportFormat) {
+    await performSave({
+      title: t("dialog.saveTranscriptionTitle"),
+      filter: t(`dialog.${fmt}Filter`),
+      ext: fmt,
+      defaultPath: `transcription${getExtension(fmt)}`,
+      content: exportResult(props.result, fmt),
+    });
+  }
+
+  async function handleDirectSave() {
+    const tab = activeTab();
+    if (tab === "summary") {
+      const summary = session.summaryResult();
+      if (!summary) return;
+      await performSave({
+        title: t("dialog.saveSummaryTitle"),
+        filter: t("dialog.mdFilter"),
+        ext: "md",
+        defaultPath: "transcription-summary.md",
+        content: formatSummaryAsText(summary),
+      });
+      return;
+    }
+    if (tab === "cleanText") {
+      const cleaned = session.cleanTextResult();
+      if (!cleaned) return;
+      await performSave({
+        title: t("dialog.saveCleanTextTitle"),
+        filter: t("dialog.txtFilter"),
+        ext: "txt",
+        defaultPath: "transcription-cleaned.txt",
+        content: cleaned,
+      });
+    }
+  }
+
+  const canSave = () => {
+    const tab = activeTab();
+    if (tab === "summary") {
+      return (
+        session.summaryResult() !== null &&
+        !(session.isProcessing() && session.currentOperation() === "summary")
+      );
+    }
+    if (tab === "cleanText") {
+      return (
+        session.cleanTextResult() !== null &&
+        !(session.isProcessing() && session.currentOperation() === "cleanText")
+      );
+    }
+    return props.result.text.length > 0;
+  };
 
   async function handleShareToNotion() {
     const text = getCopyText();
@@ -137,6 +195,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         onClose={props.onClose}
         onCopy={handleCopy}
         onSave={handleSave}
+        onDirectSave={handleDirectSave}
         onSummarize={actions.onSummarize}
         onCleanText={actions.onCleanText}
         onGenerateTitle={actions.onGenerateTitle}
@@ -148,6 +207,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         isGeneratingTitle={session.isGeneratingTitle()}
         isNotionConnected={notion.isConfigured()}
         isSharingToNotion={notionShare.state().kind === "sending"}
+        canSave={canSave()}
       />
       <Tabs
         value={activeTab()}

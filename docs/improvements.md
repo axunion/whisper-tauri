@@ -31,11 +31,11 @@
 | 5  | A   | 共有メニュー化 (Notion 等)                 | 中   | 完了 (2026-05-14) | 共有メニュー (FiShare2) 新設 + 未接続時の設定リンク導線 |
 | 6  | A   | 履歴メタ情報の拡充 (VAD ON/OFF)            | 中   | 完了 (2026-05-15) | 履歴に vad_enabled 列追加 + 詳細メタ行表示。#10 のメタ基盤として再利用可 |
 | 15 | A   | 文字起こし時の VAD ON/OFF 選択             | 中   | 完了 (2026-05-15) | createWhisper に override signal 新設 + Bar に Checkbox 列。設定は起動時デフォルトとして機能継続 |
-| 16 | A   | 要約・整文タブで保存ボタンを有効化         | 中   | 未着手   | 現状は隠されている。formatSummaryAsText 経由で .md / .txt 出力 |
+| 16 | A   | 要約・整文タブで保存ボタンを有効化         | 中   | 進行中 (2026-05-20) | 現状は隠されている。formatSummaryAsText 経由で .md / .txt 出力 |
 | 17 | A   | 要約処理中の履歴ナビゲーション制御         | 中   | 未着手   | 処理中に閉じられて再オープン時にタブ非表示。閉じる前確認 or 処理中状態の永続化 |
 | 7  | B   | Whisper モデルを small/turbo に絞る        | 高   | 完了 (2026-05-18) | medium / large-v3 を完全削除し、turbo に統合 |
 | 8  | B   | 不要モデルのクリーンアップ                 | 中   | 完了 (2026-05-19) | 廃止モデル機構を LLM 側にだけ実装。合計サイズ表示は Whisper / LLM 両方に |
-| 9  | C   | 要約の充実                                 | 中   | 進行中 (品質再検討) | 構造化要約は完成済み。tldr/keyPoints の役割分離と actionItems 厳格化を 2026-05-19 に追加 |
+| 9  | C   | 要約の充実                                 | 中   | 完了 (2026-05-20) | 構造化要約 + 品質再検討 (tldr/keyPoints 役割分離・actionItems 厳格化・keyPoints 動的レンジ)。2026-05-20 実環境確認済み |
 | 10 | C   | Notion ブロック送信 + メタデータ           | 中   | 未着手   | 主要連携の品質向上。履歴メタ (#6) と共通基盤 |
 | 11 | D   | バイナリ更新フロー (ffmpeg/llama)          | 低   | 未着手   | ポリシー策定優先 |
 | 12 | D   | リアルタイム / 話者識別                    | 低   | 未着手   | VAD は導入済み。スコープ大 |
@@ -133,6 +133,8 @@
 - **検証**: `/verify` の lint / typecheck / FE 265 tests / BE 325 tests / build 全通過。`/i18n` 監査で英語版タイトルを Title Case に揃えた (`Select an Audio File` 等、既存 `Send to Notion` / `Start Transcription` と整合)。
 - **Windows / Linux ダイアログ**: OS ロケール追従のため Info.plist 相当の対応不要。フロントの i18n 化でフィルタ名/タイトルは対応済み。実機確認は #14 に委譲。
 - **アプリ内言語と OS 言語のズレ**: 強制揃えはしない。OS=英語 + アプリ内=日本語のケースはダイアログ英語のまま (Apple HIG 準拠の仕様許容)。
+
+> 補足 (2026-05-20): 本タスクではダイアログ UI の i18n のみを扱い、`@tauri-apps/plugin-fs` の `writeTextFile` / `copyFile` に必要な capabilities permission の不足には気づかなかった。#16 着手中に保存ボタンが silent fail することで発覚し、同コミットで `fs:allow-write-text-file` / `fs:allow-copy-file` を `$HOME/**` scope で追加。本来は #2 完了時点で実機テストすべきだった事案として記録。詳細は `.claude/rules/tauri-permissions.md`。
 
 **Status:** 完了 (2026-05-13)
 
@@ -439,7 +441,74 @@
   - `formatSummaryAsText` は `src/lib/format.ts` にある。`exportResult` 系と性質が違う (構造体 → string vs `TranscriptionResult` → 整形済み export) ため、無理に統合せず Save 側で `if (tab === "summary") ...` 分岐するのが素直。
 - **#9 (品質再検討中) との関係**: 要約構造体が変わるたびに保存形式も影響を受けるが、`formatSummaryAsText` を介すれば隠蔽できる。今回の改善はそのヘルパに依存するだけ。
 
-**Status:** 未着手
+### 実施結果 (2026-05-20)
+
+#### UI / 保存ロジック
+
+- **ResultToolbar の 2 prop 分割**: `onSave: (format: ExportFormat) => void` (text/timeline 用 flyout) + `onDirectSave: () => void` (summary/cleanText 用 単発)。「タブ → format」のマッピングを ResultToolbar に漏らさず ResultViewer 側に集中させ leaky abstraction を回避 (`SaveFormat = ExportFormat | "md"` の union 拡張は中間案として導入したが /simplify レビューで撤回)。
+- **`canSave: boolean` prop**: タブごとの「結果が揃っているか + 処理中でないか」を ResultViewer 側で算出し Save ボタンの disabled に紐付け。`text.length === 0` / `summaryResult === null` / 処理中の状態で空ファイル保存を防止。
+- **保存内容のタブ別分岐**:
+  - text / timeline: 既存通り `exportResult` → `{txt, srt, vtt}` (flyout)
+  - summary: `formatSummaryAsText(summaryResult)` → `.md` (単発ボタン)
+  - cleanText: `cleanTextResult` → `.txt` (単発ボタン)
+- **`performSave` ヘルパに save → writeTextFile → toast を抽出**: `handleSave` / `handleDirectSave` 双方から呼ぶ共通シーケンス。エラー時の toast を一元化。
+- **既定ファイル名**: `transcription.{ext}` / `transcription-summary.md` / `transcription-cleaned.txt`。fileName 自動接頭辞は UX 統一性のため見送り。
+- **i18n**: `dialog.mdFilter` / `dialog.saveSummaryTitle` / `dialog.saveCleanTextTitle` の 3 キーを ja/en に追加。
+
+#### 内包バグ修正: fs permission 不足
+
+実装中に「保存ボタンを押しても silent fail」する症状が発覚。原因は `src-tauri/capabilities/default.json` の `fs:default` に `writeTextFile` / `copyFile` の permission が含まれておらず、frontend 側の `@tauri-apps/plugin-fs` 呼び出しが Tauri runtime に拒否されていた (エラー: `fs.write_text_file not allowed`)。要約タブ以外 (text/timeline) でも同様に保存できず、`RecordingPanel.tsx` の WAV 保存 (`copyFile`) も同じ原因で機能していなかった。
+
+修正: `capabilities/default.json` の permissions に以下を追加。
+
+```json
+{ "identifier": "fs:allow-write-text-file", "allow": [{ "path": "$HOME/**" }] },
+{ "identifier": "fs:allow-copy-file",       "allow": [{ "path": "$HOME/**" }] }
+```
+
+scope は当初 `**` (全パス) で実装したが /simplify レビューで `/etc` 等のシステム領域を含むと指摘され `$HOME/**` に絞った。macOS の `~/Documents` / `~/Desktop` / `~/Downloads` はすべて配下。外部ドライブ (`/Volumes/**`) は要望時に追加。
+
+知見は `.claude/rules/tauri-permissions.md` に一般化して記録 (将来の同種バグ予防のため)。
+
+#### /simplify 反映
+
+3 agent 並列レビュー (code reuse / quality / efficiency) で以下の指摘を反映:
+
+1. `SaveFormat = ExportFormat | "md"` の `"md"` 文字列が ResultToolbar / ResultViewer 両方に散在 (leaky abstraction) → `onSave (ExportFormat)` + `onDirectSave ()` の 2 prop に分割
+2. `buildSaveSpec` の 3 分岐内で `if (fmt === "md") return null` が dead code 化 → `handleSave` / `handleDirectSave` の 2 関数に直接 spec を書き、`performSave` ヘルパに共通シーケンス抽出
+3. 自明な what コメント (`// Save: flyout ... or single button ...`) → why コメント (「summary/cleanText は format 一択なので flyout 不要」) に書き換え
+4. capabilities scope `**` → `$HOME/**` で攻撃面を縮小
+
+保留 (`#10 Notion ブロック送信` で再検討):
+
+- `getCopyText` / `canSave` / `buildSaveSpec` の tab → リソース対応の三者統合 (責務が違うため強引な統合は避ける)
+- `<Show fallback>` の Button 重複統合 (可読性とのトレードオフ)
+
+#### スコープ外として残した項目
+
+- 履歴一覧 (`History.tsx`) の独立保存導線 (ResultViewer 経由なので履歴詳細では自動反映)
+- 外部ドライブ (`/Volumes/**` on macOS) への保存 (要望時に追加)
+- `fileNameText` を base にしたファイル名接頭辞 (UX 統一性のため `transcription-*` 固定)
+
+#### 検証
+
+- `pnpm fix` / `pnpm check` (Biome + tsc) ✓
+- FE 287 tests ✓
+- `cargo check` (capabilities スキーマ含む) ✓
+- `pnpm build` ✓
+- `/i18n` 監査 — 構造・プレースホルダ・品質・使用箇所すべてクリア
+- `/simplify` (3 agent 並列) 反映済み
+
+#### 動作確認のタイミング
+
+`pnpm tauri dev` の再起動が必要 (capabilities は Tauri 起動時読み込みのため HMR では反映されない)。再起動後にユーザー手元で以下を通しで確認予定:
+
+1. text / timeline タブ → flyout から txt/srt/vtt で保存
+2. summary タブ → 単発 Save ボタンで `.md`
+3. cleanText タブ → 単発 Save ボタンで `.txt`
+4. 録音後の WAV ボタンで `.wav` 保存 (#2 完了時に未検証だった経路)
+
+**Status:** 進行中 (2026-05-20) — 実装・/simplify 完了。実環境動作確認待ち
 
 ---
 
@@ -811,7 +880,14 @@ rm "~/Library/Application Support/com.whisper-tauri.desktop/models/ggml-large-v3
 - バケット境界の微調整 (実環境フィードバック次第で調整)
 - 同じ意味の keyPoint を機械的に重複検出する後処理 (`tuning.md` の workaround 警告に抵触するため見送り。プロンプトでカバー)
 
-**Status:** 進行中 (品質再検討) — Rust/TS の構造化変更とプロンプト調整を 2026-05-19 同日に追加実装。次のセッションで実環境動作確認の上、結果に応じて完了 or さらなる調整を判断
+### 実環境動作確認 (2026-05-20)
+
+- 短い独白 / 朗読では actionItems が空配列で返ることを確認 (品質再検討第1弾の厳格化が効いている)
+- 会議録では tldr (リード段落) と keyPoints (サブトピック箇条書き) が役割分離されて並ぶことを確認
+- 長尺音声で keyPoints の件数が増えるバケット動作 (品質再検討第2弾の `summary_params_for_length`) も問題なし
+- 担当者推定オフ (who 削除) で actionItems の精度低下は起きていない
+
+**Status:** 完了 (2026-05-20)
 
 ---
 

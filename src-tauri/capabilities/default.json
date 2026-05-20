@@ -8,6 +8,14 @@
     "opener:default",
     "dialog:default",
     "fs:default",
+    {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [{ "path": "$HOME/**" }]
+    },
+    {
+      "identifier": "fs:allow-copy-file",
+      "allow": [{ "path": "$HOME/**" }]
+    },
     "store:default",
     "clipboard-manager:default",
     "clipboard-manager:allow-write-text",

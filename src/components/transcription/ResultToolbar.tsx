@@ -40,6 +40,7 @@ interface ResultToolbarProps {
   onClose?: (() => void) | undefined;
   onCopy: () => void;
   onSave: (format: ExportFormat) => void;
+  onDirectSave: () => void;
   onSummarize: () => void;
   onCleanText: () => void;
   onGenerateTitle: () => void;
@@ -49,6 +50,7 @@ interface ResultToolbarProps {
   isGeneratingTitle: boolean;
   isNotionConnected: boolean;
   isSharingToNotion: boolean;
+  canSave: boolean;
 }
 
 const ResultToolbar: Component<ResultToolbarProps> = (props) => {
@@ -241,13 +243,27 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
           </Show>
         </div>
 
-        {/* Save with format flyout (only for text/timeline) */}
-        <Show when={!isTextProcessingTab()}>
+        {/* summary/cleanText have a single output format, so no flyout. */}
+        <Show
+          when={!isTextProcessingTab()}
+          fallback={
+            <Button
+              variant="ghost"
+              size="icon"
+              class="size-8"
+              disabled={!props.canSave}
+              onClick={props.onDirectSave}
+            >
+              <FiDownload class="size-4" />
+            </Button>
+          }
+        >
           <div ref={saveRef} class="relative">
             <Button
               variant="ghost"
               size="icon"
               class="size-8"
+              disabled={!props.canSave}
               onClick={() => setSaveOpen(!saveOpen())}
             >
               <FiDownload class="size-4" />

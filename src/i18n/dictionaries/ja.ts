@@ -184,9 +184,12 @@ export const ja: Dictionary = {
     txtFilter: "テキスト",
     srtFilter: "SRT 字幕",
     vttFilter: "VTT 字幕",
+    mdFilter: "Markdown",
     openAudioTitle: "音声ファイルを選択",
     saveWavTitle: "録音を保存",
     saveTranscriptionTitle: "文字起こしを保存",
+    saveSummaryTitle: "要約を保存",
+    saveCleanTextTitle: "整文を保存",
   },
   textProcessing: {
     summarize: "要約",

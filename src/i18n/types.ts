@@ -177,9 +177,12 @@ export interface Dictionary {
     txtFilter: string;
     srtFilter: string;
     vttFilter: string;
+    mdFilter: string;
     openAudioTitle: string;
     saveWavTitle: string;
     saveTranscriptionTitle: string;
+    saveSummaryTitle: string;
+    saveCleanTextTitle: string;
   };
   textProcessing: {
     summarize: string;
