@@ -1,5 +1,6 @@
 import { FiCheck, FiX } from "solid-icons/fi";
 import { createSignal, Show } from "solid-js";
+import type { NotionMetaContext } from "~/lib/notion";
 import { createTitleEditor } from "~/primitives/createTitleEditor";
 import type { TranscriptionResult as TranscriptionResultType } from "~/types";
 import { ResultViewer } from "./ResultViewer";
@@ -10,6 +11,7 @@ interface TranscriptionResultProps {
   historyId: string | null;
   onClose: () => void;
   onRename: (id: string, newName: string) => void;
+  notionMeta?: NotionMetaContext | undefined;
 }
 
 export function TranscriptionResult(props: TranscriptionResultProps) {
@@ -71,6 +73,10 @@ export function TranscriptionResult(props: TranscriptionResultProps) {
         onClose={props.onClose}
         onTitleGenerated={title.startEditing}
         onGeneratingTitleChange={setIsGeneratingTitle}
+        notionMeta={{
+          ...(props.notionMeta ?? {}),
+          duration: props.result.duration,
+        }}
       />
     </div>
   );

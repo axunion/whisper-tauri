@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/Tabs";
 import { useI18n } from "~/i18n";
 import type { ExportFormat } from "~/lib/export";
 import { exportResult, getExtension } from "~/lib/export";
-import { formatSummaryAsText } from "~/lib/format";
+import { formatSummaryAsText, formatTimeline } from "~/lib/format";
+import { buildNotionPagePayload, type NotionMetaContext } from "~/lib/notion";
 import { toast } from "~/lib/toast";
 import { createAiActions } from "~/primitives/createAiActions";
 import type { AiOperation } from "~/primitives/createAiSession";
@@ -37,10 +38,14 @@ interface ResultViewerProps {
   onProcessingChange?:
     | ((operation: AiOperation, cancel: () => Promise<void>) => void)
     | undefined;
+  // Metadata for the Notion meta callout. Undefined entries are dropped by
+  // the payload helper. History-detail callers omit `processingMs` because
+  // the timing is not persisted to history yet.
+  notionMeta?: NotionMetaContext | undefined;
 }
 
 const ResultViewer: Component<ResultViewerProps> = (props) => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = createSignal<ResultTab>("text");
   const [summaryTabRequested, setSummaryTabRequested] = createSignal(false);
@@ -85,20 +90,47 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     props.onProcessingChange?.(session.currentOperation(), session.cancel);
   });
 
-  function getCopyText(): string {
-    const tab = activeTab();
+  // Per-tab strategy for "what's on this tab" queries — used by Copy, Save,
+  // and Notion share so the three consumers don't drift in how they interpret
+  // each tab's content.
+  function tabContent(tab: ResultTab) {
     if (tab === "summary") {
       const summary = session.summaryResult();
-      return summary ? formatSummaryAsText(summary) : "";
+      return {
+        copyText: summary ? formatSummaryAsText(summary) : "",
+        notionBody: "",
+        notionSummary: summary,
+        titleSuffixKey: "notionShare.titleSummary" as const,
+      };
     }
     if (tab === "cleanText") {
-      return session.cleanTextResult() ?? "";
+      const cleaned = session.cleanTextResult() ?? "";
+      return {
+        copyText: cleaned,
+        notionBody: cleaned,
+        notionSummary: null,
+        titleSuffixKey: "notionShare.titleCleanText" as const,
+      };
     }
-    return props.result.text;
+    if (tab === "timeline") {
+      const formatted = formatTimeline(props.result.segments);
+      return {
+        copyText: formatted,
+        notionBody: formatted,
+        notionSummary: null,
+        titleSuffixKey: "notionShare.titleTimeline" as const,
+      };
+    }
+    return {
+      copyText: props.result.text,
+      notionBody: props.result.text,
+      notionSummary: null,
+      titleSuffixKey: undefined,
+    };
   }
 
   async function handleCopy() {
-    const text = getCopyText();
+    const text = tabContent(activeTab()).copyText;
     if (!text) return;
     try {
       await writeText(text);
@@ -184,15 +216,30 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
   };
 
   async function handleShareToNotion() {
-    const text = getCopyText();
-    if (!text.trim()) {
+    const content = tabContent(activeTab());
+    if (!content.notionSummary && !content.notionBody.trim()) {
       toast.error(t("notionShare.emptyContentToast"));
       return;
     }
-    await notionShare.share({
-      title: props.fileNameText.trim() || "Untitled",
-      bodyText: text,
+
+    // Tag the page title with the tab kind so multiple sends from the same
+    // recording stay distinguishable in the Notion DB list.
+    const suffix = content.titleSuffixKey
+      ? ` (${t(content.titleSuffixKey)})`
+      : "";
+
+    const payload = buildNotionPagePayload({
+      title: `${props.fileNameText}${suffix}`,
+      body: content.notionBody,
+      meta: {
+        ...(props.notionMeta ?? {}),
+        fileName: props.fileNameText.trim() || undefined,
+      },
+      summary: content.notionSummary,
+      t,
+      locale: locale(),
     });
+    await notionShare.share(payload);
   }
 
   return (

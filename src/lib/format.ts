@@ -81,6 +81,19 @@ export function formatSummaryAsText(
   return blocks.join("\n\n");
 }
 
+/**
+ * Renders transcription segments as `[H:MM:SS] text` lines for clipboard copy
+ * and Notion send from the timeline tab. Uses the same time formatter as
+ * `formatDurationColon` so hours are preserved on long recordings.
+ */
+export function formatTimeline(
+  segments: readonly import("~/types").TranscriptionSegment[],
+): string {
+  return segments
+    .map((seg) => `[${formatDurationColon(seg.start)}] ${seg.text.trim()}`)
+    .join("\n");
+}
+
 /** Sums `sizeBytes` over downloaded items only. */
 export function sumDownloadedBytes<
   T extends { downloaded: boolean; sizeBytes: number },

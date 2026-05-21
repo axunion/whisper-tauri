@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { StructuredSummary } from "~/types";
-import { formatBytes, formatSummaryAsText } from "../format";
+import type { StructuredSummary, TranscriptionSegment } from "~/types";
+import { formatBytes, formatSummaryAsText, formatTimeline } from "../format";
 
 describe("formatBytes", () => {
   it("returns 0 B for zero", () => {
@@ -94,5 +94,30 @@ describe("formatSummaryAsText", () => {
         keyPoints: [],
       }),
     ).toBe("");
+  });
+});
+
+describe("formatTimeline", () => {
+  function seg(start: number, text: string): TranscriptionSegment {
+    return { start, end: start + 1000, text };
+  }
+
+  it("returns empty string for empty segments", () => {
+    expect(formatTimeline([])).toBe("");
+  });
+
+  it("formats short-form MM:SS for segments under one hour", () => {
+    const out = formatTimeline([seg(0, "hello"), seg(5_000, "world")]);
+    expect(out).toBe("[0:00] hello\n[0:05] world");
+  });
+
+  it("includes hours when the start time crosses one hour", () => {
+    const out = formatTimeline([seg(3_725_000, "hour two")]);
+    expect(out).toBe("[1:02:05] hour two");
+  });
+
+  it("trims whitespace from segment text", () => {
+    const out = formatTimeline([seg(0, "  padded  ")]);
+    expect(out).toBe("[0:00] padded");
   });
 });

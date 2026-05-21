@@ -160,9 +160,22 @@ export interface Dictionary {
     sending: string;
     successTitle: string;
     successDescription: string;
+    successPartialNote: string;
     openInNotion: string;
     failureTitle: string;
     emptyContentToast: string;
+    metaCreatedAt: string;
+    metaModel: string;
+    metaProcessingTime: string;
+    metaAudioLength: string;
+    metaFileName: string;
+    metaVadEnabled: string;
+    metaVadOn: string;
+    metaVadOff: string;
+    titleSummary: string;
+    titleCleanText: string;
+    titleTimeline: string;
+    titleUntitled: string;
   };
   recording: {
     title: string;

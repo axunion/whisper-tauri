@@ -19,10 +19,14 @@ export type {
   SortOrder,
 } from "./history";
 export type {
+  NotionActionItem,
   NotionDatabaseInfo,
+  NotionMetaField,
   NotionPagePayload,
   NotionPageRef,
   NotionSettings,
+  NotionSummary,
+  NotionSummaryLabels,
 } from "./notion";
 export type {
   AudioDevice,

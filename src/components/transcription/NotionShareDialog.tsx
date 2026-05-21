@@ -54,7 +54,9 @@ const NotionShareDialog: Component<NotionShareDialogProps> = (props) => {
                   {t("notionShare.successTitle")}
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                  {t("notionShare.successDescription")}
+                  {success().pageRef.partial
+                    ? t("notionShare.successPartialNote")
+                    : t("notionShare.successDescription")}
                 </AlertDialogDescription>
                 <div class="flex justify-end gap-2">
                   <Button

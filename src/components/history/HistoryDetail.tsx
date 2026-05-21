@@ -161,6 +161,12 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
           onTitleGenerated={(title) => startSuggestion(title)}
           onGeneratingTitleChange={setIsGeneratingTitle}
           onProcessingChange={props.onProcessingChange}
+          notionMeta={{
+            createdAt: props.entry.createdAt,
+            modelId: props.entry.modelId,
+            duration: props.entry.duration,
+            vadEnabled: props.entry.vadEnabled,
+          }}
         />
       </div>
     </div>

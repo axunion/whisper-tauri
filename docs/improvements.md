@@ -32,11 +32,11 @@
 | 6  | A   | 履歴メタ情報の拡充 (VAD ON/OFF)            | 中   | 完了 (2026-05-15) | 履歴に vad_enabled 列追加 + 詳細メタ行表示。#10 のメタ基盤として再利用可 |
 | 15 | A   | 文字起こし時の VAD ON/OFF 選択             | 中   | 完了 (2026-05-15) | createWhisper に override signal 新設 + Bar に Checkbox 列。設定は起動時デフォルトとして機能継続 |
 | 16 | A   | 要約・整文タブで保存ボタンを有効化         | 中   | 完了 (2026-05-21) | summary/cleanText タブで保存ボタン有効化。fs:default に write 系 permission を追加 |
-| 17 | A   | 要約処理中の履歴ナビゲーション制御         | 中   | 進行中 (2026-05-21) | 方針 A 実装。確認ダイアログ + cancelSession。実機確認待ち |
+| 17 | A   | 要約処理中の履歴ナビゲーション制御         | 中   | 完了 (2026-05-21) | 方針 A 実装。確認ダイアログ + cancelSession。実機確認済み |
 | 7  | B   | Whisper モデルを small/turbo に絞る        | 高   | 完了 (2026-05-18) | medium / large-v3 を完全削除し、turbo に統合 |
 | 8  | B   | 不要モデルのクリーンアップ                 | 中   | 完了 (2026-05-19) | 廃止モデル機構を LLM 側にだけ実装。合計サイズ表示は Whisper / LLM 両方に |
 | 9  | C   | 要約の充実                                 | 中   | 完了 (2026-05-20) | 構造化要約 + 品質再検討 (tldr/keyPoints 役割分離・actionItems 厳格化・keyPoints 動的レンジ)。2026-05-20 実環境確認済み |
-| 10 | C   | Notion ブロック送信 + メタデータ           | 中   | 未着手   | 主要連携の品質向上。履歴メタ (#6) と共通基盤 |
+| 10 | C   | Notion ブロック送信 + メタデータ           | 中   | 進行中 (2026-05-21) | 構造化ペイロード + callout/heading_2/divider/append。実機確認待ち |
 | 11 | D   | バイナリ更新フロー (ffmpeg/llama)          | 低   | 未着手   | ポリシー策定優先 |
 | 12 | D   | リアルタイム / 話者識別                    | 低   | 未着手   | VAD は導入済み。スコープ大 |
 | 13 | E   | CI/CD 調整                                 | 高   | 未着手   | リリース直前に整備 (#14 と一括) |
@@ -649,7 +649,7 @@ History.tsx
 6. タイトル生成中 (`isGeneratingTitle`) は介入しない (通常閉じる)
 7. 処理完了後・処理開始前は介入しない (ダイアログは出ない)
 
-**Status:** 進行中 (2026-05-21) — 実装・/code-review 反映完了。実環境動作確認待ち
+**Status:** 完了 (2026-05-21) — 実装・/code-review 反映 + 実環境動作確認済み
 
 ---
 
@@ -995,7 +995,133 @@ rm "~/Library/Application Support/com.whisper-tauri.desktop/models/ggml-large-v3
 - 既存の `notion/types.rs` / `client.rs` の構造を、汎用 `NotionBlock` enum に整理する小リファクタが先に要りそう。
 - ブロックの内容 (項目順、メタの有無) はユーザー設定で ON/OFF できる方が後々助かる、ただしまずは固定でリリースして要望を見るのが良い。
 
-**Status:** 未着手
+### 実施結果 (2026-05-21)
+
+#### 確定方針 (ユーザー承認済み)
+
+1. **送信コンテンツ**: コピー / 保存と同じく active タブの中身を送る。メタ callout は常に付与し、本体は active タブで切替 — text タブ → 本文 paragraph、timeline タブ → `[H:MM:SS] text` 形式の segment ごと paragraph、cleanText タブ → 整文テキスト、summary タブ → 構造化要約ブロックのみ (本文は付かない)。実機検証で「summary タブから送ると構造化要約 + Markdown 化要約が二重に出る」問題が判明したため、初稿の「常にまとめて送る」案 1 を撤回して案 2 (タブ別切替) に転換した。divider は上のセクション + 本体の両方が存在するときだけ自動で挟まる。
+2. **タイトル種別接尾辞**: 同じ録音から text / timeline / summary / cleanText を別ページとして送れるよう、タイトルに送信種別を付ける — text は無印 (基本)、timeline タブ → `"<fileName> (タイムライン)"` / `"<fileName> (Timeline)"`、summary タブ → `"<fileName> (要約)"` / `"<fileName> (Summary)"`、cleanText タブ → `"<fileName> (整文)"` / `"<fileName> (Cleaned)"`。Notion DB 一覧で「どれを送ったか分からなくなる」問題を解消。timeline タブから送ると本文は `[H:MM:SS] text` 形式の segment ごと paragraph (`formatTimeline` ヘルパで整形)。
+3. **日時フィールド**: 「録音日時」一本 (`createdAt`)。「文字起こし日時」は履歴スキーマに別フィールドが無いので分けない。
+4. **要約見出しの言語**: UI 言語追従。`textProcessing.summaryTldr` 等 (ja「要点」/ en "TL;DR"、ja「重要トピック」/ en "Key Points"、ja「アクションアイテム」/ en "Action Items"、ja「キーワード」/ en "Keywords"、ja「期日」/ en "Due") を Notion ブロックでも再利用。当初は英語固定としていたが「アプリ上で見えている見出しと Notion で見える見出しが違うのは違和感」とのフィードバックで撤回。`NotionSummary.labels` フィールドに FE で localized 文字列を詰めて BE に渡す。
+5. **要約 headline ブロック**: `StructuredSummary.headline` を `heading_1` として要約セクション先頭に出す (タイトルは「ファイル名 (要約)」になるのでタイトルと headline は別物として共存)。当初は「title properties で代替するため出さない」案だったが、種別接尾辞でタイトルがファイル名+種別 になる仕様変更で重複問題が消えたため復活。
+6. **100 ブロック超過時**: 初回 POST で先頭 100 ブロック → 余剰は `PATCH /v1/blocks/{page_id}/children` で 100 ずつ append。append 失敗時のみ `partial: true` を返してダイアログで警告。truncation marker は完全廃止。
+7. **ブロック表現**: メタは callout 1 つに `\n` 区切りで全 key:value (📋 emoji)。`NotionBlock` enum は導入せず、純粋関数 (`build_meta_callout` / `build_summary_blocks` / `build_divider_block` / `build_create_page_children` / `split_children_for_create`) で分割する素朴な実装に留めた。
+8. **処理時間**: FE 側で `Date.now() - startedAt` を計測 (`createWhisper.processingMs()` accessor)。履歴経路では `processingMs` を渡さない (`Vec<NotionMetaField>` 構造で「あるフィールドだけ送る」が表現できる)。
+
+#### BE 側 (Rust)
+
+- **型定義** (`src-tauri/src/notion/types.rs`):
+  - `NotionPagePayload` を `{title, meta, summary, body_text}` に拡張 (`Default` 派生、`meta`/`summary` は `#[serde(default)]` で省略可)
+  - 新規 `NotionMetaField { label, value }` / `NotionSummary { headline, tldr, key_points, action_items, keywords, labels }` / `NotionSummaryLabels { tldr, key_points, action_items, keywords, due }` / `NotionActionItem { what, due? }` (due は `Option<String>`、`skip_serializing_if`)
+  - `NotionPageRef` に `partial: bool` を追加 (`#[serde(default)]` で既存呼び出し互換)
+- **client.rs ヘルパー**:
+  - `build_meta_callout(&[NotionMetaField]) -> Option<Value>` — 空入力 None。`📋` emoji + rich_text の改行結合
+  - `build_summary_blocks(&NotionSummary) -> Vec<Value>` — `headline (heading_1, あれば) → tldr (paragraph) → keyPoints (bulleted_list_item) → actionItems → keywords (paragraph)` の順、空セクションスキップ。heading 文字列は `summary.labels.*` から localized 値を取る。actionItems は `{what}` または `{what} ({labels.due}: {due})`
+  - `build_divider_block()` — `{type: divider, divider: {}}`
+  - `build_create_page_children(&NotionPagePayload) -> Vec<Value>` — meta callout → summary blocks → divider (両側存在時のみ) → body paragraphs を順に連結
+  - `split_children_for_create(Vec<Value>) -> (Vec<Value>, Vec<Vec<Value>>)` — 初回 POST 用と append 用に分割
+  - `append_block_children` (private async) — `PATCH /v1/blocks/{page_id}/children`
+  - `create_page` を上記の組み合わせに置換。append 失敗は `eprintln!("Warning: …")` でログ + `page_ref.partial = true` を立てる
+- **削除**: 旧 `build_create_page_body` / `split_into_blocks` / `TRUNCATION_MARKER` / その関連テスト。`build_title_properties` を private ヘルパーとして抽出
+- **エラー処理**: 新規バリアントは追加せず、append 失敗は本流のエラーとして返さない (Ok(NotionPageRef { partial: true }))。`run_inference_blocking` 相当のキャンセル経路改善は別タスク
+
+#### FE 側 (TS)
+
+- **型同期** (`src/types/notion.ts`): Rust 側と対称な拡張。`NotionPageRef.partial: boolean` を追加
+- **新規** `src/lib/notion.ts`:
+  - `summaryToNotionPayload(StructuredSummary | null, t): NotionSummary | null` — `headline` を trim 保持 (BE 側で `heading_1` に展開)、全空時 null、`actionItems` は due undefined を `{ what }` のみへ正規化、`labels` フィールドに `textProcessing.summary*` の localized 文字列を詰める
+  - `buildNotionPagePayload({title, body, meta, summary, t, locale})` — タイトル空時 "Untitled" フォールバック、`NotionMetaContext` の各フィールドを定義済みのときだけ `NotionMetaField` 配列に積む。`formatDate` / `formatDuration` 既存ヘルパーを再利用
+- **`createWhisper` 拡張** (`src/primitives/createWhisper.ts`):
+  - `processingMs: number | null` / `transcribedAt: string | null` の 2 signal を追加
+  - `startTranscription` 冒頭で両方クリア + `startedAt = Date.now()` を局所変数で保持
+  - 結果到着時に `batch` 内で 3 signal (`result` / `processingMs` / `transcribedAt`) を同時更新 (再レンダー回数を最小化)
+  - 既存 isProcessing flag テストに加え、`processingMs` の初期 null・完了時セット・次回開始時クリアを単体テストでカバー
+- **`ResultViewer` 配線**:
+  - props に `metaCreatedAt` / `metaModelId` / `metaProcessingMs` / `metaDuration` / `metaVadEnabled` の 5 件 (全 optional)
+  - `handleShareToNotion` は active タブで分岐: summary タブのとき `body = ""` + `summary = session.summaryResult()`、それ以外は `body = getCopyText()` + `summary = null`。コピー / 保存と同じ「active タブの中身を送る」セマンティクスに揃え、要約が構造化ブロックと Markdown paragraph で二重に出る挙動を回避する
+- **親コンポーネント配線**:
+  - `Transcription.tsx` → `TranscriptionResult.tsx` → `ResultViewer`: `whisper.transcribedAt()` / `whisper.selectedModel()?.id` / `whisper.processingMs()` / `whisper.vadEnabled()` を渡す
+  - `HistoryDetail.tsx` → `ResultViewer`: `entry.createdAt` / `entry.modelId` / `entry.duration` / `entry.vadEnabled` を渡す (履歴に `processingMs` 永続化していないため省略)
+  - `TranscriptionResult` の interface に対応プロパティを追加して透過に通す
+- **`NotionShareDialog`**: `success` 状態で `pageRef.partial === true` のとき Description を `notionShare.successPartialNote` に切替。append 失敗を利用者に明示
+
+#### i18n (新規 12 キー + 既存 5 キー再利用)
+
+`Dictionary.notionShare` に新規追加:
+
+| key | ja | en |
+|---|---|---|
+| `successPartialNote` | 本文が長いため一部のブロックを送信できませんでした。Notion 上で続きを追加できます。 | Some blocks couldn't be sent because the content was too long. You can append the rest in Notion. |
+| `metaCreatedAt` | 録音日時 | Recorded At |
+| `metaModel` | モデル | Model |
+| `metaProcessingTime` | 処理時間 | Processing Time |
+| `metaAudioLength` | 音声の長さ | Audio Length |
+| `metaFileName` | 元ファイル名 | File Name |
+| `metaVadEnabled` | VAD | VAD |
+| `metaVadOn` | ON | On |
+| `metaVadOff` | OFF | Off |
+| `titleSummary` | 要約 | Summary |
+| `titleCleanText` | 整文 | Cleaned |
+| `titleTimeline` | タイムライン | Timeline |
+
+`Dictionary.textProcessing` から既存キーを再利用 (要約セクション見出し): `summaryTldr` / `summaryKeyPoints` / `summaryActionItems` / `summaryKeywords` / `summaryActionDue`。UI の要約タブと Notion ページで同じ見出しが見えるようにする方針。
+
+`/i18n` 監査で初稿の "音声長" を「音声の長さ」に、英語 partial note を内容に即した表現に小修正。
+
+#### テスト
+
+- **BE** (`notion::client::tests` に +14 追加、既存テストを新型に合わせて整理):
+  - `build_meta_callout_*` 4 件 (empty None / 改行結合 / clipboard emoji / 2000 char truncate)
+  - `build_summary_blocks_*` 8 件 (空全スキップ / headline → heading_1 / localized labels / tldr / keyPoints / actionItems due / keywords / 部分セクション)
+  - `build_divider_block_has_required_shape`
+  - `build_create_page_children_*` 3 件 (順序 / body 無し divider 抑制 / meta 無し divider 抑制)
+  - `body_paragraph_blocks_*` 2 件 (空行ドロップ / 100 超過で truncate しない)
+  - `split_children_for_create_*` 3 件 (100 未満 / 101 → 100+1 / 250 → 100+100+50)
+  - `parse_page_response_sets_partial_false` / `build_title_properties_*` 2 件
+  - 既存 4 件 (`split_into_blocks_*`) と 3 件 (`build_create_page_body_*`) は廃止に伴い削除
+  - 合計 BE 361 件通過 (移行前 344 件比 +17)
+- **FE** (`src/lib/__tests__/notion.test.ts` 新規 15 件 + `format.test.ts` に formatTimeline 4 件 + `createWhisper.test.ts` に processingMs 2 件):
+  - `summaryToNotionPayload` 4 件 (null / 全空 → null / headline + labels 同梱 / actionItems with-without due)
+  - `buildNotionPagePayload` 11 件 (Untitled fallback / 全 undefined / 全埋め順序 / VAD false / VAD null / duration 0 / processingMs positive / body verbatim / summary 変換 / summary 全空 → null / headline-only summary)
+  - `formatTimeline` 4 件 (空 / MM:SS 形式 / H:MM:SS 形式 / text trim)
+  - `processingMs` 2 件 (完了時セット / 次回開始時クリア)
+  - 合計 FE 308 件通過 (移行前 287 件比 +21)
+
+#### 検証
+
+- `pnpm check` (Biome + tsc) ✓
+- `pnpm test:run` — 308 件全通過
+- `cargo clippy --all-targets -- -D warnings` — clean
+- `cargo test` — 361 件全通過
+- `pnpm build` ✓
+- `/i18n` 監査クリア (構造・プレースホルダ・表記・使用箇所すべて OK)
+
+#### 動作確認のタイミング
+
+`pnpm tauri dev` で以下を通しで確認予定 (BE → Notion API のネットワーク経路は単体テストでカバーできていないため):
+
+1. text タブから送信 → Notion ページに「📋 メタ callout + 本文 paragraph * N」が並ぶ
+2. summary タブから送信 (要約生成済み) → 「メタ + TL;DR/Key Points/Action Items/Keywords + divider + 本文」
+3. cleanText タブから送信 → 「メタ + (要約あれば) + divider + 整形テキスト」
+4. 履歴詳細から送信 → メタ callout に「処理時間」が含まれない、その他は live と同じ
+5. 要約未生成のときに要約ブロックが出ない
+6. 長文 (>100 ブロック) で append 経路が走り、Notion 側に全文が入る (`partial = false`)
+7. append 失敗を擬似誘発 → ダイアログに `successPartialNote` 文面が出る (`partial = true`)
+8. 接続未設定時に従来通りエラー → 既存挙動維持
+
+#### スコープ外として残した項目
+
+- **Notion API rate limit (429) / Retry-After 対応** — プレリリースで観測されてから別タスク化
+- **メタ / 要約 / 本文の ON-OFF 設定 UI** — 改善案ドキュメント「まずは固定」方針に従う
+- **`NotionBlock` enum / type-safe block builder** — 将来 Notion 機能が増えたら導入。現状 5 種固定で素朴ヘルパーで十分
+- **HTTP モック導入によるネットワーク経路テスト** — 既存密度に合わせ pure 関数テストに留める
+- **BE 側で `processingMs` を計測 / 履歴に永続化** — schema migration 不要のため FE 計測で代用
+- **`createdAt` の録音 vs 文字起こし分離** — 履歴スキーマ追加が必要、別タスク
+- **Notion ページの更新 / 上書き / 既存ページに append** — 現状はページ作成のみ
+- **要約 headline を本文先頭にも H1 で出す** — title properties で十分との判断
+- **要約見出しのロケール対応** — 英語固定 (`formatSummaryAsText` と整合)
+
+**Status:** 進行中 (2026-05-21) — 実装・テスト・/i18n 完了。実環境動作確認待ち
 
 ---
 

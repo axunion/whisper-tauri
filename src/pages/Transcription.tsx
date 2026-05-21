@@ -353,6 +353,12 @@ export default function Transcription() {
                     historyId={historyId()}
                     onClose={handleReset}
                     onRename={(id, name) => history.renameEntry(id, name)}
+                    notionMeta={{
+                      createdAt: whisper.transcribedAt() ?? undefined,
+                      modelId: whisper.selectedModel()?.id,
+                      processingMs: whisper.processingMs() ?? undefined,
+                      vadEnabled: whisper.vadEnabled(),
+                    }}
                   />
                 )}
               </Show>

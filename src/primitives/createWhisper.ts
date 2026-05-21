@@ -39,6 +39,10 @@ const {
   setError,
   currentTaskId,
   setCurrentTaskId,
+  processingMs,
+  setProcessingMs,
+  transcribedAt,
+  setTranscribedAt,
 } = createRoot(() => {
   const [models, setModels] = createSignal<ModelInfo[]>([]);
   const [selectedModel, setSelectedModel] = createSignal<ModelInfo | null>(
@@ -61,6 +65,16 @@ const {
 
   // Internal state for cancellation
   const [currentTaskId, setCurrentTaskId] = createSignal<string | null>(null);
+
+  // Wall-clock duration of the most recent transcription, in milliseconds.
+  // Null until the first run completes; persists across resets so the latest
+  // result's timing remains available for Notion meta until a new run starts.
+  const [processingMs, setProcessingMs] = createSignal<number | null>(null);
+
+  // ISO timestamp captured when the most recent transcription completed. The
+  // history record's `createdAt` will differ by milliseconds (server-time);
+  // this value is the live-side surrogate for the Notion meta callout.
+  const [transcribedAt, setTranscribedAt] = createSignal<string | null>(null);
 
   return {
     models,
@@ -87,6 +101,10 @@ const {
     setError,
     currentTaskId,
     setCurrentTaskId,
+    processingMs,
+    setProcessingMs,
+    transcribedAt,
+    setTranscribedAt,
   };
 });
 
@@ -206,7 +224,10 @@ async function startTranscription(overrideAudioPath?: string): Promise<void> {
     setProgress(null);
     setResult(null);
     setIsProcessing(true);
+    setProcessingMs(null);
+    setTranscribedAt(null);
   });
+  const startedAt = Date.now();
   try {
     let vadModelPath: string | null = null;
     if (vadEnabled()) {
@@ -222,7 +243,11 @@ async function startTranscription(overrideAudioPath?: string): Promise<void> {
         vadModelPath,
       },
     );
-    setResult(transcriptionResult);
+    batch(() => {
+      setResult(transcriptionResult);
+      setProcessingMs(Date.now() - startedAt);
+      setTranscribedAt(new Date().toISOString());
+    });
   } catch (e) {
     setError(parseError(e));
   } finally {
@@ -260,6 +285,8 @@ const whisperInstance = {
   isProcessing,
   isDownloading,
   error,
+  processingMs,
+  transcribedAt,
 
   // Actions
   loadModels,
@@ -294,4 +321,6 @@ export function _resetWhisperForTesting(): void {
   setVadEnabledOverride(null);
   setError(null);
   setCurrentTaskId(null);
+  setProcessingMs(null);
+  setTranscribedAt(null);
 }

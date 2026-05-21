@@ -418,6 +418,57 @@ describe("createWhisper", () => {
         dispose();
       });
     });
+
+    it("should record processingMs on successful completion", async () => {
+      vi.mocked(invoke)
+        .mockResolvedValueOnce("/models/ggml-silero-v5.1.2.bin")
+        .mockResolvedValueOnce(mockResult);
+
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        whisper.selectModel(mockModel());
+        whisper.setFile(mockFile);
+
+        expect(whisper.processingMs()).toBeNull();
+        await whisper.startTranscription();
+
+        const ms = whisper.processingMs();
+        expect(ms).not.toBeNull();
+        expect(ms).toBeGreaterThanOrEqual(0);
+        dispose();
+      });
+    });
+
+    it("should clear processingMs at the start of a new run", async () => {
+      vi.mocked(invoke)
+        .mockResolvedValueOnce("/models/ggml-silero-v5.1.2.bin")
+        .mockResolvedValueOnce(mockResult);
+
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        whisper.selectModel(mockModel());
+        whisper.setFile(mockFile);
+
+        await whisper.startTranscription();
+        expect(whisper.processingMs()).not.toBeNull();
+
+        let resolveSecond: (value: TranscriptionResult) => void = () => {};
+        const secondPromise = new Promise<TranscriptionResult>((resolve) => {
+          resolveSecond = resolve;
+        });
+        vi.mocked(invoke)
+          .mockResolvedValueOnce("/models/ggml-silero-v5.1.2.bin")
+          .mockReturnValueOnce(secondPromise as Promise<unknown>);
+
+        const inflight = whisper.startTranscription();
+        // During the second run but before completion, the previous value
+        // should be cleared so the UI does not show stale timing.
+        expect(whisper.processingMs()).toBeNull();
+        resolveSecond(mockResult);
+        await inflight;
+        dispose();
+      });
+    });
   });
 
   describe("vadEnabled", () => {
