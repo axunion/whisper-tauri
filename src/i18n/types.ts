@@ -80,6 +80,11 @@ export interface Dictionary {
     selectedCount: string;
     vadEnabledLabel: string;
     vadDisabledLabel: string;
+    processingCloseTitle: string;
+    processingCloseSummaryDescription: string;
+    processingCloseCleanTextDescription: string;
+    processingCloseConfirm: string;
+    processingCancelledToast: string;
   };
   settings: {
     title: string;

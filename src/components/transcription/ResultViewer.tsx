@@ -3,7 +3,7 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import type { Component, JSX } from "solid-js";
-import { createSignal, onMount, Show } from "solid-js";
+import { createEffect, createSignal, onMount, Show } from "solid-js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/Tabs";
 import { useI18n } from "~/i18n";
 import type { ExportFormat } from "~/lib/export";
@@ -11,6 +11,7 @@ import { exportResult, getExtension } from "~/lib/export";
 import { formatSummaryAsText } from "~/lib/format";
 import { toast } from "~/lib/toast";
 import { createAiActions } from "~/primitives/createAiActions";
+import type { AiOperation } from "~/primitives/createAiSession";
 import { createAiSession } from "~/primitives/createAiSession";
 import { createNotionSettings } from "~/primitives/createNotionSettings";
 import { createNotionShare } from "~/primitives/createNotionShare";
@@ -33,6 +34,9 @@ interface ResultViewerProps {
   onClose?: (() => void) | undefined;
   onTitleGenerated?: ((title: string) => void) | undefined;
   onGeneratingTitleChange?: ((generating: boolean) => void) | undefined;
+  onProcessingChange?:
+    | ((operation: AiOperation, cancel: () => Promise<void>) => void)
+    | undefined;
 }
 
 const ResultViewer: Component<ResultViewerProps> = (props) => {
@@ -75,6 +79,10 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     tp.checkServer();
     tp.loadModels();
     void notion.load();
+  });
+
+  createEffect(() => {
+    props.onProcessingChange?.(session.currentOperation(), session.cancel);
   });
 
   function getCopyText(): string {

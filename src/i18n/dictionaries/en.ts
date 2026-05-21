@@ -81,6 +81,13 @@ export const en: Dictionary = {
     selectedCount: "{count} selected",
     vadEnabledLabel: "VAD: ON",
     vadDisabledLabel: "VAD: OFF",
+    processingCloseTitle: "Close while processing?",
+    processingCloseSummaryDescription:
+      "Cancel the summary generation and close history. The in-progress result will not be saved.",
+    processingCloseCleanTextDescription:
+      "Cancel the clean-text generation and close history. The in-progress result will not be saved.",
+    processingCloseConfirm: "Cancel and close",
+    processingCancelledToast: "Processing cancelled",
   },
   settings: {
     title: "Settings",

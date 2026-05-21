@@ -12,12 +12,17 @@ import { VadBadge } from "~/components/history/VadBadge";
 import { ResultViewer } from "~/components/transcription/ResultViewer";
 import { useI18n } from "~/i18n";
 import { formatDate, formatDuration } from "~/lib/format";
+import type { AiOperation } from "~/primitives/createAiSession";
 import { createTitleEditor } from "~/primitives/createTitleEditor";
 import type { HistoryEntry, TranscriptionResult } from "~/types";
 
 interface HistoryDetailProps {
   entry: HistoryEntry;
   onRename?: (id: string, newFileName: string) => void;
+  onProcessingChange?: (
+    operation: AiOperation,
+    cancel: () => Promise<void>,
+  ) => void;
 }
 
 function toTranscriptionResult(entry: HistoryEntry): TranscriptionResult {
@@ -155,6 +160,7 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
           historyId={props.entry.id}
           onTitleGenerated={(title) => startSuggestion(title)}
           onGeneratingTitleChange={setIsGeneratingTitle}
+          onProcessingChange={props.onProcessingChange}
         />
       </div>
     </div>

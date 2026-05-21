@@ -11,6 +11,8 @@ import type {
 } from "~/types";
 import type { AppError } from "~/types/errors";
 
+export type AiOperation = "summary" | "cleanText" | null;
+
 export interface AiSession {
   // State
   summaryResult: Accessor<StructuredSummary | null>;
@@ -19,7 +21,7 @@ export interface AiSession {
   isProcessing: Accessor<boolean>;
   isGeneratingTitle: Accessor<boolean>;
   isLoaded: Accessor<boolean>;
-  currentOperation: Accessor<"summary" | "cleanText" | null>;
+  currentOperation: Accessor<AiOperation>;
   inferenceProgress: Accessor<InferenceProgress | null>;
   error: Accessor<AppError | null>;
 
@@ -96,9 +98,8 @@ export function createAiSession(
   const [titleResult, setTitleResult] = createSignal<string | null>(null);
   const [isProcessing, setIsProcessing] = createSignal(false);
   const [isGeneratingTitle, setIsGeneratingTitle] = createSignal(false);
-  const [currentOperation, setCurrentOperation] = createSignal<
-    "summary" | "cleanText" | null
-  >(null);
+  const [currentOperation, setCurrentOperation] =
+    createSignal<AiOperation>(null);
   const [error, setError] = createSignal<AppError | null>(null);
   const [isLoaded, setIsLoaded] = createSignal(false);
 

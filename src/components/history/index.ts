@@ -2,5 +2,6 @@ export { HistoryActions } from "./HistoryActions";
 export { HistoryDetail } from "./HistoryDetail";
 export { HistoryFilter } from "./HistoryFilter";
 export { HistoryList } from "./HistoryList";
+export { HistoryProcessingCloseDialog } from "./HistoryProcessingCloseDialog";
 export { SearchBar } from "./SearchBar";
 export { SortToggleGroup } from "./SortSelect";

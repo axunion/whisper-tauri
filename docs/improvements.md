@@ -31,8 +31,8 @@
 | 5  | A   | 共有メニュー化 (Notion 等)                 | 中   | 完了 (2026-05-14) | 共有メニュー (FiShare2) 新設 + 未接続時の設定リンク導線 |
 | 6  | A   | 履歴メタ情報の拡充 (VAD ON/OFF)            | 中   | 完了 (2026-05-15) | 履歴に vad_enabled 列追加 + 詳細メタ行表示。#10 のメタ基盤として再利用可 |
 | 15 | A   | 文字起こし時の VAD ON/OFF 選択             | 中   | 完了 (2026-05-15) | createWhisper に override signal 新設 + Bar に Checkbox 列。設定は起動時デフォルトとして機能継続 |
-| 16 | A   | 要約・整文タブで保存ボタンを有効化         | 中   | 進行中 (2026-05-20) | 現状は隠されている。formatSummaryAsText 経由で .md / .txt 出力 |
-| 17 | A   | 要約処理中の履歴ナビゲーション制御         | 中   | 未着手   | 処理中に閉じられて再オープン時にタブ非表示。閉じる前確認 or 処理中状態の永続化 |
+| 16 | A   | 要約・整文タブで保存ボタンを有効化         | 中   | 完了 (2026-05-21) | summary/cleanText タブで保存ボタン有効化。fs:default に write 系 permission を追加 |
+| 17 | A   | 要約処理中の履歴ナビゲーション制御         | 中   | 進行中 (2026-05-21) | 方針 A 実装。確認ダイアログ + cancelSession。実機確認待ち |
 | 7  | B   | Whisper モデルを small/turbo に絞る        | 高   | 完了 (2026-05-18) | medium / large-v3 を完全削除し、turbo に統合 |
 | 8  | B   | 不要モデルのクリーンアップ                 | 中   | 完了 (2026-05-19) | 廃止モデル機構を LLM 側にだけ実装。合計サイズ表示は Whisper / LLM 両方に |
 | 9  | C   | 要約の充実                                 | 中   | 完了 (2026-05-20) | 構造化要約 + 品質再検討 (tldr/keyPoints 役割分離・actionItems 厳格化・keyPoints 動的レンジ)。2026-05-20 実環境確認済み |
@@ -508,7 +508,7 @@ scope は当初 `**` (全パス) で実装したが /simplify レビューで `/
 3. cleanText タブ → 単発 Save ボタンで `.txt`
 4. 録音後の WAV ボタンで `.wav` 保存 (#2 完了時に未検証だった経路)
 
-**Status:** 進行中 (2026-05-20) — 実装・/simplify 完了。実環境動作確認待ち
+**Status:** 完了 (2026-05-21) — 実機動作確認済み (要約タブ `.md` / 整文タブ `.txt` / text/timeline タブ flyout / WAV 保存いずれも通過)
 
 ---
 
@@ -569,7 +569,87 @@ scope は当初 `**` (全パス) で実装したが /simplify レビューで `/
 2. 方針 A (確認ダイアログ) を実装 — 最も影響範囲が小さい
 3. それでも UX が不十分なら方針 B (バックグラウンド処理永続化) を後追い検討
 
-**Status:** 未着手
+### 実施結果 (2026-05-21)
+
+#### 方針判断
+
+方針 A (確認ダイアログ) を採用。対象は `session.currentOperation()` が `"summary"` または `"cleanText"` のとき (= AI 抽出処理中)。タイトル生成 (`isGeneratingTitle`) は処理時間が短く、UI 上「処理中タブ」も存在しないため対象外。
+
+#### キャンセル経路の現状把握 (実装前)
+
+`text_processing_cancel` の挙動を BE 側 (`src-tauri/src/text_processing/` 配下) で精査した結果:
+
+- **streaming 版** (`run_inference`): チャンク受信のたびに `is_cancelled()` をチェックするため、`text_processing_cancel` 発火後ほぼ即時に止まる。
+- **blocking 版** (`run_inference_blocking`): 構造化要約の `stream:false` ルートで使われる。`.send().await` と response JSON parse が完了するまで return しないため、flag は立つが推論本体は走り続けるケースが残る (multi-chunk 要約の場合、チャンク**間**ではキャンセル可、チャンク**内**は止まらない)。
+
+検討事項にあった「`text_processing_cancel` が本当に効いているか」への結論: **streaming ルートでは効く、blocking ルートでは部分的にしか効かない**。今回は「ユーザーが明示的に中断を選んだ」UI 整合性のみを担保し、`run_inference_blocking` の reqwest AbortHandle wire は別件としてスコープ外。
+
+#### 通信の流れ
+
+```
+ResultViewer (session 所有)
+  └─ createEffect で session.currentOperation() を購読
+     └─ props.onProcessingChange?.(op, session.cancel) を発火
+        ↕ HistoryDetail は素通し
+History.tsx
+  └─ currentOp / cancelFn を signal で保持
+  └─ Sheet.onOpenChange と X ボタンを attemptClose() に集約
+       ├─ currentOp() === null  → 通常通り clearSelectedEntry()
+       └─ non-null              → setShowCloseDialog(true) で保留
+  └─ HistoryProcessingCloseDialog
+       ├─ Cancel   → setShowCloseDialog(false) (Sheet 開いたまま)
+       └─ Confirm  → cancelFn() → toast.info → clearSelectedEntry()
+```
+
+`onGeneratingTitleChange` (`ResultViewer.tsx:35`) と同じ callback パターンを踏襲。controlled な Sheet なので `clearSelectedEntry()` を呼ばない限り閉じない → ESC キー / Sheet 背景クリックも同一経路に乗る。
+
+#### ファイル変更
+
+- **新規** `src/components/history/HistoryProcessingCloseDialog.tsx` — AlertDialog ベース。`AiActionDialogs.tsx` の overwrite ダイアログのレイアウトを踏襲し、`operation` で description を出し分け (`"summary"` なら要約用文言、それ以外は整文用文言)。
+- **修正** `src/components/transcription/ResultViewer.tsx` — `onProcessingChange?: ((op: AiOperation, cancel: () => Promise<void>) => void)` prop と、`createEffect(() => props.onProcessingChange?.(session.currentOperation(), session.cancel))` を追加。
+- **修正** `src/components/history/HistoryDetail.tsx` — 同 prop を素通し。
+- **修正** `src/pages/History.tsx` — `currentOp` / `cancelFn` / `showCloseDialog` signal、`attemptClose()` / `confirmCloseWithCancel()` helper、Sheet `onOpenChange` と X button onClick の集約、`<HistoryProcessingCloseDialog>` 設置。`selectedEntry === null` で signals をリセットする `createEffect` を追加 (古い session の closure を抱え込まないため)。
+- **修正** `src/primitives/createAiSession.ts` — `AiOperation = "summary" | "cleanText" | null` 型を export し、`AiSession.currentOperation` の戻り値型と内部 `createSignal` の型を差し替え。
+- **i18n** ja/en に 5 キー追加: `history.processingCloseTitle` / `processingCloseSummaryDescription` / `processingCloseCleanTextDescription` / `processingCloseConfirm` / `processingCancelledToast`。
+
+#### /code-review 反映
+
+3 agent 並列レビュー (code reuse / quality / efficiency) で以下を反映:
+
+1. `"summary" | "cleanText" | null` が 5 箇所で inline 重複 → `AiOperation` 型を `createAiSession.ts` から export して reuse。
+2. `HistoryProcessingCloseDialog` の `<Show>` をスカラー三項演算子に書き換え (Solid 慣用、`Show` import も削除)。
+3. Sheet を閉じた後 `currentOp` / `cancelFn` 信号が古い session の closure を保持し続ける問題 → `createEffect` で `selectedEntry === null` 時に signals をリセット。
+
+非採用 (理由付き):
+
+- `setCancelFn(() => cancel)` のバグ可能性指摘 → SolidJS の Setter は関数引数を updater として `(prev) => cancel` 相当に解釈、結果として `cancel` が格納される慣用句で問題なし。
+- race condition (完了瞬間に confirm を押したときの toast 不整合) → 窓が狭く UX 影響は軽微、プレリリース段階で追加複雑化を避ける。
+- inline 関数 → named handler 化 → SolidJS は関数コンポーネントを再実行しないため React 的な useCallback 論は不要。
+- AlertDialog の z-index 引き上げ → 共通スタイル変更は今回スコープ超え。Portal 挿入順で実用上は動作する。
+
+#### スコープ外として残した項目
+
+- `run_inference_blocking` の reqwest AbortHandle wire によるキャンセル確実化 → 別 issue として後追い検討。
+- 方針 B (バックグラウンド処理永続化・複数履歴並列処理) → 利用者要望があれば検討。
+- タイトル生成 (`isGeneratingTitle`) 中の閉じる介入 → 処理時間が短いため UX 影響小、対象外。
+
+#### 検証
+
+- `/verify frontend` — Biome lint / tsc / FE 287 tests 全通過 (BE は今回変更なし)。
+
+#### 動作確認のタイミング
+
+`pnpm tauri dev` で以下を通しで確認予定 (capabilities 変更はないため再起動の必須要件はないが、念のため再起動して走る):
+
+1. 履歴詳細を開く → 要約ボタン → 処理中に X クリック → ダイアログ表示
+2. ダイアログ「キャンセル」→ Sheet は開いたまま、処理は継続
+3. ダイアログ「中断して閉じる」→ `text_processing_cancel` invoke → toast「処理を中断しました」→ Sheet 閉じる
+4. ESC キー / Sheet 背景クリックでも同じダイアログ経路に乗る
+5. 整文ボタン (cleanText) → description が「整文処理を中断〜」に切り替わる
+6. タイトル生成中 (`isGeneratingTitle`) は介入しない (通常閉じる)
+7. 処理完了後・処理開始前は介入しない (ダイアログは出ない)
+
+**Status:** 進行中 (2026-05-21) — 実装・/code-review 反映完了。実環境動作確認待ち
 
 ---
 

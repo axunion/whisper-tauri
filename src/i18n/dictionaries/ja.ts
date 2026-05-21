@@ -82,6 +82,13 @@ export const ja: Dictionary = {
     selectedCount: "{count}件選択中",
     vadEnabledLabel: "VAD: ON",
     vadDisabledLabel: "VAD: OFF",
+    processingCloseTitle: "処理中に閉じますか?",
+    processingCloseSummaryDescription:
+      "要約処理を中断して履歴を閉じます。生成中の内容は保存されません。",
+    processingCloseCleanTextDescription:
+      "整文処理を中断して履歴を閉じます。生成中の内容は保存されません。",
+    processingCloseConfirm: "中断して閉じる",
+    processingCancelledToast: "処理を中断しました",
   },
   settings: {
     title: "設定",

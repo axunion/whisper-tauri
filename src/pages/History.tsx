@@ -1,11 +1,12 @@
 import { FiCheck, FiCheckSquare, FiX } from "solid-icons/fi";
-import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
 import {
   HistoryActions,
   HistoryDetail,
   HistoryFilter,
   HistoryList,
+  HistoryProcessingCloseDialog,
   SearchBar,
   SortToggleGroup,
 } from "~/components/history";
@@ -13,6 +14,7 @@ import { Button } from "~/components/ui/Button";
 import { Sheet, SheetContent, SheetTitle } from "~/components/ui/Sheet";
 import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
+import type { AiOperation } from "~/primitives/createAiSession";
 import { createHistory } from "~/primitives/createHistory";
 import type {
   HistoryFilter as HistoryFilterType,
@@ -29,7 +31,35 @@ export default function History() {
   const [rawInput, setRawInput] = createSignal("");
   const [isWaitingForSearch, setIsWaitingForSearch] = createSignal(false);
   const [selectionMode, setSelectionMode] = createSignal(false);
+  const [currentOp, setCurrentOp] = createSignal<AiOperation>(null);
+  const [cancelFn, setCancelFn] = createSignal<(() => Promise<void>) | null>(
+    null,
+  );
+  const [showCloseDialog, setShowCloseDialog] = createSignal(false);
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  createEffect(() => {
+    if (!history.selectedEntry()) {
+      setCurrentOp(null);
+      setCancelFn(null);
+    }
+  });
+
+  function attemptClose(): void {
+    if (currentOp() !== null) {
+      setShowCloseDialog(true);
+      return;
+    }
+    history.clearSelectedEntry();
+  }
+
+  async function confirmCloseWithCancel(): Promise<void> {
+    const fn = cancelFn();
+    if (fn) await fn();
+    toast.info(t("history.processingCancelledToast"));
+    history.clearSelectedEntry();
+    setShowCloseDialog(false);
+  }
 
   function handleKeyDown(e: KeyboardEvent): void {
     if (e.key === "Escape" && selectionMode()) {
@@ -192,7 +222,7 @@ export default function History() {
         <Sheet
           open={!!history.selectedEntry()}
           onOpenChange={(open) => {
-            if (!open) history.clearSelectedEntry();
+            if (!open) attemptClose();
           }}
         >
           <SheetContent class="max-w-none sm:max-w-none p-8">
@@ -201,17 +231,31 @@ export default function History() {
               variant="ghost"
               size="icon"
               class="absolute left-2 top-2 size-7 text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
-              onClick={() => history.clearSelectedEntry()}
+              onClick={attemptClose}
             >
               <FiX class="size-4" />
             </Button>
             <Show when={history.selectedEntry()} keyed>
               {(entry) => (
-                <HistoryDetail entry={entry} onRename={handleRename} />
+                <HistoryDetail
+                  entry={entry}
+                  onRename={handleRename}
+                  onProcessingChange={(op, cancel) => {
+                    setCurrentOp(op);
+                    setCancelFn(() => cancel);
+                  }}
+                />
               )}
             </Show>
           </SheetContent>
         </Sheet>
+
+        <HistoryProcessingCloseDialog
+          open={showCloseDialog}
+          operation={currentOp}
+          onOpenChange={setShowCloseDialog}
+          onConfirm={confirmCloseWithCancel}
+        />
       </div>
 
       <HistoryActions
