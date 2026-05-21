@@ -53,15 +53,19 @@ src/
 
 ```
 src-tauri/src/
-├── whisper/          # 文字起こし（whisper-rs）
-├── converter/        # ファイル変換（ffmpeg）
-├── history/          # 履歴管理（SQLite）
-├── recording/        # リアルタイム録音（cpal）
-├── text_processing/  # テキスト処理（llama-server + LLM）
-└── notion/           # Notion API 連携（reqwest）
+├── lib.rs / main.rs   # エントリポイント・invoke_handler 登録
+├── download.rs        # 汎用ダウンロード共通
+├── paths.rs           # アプリディレクトリ解決
+├── settings.rs        # tauri-plugin-store ラッパー
+├── whisper/           # 文字起こし (whisper-rs)
+├── converter/         # ファイル変換 (ffmpeg)
+├── history/           # 履歴 (SQLite)
+├── recording/         # リアルタイム録音 (cpal)
+├── text_processing/   # テキスト処理 (llama-server + LLM)
+└── notion/            # Notion API 連携 (reqwest)
 ```
 
-各モジュールは `commands.rs` / `types.rs` / `error.rs` / `mod.rs` の共通構成。
+ドメインモジュールは基本 `commands.rs` / `types.rs` / `error.rs` / `mod.rs` の共通構成。実装規模が大きい `text_processing` 等は `extract.rs` / `inference.rs` / `models.rs` / `server.rs` を追加で持つ。
 
 ## 型定義
 
@@ -72,3 +76,27 @@ TypeScript型 (`src/types/`) と Rust型 (`src-tauri/src/*/types.rs`) は一致�
 
 - **TDD遵守**: テスト可能な実装では先にテストを書く。UIの視覚確認は例外
 - **TypeScript Strict**: `noUncheckedIndexedAccess` / `noImplicitOverride` / `exactOptionalPropertyTypes` 有効
+
+## Git Commit Style
+
+- imperative の英文タイトル 1 行。Conventional Commits prefix (`feat:` / `fix:` 等) や AX-Tag は付けない
+- **変更が非自明な場合** (新機能 / 設計判断 / リファクタの why / 既存挙動の修正) は 1 行空けて本文 2〜3 段落で書く:
+  - 何を変えたか (主要 hunks の要約)
+  - なぜ変えたか (背景・代替案を退けた理由)
+  - スコープ外として残した項目 / 後追いタスク
+- マージ後の `docs/improvements.md` の Status 更新が含まれる場合は本文末尾で軽く触れる
+- 過去の良例: `7a48eed` (saving + permission)、`574f270` (legacy cleanup)、`416803b` (model drop) を参照
+
+## ルール (`.claude/rules/`)
+
+該当パスに編集が入ると system reminder として自動挿入されるプロジェクト固有ルール群。
+
+| ファイル | 用途 |
+|---|---|
+| `error-handling.md` | Rust `error.rs` の prefix 命名と FE `errors.ts::PREFIX_MAP` の同期 |
+| `i18n.md` | UI 文字列追加・変更時の `types.ts` / 全 locale / `t("...")` 同期 |
+| `ipc-events.md` | Rust → TS イベント名 (`whisper:progress` 等) のリファレンス |
+| `tauri-permissions.md` | `@tauri-apps/plugin-*` 利用時の `capabilities/default.json` permission チェック |
+| `tuning.md` | チューニング方針 — 標準設定を優先、独自整形で弱点を隠さない |
+| `ui-design.md` | Glassmorphism / `SectionRow` / `Separator` など UI 共通ルール |
+| `workarounds.md` | 既知バグの workaround (whisper-rs FFI UB / `SOURCE_DATE_EPOCH` 等) |
