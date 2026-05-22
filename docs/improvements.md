@@ -37,7 +37,7 @@
 | 8  | B   | 不要モデルのクリーンアップ                 | 中   | 完了 (2026-05-19) | 廃止モデル機構を LLM 側にだけ実装。合計サイズ表示は Whisper / LLM 両方に |
 | 9  | C   | 要約の充実                                 | 中   | 完了 (2026-05-20) | 構造化要約 + 品質再検討 (tldr/keyPoints 役割分離・actionItems 厳格化・keyPoints 動的レンジ)。2026-05-20 実環境確認済み |
 | 10 | C   | Notion ブロック送信 + メタデータ           | 中   | 完了 (2026-05-22) | 構造化ペイロード + callout/heading_1/divider/append。実機確認済み |
-| 18 | A   | Notion 送信ダイアログのレイアウトシフト解消 | 中   | 未着手   | sending と success/error で高さが変わる。#10 対応中に発覚 |
+| 18 | A   | Notion 送信ダイアログのレイアウトシフト解消 | 中   | 完了 (2026-05-22) | sending を中央配置の独自レイアウトに振り、Title/Description を Switch 外に hoist して a11y 安定化 |
 | 19 | A   | Notion 送信完了後の遷移確認 UI 再考        | 低   | 未着手   | 毎回ブラウザに飛ぶ「Notionで確認」ボタンの是非。要検討 |
 | 11 | D   | バイナリ更新フロー (ffmpeg/llama)          | 低   | 未着手   | ポリシー策定優先 |
 | 12 | D   | リアルタイム / 話者識別                    | 低   | 未着手   | VAD は導入済み。スコープ大 |
@@ -149,37 +149,19 @@ scope は当初 `**` で実装したがレビューで `/etc` 等のシステム
 
 ## 18. Notion 送信ダイアログのレイアウトシフト解消
 
-### 背景
+**結論 (2026-05-22)**: 当初 plan は方針 A (ボタン行スペースを sending 中も `min-h-10` で予約) だったが、ユーザーから「送信中は見出し不要・中央に送信中のみが一般的」とフィードバックを受け、**方針 D: sending を中央配置の独自レイアウトに振る**方向に転換。Slack / Discord 風の loading ダイアログ UX に寄せた。
 
-- #10 (Notion ブロック送信) の実機確認で発覚。`NotionShareDialog.tsx` の AlertDialog は `sending` / `success` / `error` の 3 状態を `<Switch>` で切替えるが、状態ごとのコンテンツ量が大きく違うためダイアログのサイズが切り替わり、視覚的なレイアウトシフトとして見える。
-  - **sending**: タイトル + 説明文のみ (ボタン行なし)
-  - **success**: タイトル + 説明文 + ボタン行 (`閉じる` / `Notionで確認` の 2 ボタン)
-  - **error**: タイトル + 説明文 + ボタン行 (`閉じる` / `再試行` の 2 ボタン)
-- 状態遷移の瞬間にダイアログ全体が広がるため、利用者目線で「完了したのに何かが起きた」「位置がズレた」と感じる。
+**実装ポイント**:
+- **Title/Description は `<Switch>` の外に hoist** し常に DOM に存在させる。class を `sr-only` 動的切替 (sending 時のみ sr-only)、テキストは `titleText()` / `descriptionText()` memo で state に応じて切替。Kobalte の `aria-labelledby` / `aria-describedby` が指す id が branch swap の microtask 間で undefined になる race を回避。
+- **sending 中の可視 spinner div** は `role="status"` + `aria-live="polite"` で aria-live region として動作させ、`FiLoader` (animate-spin) + 「送信中…」テキストを中央配置。可視 `<p>` は `aria-hidden="true"` (Description が SR への wire を持つ)。
+- **focus 移動**: Kobalte の `onMountAutoFocus` は AlertDialog Content マウント時のみ発火し inner Switch の branch swap では再発火しないため、`createEffect` で `kind()` を監視し、`success` / `error` 遷移時に `queueMicrotask` 経由で新 Close ボタン (`ref`) に focus を明示移動。
+- **i18n 集約**: `descriptionText` memo に `t()` 呼び出しを集約し、sr-only Description と可視 `<p>` が同じソースを参照 (キー rename 時の漏れ防止)。
 
-### 案
+**意図的に残した不揃い**: sending では visible grid item が 1 つ (spinner div のみ・sr-only は `position:absolute` で grid から外れる)、success / error では 2 つ (Description + buttons) になるため、sending と success/error の高さは branch 間で完全には揃わない。これは「送信中は中央配置」を優先する方針の意図的な選択 (success / error 同士の高さは揃っているので「完了したのに何か起きた」感は出ない)。
 
-- **方針 A (推奨・最小)**: ボタン行のスペースを sending 中も予約する。
-  - `sending` でもボタン行を出し、ボタンは disabled 状態 (`閉じる` のみグレーアウト、`再試行` / `Notionで確認` の枠は出さない or 透明 placeholder)。
-  - もしくはボタン領域を `min-h-` で確保し、`sending` 時は中身を空にする。
-- **方針 B (穏当)**: `AlertDialogContent` 自体に `min-h-` を設定し、最大状態 (success) の高さに揃える。中身の不揃いは許容するが、外側はぴったり同じサイズに見える。
-- **方針 C (大きい)**: 全状態でレイアウトを揃え、`sending` 中もボタン行に「キャンセル」ボタンを出す。利用者が送信中に取り消せるようになる副次効果あり (ただし BE 側 `notion_share` のキャンセル経路は未実装 → スコープ拡大)。
+**スコープ外**: sending 中のキャンセル (BE `notion_share` の AbortHandle 化が必要 → #19 の延長案で別途検討)、「Notionで確認」ボタンの UX (→ #19)。
 
-### 検討事項
-
-- 方針 A だと「sending 中に閉じるボタンを出すべきか」が判断ポイント。`handleOpenChange` は現状 `sending` 中の close をブロックしているので、UI 上もボタンを出さないか disabled にするのが整合的。
-- ボタン文字数が ja/en で違うため、`w-32` / `w-40` の固定幅を維持するだけで横方向のシフトはほぼ抑えられている。本タスクは縦方向シフトに集中。
-- AlertDialog の transition (`data-[state=open]:animate-in` 等) と組み合わせたとき、高さが変わる遷移はアニメーション中に再計算されて不自然に見える。`min-h-` 固定の方が transition と相性が良い可能性。
-- 「Notionで確認」ボタン自体の是非は #19 で議論する。本タスクはレイアウトシフトのみに絞る。
-
-### 実装ステップ案
-
-1. 3 状態の現状サイズを計測 (devtools の Computed → height)。
-2. 方針 A を試す。`<Switch>` の外側に固定の Title/Description/Footer 骨格を置き、中身だけ切替える形にリファクタ。
-3. 状態遷移時にシフトが目視で消えるまで微調整。
-4. `/verify frontend` → コミット。
-
-**Status:** 未着手
+**Status:** 完了 (2026-05-22) — 実機確認済み
 
 ---
 
