@@ -166,11 +166,14 @@ export const en: Dictionary = {
   notionShare: {
     dialogTitle: "Send to Notion",
     sending: "Sending...",
-    successTitle: "Sent to Notion",
-    successDescription: "A new page has been created in your Notion database.",
+    successToastTitle: "Sent to Notion",
+    successPartialToastTitle: "Partially sent to Notion",
     successPartialNote:
       "Some blocks couldn't be sent because the content was too long. You can append the rest in Notion.",
     openInNotion: "Open in Notion",
+    copyUrlAction: "Copy URL",
+    urlCopiedToast: "URL copied to clipboard",
+    copyFailedToast: "Failed to copy URL",
     failureTitle: "Failed to send",
     emptyContentToast: "Nothing to send",
     metaCreatedAt: "Recorded At",

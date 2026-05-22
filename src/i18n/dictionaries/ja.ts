@@ -167,11 +167,14 @@ export const ja: Dictionary = {
   notionShare: {
     dialogTitle: "Notion に送信",
     sending: "送信中...",
-    successTitle: "Notion に保存しました",
-    successDescription: "Notion 上に新しいページが作成されました。",
+    successToastTitle: "Notion に送信しました",
+    successPartialToastTitle: "Notion に部分送信しました",
     successPartialNote:
       "本文が長いため一部のブロックを送信できませんでした。Notion 上で続きを追加できます。",
     openInNotion: "Notion で開く",
+    copyUrlAction: "URL をコピー",
+    urlCopiedToast: "URL をコピーしました",
+    copyFailedToast: "URL のコピーに失敗しました",
     failureTitle: "送信に失敗しました",
     emptyContentToast: "送信する内容がありません",
     metaCreatedAt: "録音日時",

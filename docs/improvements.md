@@ -38,7 +38,7 @@
 | 9  | C   | 要約の充実                                 | 中   | 完了 (2026-05-20) | 構造化要約 + 品質再検討 (tldr/keyPoints 役割分離・actionItems 厳格化・keyPoints 動的レンジ)。2026-05-20 実環境確認済み |
 | 10 | C   | Notion ブロック送信 + メタデータ           | 中   | 完了 (2026-05-22) | 構造化ペイロード + callout/heading_1/divider/append。実機確認済み |
 | 18 | A   | Notion 送信ダイアログのレイアウトシフト解消 | 中   | 完了 (2026-05-22) | sending を中央配置の独自レイアウトに振り、Title/Description を Switch 外に hoist して a11y 安定化 |
-| 19 | A   | Notion 送信完了後の遷移確認 UI 再考        | 低   | 未着手   | 毎回ブラウザに飛ぶ「Notionで確認」ボタンの是非。要検討 |
+| 19 | A   | Notion 送信完了後の遷移確認 UI 再考        | 低   | 完了 (2026-05-22) | success ダイアログを廃止しトースト + 「開く / コピー」CTA に。error 時のみダイアログ維持。partial は warning トースト |
 | 11 | D   | バイナリ更新フロー (ffmpeg/llama)          | 低   | 未着手   | ポリシー策定優先 |
 | 12 | D   | リアルタイム / 話者識別                    | 低   | 未着手   | VAD は導入済み。スコープ大 |
 | 13 | E   | CI/CD 調整                                 | 高   | 未着手   | リリース直前に整備 (#14 と一括) |
@@ -167,37 +167,22 @@ scope は当初 `**` で実装したがレビューで `/etc` 等のシステム
 
 ## 19. Notion 送信完了後の遷移確認 UI 再考
 
-### 背景
+**結論 (2026-05-22)**: 案 C (トースト格下げ) + 案 A (開く / コピーの 2 アクション) のハイブリッドを採用。`NotionShareState` から `success` kind を削除し、`share()` の戻り値 `Promise<NotionPageRef | null>` で受ける形に変更したことで「ダイアログは error / sending 専用」が型レベルで保証される。
 
-- 現状: `NotionShareDialog` の success 状態で「Notionで確認」ボタンを押すと `openUrl(pageRef.url)` で外部ブラウザが起動する。
-- 毎回ブラウザに飛ばされるのは UX として微妙。
-  - 大量送信する利用者にとって、ブラウザにタブが溜まる。
-  - 「送信したことを確認したいだけで開きたいわけではない」ケースが多い。
-  - 一方、送信直後に Notion 側を確認したいケースもゼロではない (ブロック構造が想定通りか、初回送信時など)。
-- ただし「ボタン自体を消す」と確認手段が無くなるため、UI として何かしらの代替が要る。**まだ良い解決策が固まっていない**ため、作業開始時に検討する。
+**実装ポイント**:
+- **Toast API 拡張** (`src/components/ui/toast.tsx` + `src/lib/toast.ts`): `showToast` に `actions?: Array<{label, onClick}>` を追加。アクションボタンは押下で必ず `ToastPrimitive.toaster.dismiss(toastId)` を経て callback を呼ぶ (= 押下で必ず閉じる)。ファサード側は `toast.warning` 追加 + 全メソッドに `{description, duration, actions}` の optional 引数を導入。既存の `toast.success(msg)` 呼び出し ~21 箇所は破壊しない
+- **成功時 UX**: `toast.success("Notion に送信しました", { actions: [{開く, コピー}], duration: 6000 })`。「開く」で `openUrl(ref.url)`、「コピー」で `writeText(ref.url)` 後にセカンダリ `toast.success("URL をコピーしました")` を別出し
+- **partial 警告**: `toast.warning(..., { description: successPartialNote, duration: 8000 })` で重要度を表現。ダイアログ復活は避けて UX を一貫させる
+- **NotionShareDialog**: success 分岐 / `successCloseRef` / openUrl import を全削除。`open()` 判定は `kind() !== "idle"` のままで sending + error のみが拾われる
+- **i18n**: `successToastTitle` / `successPartialToastTitle` / `copyUrlAction` / `urlCopiedToast` / `copyFailedToast` の 5 キー追加、`successTitle` / `successDescription` の 2 キー削除 (デッドコードを残さない方針)
 
-### 検討の方向性 (たたき台)
+**スコープ外として残した項目**:
+- **案 B (永続化チェックボックス)**: 「次回から開かない」設定。トースト化で問題が緩和されたため当面不要、要望が出たら再考
+- **案 D (送信履歴ページ)**: `history` DB に `notion_page_url` 列を追加して「過去送信先を一覧」する導線。#6 ⇄ #10 の延長として中長期検討。「送信したか分からなくなった」フィードバックが出たら着手
+- **sending 中のキャンセル**: BE 側 `notion_create_page` の AbortHandle 化が必要。プレリリースで rate limit / 巨大ペイロードの問題が観測されたら別タスク化
+- **「開く」CTA 押下後のブラウザフォーカス制御**: Tauri 側でどう振る舞うかは OS 依存。実機運用で違和感があれば検討
 
-- **案 A**: ボタンは残すが既定動作を変える。例えば URL をクリップボードにコピーするだけにして、ブラウザは開かない。「Notion で開く」と「URL をコピー」の 2 つのアクションに分割。
-- **案 B**: 「次回からブラウザを自動で開かない」チェックボックスを success ダイアログに置く (永続化は settings.json)。デフォルトは現状維持。
-- **案 C**: 送信完了をトーストに格下げし、ダイアログを出さない (URL はトーストの「開く」アクションから踏める)。エラー時のみダイアログ表示。
-- **案 D**: 送信履歴ページを新設し、過去の送信先 URL を一覧できるようにする (=「あとから開く」導線を別レイヤーに用意してから、ダイアログのボタンを撤去)。
-- **案 E**: success ダイアログから「Notion で開く」ボタンを撤去し、URL は省略表記 (`https://www.notion.so/...`) を表示するだけにする。クリックでコピー、長押し/右クリックで「ブラウザで開く」程度。
-
-### 検討事項
-
-- 大量送信ユースケースの実利用者像を確認したい (#10 を本機で使い込んでから判断する方が良い)。
-- 送信履歴ページ (案 D) は履歴メタの拡張になる。#6 (履歴メタ) と同じ DB に `notion_page_url` 列を足す形が自然 → 一度送った履歴を再送・確認できる導線にも繋がる。
-- 「送信完了後の Notion 側構造を確認したい」ニーズは初期段階だけ強く、慣れたら減るはず。デフォルトを「開かない」にしてオプションで開けるくらいが現実的か。
-- `tuning.md` の方針 (一般的な UX に寄せる) に沿うと、Slack / Discord アプリの「メッセージ送信後にダイアログを出さない」挙動が参考になる。トースト + 必要時だけ「開く」が標準的。
-
-### 推奨進め方 (現時点)
-
-1. #10 を本機で 1〜2 週間使い込み、実際に「Notion で確認」を踏んでいる頻度を見る。
-2. 案 C (トースト格下げ) + 案 A (URL コピーと開くを分離) のハイブリッドが第一候補。
-3. 案 D (送信履歴ページ) は #6 ⇄ #10 の延長として中長期検討。
-
-**Status:** 未着手 (要検討)
+**Status:** 完了 (2026-05-22) — 実機動作確認は別途
 
 ---
 

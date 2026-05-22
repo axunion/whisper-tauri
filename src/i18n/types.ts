@@ -158,10 +158,13 @@ export interface Dictionary {
   notionShare: {
     dialogTitle: string;
     sending: string;
-    successTitle: string;
-    successDescription: string;
+    successToastTitle: string;
+    successPartialToastTitle: string;
     successPartialNote: string;
     openInNotion: string;
+    copyUrlAction: string;
+    urlCopiedToast: string;
+    copyFailedToast: string;
     failureTitle: string;
     emptyContentToast: string;
     metaCreatedAt: string;

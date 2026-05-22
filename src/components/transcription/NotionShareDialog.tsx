@@ -1,5 +1,4 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
-import { FiExternalLink, FiLoader, FiX } from "solid-icons/fi";
+import { FiLoader, FiX } from "solid-icons/fi";
 import type { Component } from "solid-js";
 import { createEffect, createMemo, Match, Show, Switch } from "solid-js";
 import {
@@ -22,10 +21,6 @@ const NotionShareDialog: Component<NotionShareDialogProps> = (props) => {
   const { t } = useI18n();
   const kind = createMemo(() => props.state().kind);
   const open = createMemo(() => kind() !== "idle");
-  const successState = createMemo(() => {
-    const s = props.state();
-    return s.kind === "success" ? s : null;
-  });
   const errorState = createMemo(() => {
     const s = props.state();
     return s.kind === "error" ? s : null;
@@ -35,8 +30,6 @@ const NotionShareDialog: Component<NotionShareDialogProps> = (props) => {
     switch (kind()) {
       case "sending":
         return t("notionShare.dialogTitle");
-      case "success":
-        return t("notionShare.successTitle");
       case "error":
         return t("notionShare.failureTitle");
       default:
@@ -49,10 +42,6 @@ const NotionShareDialog: Component<NotionShareDialogProps> = (props) => {
     switch (s.kind) {
       case "sending":
         return t("notionShare.sending");
-      case "success":
-        return s.pageRef.partial
-          ? t("notionShare.successPartialNote")
-          : t("notionShare.successDescription");
       case "error":
         return s.message;
       default:
@@ -62,15 +51,12 @@ const NotionShareDialog: Component<NotionShareDialogProps> = (props) => {
 
   const isSending = createMemo(() => kind() === "sending");
 
-  let successCloseRef: HTMLButtonElement | undefined;
   let errorCloseRef: HTMLButtonElement | undefined;
 
   createEffect(() => {
-    const k = kind();
-    if (k !== "success" && k !== "error") return;
+    if (kind() !== "error") return;
     queueMicrotask(() => {
-      const ref = k === "success" ? successCloseRef : errorCloseRef;
-      ref?.focus();
+      errorCloseRef?.focus();
     });
   });
 
@@ -107,31 +93,6 @@ const NotionShareDialog: Component<NotionShareDialogProps> = (props) => {
         </Show>
 
         <Switch>
-          <Match when={successState()}>
-            {(success) => (
-              <div class="flex justify-end gap-2">
-                <Button
-                  ref={successCloseRef}
-                  variant="outline"
-                  class="w-32"
-                  onClick={props.onClose}
-                >
-                  <FiX class="size-4" />
-                  {t("common.close")}
-                </Button>
-                <Button
-                  class="w-40"
-                  onClick={() => {
-                    void openUrl(success().pageRef.url);
-                    props.onClose();
-                  }}
-                >
-                  <FiExternalLink class="size-4" />
-                  {t("notionShare.openInNotion")}
-                </Button>
-              </div>
-            )}
-          </Match>
           <Match when={errorState()}>
             <div class="flex justify-end gap-2">
               <Button

@@ -2,6 +2,7 @@ import { useNavigate } from "@solidjs/router";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import type { Component, JSX } from "solid-js";
 import { createEffect, createSignal, onMount, Show } from "solid-js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/Tabs";
@@ -50,6 +51,16 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
   const [activeTab, setActiveTab] = createSignal<ResultTab>("text");
   const [summaryTabRequested, setSummaryTabRequested] = createSignal(false);
   const [cleanTextTabRequested, setCleanTextTabRequested] = createSignal(false);
+  // Lock the Share button from invoke start until the success/error UX is
+  // fully on screen — `notionShare.state().kind === "sending"` flips back
+  // the instant invoke resolves, which would let a rapid double-click create
+  // duplicate Notion pages before the user notices the toast.
+  const [isSharingNotion, setIsSharingNotion] = createSignal(false);
+  // Remember which tab the in-flight share is bound to so Retry resends the
+  // same content even if the user switches tabs while the error dialog is up.
+  const [failedShareTab, setFailedShareTab] = createSignal<ResultTab | null>(
+    null,
+  );
   const tp = createTextProcessing();
   const session = createAiSession(() => props.historyId);
   const notion = createNotionSettings();
@@ -215,10 +226,32 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     return props.result.text.length > 0;
   };
 
-  async function handleShareToNotion() {
-    const content = tabContent(activeTab());
+  async function copyAndNotify(url: string) {
+    try {
+      await writeText(url);
+      toast.success(t("notionShare.urlCopiedToast"));
+    } catch (err) {
+      console.error("Failed to copy Notion URL:", err);
+      toast.error(t("notionShare.copyFailedToast"));
+    }
+  }
+
+  function openNotionUrl(url: string) {
+    openUrl(url).catch((err) => {
+      console.error("Failed to open Notion URL:", err);
+      toast.error(t("notionShare.copyFailedToast"));
+    });
+  }
+
+  async function handleShareToNotion(retryTab?: ResultTab) {
+    if (isSharingNotion()) return;
+    const tab = retryTab ?? activeTab();
+    const content = tabContent(tab);
     if (!content.notionSummary && !content.notionBody.trim()) {
       toast.error(t("notionShare.emptyContentToast"));
+      // Clear any lingering error dialog so the toast isn't stacked on top.
+      notionShare.reset();
+      setFailedShareTab(null);
       return;
     }
 
@@ -239,7 +272,43 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
       t,
       locale: locale(),
     });
-    await notionShare.share(payload);
+    setIsSharingNotion(true);
+    try {
+      const ref = await notionShare.share(payload);
+      if (!ref) {
+        setFailedShareTab(tab);
+        return;
+      }
+      setFailedShareTab(null);
+
+      const toastActions = [
+        {
+          label: t("notionShare.openInNotion"),
+          onClick: () => openNotionUrl(ref.url),
+        },
+        {
+          label: t("notionShare.copyUrlAction"),
+          onClick: () => {
+            void copyAndNotify(ref.url);
+          },
+        },
+      ];
+
+      if (ref.partial) {
+        toast.warning(t("notionShare.successPartialToastTitle"), {
+          description: t("notionShare.successPartialNote"),
+          actions: toastActions,
+          duration: 8000,
+        });
+      } else {
+        toast.success(t("notionShare.successToastTitle"), {
+          actions: toastActions,
+          duration: 6000,
+        });
+      }
+    } finally {
+      setIsSharingNotion(false);
+    }
   }
 
   return (
@@ -261,7 +330,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         isProcessing={session.isProcessing()}
         isGeneratingTitle={session.isGeneratingTitle()}
         isNotionConnected={notion.isConfigured()}
-        isSharingToNotion={notionShare.state().kind === "sending"}
+        isSharingToNotion={isSharingNotion()}
         canSave={canSave()}
       />
       <Tabs
@@ -329,9 +398,13 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
 
       <NotionShareDialog
         state={notionShare.state}
-        onClose={notionShare.reset}
+        onClose={() => {
+          notionShare.reset();
+          setFailedShareTab(null);
+        }}
         onRetry={() => {
-          void handleShareToNotion();
+          const tab = failedShareTab();
+          void handleShareToNotion(tab ?? undefined);
         }}
       />
     </div>

@@ -3,7 +3,7 @@ import * as ToastPrimitive from "@kobalte/core/toast";
 import type { VariantProps } from "class-variance-authority";
 import { cva } from "class-variance-authority";
 import type { JSX, ValidComponent } from "solid-js";
-import { Match, Switch, splitProps } from "solid-js";
+import { For, Match, Switch, splitProps } from "solid-js";
 import { Portal } from "solid-js/web";
 
 import { cn } from "~/lib/utils";
@@ -141,11 +141,14 @@ const ToastDescription = <T extends ValidComponent = "div">(
   );
 };
 
+type ToastAction = { label: string; onClick: () => void };
+
 function showToast(props: {
   title?: JSX.Element;
   description?: JSX.Element;
   variant?: ToastVariant;
   duration?: number;
+  actions?: ToastAction[];
 }) {
   ToastPrimitive.toaster.show((data) => (
     <Toast
@@ -153,10 +156,33 @@ function showToast(props: {
       variant={props.variant}
       {...(props.duration !== undefined && { duration: props.duration })}
     >
-      <div class="grid gap-1">
-        {props.title && <ToastTitle>{props.title}</ToastTitle>}
-        {props.description && (
-          <ToastDescription>{props.description}</ToastDescription>
+      <div class="flex w-full flex-col gap-2">
+        <div class="grid gap-1">
+          {props.title && <ToastTitle>{props.title}</ToastTitle>}
+          {props.description && (
+            <ToastDescription>{props.description}</ToastDescription>
+          )}
+        </div>
+        {props.actions && props.actions.length > 0 && (
+          <div class="flex flex-wrap gap-2">
+            <For each={props.actions}>
+              {(action) => (
+                <button
+                  type="button"
+                  class="rounded-md border border-current/30 px-2.5 py-1 text-xs font-medium hover:bg-current/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+                  onClick={() => {
+                    // Run the callback first so any cascade toast it fires
+                    // slots into the region before the current toast tears
+                    // down, keeping ordering deterministic.
+                    action.onClick();
+                    ToastPrimitive.toaster.dismiss(data.toastId);
+                  }}
+                >
+                  {action.label}
+                </button>
+              )}
+            </For>
+          </div>
         )}
       </div>
       <ToastClose />
@@ -207,4 +233,4 @@ export {
   showToastPromise,
   toastVariants,
 };
-export type { ToastVariant };
+export type { ToastAction, ToastVariant };
