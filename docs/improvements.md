@@ -387,7 +387,8 @@ rm "~/Library/Application Support/com.whisper-tauri.desktop/models/ggml-large-v3
 `.github/workflows/ci.yml` を新設。`pull_request` (main 宛) と `push` (main) の両方をトリガに、frontend / backend を並列実行する最小構成。
 
 - **frontend** (ubuntu-latest): `pnpm/action-setup@v4` (`packageManager` から自動でバージョン検出) + `actions/setup-node@v4` (`cache: pnpm`) → `pnpm install --frozen-lockfile` → `pnpm check` (Biome + tsc) → `pnpm test:run`
-- **backend** (ubuntu-latest): `dtolnay/rust-toolchain@stable` (`components: rustfmt, clippy`) + `swatinem/rust-cache@v2` (`workspaces: ./src-tauri -> target`) → Linux deps (`libwebkit2gtk-4.1-dev` 等) → `SOURCE_DATE_EPOCH` 設定 → `cargo fmt --all -- --check` → `cargo clippy --all-targets -- -D warnings` → `cargo test`
+- **backend** (ubuntu-latest): `dtolnay/rust-toolchain@stable` (`components: rustfmt, clippy`) + `swatinem/rust-cache@v2` (`workspaces: ./src-tauri -> target`) → Linux deps (`libwebkit2gtk-4.1-dev` 等 + `libasound2-dev`) → `SOURCE_DATE_EPOCH` 設定 → `cargo fmt --all -- --check` → `cargo clippy --all-targets -- -D warnings` → `cargo test`
+  - `libasound2-dev` は `cpal` の ALSA バインディング (`alsa-sys`) ビルドに必須。`release.yml` は `bundle.targets = ["app"]` のため Ubuntu ジョブで実質ビルドが走らず未検出だった (初回 CI run で発覚し追加)
 - **concurrency**: `${{ github.workflow }}-${{ github.ref }}` で同一 PR の古い run を cancel。main push では cancel しない (`cancel-in-progress: ${{ github.event_name == 'pull_request' }}`)
 - **permissions**: `contents: read` のみ
 - **SOURCE_DATE_EPOCH**: `.claude/rules/workarounds.md` の通り、CI で GGML_NATIVE=OFF を効かせるため必須
