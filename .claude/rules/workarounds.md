@@ -31,3 +31,22 @@ On CI runners, `GGML_NATIVE=ON` (the default) enables newer instruction sets and
 **Workaround** (`.github/workflows/release.yml`): set the `SOURCE_DATE_EPOCH` environment variable — ggml then forces `GGML_NATIVE=OFF` internally.
 
 **Note**: setting `GGML_NATIVE=OFF` directly via environment variable or `CFLAGS` does not work due to cmake-rs limitations. Local builds can stay on the defaults.
+
+## tauri-action 0.5: codesign Auto-Trigger on macOS
+
+`tauri-apps/tauri-action@v0.5` runs the macOS codesign path whenever any of `APPLE_CERTIFICATE` / `APPLE_CERTIFICATE_PASSWORD` / `APPLE_SIGNING_IDENTITY` is *present* on the step env — empty strings count as present. This makes "merge build-only and build+release into one step via conditional env values" structurally impossible: an expression like
+
+```yaml
+APPLE_CERTIFICATE: ${{ env.IS_RELEASE == 'true' && secrets.APPLE_CERTIFICATE || '' }}
+```
+
+still produces an env var, the action invokes `security import` on an empty payload, and the run fails with:
+
+```
+security: SecKeychainItemImport: One or more parameters passed to a function were not valid.
+failed to bundle project failed codesign application
+```
+
+**Implication** (`.github/workflows/release.yml`): keep two `tauri-apps/tauri-action` steps — one for `build-only` with `env: { GITHUB_TOKEN }`, one for `build and release` with the Apple env vars. Do not try to collapse them with `${{ ... || '' }}` env patterns; that was attempted and reverted (see `c906d97` → `f4fee36`).
+
+**Removal condition**: a future tauri-action release adds an explicit `skipCodesign` / `--no-codesign` option, or starts treating empty env values as "skip codesign."
