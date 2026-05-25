@@ -42,7 +42,7 @@
 | 11 | D   | バイナリ更新フロー (ffmpeg/llama)          | 低   | 未着手   | ポリシー策定優先 |
 | 12 | D   | リアルタイム / 話者識別                    | 低   | 未着手   | VAD は導入済み。スコープ大 |
 | 13 | E   | CI/CD 調整                                 | 高   | 完了 (2026-05-25) | Phase 1: PR チェックワークフロー (ci.yml) 新設。release.yml refactor / Dependabot は本項目スコープ外 |
-| 14 | E   | Windows / Linux ビルド・配布               | 高   | 進行中   | `install.md` の案内と実態が乖離している。#13 と並行整備 |
+| 14 | E   | Windows / Linux ビルド・配布               | 高   | 完了 (2026-05-26) | bundle.targets を `"all"` に変更し各 OS で `--bundles` 指定。install.md を実態 (NSIS / deb / AppImage) に合わせて書き直し |
 
 > ステータス更新のとき、優先度の見直しが必要になったら表ごと並べ替えて構わない。
 > 関連項目の依存 (例: #7 → #8、#9 → #10、#6 ⇄ #10、#3 ⇄ #4、#13 ⇄ #14) はカテゴリ内の順序に反映済み。
@@ -406,37 +406,29 @@ rm "~/Library/Application Support/com.whisper-tauri.desktop/models/ggml-large-v3
 
 ## 14. Windows / Linux ビルドおよび配布
 
-### 背景
-- 現状: `tauri.conf.json` の `bundle.targets` は `["app"]` で **macOS の `.app` のみ** が出力される。
-- `release.yml` のマトリクスは `macos-latest` / `ubuntu-22.04` / `windows-latest` の3つを回しているが、Windows/Linux ジョブはターゲットが無いため成果物が空になっている可能性が高い。
-- `docs/install.md` には「Windows / Linux: `.msi` / `.exe` / `.AppImage` / `.deb` をリリースから取得」と書かれているが、**実態と乖離している** (案内している成果物が無い)。
+**結論 (2026-05-26)**: `tauri.conf.json` の `bundle.targets` を `"all"` に変更し、`release.yml` の各 OS ジョブで `--bundles` を渡して必要な形式に絞る構成。`workflow_dispatch` の build-only モードで 3 OS すべてのビルド通過を確認。
 
-### 案
-- `bundle.targets` を OS 別に切り替える形に変更。Tauri 2 では `bundle.targets: "all"` でホスト OS に応じた標準形式を全部出すか、配列で個別指定できる。
-  - macOS: `["app", "dmg"]` (現状の Install.command zip と併存)
-  - Windows: `["nsis"]` (`.exe` インストーラ。MSI は要件に応じて追加)
-  - Linux: `["deb", "appimage"]` (rpm はディストリビューション需要次第)
-- ワークフローのマトリクス毎に `args: --bundles <target1>,<target2>` を渡すか、設定ファイル分割で OS 別ターゲットを指定する。
-- 各 OS の追加要件:
-  - **Windows**: コードサイニング (EV 証明書 or 自己署名 + SmartScreen の警告許容) を方針決定。プレリリース段階なら未署名 + ドキュメントで Windows Defender SmartScreen の警告対応を案内する形でも可。
-  - **Linux**: `libwebkit2gtk-4.1-dev` 等の依存関係は CI で既にインストール済み。AppImage は `linuxdeploy` ベースで動くはず。
-  - 動作確認用の OS は最低でも Windows 11 / Ubuntu 22.04 (LTS)。
+**最終構成**:
+- **macOS**: `--bundles app` (Install.command zip 経路を維持。`.dmg` は追加しない方針)
+- **Windows**: `--bundles nsis` (NSIS `.exe` インストーラ。未署名 + SmartScreen 警告は install.md で案内)
+- **Linux**: `--bundles deb,appimage` (Debian/Ubuntu は `.deb`、その他は `.AppImage`)
+- **Linux deps**: `libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libasound2-dev` (cpal が ALSA を要求するため `libasound2-dev` 必須。ci.yml と同期)
+- **install.md**: 各 OS のインストール手順 + SmartScreen / Gatekeeper 警告対応 + uninstall + app-data path を実態に合わせて書き直し
 
-### 検討事項
-- ffmpeg / llama-server の OS 別バイナリ取得ロジック (`converter/downloader.rs`, `text_processing/extract.rs`) が Windows/Linux で実際に動くかは未検証。**この項目に着手する前にローカル動作確認が必要**。
-- Linux の AppImage / deb で `libwebkit2gtk` バージョン差異の問題が出やすい。22.04 でビルドして 24.04 で動作確認、など多 OS テストの体制をどう整えるか。
-- Windows の EV 証明書は年単位コストが高い。**一旦未署名で出してフィードバックを見る**方針で良いか確認。
-- macOS の Install.command zip は残し、`.dmg` を追加で配布するかは要相談 (現行の Gatekeeper 警告対策の経緯と整合させる)。
-- インストーラのサイズ感: ffmpeg / llama-server をバンドル同梱 vs 初回起動時ダウンロード のトレードオフを再確認。
+**運用ルール (今後のために)**:
+- **`bundle.targets: "all"` + CLI `--bundles` 上書き**: tauri.conf.json で `"all"` にしておくと、ローカル `pnpm tauri build` を素で叩いた時にホスト OS のフル形式 (macOS なら app + dmg) が作られる。普段使いには CI と同じ `--bundles app` を渡せば現状維持
+- **Windows コードサイニング**: 未署名で出して install.md の SmartScreen 「More info → Run anyway」案内でフォロー。EV 証明書はコスト過大 (年単位 数万〜10 万円) でプレリリース段階に見合わない
+- **macOS `.dmg`**: Install.command zip 経路 (Gatekeeper 警告回避済み) で十分。`.dmg` を追加すると署名なしダブル経路で UX が分散するため意図的に作らない
+- **install.md のファイル名プレースホルダー**: `<version>` は Tauri の bundle 命名規則任せ。NSIS は `<productName>_<version>_x64-setup.exe`、deb/AppImage は `whisper-tauri_<version>_amd64.<ext>` の想定。初リリース時に実 artifact 名を見て install.md を微調整する余地あり
 
-### 実装ステップ案
-1. ローカルで `pnpm tauri build --bundles nsis` 等を試し、各 OS でビルド可否を確認。
-2. `bundle.targets` を OS 別に変更 (もしくはワークフロー側で `--bundles` 指定)。
-3. `release.yml` の各マトリクスジョブに OS 固有のチェックを追加 (バイナリの存在、SmartScreen/Gatekeeper 挙動)。
-4. `docs/install.md` を実態に合わせて書き直し。
-5. 自分以外の手元 (Windows / Linux マシン) で1回は動作確認してからリリース。
+**スコープ外として残した項目** (要望が出たら別タスク化):
+- **実機 Win/Linux での起動確認**: CI ビルド通過まで。ffmpeg / llama-server の OS 別バイナリダウンロード (`converter/downloader.rs`, `text_processing/extract.rs`) が実機で動くかは初リリース後のフィードバック待ち
+- **Windows MSI 併用**: 企業現場で MSI 需要が出たら検討
+- **Linux RPM**: Fedora/RHEL 系の需要が出たら検討
+- **AppImage の Ubuntu バージョン差異**: 22.04 でビルドして 24.04 で動くかは未検証。ユーザーフィードバック待ち
+- **release.yml の `if` 分岐 2 回統合**: #13 のスコープ外と同じく、機能変更なし可読性タスク。要望が出たら着手
 
-**Status:** 進行中 (2026-05-25 着手)
+**Status:** 完了 (2026-05-26)
 
 ---
 

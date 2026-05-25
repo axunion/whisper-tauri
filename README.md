@@ -74,7 +74,7 @@ Both are distributed in `Q4_K_M` GGUF quantization. `llama-server` is started on
 
 End-user installation guide: **[docs/install.md](docs/install.md)**.
 
-Releases are published to the [GitHub Releases page](../../releases). macOS builds are unsigned; the included `Install.command` strips the quarantine attribute and copies the app to `/Applications`.
+Releases are published to the [GitHub Releases page](../../releases). Builds are unsigned across all platforms — see [docs/install.md](docs/install.md) for the SmartScreen / Gatekeeper handling steps per OS.
 
 ## Development
 
