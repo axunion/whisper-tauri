@@ -41,7 +41,7 @@
 | 19 | A   | Notion 送信完了後の遷移確認 UI 再考        | 低   | 完了 (2026-05-22) | success ダイアログを廃止しトースト + 「開く / コピー」CTA に。error 時のみダイアログ維持。partial は warning トースト |
 | 11 | D   | バイナリ更新フロー (ffmpeg/llama)          | 低   | 未着手   | ポリシー策定優先 |
 | 12 | D   | リアルタイム / 話者識別                    | 低   | 未着手   | VAD は導入済み。スコープ大 |
-| 13 | E   | CI/CD 調整                                 | 高   | 未着手   | リリース直前に整備 (#14 と一括) |
+| 13 | E   | CI/CD 調整                                 | 高   | 進行中   | Phase 1: PR チェックワークフロー (ci.yml) 新設のみ着手 |
 | 14 | E   | Windows / Linux ビルド・配布               | 高   | 未着手   | `install.md` の案内と実態が乖離している。#13 と並行整備 |
 
 > ステータス更新のとき、優先度の見直しが必要になったら表ごと並べ替えて構わない。
@@ -380,6 +380,27 @@ rm "~/Library/Application Support/com.whisper-tauri.desktop/models/ggml-large-v3
 
 ## 13. CI / CD の調整
 
+**Status:** 進行中 (2026-05-25 時点で Phase 1 実装完了。PR 上で実際に green になる動作確認後に「完了」へ。release.yml リファクタ / Dependabot / フルビルド smoke は別フェーズで未着手)
+
+### Phase 1 実装メモ (2026-05-25)
+
+`.github/workflows/ci.yml` を新設。`pull_request` (main 宛) と `push` (main) の両方をトリガに、frontend / backend を並列実行する最小構成。
+
+- **frontend** (ubuntu-latest): `pnpm/action-setup@v4` (`packageManager` から自動でバージョン検出) + `actions/setup-node@v4` (`cache: pnpm`) → `pnpm install --frozen-lockfile` → `pnpm check` (Biome + tsc) → `pnpm test:run`
+- **backend** (ubuntu-latest): `dtolnay/rust-toolchain@stable` (`components: rustfmt, clippy`) + `swatinem/rust-cache@v2` (`workspaces: ./src-tauri -> target`) → Linux deps (`libwebkit2gtk-4.1-dev` 等) → `SOURCE_DATE_EPOCH` 設定 → `cargo fmt --all -- --check` → `cargo clippy --all-targets -- -D warnings` → `cargo test`
+- **concurrency**: `${{ github.workflow }}-${{ github.ref }}` で同一 PR の古い run を cancel。main push では cancel しない (`cancel-in-progress: ${{ github.event_name == 'pull_request' }}`)
+- **permissions**: `contents: read` のみ
+- **SOURCE_DATE_EPOCH**: `.claude/rules/workarounds.md` の通り、CI で GGML_NATIVE=OFF を効かせるため必須
+
+ローカルで `cargo fmt --check` / `cargo clippy --all-targets -- -D warnings` / `cargo test` / `pnpm check` / `pnpm test:run` がすべて green であることを確認してから push する。Cargo.toml には既に `clippy::pedantic` warn + `unwrap_used` warn + `expect_used` warn が入っており、CI 側で `-D warnings` に昇格させる構成。
+
+### スコープ外として残した項目 (Phase 2 以降)
+
+- **release.yml リファクタ** (実装ステップ案 3): `if` 分岐 2 回で同じ tauri-action を呼んでいる部分の統合、Windows/Linux 成果物アップロードの明示化。機能変更なしの可読性タスク
+- **Dependabot 有効化** (実装ステップ案 5): CI が安定してから
+- **フルビルド smoke**: `pnpm tauri build --debug` を ubuntu のみで nightly 等で回す案。PR 毎は重すぎる
+- **#14 (Win/Linux ビルド) 完了後**: release.yml 側で Windows / Linux 成果物アップロードを明示化
+
 ### 背景
 - 現状の `.github/workflows/` は `release.yml` のみ。タグ push もしくは手動 dispatch でビルド + リリースを回す構成。
 - **PR 単位の lint / typecheck / test ワークフローが存在しない** ため、メイン以外でのリグレッション検出が手元の `/verify` 頼み。
@@ -413,8 +434,6 @@ rm "~/Library/Application Support/com.whisper-tauri.desktop/models/ggml-large-v3
 3. release.yml をリファクタ (機能変更なし、可読性のみ)。
 4. #14 (Windows/Linux ビルド) 完了後に Windows / Linux 成果物アップロード部分を release.yml 側で明示化。
 5. Dependabot の有効化はそのあと。
-
-**Status:** 未着手
 
 ---
 
