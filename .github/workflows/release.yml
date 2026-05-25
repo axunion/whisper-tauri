@@ -21,6 +21,7 @@ jobs:
       contents: write
     env:
       RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || format('v{0}-test', github.run_number) }}
+      IS_RELEASE: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'release') }}
     strategy:
       fail-fast: false
       matrix:
@@ -70,16 +71,10 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build only
-        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'build-only'
-        uses: tauri-apps/tauri-action@v0.5
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: ${{ matrix.args }}
-
-      - name: Build and release
-        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'release')
+      # tauri-action skips release creation when tagName is empty,
+      # so a single step handles both build-only (IS_RELEASE=false) and
+      # the tag/dispatch=release path.
+      - name: Build (and release when IS_RELEASE)
         uses: tauri-apps/tauri-action@v0.5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -90,8 +85,8 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
-          tagName: ${{ env.RELEASE_TAG }}
-          releaseName: "Whisper Tauri ${{ env.RELEASE_TAG }}"
+          tagName: ${{ env.IS_RELEASE == 'true' && env.RELEASE_TAG || '' }}
+          releaseName: ${{ env.IS_RELEASE == 'true' && format('Whisper Tauri {0}', env.RELEASE_TAG) || '' }}
           releaseBody: |
             ## Installation
 
@@ -137,7 +132,7 @@ jobs:
           ls -lh "$ZIP_PATH"
 
       - name: Upload installer zip to release (macOS)
-        if: matrix.platform == 'macos-latest' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'release'))
+        if: matrix.platform == 'macos-latest' && env.IS_RELEASE == 'true'
         run: gh release upload "$RELEASE_TAG" "$ZIP_PATH" --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

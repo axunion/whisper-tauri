@@ -43,6 +43,7 @@
 | 12 | D   | リアルタイム / 話者識別                    | 低   | 未着手   | VAD は導入済み。スコープ大 |
 | 13 | E   | CI/CD 調整                                 | 高   | 完了 (2026-05-25) | Phase 1: PR チェックワークフロー (ci.yml) 新設。release.yml refactor / Dependabot は本項目スコープ外 |
 | 14 | E   | Windows / Linux ビルド・配布               | 高   | 完了 (2026-05-26) | bundle.targets を `"all"` に変更し各 OS で `--bundles` 指定。install.md を実態 (NSIS / deb / AppImage) に合わせて書き直し |
+| 20 | E   | release.yml の if 分岐統合                 | 中   | 進行中   | `tauri-action` を 2 回呼んでいる部分を 1 つに統合。`IS_RELEASE` フラグで release 作成を切り替え |
 
 > ステータス更新のとき、優先度の見直しが必要になったら表ごと並べ替えて構わない。
 > 関連項目の依存 (例: #7 → #8、#9 → #10、#6 ⇄ #10、#3 ⇄ #4、#13 ⇄ #14) はカテゴリ内の順序に反映済み。
@@ -426,9 +427,39 @@ rm "~/Library/Application Support/com.whisper-tauri.desktop/models/ggml-large-v3
 - **Windows MSI 併用**: 企業現場で MSI 需要が出たら検討
 - **Linux RPM**: Fedora/RHEL 系の需要が出たら検討
 - **AppImage の Ubuntu バージョン差異**: 22.04 でビルドして 24.04 で動くかは未検証。ユーザーフィードバック待ち
-- **release.yml の `if` 分岐 2 回統合**: #13 のスコープ外と同じく、機能変更なし可読性タスク。要望が出たら着手
+- **release.yml の `if` 分岐 2 回統合**: → #20 で着手
 
 **Status:** 完了 (2026-05-26)
+
+---
+
+## 20. release.yml の if 分岐統合
+
+### 背景
+- `release.yml` は `tauri-apps/tauri-action@v0.5` を 2 回呼び分けている: `build-only` と `build and release`。どちらも同じ matrix / Linux deps / Rust toolchain の上に乗っており、`if:` だけが違う ~30 行の重複。
+- #13 / #14 で「スコープ外」と整理してきたが、main へ release.yml の変更を積み重ねた結果 (Win/Linux bundle, libasound2-dev, releaseBody 書き換え) でこの重複の存在感が増し、次回の修正が両側を漏れなく触れるか不安に。
+- `tauri-action` は `tagName` が空のときに release を作らない仕様なので、フラグで切り替える 1 ステップに統合できる。
+
+### 案
+- job レベルで `IS_RELEASE` フラグを `env:` に定義: `${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'release') }}`
+- `tauri-action` ステップを 1 つに統合:
+  - `tagName`: `${{ env.IS_RELEASE == 'true' && env.RELEASE_TAG || '' }}`
+  - `releaseName` / `releaseBody`: 同様の条件式
+  - `releaseDraft` / `prerelease`: そのまま
+  - Apple secrets (`APPLE_CERTIFICATE` 等): build-only でも env に並んで構わない (tauri-action は使わなければ無視)
+- macOS installer zip upload の `if:` 条件も `env.IS_RELEASE == 'true'` に揃える
+
+### スコープ外
+- `RELEASE_TAG` のフォールバック (`v{run_number}-test`) ロジック維持
+- `releaseBody` テンプレートの中身変更 (#14 で既に最新)
+- Apple secrets を build-only 時に env からも外す (tauri-action 側で無視されるので問題なし)
+- CI ジョブの並列化 / フルビルド smoke
+
+### 完了条件
+- `workflow_dispatch` の **build-only モード** で 3 OS green
+- 既存の release ロジックが壊れていないことを目視 + 条件式の対称性で担保 (実際の release は次回のタグ push で確認)
+
+**Status:** 進行中 (2026-05-26 着手)
 
 ---
 
