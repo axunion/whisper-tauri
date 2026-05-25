@@ -26,11 +26,11 @@ jobs:
       matrix:
         include:
           - platform: macos-latest
-            args: "--target aarch64-apple-darwin"
+            args: "--target aarch64-apple-darwin --bundles app"
           - platform: ubuntu-22.04
-            args: ""
+            args: "--bundles deb,appimage"
           - platform: windows-latest
-            args: ""
+            args: "--bundles nsis"
 
     runs-on: ${{ matrix.platform }}
 
@@ -62,7 +62,7 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libasound2-dev
 
       - name: Set reproducible build environment
         run: echo "SOURCE_DATE_EPOCH=$(date +%s)" >> $GITHUB_ENV
@@ -101,10 +101,14 @@ jobs:
             3. Open the folder and double-click `Install.command`
             4. Confirm in Terminal — the app installs to `/Applications` and launches
 
-            ### Windows / Linux
-            See the assets below.
+            ### Windows
+            Download the `.exe` installer from the assets below and follow the prompts. SmartScreen warning is expected for unsigned builds.
 
-            See [docs/install.md](https://github.com/${{ github.repository }}/blob/main/docs/install.md) for troubleshooting and uninstall instructions.
+            ### Linux
+            - **Debian/Ubuntu**: install the `.deb` package
+            - **Other distros**: download the `.AppImage`, `chmod +x`, and run it
+
+            See [docs/install.md](https://github.com/${{ github.repository }}/blob/main/docs/install.md) for SmartScreen / Gatekeeper warnings and uninstall instructions.
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

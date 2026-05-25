@@ -41,8 +41,8 @@
 | 19 | A   | Notion 送信完了後の遷移確認 UI 再考        | 低   | 完了 (2026-05-22) | success ダイアログを廃止しトースト + 「開く / コピー」CTA に。error 時のみダイアログ維持。partial は warning トースト |
 | 11 | D   | バイナリ更新フロー (ffmpeg/llama)          | 低   | 未着手   | ポリシー策定優先 |
 | 12 | D   | リアルタイム / 話者識別                    | 低   | 未着手   | VAD は導入済み。スコープ大 |
-| 13 | E   | CI/CD 調整                                 | 高   | 進行中   | Phase 1: PR チェックワークフロー (ci.yml) 新設のみ着手 |
-| 14 | E   | Windows / Linux ビルド・配布               | 高   | 未着手   | `install.md` の案内と実態が乖離している。#13 と並行整備 |
+| 13 | E   | CI/CD 調整                                 | 高   | 完了 (2026-05-25) | Phase 1: PR チェックワークフロー (ci.yml) 新設。release.yml refactor / Dependabot は本項目スコープ外 |
+| 14 | E   | Windows / Linux ビルド・配布               | 高   | 進行中   | `install.md` の案内と実態が乖離している。#13 と並行整備 |
 
 > ステータス更新のとき、優先度の見直しが必要になったら表ごと並べ替えて構わない。
 > 関連項目の依存 (例: #7 → #8、#9 → #10、#6 ⇄ #10、#3 ⇄ #4、#13 ⇄ #14) はカテゴリ内の順序に反映済み。
@@ -380,61 +380,27 @@ rm "~/Library/Application Support/com.whisper-tauri.desktop/models/ggml-large-v3
 
 ## 13. CI / CD の調整
 
-**Status:** 進行中 (2026-05-25 時点で Phase 1 実装完了。PR 上で実際に green になる動作確認後に「完了」へ。release.yml リファクタ / Dependabot / フルビルド smoke は別フェーズで未着手)
+**結論 (2026-05-25)**: Phase 1 として `.github/workflows/ci.yml` を新設し、PR (main 宛) + main push をトリガに frontend / backend を並列で lint + test する最小構成を導入。release.yml refactor / Dependabot / フルビルド smoke は本項目のスコープ外として整理 (要望が出たら別タスク化)。
 
-### Phase 1 実装メモ (2026-05-25)
-
-`.github/workflows/ci.yml` を新設。`pull_request` (main 宛) と `push` (main) の両方をトリガに、frontend / backend を並列実行する最小構成。
-
-- **frontend** (ubuntu-latest): `pnpm/action-setup@v4` (`packageManager` から自動でバージョン検出) + `actions/setup-node@v4` (`cache: pnpm`) → `pnpm install --frozen-lockfile` → `pnpm check` (Biome + tsc) → `pnpm test:run`
-- **backend** (ubuntu-latest): `dtolnay/rust-toolchain@stable` (`components: rustfmt, clippy`) + `swatinem/rust-cache@v2` (`workspaces: ./src-tauri -> target`) → Linux deps (`libwebkit2gtk-4.1-dev` 等 + `libasound2-dev`) → `SOURCE_DATE_EPOCH` 設定 → `cargo fmt --all -- --check` → `cargo clippy --all-targets -- -D warnings` → `cargo test`
-  - `libasound2-dev` は `cpal` の ALSA バインディング (`alsa-sys`) ビルドに必須。`release.yml` は `bundle.targets = ["app"]` のため Ubuntu ジョブで実質ビルドが走らず未検出だった (初回 CI run で発覚し追加)
-- **concurrency**: `${{ github.workflow }}-${{ github.ref }}` で同一 PR の古い run を cancel。main push では cancel しない (`cancel-in-progress: ${{ github.event_name == 'pull_request' }}`)
+**ci.yml の構成**:
+- **frontend** (ubuntu-latest): `pnpm/action-setup@v4` (`packageManager` から自動バージョン検出) + `actions/setup-node@v4` (`cache: pnpm`) → `pnpm install --frozen-lockfile` → `pnpm check` (Biome + tsc) → `pnpm test:run`
+- **backend** (ubuntu-latest): `dtolnay/rust-toolchain@stable` (`components: rustfmt, clippy`) + `swatinem/rust-cache@v2` → Linux deps (`libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libasound2-dev`) → `SOURCE_DATE_EPOCH` 設定 → `cargo fmt --all -- --check` → `cargo clippy --all-targets -- -D warnings` → `cargo test`
+- **concurrency**: `${{ github.workflow }}-${{ github.ref }}` で同一 PR の古い run を cancel。main push では cancel しない
 - **permissions**: `contents: read` のみ
-- **SOURCE_DATE_EPOCH**: `.claude/rules/workarounds.md` の通り、CI で GGML_NATIVE=OFF を効かせるため必須
 
-ローカルで `cargo fmt --check` / `cargo clippy --all-targets -- -D warnings` / `cargo test` / `pnpm check` / `pnpm test:run` がすべて green であることを確認してから push する。Cargo.toml には既に `clippy::pedantic` warn + `unwrap_used` warn + `expect_used` warn が入っており、CI 側で `-D warnings` に昇格させる構成。
+**運用ルール (今後のために)**:
+- **Rust toolchain の齟齬**: ローカル Rust と CI stable のバージョン差で「ローカル green / CI fail」が起きるため、`rustup update stable` でローカルも追従させる運用。`rust-toolchain.toml` 固定は tuning.md の「標準設定優先」に反するため不採用
+- **`#[cfg(target_os = ...)]` ガード下の lint**: macOS ローカル clippy では Linux/Windows 固有コード (例: `converter::downloader::btbn_url`) の lint がスキップされるため、CI が初出 lint を見つけて修正するサイクルが基本。Linux 固有コードを書いた直後は CI run を見るまで完了扱いにしない
+- **Linux deps の必須リスト**: `cpal` 経由で `libasound2-dev` が必要 (release.yml の Ubuntu ジョブは `bundle.targets = ["app"]` で実質コンパイルされず未検出だったため漏れていた歴史あり)
+- **SOURCE_DATE_EPOCH**: `.claude/rules/workarounds.md` の通り、CI で `GGML_NATIVE=OFF` を効かせるため必須
+- **ビルド時間目安**: 初回 backend ジョブは 5〜6 分 (`whisper-rs-sys` / `libsqlite3-sys` 等の依存コンパイル込み)。2 回目以降は `swatinem/rust-cache` ヒットで 1〜3 分に縮む想定。Cargo.lock 更新 PR では再びフルビルド
 
-### スコープ外として残した項目 (Phase 2 以降)
+**スコープ外として残した項目** (要望が出たら別タスク化):
+- **release.yml リファクタ**: `if` 分岐 2 回で同じ tauri-action を呼んでいる部分の統合 + Windows/Linux 成果物アップロード明示化。機能変更なし可読性タスク
+- **Dependabot 有効化**: CI が安定してから
+- **フルビルド smoke** (`pnpm tauri build --debug`): PR 毎は重すぎる。nightly でやるなら別 workflow
 
-- **release.yml リファクタ** (実装ステップ案 3): `if` 分岐 2 回で同じ tauri-action を呼んでいる部分の統合、Windows/Linux 成果物アップロードの明示化。機能変更なしの可読性タスク
-- **Dependabot 有効化** (実装ステップ案 5): CI が安定してから
-- **フルビルド smoke**: `pnpm tauri build --debug` を ubuntu のみで nightly 等で回す案。PR 毎は重すぎる
-- **#14 (Win/Linux ビルド) 完了後**: release.yml 側で Windows / Linux 成果物アップロードを明示化
-
-### 背景
-- 現状の `.github/workflows/` は `release.yml` のみ。タグ push もしくは手動 dispatch でビルド + リリースを回す構成。
-- **PR 単位の lint / typecheck / test ワークフローが存在しない** ため、メイン以外でのリグレッション検出が手元の `/verify` 頼み。
-- リリースワークフローもいくつか改善余地: tauri-action の `args` 切替が if 分岐2回で冗長、Windows / Linux のリリース成果物添付が tauri-action 内部任せでブラックボックス。
-- `SOURCE_DATE_EPOCH` のワークアラウンド (`workarounds.md` 参照) は維持必須。
-
-### 案
-- **PR チェックワークフロー (`.github/workflows/ci.yml` 新設)** を追加:
-  - トリガ: `pull_request` (main 宛) と `push` (main)。
-  - ジョブ:
-    1. **frontend**: `pnpm check` / `pnpm test:run` (Node + pnpm のみ。Rust 不要なので速い)
-    2. **backend**: `cargo fmt --check` / `cargo clippy -- -D warnings` / `cargo test`
-    3. **build smoke** (任意): `pnpm tauri build --debug` を ubuntu のみで回し、ビルドが通ることを確認。フルビルドは時間がかかるので OS 縛り + デバッグビルドで節約。
-  - キャッシュ: `swatinem/rust-cache` と pnpm store cache を使う。
-- **release.yml の整理**:
-  - `if` 分岐2回で同じ `tauri-action` を呼んでいる部分を統合。`releaseDraft` / `tagName` を入力で切り替えるだけにする。
-  - Windows / Linux の成果物アップロードを明示化 (現在は tauri-action のデフォルト挙動任せ)。
-  - `RELEASE_TAG` の test 用フォールバックは残すが、build-only モードのときは明示的にリリース作成をスキップしていることをコメントで明文化。
-- **依存自動更新** (将来):
-  - Dependabot もしくは Renovate で `pnpm` / `cargo` / `actions/*` のバージョン更新 PR を自動化。CI が整ってからの導入が前提。
-
-### 検討事項
-- CI のフルビルド (release ビルド3 OS) をどこまで頻度高く回すか。**PR 毎は重すぎるので、main マージ後に nightly で回す**くらいが現実解。
-- `cargo clippy` の `-D warnings` を CI で強制すると、whisper-rs の FFI 周りで `unsafe` 警告が出やすい。`workarounds.md` のワークアラウンドが clippy に引っかからないか事前確認。
-- Apple 署名・公証は秘密情報ゆえテストが難しい。当面は手動リリースで動作確認、自動化は最後。
-- リリース時の changelog 自動生成 (git-cliff / release-please) は今は不要。手書きで対応できる規模。
-
-### 実装ステップ案
-1. `ci.yml` を frontend / backend ジョブだけで先に作る (build smoke は後回し)。
-2. 既存 PR を1つ流して動作確認、必要なら biome / clippy ルールを微調整。
-3. release.yml をリファクタ (機能変更なし、可読性のみ)。
-4. #14 (Windows/Linux ビルド) 完了後に Windows / Linux 成果物アップロード部分を release.yml 側で明示化。
-5. Dependabot の有効化はそのあと。
+**Status:** 完了 (2026-05-25)
 
 ---
 
@@ -470,7 +436,7 @@ rm "~/Library/Application Support/com.whisper-tauri.desktop/models/ggml-large-v3
 4. `docs/install.md` を実態に合わせて書き直し。
 5. 自分以外の手元 (Windows / Linux マシン) で1回は動作確認してからリリース。
 
-**Status:** 未着手
+**Status:** 進行中 (2026-05-25 着手)
 
 ---
 

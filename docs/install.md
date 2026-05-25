@@ -22,14 +22,74 @@ macOS may block the script depending on security settings:
 
 If you launch the `.app` directly without `Install.command`, macOS Gatekeeper shows a "cannot be opened because it is damaged" warning. This is normal for unsigned apps. Always use `Install.command`.
 
-## Windows / Linux
+## Windows
 
-Download the platform-appropriate installer (`.msi` / `.exe` / `.AppImage` / `.deb`) from the [Releases](../../../releases) page and run it.
+1. Download the latest `Whisper Tauri_<version>_x64-setup.exe` from the [Releases](../../../releases) page.
+2. Double-click to run.
+3. Windows Defender SmartScreen will likely warn "Microsoft Defender SmartScreen prevented an unrecognized app from starting." This is expected — the build is unsigned. Click **More info** → **Run anyway**.
+4. Follow the installer prompts to complete installation.
+5. Launch Whisper Tauri from the Start menu.
 
-## Uninstall (macOS)
+## Linux
+
+Two formats are provided. Use whichever fits your distribution.
+
+### Debian / Ubuntu (`.deb`)
+
+```bash
+sudo dpkg -i whisper-tauri_<version>_amd64.deb
+sudo apt-get install -f   # resolve any missing dependencies
+```
+
+Whisper Tauri appears in the application menu after install.
+
+### Other distributions (`.AppImage`)
+
+The AppImage requires no system installation.
+
+```bash
+chmod +x whisper-tauri_<version>_amd64.AppImage
+./whisper-tauri_<version>_amd64.AppImage
+```
+
+If your distribution does not provide GLib/GTK/WebKit2GTK runtimes, install them via your package manager (Tauri 2 targets `webkit2gtk-4.1`).
+
+## Uninstall
+
+### macOS
 
 ```bash
 rm -rf "/Applications/Whisper Tauri.app"
 rm -rf "$HOME/Library/Application Support/com.whisper-tauri.desktop"
 rm -rf "$HOME/Library/Caches/com.whisper-tauri.desktop"
+```
+
+### Windows
+
+Use **Settings** → **Apps** → search "Whisper Tauri" → **Uninstall**.
+
+Application data and cached models are stored at:
+
+```
+%APPDATA%\com.whisper-tauri.desktop
+%LOCALAPPDATA%\com.whisper-tauri.desktop
+```
+
+Remove these folders manually if you want a clean uninstall.
+
+### Linux
+
+For `.deb` installs:
+
+```bash
+sudo apt-get remove whisper-tauri
+```
+
+For `.AppImage`, simply delete the file.
+
+Application data and cached models are stored at:
+
+```
+~/.local/share/com.whisper-tauri.desktop
+~/.cache/com.whisper-tauri.desktop
 ```
