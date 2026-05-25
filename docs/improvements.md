@@ -426,7 +426,7 @@ rm "~/Library/Application Support/com.whisper-tauri.desktop/models/ggml-large-v3
 - **Windows MSI 併用**: 企業現場で MSI 需要が出たら検討
 - **Linux RPM**: Fedora/RHEL 系の需要が出たら検討
 - **AppImage の Ubuntu バージョン差異**: 22.04 でビルドして 24.04 で動くかは未検証。ユーザーフィードバック待ち
-- **release.yml の `if` 分岐 2 回統合**: #13 のスコープ外と同じく、機能変更なし可読性タスク。要望が出たら着手
+- **release.yml の `if` 分岐 2 回統合**: 2026-05-26 に試行したが撤回 (commit f4fee36 で revert)。`tauri-action` は `APPLE_CERTIFICATE` 等 env var の **存在** (空文字含む) で codesign を自動起動するため、`env.IS_RELEASE == 'true' && secrets.X || ''` で空文字を渡しても `security import` で失敗する。env を持つ「Build and release」ステップを `if:` で別 step に保つ現状が tauri-action 仕様上の正しい形
 
 **Status:** 完了 (2026-05-26)
 
