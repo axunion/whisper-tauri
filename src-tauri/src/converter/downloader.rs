@@ -24,8 +24,7 @@ pub enum ArchiveFormat {
 #[cfg(not(target_os = "macos"))]
 fn btbn_url(suffix: &str) -> String {
     format!(
-        "https://github.com/BtbN/FFmpeg-Builds/releases/download/{}/ffmpeg-{}-{suffix}",
-        FFMPEG_BTBN_TAG, FFMPEG_BTBN_BUILD_ID,
+        "https://github.com/BtbN/FFmpeg-Builds/releases/download/{FFMPEG_BTBN_TAG}/ffmpeg-{FFMPEG_BTBN_BUILD_ID}-{suffix}",
     )
 }
 
@@ -126,9 +125,7 @@ pub fn ffmpeg_version_path(app_data_dir: &Path) -> PathBuf {
 #[must_use]
 pub fn ffmpeg_version_matches(app_data_dir: &Path) -> bool {
     let version_file = ffmpeg_version_path(app_data_dir);
-    std::fs::read_to_string(version_file)
-        .map(|v| v.trim() == current_ffmpeg_version())
-        .unwrap_or(false)
+    std::fs::read_to_string(version_file).is_ok_and(|v| v.trim() == current_ffmpeg_version())
 }
 
 /// Checks whether the bundled ffmpeg needs to be updated.

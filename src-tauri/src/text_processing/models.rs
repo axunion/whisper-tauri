@@ -129,8 +129,7 @@ pub fn delete_server_version(app_data_dir: &Path) {
 #[must_use]
 pub fn is_server_version_current(app_data_dir: &Path) -> bool {
     std::fs::read_to_string(llama_server_version_path(app_data_dir))
-        .map(|v| v.trim() == LLAMA_SERVER_VERSION)
-        .unwrap_or(false)
+        .is_ok_and(|v| v.trim() == LLAMA_SERVER_VERSION)
 }
 
 /// Returns the path where the llama-server binary will be stored.
