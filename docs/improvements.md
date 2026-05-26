@@ -39,8 +39,8 @@
 | 10 | C   | Notion ブロック送信 + メタデータ           | 中   | 完了 (2026-05-22) | 構造化ペイロード + callout/heading_1/divider/append。実機確認済み |
 | 18 | A   | Notion 送信ダイアログのレイアウトシフト解消 | 中   | 完了 (2026-05-22) | sending を中央配置の独自レイアウトに振り、Title/Description を Switch 外に hoist して a11y 安定化 |
 | 19 | A   | Notion 送信完了後の遷移確認 UI 再考        | 低   | 完了 (2026-05-22) | success ダイアログを廃止しトースト + 「開く / コピー」CTA に。error 時のみダイアログ維持。partial は warning トースト |
-| 11 | D   | バイナリ更新フロー (ffmpeg/llama)          | 低   | 未着手   | ポリシー策定優先 |
-| 12 | D   | リアルタイム / 話者識別                    | 低   | 未着手   | VAD は導入済み。スコープ大 |
+| 11 | D   | バイナリ更新フロー (ffmpeg/llama)          | 低   | 完了 (2026-05-26) | docs/binary-updates.md 新設 (チェックリスト形式)。SHA256 / UI 通知 / スクリプト化はスコープ外 |
+| 12 | D   | リアルタイム / 話者識別                    | 低   | 保留 (2026-05-26) | whisper 設計とリアルタイムが不整合 + 話者識別の統合コスト過大 |
 | 13 | E   | CI/CD 調整                                 | 高   | 完了 (2026-05-25) | Phase 1: PR チェックワークフロー (ci.yml) 新設。release.yml refactor / Dependabot は本項目スコープ外 |
 | 14 | E   | Windows / Linux ビルド・配布               | 高   | 完了 (2026-05-26) | bundle.targets を `"all"` に変更し各 OS で `--bundles` 指定。install.md を実態 (NSIS / deb / AppImage) に合わせて書き直し |
 
@@ -326,51 +326,57 @@ rm "~/Library/Application Support/com.whisper-tauri.desktop/models/ggml-large-v3
 
 ## 11. ffmpeg / llama.cpp バイナリの更新フロー
 
-### 背景
-- 現状: バージョンを固定して URL 直書きでダウンロード (`converter/`, `text_processing/extract.rs`)。
-- セキュリティ脆弱性 (ffmpeg は CVE が定期的に出る) や llama.cpp の機能更新に追随する手段が手動更新のみ。
+**結論 (2026-05-26)**: 案 A (チェックリスト形式の docs 単体) を採用。`docs/binary-updates.md` を新設し、メジャーリリース時に上から下になぞるだけで更新が完了する形式で運用する。事前の現状調査でバージョンピン留めとマーカー突合 (`ffmpeg_needs_update` / `is_server_version_current`) は既に実装済みと確認、コード追加はなし。改善案にあった「`version.rs` への集約」も `converter/downloader.rs` / `text_processing/models.rs` に集約済みのため不要。
 
-### 案
-- **更新ポリシーを明文化**:
-  - メジャーリリースに合わせて手動更新する (自動更新はしない)。
-  - 各バイナリのバージョン情報を `src-tauri/src/{converter,text_processing}/version.rs` 等に集約し、URL / SHA256 / バージョン文字列を1箇所で管理。
-- **整合性チェック**: ダウンロード後に SHA256 を検証 (現状チェックしているか確認要)。していなければ追加。
-- **アプリ起動時のバージョン突合**: バンドル想定バージョンとローカルにあるバイナリのバージョンを比較し、不一致なら "更新可能" 表示。
-- **更新手順を docs 化**: `docs/binary-updates.md` (仮) を作り、新バージョンへの差し替え手順 (URL更新 → SHA256更新 → ローカル検証 → リリース) を残す。
+**docs/binary-updates.md の構成**: Scope / Update Policy / Files to Update / Update Procedure (チェックリスト) / License / API Stability Notes / Out of Scope の 7 章。次回バイナリ更新時にこの docs を上から実行する運用に乗せる。
 
-### 検討事項
-- 「自動アップデート」は誤算定が起きやすく、ローカル LLM のように動作実績が大事な領域では非推奨。手動 + ユーザー通知 が安全。
-- ffmpeg は GPL ビルドと LGPL ビルドで配布元が違う。ライセンス整合は事前確認。
-- llama.cpp は API が破壊的に変わる時期があるため、`extract.rs` / 起動引数の互換性検証を更新フローに含める。
+**スコープ外として残した項目** (要望が出たら別タスク化):
+- **SHA256 整合性検証** (ffmpeg / llama-server / GGUF モデル 3 種): 更新ごとに 4 ソース (evermeet.cx / BtbN / ggml-org / HuggingFace) から SHA256 取得が必要、HTTPS の中間者攻撃保証で当面足りるとの判断で見送り。CVE / 改ざん事案が観測されたら別タスク化
+- **起動時 UI 通知**: 突合 API は既存。Settings の「再ダウンロード推奨」バナー追加は別タスク
+- **アプリ内自動アップデート**: 動作実績重視の方針で当面入れない
+- **`scripts/check-binary-updates.sh` (案 B)**: 年数回の頻度ではスクリプト保守コストが先に来る判断。形骸化兆候が見えたら案 B に拡張
 
-**Status:** 未着手
+**Status:** 完了 (2026-05-26)
 
 ---
 
 ## 12. リアルタイム文字起こし / 話者識別
 
-### 背景
-- 現状: `recording/` モジュールで cpal を使い録音 → 録音停止後に whisper を一括実行。
-- リアルタイム書き起こしと話者識別は、ミーティング・インタビュー用途で大きな価値がある。
-- ただし両方とも whisper-rs 単体では完結しない領域。
+**保留判断 (2026-05-26)**: 当面着手しない。両機能とも「安定した機能として出す」のが現時点の whisper / Rust エコシステムでは現実的でない。要望が強く出るまで `保留` で温める。
 
-### 案
-- **リアルタイム書き起こし**:
-  - 案A: 既に導入済みの Silero VAD (スタンドアロン、`process.rs:preprocess_with_vad`) を録音ストリームに対して逐次適用し、発話区切りごとに whisper を実行 (低レイテンシ・低負荷だが文脈が短い)。
-  - 案B: 30秒 sliding window で逐次推論 (文脈は保てるがCPU負荷高)。
-  - 推奨は A から始める。バッチ処理パスで使っている VAD ロジックを、ストリーム入力にも流用できるかが最初の検証点。
-- **話者識別 (diarization)**:
-  - whisper 単体では不可。pyannote / `sherpa-onnx` の話者埋め込み + クラスタリングが現実解。
-  - Rust から扱うなら `sherpa-onnx` (ONNX Runtime, Rust binding 有) が候補。
-  - 1段目は「話者数を手入力」「2人固定」など制約付きで導入し、フル diarization は段階的に。
+### 保留の根拠
 
-### 検討事項
-- Apple Silicon の Metal バックエンドでリアルタイム処理が現実的か事前ベンチが必要。
-- リアルタイム表示 UI: 確定済みテキスト + tentative テキスト (薄字) の2層表現を採用するか。
-- 話者識別の精度は会議録音で評価しないと机上の空論になる。テスト用音源を `tests/fixtures/` に整備する前提で計画。
-- 既存の `RecordingPanel.tsx` / `TranscriptionResult.tsx` の状態モデルに、ストリーム/セグメント/話者 を追加する大きめのリファクタが入る。スコープを区切って PR を分割。
+**リアルタイム文字起こし**:
+- whisper はバッチ前提 (10〜30 秒コンテキストで精度設計) のため、短い窓で逐次推論すると filler / 言い淀みで断片化し accuracy が大きく落ちる
+- 30 秒 sliding window 案は重複推論コスト + 確定/暫定境界の結合ロジックが複雑で、出力が「揺れる」UX になりがち
+- whisper.cpp の `stream` example も accuracy 劣化前提、OpenAI 公式 API もストリーミングは提供せず chunked batch が代替
+- VAD 導入 (#6 / #15) で長尺音声の処理品質改善は既に達成しており、ここから「リアルタイム性」へ追加投資する ROI が低い
 
-**Status:** 未着手
+**話者識別**:
+- whisper 単体では不可 (仕様)。sherpa-onnx 等の埋め込み + クラスタリング併用が必要
+- sherpa-onnx を導入すると ONNX Runtime 同梱でバイナリサイズが激増 (数百 MB)、Apple Silicon 向けの CoreML 経路を別途用意するコストも
+- マイク 1 本録音の 2 人会話で 70〜80%、3 人以上で急降下。会議録音だと重なり発話と距離差で分離自体が困難
+- 話者ラベルを history スキーマ / 編集 UI / Notion ブロック表現まで貫通させる統合コストが大きい
+
+**チューニング方針との整合性**: `.claude/rules/tuning.md` の「独自整形で弱点を隠さない」「品質が必要ならモデルを変える」方針と、whisper をストリーミング化する / 別ライブラリで弱点を埋める方向性は矛盾する。
+
+### 再開する場合の論点 (将来のメモ)
+
+要望が強く出た場合に再評価する論点:
+- whisper の代替ライブラリ (faster-whisper / whisper.cpp 系) で安定したストリーミング実装が成熟したか
+- 話者識別を別アプリ / 別ツールに分離する選択肢 (本アプリは音声 → テキスト変換に集中)
+- 「ライブ字幕」用途と「会議録」用途は要件が異なるため、どちらか一方に絞れるか
+- バイナリサイズ増加 (sherpa-onnx / ONNX Runtime で数百 MB) を許容するユーザー層が存在するか
+
+### スコープ外 / 再開時の作業候補
+
+- リアルタイム書き起こしの実装 (案 A: VAD 区切り逐次 / 案 B: 30 秒 sliding window)
+- 話者識別 (pyannote / sherpa-onnx の Rust 統合)
+- 「ライブ字幕」用 UI (確定済み + tentative の 2 層表示)
+- テスト用会議音源の整備 (`tests/fixtures/`)
+- `RecordingPanel.tsx` / `TranscriptionResult.tsx` のストリーム / セグメント / 話者を含む状態モデル拡張
+
+**Status:** 保留 (2026-05-26)
 
 ---
 
