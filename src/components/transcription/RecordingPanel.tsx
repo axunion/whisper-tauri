@@ -132,6 +132,7 @@ const RecordingPanel: Component<RecordingPanelProps> = (props) => {
                 class="flex size-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:scale-105 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                 disabled={props.disabled || props.devices.length === 0}
                 onClick={props.onStartRecording}
+                aria-label={t("recording.startRecording")}
               >
                 <FiMic class="size-6" />
               </button>
@@ -141,6 +142,7 @@ const RecordingPanel: Component<RecordingPanelProps> = (props) => {
               type="button"
               class="flex size-16 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-lg transition-all hover:scale-105 hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               onClick={props.onStopRecording}
+              aria-label={t("recording.stopRecording")}
             >
               <FiSquare class="size-6" />
             </button>
@@ -155,12 +157,19 @@ const RecordingPanel: Component<RecordingPanelProps> = (props) => {
               </p>
             }
           >
-            <div class="mt-3 flex items-center gap-2 text-sm">
-              <FiDisc class="size-4 animate-pulse text-red-500" />
+            <div
+              role="status"
+              aria-live="polite"
+              class="mt-3 flex items-center gap-2 text-sm"
+            >
+              <FiDisc
+                class="size-4 animate-pulse text-red-500"
+                aria-hidden="true"
+              />
               <span class="text-muted-foreground">
                 {t("recording.recording")}
               </span>
-              <span class="font-mono tabular-nums">
+              <span class="font-mono tabular-nums" aria-hidden="true">
                 {formatDurationColon(props.duration)}
               </span>
             </div>

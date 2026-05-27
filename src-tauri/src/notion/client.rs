@@ -323,16 +323,19 @@ async fn execute_request(req: reqwest::RequestBuilder) -> Result<Value, NotionEr
     let text = response.text().await.map_err(NotionError::from)?;
     let body = serde_json::from_str::<Value>(&text).unwrap_or(Value::Null);
     if !status.is_success() {
-        let message = body.get("message").and_then(Value::as_str).map_or_else(
-            || {
-                if text.is_empty() {
-                    format!("HTTP {status}")
-                } else {
-                    text.clone()
-                }
-            },
-            String::from,
-        );
+        // Use Notion's structured `message` field when present; otherwise fall back to
+        // the status line only. The raw response body is intentionally not echoed into
+        // the user-facing error string (defense-in-depth: avoids widening the leak
+        // surface if Notion ever starts reflecting request data in error bodies). The
+        // raw body is logged to stderr so non-JSON gateway errors (HTML 429/502/504)
+        // remain diagnosable during development.
+        if body.get("message").is_none() && !text.is_empty() {
+            eprintln!("[notion] error response body (HTTP {status}): {text}");
+        }
+        let message = body
+            .get("message")
+            .and_then(Value::as_str)
+            .map_or_else(|| format!("HTTP {status}"), String::from);
         return Err(NotionError::Api {
             status: status.as_u16(),
             message,

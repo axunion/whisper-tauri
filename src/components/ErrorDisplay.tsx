@@ -27,7 +27,10 @@ export function ErrorDisplay(props: ErrorDisplayProps) {
   return (
     <Show when={props.error}>
       {(error) => (
-        <div class="rounded-lg border border-destructive bg-destructive/10 p-4 space-y-2">
+        <div
+          role="alert"
+          class="rounded-lg border border-destructive bg-destructive/10 p-4 space-y-2"
+        >
           <div class="flex items-start justify-between gap-2">
             <div class="flex items-center gap-2">
               <Badge

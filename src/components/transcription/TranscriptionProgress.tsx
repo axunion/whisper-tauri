@@ -1,6 +1,6 @@
 import { FiX } from "solid-icons/fi";
 import type { Component } from "solid-js";
-import { createEffect, createSignal, onCleanup, Show } from "solid-js";
+import { createEffect, createSignal, onCleanup } from "solid-js";
 import { Button } from "~/components/ui/Button";
 import { Progress } from "~/components/ui/Progress";
 import { useI18n } from "~/i18n";
@@ -79,38 +79,33 @@ const TranscriptionProgress: Component<TranscriptionProgressProps> = (
     return t("transcription.remainingTime", { minutes: remainingMin });
   }
 
+  // Keep the live region on a single persistent node with reactive content.
+  // If it lived inside <Show> branches, the placeholder→real-label transition
+  // would swap the DOM node and screen readers would miss the first announcement.
+  const remainingLabel = () => {
+    const p = props.progress;
+    if (!p) return NBSP;
+    return (
+      getRemainingLabel(
+        p.progress,
+        localElapsedMs(),
+        props.estimatedTotalSec,
+      ) ?? NBSP
+    );
+  };
+  const progressPct = () => props.progress?.progress ?? 0;
+
   return (
     <div class="space-y-3">
-      <Show
-        when={props.progress}
-        fallback={
-          <>
-            <div class="flex items-center justify-between text-sm">
-              <span class="text-muted-foreground">{NBSP}</span>
-              <span class="font-medium">0%</span>
-            </div>
-            <Progress value={0} />
-          </>
-        }
-      >
-        {(progress) => (
-          <>
-            <div class="flex items-center justify-between text-sm">
-              <span class="text-muted-foreground">
-                {getRemainingLabel(
-                  progress().progress,
-                  localElapsedMs(),
-                  props.estimatedTotalSec,
-                ) ?? NBSP}
-              </span>
-              <span class="font-medium">
-                {Math.round(progress().progress)}%
-              </span>
-            </div>
-            <Progress value={progress().progress} />
-          </>
-        )}
-      </Show>
+      <div class="flex items-center justify-between text-sm">
+        <span class="text-muted-foreground" aria-live="polite">
+          {remainingLabel()}
+        </span>
+        <span class="font-medium" aria-hidden="true">
+          {Math.round(progressPct())}%
+        </span>
+      </div>
+      <Progress value={progressPct()} />
       <Button
         variant="outline"
         size="sm"

@@ -24,7 +24,12 @@ const ResultProcessingShell: Component<ResultProcessingShellProps> = (
   return (
     <div class="flex h-full flex-col overflow-y-auto rounded-lg border bg-muted/50 p-4">
       <Show when={props.isProcessing}>
-        <div class="flex flex-1 flex-col items-center justify-center gap-4">
+        <div
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+          class="flex flex-1 flex-col items-center justify-center gap-4"
+        >
           <p class="animate-pulse text-sm text-muted-foreground">
             {props.processingLabel}
           </p>

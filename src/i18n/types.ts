@@ -154,6 +154,11 @@ export interface Dictionary {
     shareMenu: string;
     shareToNotion: string;
     shareNotionSetupHint: string;
+    shareToNotionDisabledHint: string;
+    aiMenu: string;
+    saveMenu: string;
+    copy: string;
+    close: string;
   };
   notionShare: {
     dialogTitle: string;
@@ -185,6 +190,7 @@ export interface Dictionary {
     selectDevice: string;
     defaultDevice: string;
     startRecording: string;
+    stopRecording: string;
     recording: string;
     noDevices: string;
     discardRecording: string;
