@@ -87,6 +87,17 @@ export default function History() {
     history.toggleSelect(id);
   }
 
+  // Empty → reset to all entries. >= MIN → run search. Otherwise no-op so the
+  // caller's "clear in-flight search" or "do nothing" choice stays local.
+  async function runQuery(trimmed: string): Promise<void> {
+    if (!trimmed) {
+      history.clearSearch();
+      await history.loadEntries();
+    } else if (trimmed.length >= SEARCH_MIN_LENGTH) {
+      await history.searchEntries(trimmed);
+    }
+  }
+
   function handleSearchInput(value: string): void {
     setRawInput(value);
     clearTimeout(debounceTimer);
@@ -94,39 +105,44 @@ export default function History() {
     const trimmed = value.trim();
     if (!trimmed) {
       setIsWaitingForSearch(false);
-      history.clearSearch();
-      history.loadEntries();
-    } else if (trimmed.length >= SEARCH_MIN_LENGTH) {
-      if (!history.isSearching()) {
-        setIsWaitingForSearch(true);
-      }
-      debounceTimer = setTimeout(() => {
-        history.searchEntries(trimmed).finally(() => {
-          setIsWaitingForSearch(false);
-        });
-      }, DEBOUNCE_MS);
-    } else if (history.isSearching()) {
-      setIsWaitingForSearch(false);
-      history.clearSearch();
+      void runQuery("");
+      return;
     }
+    if (trimmed.length < SEARCH_MIN_LENGTH) {
+      // Always reset the waiting flag — the gate was an in-flight search,
+      // but the flag is set unconditionally before debounce fires, so it
+      // can be stuck-true even when isSearching is still false.
+      setIsWaitingForSearch(false);
+      if (history.isSearching()) {
+        history.clearSearch();
+      }
+      return;
+    }
+    if (!history.isSearching()) {
+      setIsWaitingForSearch(true);
+    }
+    debounceTimer = setTimeout(() => {
+      void runQuery(trimmed).finally(() => setIsWaitingForSearch(false));
+    }, DEBOUNCE_MS);
   }
 
   function handleClearSearch(): void {
+    clearTimeout(debounceTimer);
     setRawInput("");
     setIsWaitingForSearch(false);
-    history.clearSearch();
-    history.loadEntries();
+    void runQuery("");
   }
 
   async function handleFilterChange(filter: HistoryFilterType): Promise<void> {
+    clearTimeout(debounceTimer);
     history.updateFilter(filter);
     const trimmed = rawInput().trim();
-    if (trimmed.length >= SEARCH_MIN_LENGTH) {
-      setIsWaitingForSearch(true);
-      await history.searchEntries(trimmed);
+    if (trimmed && trimmed.length < SEARCH_MIN_LENGTH) return;
+    if (trimmed) setIsWaitingForSearch(true);
+    try {
+      await runQuery(trimmed);
+    } finally {
       setIsWaitingForSearch(false);
-    } else if (!trimmed) {
-      await history.loadEntries();
     }
   }
 

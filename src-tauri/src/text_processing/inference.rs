@@ -263,8 +263,7 @@ pub fn chunk_text(text: &str, max_chars: usize) -> Vec<String> {
     for sentence in text.split_inclusive('。') {
         let sentence_chars = sentence.chars().count();
         if current_chars + sentence_chars > max_chars && !current.is_empty() {
-            chunks.push(current.clone());
-            current.clear();
+            chunks.push(std::mem::take(&mut current));
             current_chars = 0;
         }
         current.push_str(sentence);
@@ -360,29 +359,12 @@ pub async fn run_inference(
 
             if let Some(content) = parse_sse_line(&line) {
                 accumulated.push_str(&content);
-                let _ = app.emit(
-                    "text-processing:inference-progress",
-                    InferenceProgress {
-                        task_id: task_id.to_string(),
-                        token: content,
-                        accumulated_text: accumulated.clone(),
-                        done: false,
-                    },
-                );
+                emit_progress(app, task_id, &content, &accumulated, false);
             }
         }
     }
 
-    // Emit final done event
-    let _ = app.emit(
-        "text-processing:inference-progress",
-        InferenceProgress {
-            task_id: task_id.to_string(),
-            token: String::new(),
-            accumulated_text: accumulated.clone(),
-            done: true,
-        },
-    );
+    emit_progress(app, task_id, "", &accumulated, true);
 
     Ok(accumulated)
 }
@@ -461,17 +443,30 @@ pub async fn run_inference_blocking(
         })?
         .to_string();
 
+    emit_progress(app, task_id, "", &content, true);
+
+    Ok(content)
+}
+
+/// Emits an `InferenceProgress` event. Borrowing-friendly wrapper so callers
+/// don't repeat the event-name string or build the payload by hand.
+fn emit_progress(app: &AppHandle, task_id: &str, token: &str, accumulated: &str, done: bool) {
     let _ = app.emit(
         "text-processing:inference-progress",
         InferenceProgress {
             task_id: task_id.to_string(),
-            token: String::new(),
-            accumulated_text: content.clone(),
-            done: true,
+            token: token.to_string(),
+            accumulated_text: accumulated.to_string(),
+            done,
         },
     );
+}
 
-    Ok(content)
+/// Emits the initial empty-payload progress event so the frontend receives
+/// the taskId immediately and can wire up cancellation before any streamed
+/// tokens arrive. Domain-named to keep the generic `emit_progress` private.
+pub(super) fn emit_initial_progress(app: &AppHandle, task_id: &str) {
+    emit_progress(app, task_id, "", "", false);
 }
 
 /// Default chunk size for text processing.

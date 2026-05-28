@@ -53,36 +53,40 @@ fn rich_text_array(content: &str) -> Value {
     }
 }
 
-fn paragraph_block(content: &str) -> Value {
-    json!({
+/// Notion blocks of the "rich-text-bearing" family (paragraph, heading_*,
+/// `bulleted_list_item`) all share the shape `{ object, type, <type>: { rich_text } }`,
+/// so the per-type builders below are thin wrappers around this common shape.
+///
+/// `block_type` must not collide with the framing keys `"object"` or `"type"`:
+/// the index-assignment below would silently overwrite the discriminator and
+/// Notion would reject the page payload.
+fn rich_text_block(block_type: &str, content: &str) -> Value {
+    debug_assert!(
+        !matches!(block_type, "object" | "type"),
+        "rich_text_block: block_type cannot collide with framing keys"
+    );
+    let mut block = json!({
         "object": "block",
-        "type": "paragraph",
-        "paragraph": {"rich_text": rich_text_array(content)},
-    })
+        "type": block_type,
+    });
+    block[block_type] = json!({ "rich_text": rich_text_array(content) });
+    block
+}
+
+fn paragraph_block(content: &str) -> Value {
+    rich_text_block("paragraph", content)
 }
 
 fn heading1_block(content: &str) -> Value {
-    json!({
-        "object": "block",
-        "type": "heading_1",
-        "heading_1": {"rich_text": rich_text_array(content)},
-    })
+    rich_text_block("heading_1", content)
 }
 
 fn heading2_block(content: &str) -> Value {
-    json!({
-        "object": "block",
-        "type": "heading_2",
-        "heading_2": {"rich_text": rich_text_array(content)},
-    })
+    rich_text_block("heading_2", content)
 }
 
 fn bulleted_item_block(content: &str) -> Value {
-    json!({
-        "object": "block",
-        "type": "bulleted_list_item",
-        "bulleted_list_item": {"rich_text": rich_text_array(content)},
-    })
+    rich_text_block("bulleted_list_item", content)
 }
 
 /// Builds a single callout block containing every metadata field as
@@ -472,6 +476,23 @@ mod tests {
     #[test]
     fn chunk_string_returns_single_chunk_when_short() {
         assert_eq!(chunk_string("abc", 10), vec!["abc".to_string()]);
+    }
+
+    #[test]
+    fn rich_text_block_preserves_framing_and_content_keys() {
+        let block = rich_text_block("paragraph", "hello");
+        assert_eq!(block["object"], "block");
+        assert_eq!(block["type"], "paragraph");
+        assert!(block["paragraph"]["rich_text"].is_array());
+    }
+
+    #[test]
+    fn rich_text_block_works_for_each_known_type() {
+        for kind in ["paragraph", "heading_1", "heading_2", "bulleted_list_item"] {
+            let block = rich_text_block(kind, "x");
+            assert_eq!(block["type"], kind);
+            assert!(block[kind]["rich_text"].is_array());
+        }
     }
 
     #[test]

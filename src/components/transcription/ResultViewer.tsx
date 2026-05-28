@@ -151,13 +151,15 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     }
   }
 
-  async function performSave(opts: {
+  type SaveOptions = {
     title: string;
     filter: string;
     ext: string;
     defaultPath: string;
     content: string;
-  }) {
+  };
+
+  async function performSave(opts: SaveOptions) {
     try {
       const filePath = await save({
         title: opts.title,
@@ -182,48 +184,63 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     });
   }
 
+  // Tabs whose Save button writes the AI-generated artifact directly (no
+  // format chooser). Derived from AiOperation so adding a third AI op there
+  // is a compile error here until aiTabSpecs is extended too.
+  type AiTab = NonNullable<AiOperation>;
+
+  function isAiTab(tab: ResultTab): tab is AiTab {
+    return tab === "summary" || tab === "cleanText";
+  }
+
+  const aiTabSpecs: Record<
+    AiTab,
+    { hasResult: () => boolean; saveOptions: () => SaveOptions | null }
+  > = {
+    summary: {
+      hasResult: () => session.summaryResult() !== null,
+      saveOptions: () => {
+        const summary = session.summaryResult();
+        if (!summary) return null;
+        return {
+          title: t("dialog.saveSummaryTitle"),
+          filter: t("dialog.mdFilter"),
+          ext: "md",
+          defaultPath: "transcription-summary.md",
+          content: formatSummaryAsText(summary),
+        };
+      },
+    },
+    cleanText: {
+      hasResult: () => session.cleanTextResult() !== null,
+      saveOptions: () => {
+        const cleaned = session.cleanTextResult();
+        if (!cleaned) return null;
+        return {
+          title: t("dialog.saveCleanTextTitle"),
+          filter: t("dialog.txtFilter"),
+          ext: "txt",
+          defaultPath: "transcription-cleaned.txt",
+          content: cleaned,
+        };
+      },
+    },
+  };
+
   async function handleDirectSave() {
     const tab = activeTab();
-    if (tab === "summary") {
-      const summary = session.summaryResult();
-      if (!summary) return;
-      await performSave({
-        title: t("dialog.saveSummaryTitle"),
-        filter: t("dialog.mdFilter"),
-        ext: "md",
-        defaultPath: "transcription-summary.md",
-        content: formatSummaryAsText(summary),
-      });
-      return;
-    }
-    if (tab === "cleanText") {
-      const cleaned = session.cleanTextResult();
-      if (!cleaned) return;
-      await performSave({
-        title: t("dialog.saveCleanTextTitle"),
-        filter: t("dialog.txtFilter"),
-        ext: "txt",
-        defaultPath: "transcription-cleaned.txt",
-        content: cleaned,
-      });
-    }
+    if (!isAiTab(tab)) return;
+    const opts = aiTabSpecs[tab].saveOptions();
+    if (opts) await performSave(opts);
   }
 
   const canSave = () => {
     const tab = activeTab();
-    if (tab === "summary") {
-      return (
-        session.summaryResult() !== null &&
-        !(session.isProcessing() && session.currentOperation() === "summary")
-      );
-    }
-    if (tab === "cleanText") {
-      return (
-        session.cleanTextResult() !== null &&
-        !(session.isProcessing() && session.currentOperation() === "cleanText")
-      );
-    }
-    return props.result.text.length > 0;
+    if (!isAiTab(tab)) return props.result.text.length > 0;
+    return (
+      aiTabSpecs[tab].hasResult() &&
+      !(session.isProcessing() && session.currentOperation() === tab)
+    );
   };
 
   async function copyAndNotify(url: string) {

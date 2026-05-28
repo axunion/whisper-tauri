@@ -1,9 +1,11 @@
 use std::path::Path;
+use std::sync::Arc;
 
 use tauri::{AppHandle, Emitter, State};
 
 use crate::paths;
 use crate::settings;
+use crate::whisper::process::CancellationToken;
 
 use super::error::TextProcessingError;
 use super::extract;
@@ -11,8 +13,7 @@ use super::inference;
 use super::models;
 use super::server::LlamaServerManager;
 use super::types::{
-    InferenceProgress, LegacyTextModelInfo, ServerStatus, StructuredSummary, TextDownloadProgress,
-    TextModelInfo,
+    LegacyTextModelInfo, ServerStatus, StructuredSummary, TextDownloadProgress, TextModelInfo,
 };
 
 /// Store key for custom text model download URL.
@@ -288,23 +289,20 @@ pub async fn text_processing_chat(
     text: String,
     model_id: Option<String>,
 ) -> Result<String, String> {
-    let task_id = uuid::Uuid::new_v4().to_string();
-    let token = inference::INFERENCE_TASK_MANAGER.create_task(&task_id);
-    let _guard = TaskGuard {
-        task_id: task_id.clone(),
-    };
-
-    emit_initial_progress(&app, &task_id);
-
-    let port = ensure_server_running(&app, &manager, model_id.as_deref()).await?;
-    if token.is_cancelled() {
-        return Err(TextProcessingError::Cancelled.into());
-    }
+    let task = begin_task(&app, &manager, model_id.as_deref()).await?;
 
     let messages = inference::build_chat_messages(&text);
-    let result = inference::run_inference(port, &messages, 0.7, 2048, &task_id, &token, &app)
-        .await
-        .map_err::<String, _>(Into::into)?;
+    let result = inference::run_inference(
+        task.port,
+        &messages,
+        0.7,
+        2048,
+        &task.task_id,
+        &task.token,
+        &app,
+    )
+    .await
+    .map_err::<String, _>(Into::into)?;
 
     Ok(result)
 }
@@ -325,18 +323,7 @@ pub async fn text_processing_summarize(
     text: String,
     model_id: Option<String>,
 ) -> Result<StructuredSummary, String> {
-    let task_id = uuid::Uuid::new_v4().to_string();
-    let token = inference::INFERENCE_TASK_MANAGER.create_task(&task_id);
-    let _guard = TaskGuard {
-        task_id: task_id.clone(),
-    };
-
-    emit_initial_progress(&app, &task_id);
-
-    let port = ensure_server_running(&app, &manager, model_id.as_deref()).await?;
-    if token.is_cancelled() {
-        return Err(TextProcessingError::Cancelled.into());
-    }
+    let task = begin_task(&app, &manager, model_id.as_deref()).await?;
 
     // Scale the keyPoints target and max_tokens to the original transcript
     // length — chunked condensation shortens the final structured-pass input,
@@ -350,15 +337,22 @@ pub async fn text_processing_summarize(
     } else {
         let mut chunk_summaries = Vec::new();
         for chunk in &chunks {
-            if token.is_cancelled() {
+            if task.token.is_cancelled() {
                 return Err(TextProcessingError::Cancelled.into());
             }
 
             let messages = inference::build_chunk_condense_messages(chunk);
-            let summary =
-                inference::run_inference(port, &messages, 0.3, 1024, &task_id, &token, &app)
-                    .await
-                    .map_err::<String, _>(Into::into)?;
+            let summary = inference::run_inference(
+                task.port,
+                &messages,
+                0.3,
+                1024,
+                &task.task_id,
+                &task.token,
+                &app,
+            )
+            .await
+            .map_err::<String, _>(Into::into)?;
             chunk_summaries.push(summary);
         }
         chunk_summaries.join("\n\n")
@@ -370,13 +364,13 @@ pub async fn text_processing_summarize(
         params.key_points_max,
     );
     let json = inference::run_inference_blocking(
-        port,
+        task.port,
         &messages,
         0.3,
         params.max_tokens,
         Some(inference::summary_response_format()),
-        &task_id,
-        &token,
+        &task.task_id,
+        &task.token,
         &app,
     )
     .await
@@ -409,25 +403,22 @@ pub async fn text_processing_generate_title(
     text: String,
     model_id: Option<String>,
 ) -> Result<String, String> {
-    let task_id = uuid::Uuid::new_v4().to_string();
-    let token = inference::INFERENCE_TASK_MANAGER.create_task(&task_id);
-    let _guard = TaskGuard {
-        task_id: task_id.clone(),
-    };
-
-    emit_initial_progress(&app, &task_id);
-
-    let port = ensure_server_running(&app, &manager, model_id.as_deref()).await?;
-    if token.is_cancelled() {
-        return Err(TextProcessingError::Cancelled.into());
-    }
+    let task = begin_task(&app, &manager, model_id.as_deref()).await?;
 
     // Use only the first 1000 chars for title generation
     let truncated: String = text.chars().take(1000).collect();
     let messages = inference::build_title_messages(&truncated);
-    let result = inference::run_inference(port, &messages, 0.3, 64, &task_id, &token, &app)
-        .await
-        .map_err::<String, _>(Into::into)?;
+    let result = inference::run_inference(
+        task.port,
+        &messages,
+        0.3,
+        64,
+        &task.task_id,
+        &task.token,
+        &app,
+    )
+    .await
+    .map_err::<String, _>(Into::into)?;
 
     // Clean up: trim whitespace, remove surrounding quotes if present
     let title = result
@@ -451,39 +442,43 @@ pub async fn text_processing_clean_text(
     text: String,
     model_id: Option<String>,
 ) -> Result<String, String> {
-    let task_id = uuid::Uuid::new_v4().to_string();
-    let token = inference::INFERENCE_TASK_MANAGER.create_task(&task_id);
-    let _guard = TaskGuard {
-        task_id: task_id.clone(),
-    };
-
-    emit_initial_progress(&app, &task_id);
-
-    let port = ensure_server_running(&app, &manager, model_id.as_deref()).await?;
-    if token.is_cancelled() {
-        return Err(TextProcessingError::Cancelled.into());
-    }
+    let task = begin_task(&app, &manager, model_id.as_deref()).await?;
 
     let chunks = inference::chunk_text(&text, inference::default_max_chunk_chars());
 
     let result = if chunks.len() == 1 {
         let max_tokens = inference::clean_text_max_tokens(&text);
         let messages = inference::build_clean_text_messages(&text);
-        inference::run_inference(port, &messages, 0.3, max_tokens, &task_id, &token, &app)
-            .await
-            .map_err::<String, _>(Into::into)?
+        inference::run_inference(
+            task.port,
+            &messages,
+            0.3,
+            max_tokens,
+            &task.task_id,
+            &task.token,
+            &app,
+        )
+        .await
+        .map_err::<String, _>(Into::into)?
     } else {
         let mut cleaned_chunks = Vec::new();
         for chunk in &chunks {
-            if token.is_cancelled() {
+            if task.token.is_cancelled() {
                 return Err(TextProcessingError::Cancelled.into());
             }
             let max_tokens = inference::clean_text_max_tokens(chunk);
             let messages = inference::build_clean_text_messages(chunk);
-            let chunk_result =
-                inference::run_inference(port, &messages, 0.3, max_tokens, &task_id, &token, &app)
-                    .await
-                    .map_err::<String, _>(Into::into)?;
+            let chunk_result = inference::run_inference(
+                task.port,
+                &messages,
+                0.3,
+                max_tokens,
+                &task.task_id,
+                &task.token,
+                &app,
+            )
+            .await
+            .map_err::<String, _>(Into::into)?;
             cleaned_chunks.push(chunk_result);
         }
         cleaned_chunks.join("\n\n")
@@ -501,6 +496,49 @@ impl Drop for TaskGuard {
     fn drop(&mut self) {
         inference::INFERENCE_TASK_MANAGER.remove_task(&self.task_id);
     }
+}
+
+/// Bundle of state shared by every inference command. The `_guard` field is
+/// the RAII handle that removes the task from `INFERENCE_TASK_MANAGER` on
+/// Drop — keep this struct alive for the full duration of the inference
+/// call. Prefer field-access (`task.token`) over destructuring; a partial
+/// destructure like `let InferenceTask { token, .. } = ...;` would drop the
+/// guard early and silently disable cancellation.
+struct InferenceTask {
+    task_id: String,
+    token: Arc<CancellationToken>,
+    port: u16,
+    // Held for its Drop side-effect only. The leading underscore documents
+    // intent and silences the `dead_code` lint without `#[allow]`.
+    _guard: TaskGuard,
+}
+
+/// Standard preamble shared by every inference command: allocate a task id,
+/// register it with the inference task manager, emit the initial progress
+/// event so the frontend sees the taskId immediately, ensure the llama-server
+/// is running with the requested model, and bail out early if the task was
+/// cancelled while the server was starting.
+async fn begin_task(
+    app: &AppHandle,
+    manager: &State<'_, tokio::sync::Mutex<LlamaServerManager>>,
+    model_id: Option<&str>,
+) -> Result<InferenceTask, String> {
+    let task_id = uuid::Uuid::new_v4().to_string();
+    let token = inference::INFERENCE_TASK_MANAGER.create_task(&task_id);
+    let guard = TaskGuard {
+        task_id: task_id.clone(),
+    };
+    inference::emit_initial_progress(app, &task_id);
+    let port = ensure_server_running(app, manager, model_id).await?;
+    if token.is_cancelled() {
+        return Err(TextProcessingError::Cancelled.into());
+    }
+    Ok(InferenceTask {
+        task_id,
+        token,
+        port,
+        _guard: guard,
+    })
 }
 
 /// Gets the custom text model download URL from settings.
@@ -598,19 +636,6 @@ async fn ensure_server_running(
         .map_err::<String, _>(Into::into)?;
 
     Ok(port)
-}
-
-/// Emits an initial inference progress event so the frontend has the taskId immediately.
-fn emit_initial_progress(app: &AppHandle, task_id: &str) {
-    let _ = app.emit(
-        "text-processing:inference-progress",
-        InferenceProgress {
-            task_id: task_id.to_string(),
-            token: String::new(),
-            accumulated_text: String::new(),
-            done: false,
-        },
-    );
 }
 
 /// Quick health check with a short timeout to verify the server is responsive.

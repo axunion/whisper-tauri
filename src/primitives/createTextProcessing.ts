@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { createRoot, createSignal } from "solid-js";
+import { batch, createRoot, createSignal } from "solid-js";
 import { parseError } from "~/lib/errors";
 import { sumBytes, sumDownloadedBytes } from "~/lib/format";
 import { createSettings } from "~/primitives/createSettings";
@@ -156,32 +156,54 @@ function effectiveModelId(override?: string): string | undefined {
   return override ?? selectedModelId() ?? undefined;
 }
 
-async function downloadModel(modelId: string): Promise<boolean> {
+// Shared mutex + phase reset + error handling for the two download paths.
+// `modelId` is set as `downloadingModelId` so the model list can highlight
+// the in-progress row; pass null when only the server is being fetched.
+// `initialPhase` is set inside the same batch as the mutex flags so memos
+// reading both never see a transient (isDownloading: true, phase: "idle").
+async function runDownload(
+  modelId: string | null,
+  initialPhase: "server" | "model",
+  body: () => Promise<void>,
+): Promise<boolean> {
   if (isDownloading()) return false;
-  setIsDownloading(true);
-  setDownloadingModelId(modelId);
-  try {
-    // Phase 1: サーバーが未ダウンロードなら自動取得
-    if (!serverAvailable()) {
-      setDownloadPhase("server");
-      setDownloadProgress(null);
-      await invoke("text_processing_download_server");
-      setServerAvailable(true);
-    }
-    // Phase 2: モデルダウンロード
-    setDownloadPhase("model");
+  batch(() => {
+    setIsDownloading(true);
+    setDownloadingModelId(modelId);
+    setDownloadPhase(initialPhase);
     setDownloadProgress(null);
-    await invoke("text_processing_download_model", { modelId });
-    await loadModels();
+  });
+  try {
+    await body();
     return true;
   } catch (e) {
     setError(parseError(e));
     return false;
   } finally {
-    setDownloadPhase("idle");
-    setDownloadingModelId(null);
-    setIsDownloading(false);
+    batch(() => {
+      setDownloadPhase("idle");
+      setDownloadingModelId(null);
+      setIsDownloading(false);
+    });
   }
+}
+
+async function downloadModel(modelId: string): Promise<boolean> {
+  const startPhase: "server" | "model" = serverAvailable() ? "model" : "server";
+  return runDownload(modelId, startPhase, async () => {
+    // Phase 1: サーバーが未ダウンロードなら自動取得
+    if (!serverAvailable()) {
+      await invoke("text_processing_download_server");
+      setServerAvailable(true);
+      batch(() => {
+        setDownloadPhase("model");
+        setDownloadProgress(null);
+      });
+    }
+    // Phase 2: モデルダウンロード
+    await invoke("text_processing_download_model", { modelId });
+    await loadModels();
+  });
 }
 
 async function deleteModel(modelId: string): Promise<void> {
@@ -206,21 +228,10 @@ async function deleteModel(modelId: string): Promise<void> {
 }
 
 async function downloadServer(): Promise<boolean> {
-  if (isDownloading()) return false;
-  setIsDownloading(true);
-  setDownloadPhase("server");
-  setDownloadProgress(null);
-  try {
+  return runDownload(null, "server", async () => {
     await invoke("text_processing_download_server");
     setServerAvailable(true);
-    return true;
-  } catch (e) {
-    setError(parseError(e));
-    return false;
-  } finally {
-    setDownloadPhase("idle");
-    setIsDownloading(false);
-  }
+  });
 }
 
 async function deleteServer(): Promise<boolean> {
