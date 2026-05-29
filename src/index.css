@@ -48,19 +48,19 @@
 
 .dark,
 [data-kb-theme="dark"] {
-  --background: oklch(0.16 0.03 285);
+  --background: oklch(0.16 0.012 285);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.20 0.03 285);
+  --card: oklch(0.20 0.012 285);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.20 0.03 285);
+  --popover: oklch(0.20 0.012 285);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.72 0.19 285);
   --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.28 0.04 285);
+  --secondary: oklch(0.28 0.015 285);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.28 0.04 285);
+  --muted: oklch(0.28 0.015 285);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.28 0.04 285);
+  --accent: oklch(0.28 0.015 285);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.396 0.141 25.723);
   --destructive-foreground: oklch(0.985 0 0);
@@ -74,17 +74,17 @@
   --error: oklch(0.26 0.0886 26.05);
   --error-foreground: oklch(0.64 0.2082 25.38);
 
-  --border: oklch(0.40 0.04 285);
-  --input: oklch(0.40 0.04 285);
+  --border: oklch(0.40 0.018 285);
+  --input: oklch(0.40 0.018 285);
   --ring: oklch(0.72 0.19 285);
 
-  --sidebar: oklch(0.18 0.04 285);
+  --sidebar: oklch(0.18 0.015 285);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.72 0.19 285);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.28 0.04 285);
+  --sidebar-accent: oklch(0.28 0.015 285);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.40 0.04 285);
+  --sidebar-border: oklch(0.40 0.018 285);
   --sidebar-ring: oklch(0.72 0.19 285);
 }
 
@@ -232,11 +232,11 @@ button {
 
 :is(.dark, [data-kb-theme="dark"]) body {
   background:
-    radial-gradient(ellipse at 15% 50%, oklch(0.35 0.18 295 / 0.6) 0%, transparent 55%),
-    radial-gradient(ellipse at 75% 15%, oklch(0.30 0.20 260 / 0.55) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 85%, oklch(0.32 0.15 330 / 0.5) 0%, transparent 55%),
-    radial-gradient(ellipse at 85% 65%, oklch(0.28 0.16 270 / 0.45) 0%, transparent 45%),
-    radial-gradient(ellipse at 10% 10%, oklch(0.30 0.12 210 / 0.4) 0%, transparent 45%),
-    conic-gradient(from 45deg at 50% 50%, oklch(0.22 0.06 285 / 0.5), oklch(0.18 0.08 250 / 0.3), oklch(0.22 0.07 330 / 0.4), oklch(0.18 0.06 210 / 0.3), oklch(0.22 0.06 285 / 0.5)),
+    radial-gradient(ellipse at 15% 50%, oklch(0.35 0.09 295 / 0.38) 0%, transparent 55%),
+    radial-gradient(ellipse at 75% 15%, oklch(0.30 0.10 260 / 0.35) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 85%, oklch(0.32 0.08 330 / 0.32) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 65%, oklch(0.28 0.08 270 / 0.30) 0%, transparent 45%),
+    radial-gradient(ellipse at 10% 10%, oklch(0.30 0.06 210 / 0.28) 0%, transparent 45%),
+    conic-gradient(from 45deg at 50% 50%, oklch(0.22 0.035 285 / 0.35), oklch(0.18 0.04 250 / 0.2), oklch(0.22 0.035 330 / 0.28), oklch(0.18 0.035 210 / 0.2), oklch(0.22 0.035 285 / 0.35)),
     var(--background);
 }
