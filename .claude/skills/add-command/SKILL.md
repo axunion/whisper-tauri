@@ -9,7 +9,7 @@ user-invocable: true
 
 Add a command end-to-end (Rust backend → TypeScript frontend) for the module and command name in `$ARGUMENTS`.
 
-All user-facing output and confirmations are in **Japanese**.
+All user-facing output and confirmations are in **English**.
 
 ## Argument Parsing
 

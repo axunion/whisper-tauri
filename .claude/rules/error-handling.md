@@ -32,5 +32,5 @@ When a new error message prefix is introduced on the Rust side, update all of th
 
 ## Symptoms of Forgetting to Sync
 
-- Rust raises an error but the frontend shows `UNKNOWN_ERROR` ("予期しないエラー") → the prefix is missing from `PREFIX_MAP`
+- Rust raises an error but the frontend shows `UNKNOWN_ERROR` (displays: "Unexpected error occurred") → the prefix is missing from `PREFIX_MAP`
 - A new `ErrorCode` is added and `CATEGORY_MAP` / `MESSAGE_MAP` produce type errors → the `Record` exhaustiveness check is enforcing coverage; fill in both maps

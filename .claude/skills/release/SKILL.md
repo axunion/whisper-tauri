@@ -9,7 +9,7 @@ user-invocable: true
 
 Releases are fully automated by `.github/workflows/release.yml`, triggered by pushing a `v*` tag. This skill handles the **local** side: keeping the three version manifests in sync, validating preflight, composing release notes from git history, creating and pushing the tag, and watching the CI run.
 
-All user-facing output and confirmations are in **Japanese**.
+All user-facing output and confirmations are in **English**.
 
 ## Argument Parsing
 
@@ -67,7 +67,7 @@ LAST_TAG=$(git describe --tags --abbrev=0)
 git log "$LAST_TAG"..HEAD --pretty=format:"- %s" --no-merges
 ```
 
-Group commits by conventional-commit prefix when possible (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`). Present the draft in Japanese to the user for review.
+Group commits by conventional-commit prefix when possible (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`). Present the draft to the user for review.
 
 The CI workflow (`release.yml`) writes a fixed installation guide as the release body, so these notes are for the user to paste into the GitHub draft release manually after CI completes. Save them where the user can find them — print to terminal is sufficient.
 
@@ -111,24 +111,24 @@ On CI failure, fetch logs (`gh run view <id> --log-failed`) and report. Do not r
 
 ## Output Format
 
-User-facing summaries in Japanese. Use a phase header per phase, e.g.:
+Use a phase header per phase, e.g.:
 
 ```
-## Phase 0: プリフライト
-- main ブランチ: ✅
-- リモートと同期: ✅
-- 作業ツリー clean: ✅
-- タグ未存在: ✅
-- gh 認証: ✅
+## Phase 0: Preflight
+- main branch:      ✅
+- Synced with remote: ✅
+- Clean working tree: ✅
+- Tag does not exist: ✅
+- gh authenticated:  ✅
 ```
 
 End-of-skill summary:
 
 ```
-## リリース実行サマリ
-- バージョン: 0.1.0 → 0.2.0
-- コミット: <sha>
-- タグ: v0.2.0 (push 完了)
-- CI: <成功 or 失敗 with link>
-- 次のアクション: GitHub の draft release に上記のリリースノートを貼り付けて publish
+## Release Summary
+- Version:     0.1.0 → 0.2.0
+- Commit:      <sha>
+- Tag:         v0.2.0 (pushed)
+- CI:          <succeeded | failed — link>
+- Next action: Paste the Phase 4 release notes into the GitHub draft release and publish.
 ```

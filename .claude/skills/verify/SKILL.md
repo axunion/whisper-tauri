@@ -7,7 +7,7 @@ user-invocable: true
 
 # /verify — Validation Skill
 
-Runs static analysis and tests in parallel. Formatting is handled by the `.githooks/pre-commit` hook (`biome --write` + `cargo fmt` on staged files) so this skill does not mutate code preemptively — it only fixes on retry when a check fails.
+Runs static analysis and tests in parallel. Formatting is handled by the `lefthook.yml` pre-commit hook (`biome --write` + `cargo fmt` on staged files) so this skill does not mutate code preemptively — it only fixes on retry when a check fails.
 
 ## Argument Parsing
 

@@ -83,29 +83,29 @@ This is a heuristic — flag suspicious Tailwind class combinations rather than 
 
 ## Output Format
 
-Output in **Japanese**. Use this exact structure:
+Output in **English**. Use this exact structure:
 
 ```
-## アクセシビリティレビュー結果
+## Accessibility Review Results
 
-### サマリ
-- Critical: <件数>  ← 操作不能・SR完全非対応
-- High: <件数>      ← 重要操作の障壁
-- Medium: <件数>    ← UX 低下
-- Low: <件数>       ← 改善余地
-- 確認OK: <件数>
+### Summary
+- Critical: <count>  ← interactive element completely inaccessible or invisible to screen readers
+- High: <count>      ← barrier to a primary user action
+- Medium: <count>    ← UX degradation
+- Low: <count>       ← improvement opportunity
+- Passed: <count>
 
-### 指摘事項
+### Findings
 
-#### [High] <短いタイトル>
-- **場所**: `src/components/.../File.tsx:LINE`
-- **問題**: <何が起きるか>
-- **修正案**: <具体的な修正方針>
+#### [High] <short title>
+- **Location**: `src/components/.../File.tsx:LINE`
+- **Issue**: <what happens>
+- **Fix**: <concrete remediation approach>
 
 ...
 
-### コンポーネント別チェック状況
-| コンポーネント | Kobalte | ARIA | Keyboard | Focus | Live | Contrast | i18n |
+### Component Check Status
+| Component | Kobalte | ARIA | Keyboard | Focus | Live | Contrast | i18n |
 |---|---|---|---|---|---|---|---|
 | Button (icon-only) | - | ⚠️ | OK | OK | - | OK | OK |
 ...

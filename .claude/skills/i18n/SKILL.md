@@ -8,8 +8,6 @@ user-invocable: true
 
 Audits the dictionary files in `src/i18n/dictionaries/` and their usage sites, then fixes the issues found.
 
-All user-facing output and confirmations are in **Japanese**.
-
 ## Principles
 
 - **Japanese is the master language**: take Japanese as the source of truth and translate from there

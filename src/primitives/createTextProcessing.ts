@@ -191,7 +191,7 @@ async function runDownload(
 async function downloadModel(modelId: string): Promise<boolean> {
   const startPhase: "server" | "model" = serverAvailable() ? "model" : "server";
   return runDownload(modelId, startPhase, async () => {
-    // Phase 1: サーバーが未ダウンロードなら自動取得
+    // Phase 1: download the llama-server binary if not yet available
     if (!serverAvailable()) {
       await invoke("text_processing_download_server");
       setServerAvailable(true);
@@ -200,7 +200,7 @@ async function downloadModel(modelId: string): Promise<boolean> {
         setDownloadProgress(null);
       });
     }
-    // Phase 2: モデルダウンロード
+    // Phase 2: download the model
     await invoke("text_processing_download_model", { modelId });
     await loadModels();
   });

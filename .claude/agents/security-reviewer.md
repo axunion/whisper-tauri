@@ -83,30 +83,30 @@ Run through these in order. For each, grep the relevant patterns and read the ma
 
 ## Output Format
 
-Output in **Japanese**. Use this exact structure:
+Output in **English**. Use this exact structure:
 
 ```
-## セキュリティレビュー結果
+## Security Review Results
 
-### サマリ
-- High: <件数>
-- Medium: <件数>
-- Low: <件数>
-- Info: <件数>
+### Summary
+- High: <count>
+- Medium: <count>
+- Low: <count>
+- Info: <count>
 
-### 指摘事項
+### Findings
 
-#### [High] <短いタイトル>
-- **場所**: `path/to/file.rs:LINE`
-- **問題**: <何が起きうるか>
-- **修正案**: <具体的な修正方針>
+#### [High] <short title>
+- **Location**: `path/to/file.rs:LINE`
+- **Issue**: <what could happen>
+- **Fix**: <concrete remediation approach>
 
 #### [Medium] <...>
 ...
 
-### 確認したが問題なし
-- <観点1>
-- <観点2>
+### Checked — No Issues Found
+- <area 1>
+- <area 2>
 ...
 ```
 

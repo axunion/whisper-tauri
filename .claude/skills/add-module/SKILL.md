@@ -9,7 +9,7 @@ user-invocable: true
 
 Creates a new backend module that follows the project's standard layout (see `CLAUDE.md` → Architecture). Use this when introducing a new domain area before adding any commands. For adding individual commands to an existing module, use `/add-command` instead.
 
-All user-facing output and confirmations are in **Japanese**.
+All user-facing output and confirmations are in **English**.
 
 ## Argument Parsing
 
@@ -74,21 +74,21 @@ When `/add-command` introduces the first variant it will surface this prompt aga
 Print the recommendation (do not auto-run):
 
 ```
-次のアクション:
-1. /add-command <module> <command-name> で最初のコマンドを追加
-2. /verify all で検証
+Next steps:
+1. /add-command <module> <command-name>  — add the first command
+2. /verify all                           — validate
 ```
 
 `/verify all` catches missing imports, lib.rs registration mistakes, and `types/index.ts` syntax errors.
 
 ## Output Format
 
-Phase headers in Japanese. End with:
+Phase headers in English. End with:
 
 ```
-## モジュール追加完了
-- バックエンド: src-tauri/src/<module>/{mod,types,error,commands}.rs
-- 登録: src-tauri/src/lib.rs (pub mod <module>)
-- フロントエンド: src/types/<module>.ts + src/types/index.ts
-- エラープレフィックス: <登録 or 未登録>
+## Module Added
+- Backend:       src-tauri/src/<module>/{mod,types,error,commands}.rs
+- Registered in: src-tauri/src/lib.rs (pub mod <module>)
+- Frontend:      src/types/<module>.ts + src/types/index.ts
+- Error prefix:  <registered | not registered>
 ```

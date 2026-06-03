@@ -1,14 +1,14 @@
 # Tauri 2 Plugin Permissions
 
-frontend から `@tauri-apps/plugin-*` の API を呼ぶときは、`src-tauri/capabilities/default.json` の `permissions` にコマンド単位の許可が登録されているか必ず確認する。
+When calling `@tauri-apps/plugin-*` APIs from the frontend, always verify that the required commands are registered in `src-tauri/capabilities/default.json`.
 
-## 前提
+## Background
 
-- `fs:default` / `dialog:default` / `store:default` などの `*:default` バンドルにはコアセットしか含まれない。
-- 特に `fs:default` には `writeTextFile` / `writeFile` / `copyFile` / `renameFile` / `removeFile` などの **書き込み系** permission は入っていない。
-- 書き込み系を使うときは個別 permission を identifier + scope (allow パス) 付きで明示追加する。
+- `fs:default` / `dialog:default` / `store:default` and similar `*:default` bundles include only a core subset of commands.
+- In particular, `fs:default` does **not** include write operations such as `writeTextFile` / `writeFile` / `copyFile` / `renameFile` / `removeFile`.
+- Write operations must be added individually as explicit permission entries with an `identifier` and an `allow` scope (path restriction).
 
-## 例: ユーザー選択ダイアログ経由の保存
+## Example: saving a user-selected file
 
 ```json
 {
@@ -26,24 +26,24 @@ frontend から `@tauri-apps/plugin-*` の API を呼ぶときは、`src-tauri/c
 }
 ```
 
-- scope は `**` (全パス) ではなく `$HOME/**` などに絞る。`/etc`, `/System` への書き込みは通常不要。
-- `$HOME/**` は macOS の `~/Documents` / `~/Desktop` / `~/Downloads` を全てカバーする。
-- 外部ドライブ (`/Volumes/**` on macOS) への保存は要望時に追加。
+- Restrict scope to `$HOME/**` or narrower — avoid `**` (all paths). Writes to `/etc` or `/System` are never needed.
+- `$HOME/**` covers `~/Documents`, `~/Desktop`, and `~/Downloads` on macOS.
+- Add `/Volumes/**` only when external-drive support is explicitly requested.
 
-## チェックリスト (新規 plugin API 利用時)
+## Checklist (when adding a new plugin API)
 
-1. plugin の `*:default` に必要なコマンドが含まれているか公式 docs / `src-tauri/gen/schemas/` で確認
-2. 含まれていなければ `fs:allow-<command>` のような個別 identifier を `capabilities/default.json` に追加
-3. scope (パス制限) は最小限にする (`**` は避けて `$HOME/**` 等を使う)
-4. dev サーバーを **再起動** (capabilities は Tauri 起動時読み込みのため HMR で反映されない)
-5. 実機で実際に API を呼び silent fail していないか確認
+1. Check official docs or `src-tauri/gen/schemas/` to confirm whether the command is included in the plugin's `*:default` bundle.
+2. If not included, add the individual `fs:allow-<command>` (or equivalent) identifier to `capabilities/default.json`.
+3. Keep scope as narrow as possible — prefer `$HOME/**` over `**`.
+4. **Restart the dev server** after editing capabilities — changes are read at Tauri startup and are not picked up by HMR.
+5. Test the actual API call on a real device to confirm there are no silent failures.
 
-## 既知の落とし穴
+## Common Pitfalls
 
-- **silent fail**: permission 不足時は `<command> not allowed` のような Promise reject。frontend で `try/catch` でエラーを握りつぶしていると気づきにくい。デバッグ時は `catch (err) { console.error(err); ... }` で詳細を必ずログ出力する。
-- **scope 不足**: identifier は登録されているが scope に対象パスが含まれていないと同様に拒否される。
-- **HMR 非反映**: capabilities ファイルは frontend のホットリロードと無関係。dev サーバーの再起動が必須。
+- **Silent fail**: insufficient permission causes a Promise rejection such as `<command> not allowed`. If the frontend swallows errors in a `try/catch`, the failure is invisible. Always log with `catch (err) { console.error(err); ... }` during debugging.
+- **Scope mismatch**: the identifier is registered but the `allow` scope does not cover the target path — produces the same rejection as a missing identifier.
+- **HMR does not apply**: capabilities files are unrelated to hot module replacement. A dev-server restart is mandatory.
 
-## 過去の事例
+## Past Incidents
 
-- **2026-05-20**: #16 (要約・整文タブで保存ボタン有効化) 実装中に、要約タブだけでなく text/timeline タブの保存 (`writeTextFile`) と録音 WAV 保存 (`copyFile`) も silent fail していたことが発覚。`fs:default` に write 系が含まれていない仕様を見落としていた。#2 (ファイル選択ダイアログの言語整合) 完了時点 (2026-05-13) で実機テストしていれば早期発見できた。
+- **2026-05-20** — While implementing #16 (enable save button in summary/clean-text tabs), silent failures were discovered in the text and timeline tab saves (`writeTextFile`) and the recording WAV save (`copyFile`) as well. Root cause: `fs:default` does not include write operations, a requirement that had been overlooked. Earlier device testing at the completion of #2 (file-dialog locale consistency, 2026-05-13) would have caught this sooner.
