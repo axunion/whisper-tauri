@@ -77,10 +77,10 @@ const CardTitleWithIcon: Component<
 
 export {
   Card,
-  CardHeader,
+  CardContent,
+  CardDescription,
   CardFooter,
+  CardHeader,
   CardTitle,
   CardTitleWithIcon,
-  CardDescription,
-  CardContent,
 };

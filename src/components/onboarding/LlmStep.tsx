@@ -1,5 +1,5 @@
 import { FiCheck, FiDownload } from "solid-icons/fi";
-import { TbSparkles } from "solid-icons/tb";
+import { TbOutlineSparkles } from "solid-icons/tb";
 import { For, Show } from "solid-js";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
 import { Badge } from "~/components/ui/Badge";
@@ -27,7 +27,7 @@ export function LlmStep(props: LlmStepProps) {
   return (
     <div class="animate-fade-in mx-auto flex w-full max-w-lg flex-col items-center gap-5 text-center">
       <div class="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary animate-scale-in">
-        <TbSparkles class="size-6" />
+        <TbOutlineSparkles class="size-6" />
       </div>
 
       <div class="space-y-1.5">

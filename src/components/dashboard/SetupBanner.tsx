@@ -1,7 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import { invoke } from "@tauri-apps/api/core";
 import { FiArrowRight, FiMic, FiTool } from "solid-icons/fi";
-import { TbSparkles } from "solid-icons/tb";
+import { TbOutlineSparkles } from "solid-icons/tb";
 import type { JSX } from "solid-js";
 import { createSignal, onMount, Show } from "solid-js";
 import { Card, CardContent } from "~/components/ui/Card";
@@ -61,7 +61,7 @@ export function SetupBanner() {
             </Show>
             <Show when={!aiReady()}>
               <SetupIndicator
-                icon={<TbSparkles class="size-3.5" />}
+                icon={<TbOutlineSparkles class="size-3.5" />}
                 label={t("dashboard.setupAiHint")}
               />
             </Show>

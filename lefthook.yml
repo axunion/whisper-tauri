@@ -9,6 +9,10 @@ pre-commit:
       run: pnpm exec biome check --write --no-errors-on-unmatched {staged_files}
       stage_fixed: true
 
+    - name: typecheck
+      glob: "src/**/*.{ts,tsx}"
+      run: pnpm typecheck
+
     - name: cargo-fmt
       glob: "src-tauri/**/*.rs"
       run: cargo fmt --manifest-path src-tauri/Cargo.toml

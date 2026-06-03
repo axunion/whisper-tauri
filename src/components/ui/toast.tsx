@@ -223,14 +223,14 @@ function showToastPromise<T, U>(
   ));
 }
 
+export type { ToastAction, ToastVariant };
 export {
+  showToast,
+  showToastPromise,
   Toast,
   ToastClose,
   ToastDescription,
-  ToastTitle,
   Toaster,
-  showToast,
-  showToastPromise,
+  ToastTitle,
   toastVariants,
 };
-export type { ToastAction, ToastVariant };

@@ -98,11 +98,11 @@ const DropdownMenuGroupLabel = <T extends ValidComponent = "span">(
 
 export {
   DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuPortal,
-  DropdownMenuGroup,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
+  DropdownMenuGroup,
   DropdownMenuGroupLabel,
+  DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 };

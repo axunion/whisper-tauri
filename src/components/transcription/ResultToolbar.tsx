@@ -13,7 +13,7 @@ import {
   FiType,
 } from "solid-icons/fi";
 import { SiNotion } from "solid-icons/si";
-import { TbSparkles, TbSubtask } from "solid-icons/tb";
+import { TbOutlineSparkles, TbOutlineSubtask } from "solid-icons/tb";
 import type { Component, JSX } from "solid-js";
 import { createSignal, For, Show } from "solid-js";
 import { Button } from "~/components/ui/Button";
@@ -112,7 +112,7 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
             aria-label={t("result.aiMenu")}
             title={t("result.aiMenu")}
           >
-            <TbSparkles class="size-4" />
+            <TbOutlineSparkles class="size-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem
@@ -134,7 +134,7 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
               disabled={props.isProcessing}
               onSelect={() => props.onSummarize()}
             >
-              <TbSubtask class={dropdownIconClass} />
+              <TbOutlineSubtask class={dropdownIconClass} />
               {t("textProcessing.summarize")}
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -248,5 +248,5 @@ const ResultToolbar: Component<ResultToolbarProps> = (props) => {
   );
 };
 
-export { ResultToolbar };
 export type { ResultTab };
+export { ResultToolbar };

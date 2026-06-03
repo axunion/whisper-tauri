@@ -5,7 +5,7 @@
   "private": true,
   "type": "module",
   "license": "MIT",
-  "packageManager": "pnpm@11.4.0",
+  "packageManager": "pnpm@11.5.1",
   "devEngines": {
     "runtime": {
       "name": "node",
@@ -14,22 +14,22 @@
     },
     "packageManager": {
       "name": "pnpm",
-      "version": "11.4.0",
+      "version": "11.5.1",
       "onFail": "warn"
     }
   },
   "scripts": {
+    "prepare": "lefthook install",
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview",
     "tauri": "tauri",
-    "test": "vitest",
-    "test:run": "vitest run",
     "check": "biome check src/ && tsc --noEmit",
-    "fix": "biome check --write src/",
     "typecheck": "tsc --noEmit",
-    "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && lefthook install || true"
+    "fix": "biome check --write src/",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@kobalte/core": "^0.13.11",
