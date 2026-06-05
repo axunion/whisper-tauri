@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ErrorCode } from "~/types/errors";
-import {
-  getErrorCategory,
-  getErrorMessage,
-  isRecoverable,
-  parseError,
-} from "../errors";
+import { getErrorCategory, isRecoverable, parseError } from "../errors";
 
 describe("getErrorCategory", () => {
   it("should return 'file' for FILE_NOT_FOUND", () => {
@@ -181,60 +176,30 @@ describe("parseError", () => {
     expect(result.recoverable).toBe(false);
   });
 
-  it("should set user-friendly message", () => {
+  it("should set messageKey for the error code", () => {
     const result = parseError("File not found: /path/to/file.wav");
-    expect(result.message).toBe(getErrorMessage(ErrorCode.FILE_NOT_FOUND));
+    expect(result.messageKey).toBe("errors.fileNotFound");
   });
 });
 
-describe("getErrorMessage", () => {
-  it("should return Japanese message for FILE_NOT_FOUND", () => {
-    const msg = getErrorMessage(ErrorCode.FILE_NOT_FOUND);
-    expect(msg).toContain("ファイルが見つかりません");
-  });
-
-  it("should return Japanese message for FILE_READ_ERROR", () => {
-    const msg = getErrorMessage(ErrorCode.FILE_READ_ERROR);
-    expect(msg).toContain("ファイルの読み込み");
-  });
-
-  it("should return Japanese message for UNSUPPORTED_FORMAT", () => {
-    const msg = getErrorMessage(ErrorCode.UNSUPPORTED_FORMAT);
-    expect(msg).toContain("サポートされていない");
-  });
-
-  it("should return Japanese message for MODEL_NOT_FOUND", () => {
-    const msg = getErrorMessage(ErrorCode.MODEL_NOT_FOUND);
-    expect(msg).toContain("モデルが見つかりません");
-  });
-
-  it("should return Japanese message for MODEL_LOAD_ERROR", () => {
-    const msg = getErrorMessage(ErrorCode.MODEL_LOAD_ERROR);
-    expect(msg).toContain("モデルの読み込み");
-  });
-
-  it("should return Japanese message for MODEL_DOWNLOAD_ERROR", () => {
-    const msg = getErrorMessage(ErrorCode.MODEL_DOWNLOAD_ERROR);
-    expect(msg).toContain("ダウンロード");
-  });
-
-  it("should return Japanese message for TRANSCRIPTION_ERROR", () => {
-    const msg = getErrorMessage(ErrorCode.TRANSCRIPTION_ERROR);
-    expect(msg).toContain("文字起こし");
-  });
-
-  it("should return Japanese message for NETWORK_ERROR", () => {
-    const msg = getErrorMessage(ErrorCode.NETWORK_ERROR);
-    expect(msg).toContain("ネットワーク");
-  });
-
-  it("should return Japanese message for CANCELLED", () => {
-    const msg = getErrorMessage(ErrorCode.CANCELLED);
-    expect(msg).toContain("キャンセル");
-  });
-
-  it("should return Japanese message for UNKNOWN_ERROR", () => {
-    const msg = getErrorMessage(ErrorCode.UNKNOWN_ERROR);
-    expect(msg).toContain("エラー");
+describe("PREFIX_MAP coverage", () => {
+  it("each non-fallback ErrorCode is reachable via at least one prefix", () => {
+    const REPRESENTATIVE_PREFIXES: [ErrorCode, string][] = [
+      [ErrorCode.FILE_NOT_FOUND, "File not found: /test.wav"],
+      [ErrorCode.FILE_READ_ERROR, "File read error: corrupt"],
+      [ErrorCode.UNSUPPORTED_FORMAT, "Unsupported format: mp3"],
+      [ErrorCode.MODEL_NOT_FOUND, "Model not found: test-model"],
+      [ErrorCode.MODEL_LOAD_ERROR, "Model load error: invalid"],
+      [ErrorCode.MODEL_DOWNLOAD_ERROR, "Download failed: timeout"],
+      [ErrorCode.TRANSCRIPTION_ERROR, "Transcription error: decode failed"],
+      [ErrorCode.NETWORK_ERROR, "HTTP error: 404"],
+      [ErrorCode.CANCELLED, "Transcription cancelled"],
+    ];
+    for (const [expectedCode, message] of REPRESENTATIVE_PREFIXES) {
+      expect(
+        parseError(message).code,
+        `"${message}" should parse to ${expectedCode}`,
+      ).toBe(expectedCode);
+    }
   });
 });

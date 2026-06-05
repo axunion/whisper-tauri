@@ -43,7 +43,7 @@ const NotionShareDialog: Component<NotionShareDialogProps> = (props) => {
       case "sending":
         return t("notionShare.sending");
       case "error":
-        return s.message;
+        return t(s.messageKey);
       default:
         return "";
     }

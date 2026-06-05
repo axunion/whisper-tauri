@@ -22,12 +22,6 @@ pub mod settings;
 pub mod text_processing;
 pub mod whisper;
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {name}! You've been greeted from Rust!")
-}
-
 /// Run the Tauri application.
 ///
 /// # Panics
@@ -49,7 +43,6 @@ pub fn run() {
             text_processing::server::LlamaServerManager::new(),
         ))
         .invoke_handler(tauri::generate_handler![
-            greet,
             whisper::commands::get_available_models,
             whisper::commands::check_model_exists,
             whisper::commands::download_model,

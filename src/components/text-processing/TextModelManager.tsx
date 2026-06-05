@@ -45,7 +45,7 @@ export default function TextModelManager(props: TextModelManagerProps) {
       toast.success(t(successKey));
     } else {
       const err = tp.error();
-      if (err) toast.error(err.message);
+      if (err) toast.error(t(err.messageKey));
     }
   }
 

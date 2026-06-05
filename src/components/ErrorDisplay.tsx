@@ -3,16 +3,17 @@ import { Show } from "solid-js";
 import type { DictionaryKey } from "~/i18n";
 import { useI18n } from "~/i18n";
 import type { AppError } from "~/types/errors";
+import { ErrorCategory } from "~/types/errors";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 
-const CATEGORY_KEYS: Record<string, DictionaryKey> = {
-  file: "errors.file",
-  model: "errors.model",
-  process: "errors.process",
-  network: "errors.network",
-  cancelled: "errors.cancelled",
-  unknown: "errors.unknown",
+const CATEGORY_KEYS: Record<ErrorCategory, DictionaryKey> = {
+  [ErrorCategory.FILE]: "errors.file",
+  [ErrorCategory.MODEL]: "errors.model",
+  [ErrorCategory.PROCESS]: "errors.process",
+  [ErrorCategory.NETWORK]: "errors.network",
+  [ErrorCategory.CANCELLED]: "errors.cancelled",
+  [ErrorCategory.UNKNOWN]: "errors.unknown",
 };
 
 interface ErrorDisplayProps {
@@ -37,10 +38,10 @@ export function ErrorDisplay(props: ErrorDisplayProps) {
                 variant="outline"
                 class="border-destructive text-destructive"
               >
-                {t(CATEGORY_KEYS[error().category] ?? "errors.unknown")}
+                {t(CATEGORY_KEYS[error().category])}
               </Badge>
               <span class="text-sm font-medium text-destructive">
-                {error().message}
+                {t(error().messageKey)}
               </span>
             </div>
             <div class="flex shrink-0 gap-1">

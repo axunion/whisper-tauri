@@ -81,8 +81,12 @@ export default function NotionIntegration() {
       setEditMode(false);
       setShowToken(false);
     } catch (e) {
-      const raw = parseError(e).details ?? "Unknown error";
-      setErrorMessage(t("settings.notionConnectionFailed", { message: raw }));
+      const err = parseError(e);
+      setErrorMessage(
+        t("settings.notionConnectionFailed", {
+          message: err.details ?? t(err.messageKey),
+        }),
+      );
     } finally {
       setTesting(false);
     }

@@ -103,7 +103,7 @@ export function LlmTester(props: LlmTesterProps) {
       <Show when={props.textProcessing.error()}>
         {(err) => (
           <div class="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            <span>{err().message}</span>
+            <span>{t(err().messageKey)}</span>
             <button
               type="button"
               class="ml-2 text-destructive/60 hover:text-destructive"

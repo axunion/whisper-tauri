@@ -1,12 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
 import { createSignal } from "solid-js";
+import type { DictionaryKey } from "~/i18n/types";
 import { parseError } from "~/lib/errors";
 import type { NotionPagePayload, NotionPageRef } from "~/types";
 
 export type NotionShareState =
   | { kind: "idle" }
   | { kind: "sending" }
-  | { kind: "error"; message: string };
+  | { kind: "error"; messageKey: DictionaryKey; details?: string };
 
 export function createNotionShare() {
   const [state, setState] = createSignal<NotionShareState>({ kind: "idle" });
@@ -22,9 +23,11 @@ export function createNotionShare() {
       setState({ kind: "idle" });
       return pageRef;
     } catch (e) {
+      const err = parseError(e);
       setState({
         kind: "error",
-        message: parseError(e).details ?? "Unknown error",
+        messageKey: err.messageKey,
+        ...(err.details ? { details: err.details } : {}),
       });
       return null;
     }

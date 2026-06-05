@@ -1,3 +1,5 @@
+import type { DictionaryKey } from "~/i18n/types";
+
 export const ErrorCategory = {
   FILE: "file",
   MODEL: "model",
@@ -27,7 +29,7 @@ export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 export interface AppError {
   code: ErrorCode;
   category: ErrorCategory;
-  message: string;
+  messageKey: DictionaryKey;
   details?: string;
   recoverable: boolean;
 }

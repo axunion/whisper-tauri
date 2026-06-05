@@ -108,6 +108,37 @@ describe("createSettings", () => {
         dispose();
       });
     });
+
+    it("should keep the app usable with defaults when store loading fails", async () => {
+      await createRoot(async (dispose) => {
+        const settings = createSettings();
+        const store = getLastStoreInstance();
+        store.get.mockRejectedValueOnce(new Error("store unavailable"));
+
+        await expect(settings.load()).resolves.toBeUndefined();
+
+        expect(settings.isLoaded()).toBe(true);
+        expect(settings.settings()).toEqual(DEFAULT_SETTINGS);
+        dispose();
+      });
+    });
+
+    it("should not write to the store when loaded from defaults due to error", async () => {
+      await createRoot(async (dispose) => {
+        const settings = createSettings();
+        const store = getLastStoreInstance();
+        store.get.mockRejectedValueOnce(new Error("store unavailable"));
+        store.set.mockResolvedValue(undefined);
+        store.save.mockResolvedValue(undefined);
+
+        await settings.load();
+        await settings.update({ language: "en" });
+
+        expect(store.set).not.toHaveBeenCalled();
+        expect(store.save).not.toHaveBeenCalled();
+        dispose();
+      });
+    });
   });
 
   describe("update", () => {
@@ -132,9 +163,11 @@ describe("createSettings", () => {
       await createRoot(async (dispose) => {
         const settings = createSettings();
         const store = getLastStoreInstance();
+        store.get.mockResolvedValueOnce(null);
         store.set.mockResolvedValue(undefined);
         store.save.mockResolvedValue(undefined);
 
+        await settings.load();
         await settings.update({ theme: "dark" });
 
         expect(store.set).toHaveBeenCalledWith("app_settings", {

@@ -11,7 +11,6 @@ export interface Dictionary {
     deleting: string;
     confirm: string;
     done: string;
-    downloading: string;
     downloadingSpeechModel: string;
     downloadingFfmpeg: string;
     downloadingTextModel: string;
@@ -138,6 +137,16 @@ export interface Dictionary {
     network: string;
     cancelled: string;
     unknown: string;
+    fileNotFound: string;
+    fileReadError: string;
+    unsupportedFormat: string;
+    modelNotFound: string;
+    modelLoadError: string;
+    modelDownloadError: string;
+    transcriptionError: string;
+    networkError: string;
+    processCancelled: string;
+    unknownError: string;
   };
   result: {
     copiedToast: string;

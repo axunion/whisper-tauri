@@ -1,3 +1,4 @@
+import type { DictionaryKey } from "~/i18n/types";
 import {
   type AppError,
   ErrorCategory,
@@ -47,17 +48,17 @@ const PREFIX_MAP: readonly [string, ErrorCodeType][] = [
   ["Compression error:", ErrorCode.UNKNOWN_ERROR],
 ];
 
-const MESSAGE_MAP: Record<ErrorCodeType, string> = {
-  [ErrorCode.FILE_NOT_FOUND]: "ファイルが見つかりません",
-  [ErrorCode.FILE_READ_ERROR]: "ファイルの読み込みに失敗しました",
-  [ErrorCode.UNSUPPORTED_FORMAT]: "サポートされていないファイル形式です",
-  [ErrorCode.MODEL_NOT_FOUND]: "モデルが見つかりません",
-  [ErrorCode.MODEL_LOAD_ERROR]: "モデルの読み込みに失敗しました",
-  [ErrorCode.MODEL_DOWNLOAD_ERROR]: "モデルのダウンロードに失敗しました",
-  [ErrorCode.TRANSCRIPTION_ERROR]: "文字起こし処理に失敗しました",
-  [ErrorCode.NETWORK_ERROR]: "ネットワークエラーが発生しました",
-  [ErrorCode.CANCELLED]: "処理がキャンセルされました",
-  [ErrorCode.UNKNOWN_ERROR]: "予期しないエラーが発生しました",
+const MESSAGE_KEY_MAP: Record<ErrorCodeType, DictionaryKey> = {
+  [ErrorCode.FILE_NOT_FOUND]: "errors.fileNotFound",
+  [ErrorCode.FILE_READ_ERROR]: "errors.fileReadError",
+  [ErrorCode.UNSUPPORTED_FORMAT]: "errors.unsupportedFormat",
+  [ErrorCode.MODEL_NOT_FOUND]: "errors.modelNotFound",
+  [ErrorCode.MODEL_LOAD_ERROR]: "errors.modelLoadError",
+  [ErrorCode.MODEL_DOWNLOAD_ERROR]: "errors.modelDownloadError",
+  [ErrorCode.TRANSCRIPTION_ERROR]: "errors.transcriptionError",
+  [ErrorCode.NETWORK_ERROR]: "errors.networkError",
+  [ErrorCode.CANCELLED]: "errors.processCancelled",
+  [ErrorCode.UNKNOWN_ERROR]: "errors.unknownError",
 };
 
 export function getErrorCategory(code: ErrorCodeType): ErrorCategory {
@@ -66,10 +67,6 @@ export function getErrorCategory(code: ErrorCodeType): ErrorCategory {
 
 export function isRecoverable(code: ErrorCodeType): boolean {
   return !NON_RECOVERABLE.has(code);
-}
-
-export function getErrorMessage(code: ErrorCodeType): string {
-  return MESSAGE_MAP[code];
 }
 
 function matchErrorCode(message: string): ErrorCodeType {
@@ -129,7 +126,7 @@ export function parseError(error: unknown): AppError {
   const result: AppError = {
     code,
     category: getErrorCategory(code),
-    message: getErrorMessage(code),
+    messageKey: MESSAGE_KEY_MAP[code],
     recoverable: isRecoverable(code),
   };
   if (message) {

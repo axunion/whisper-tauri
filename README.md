@@ -108,12 +108,15 @@ src/                       # SolidJS frontend
 
 src-tauri/                 # Rust backend
 └── src/
-    ├── whisper/           # Transcription with whisper-rs (+ Silero VAD)
-    ├── recording/         # Microphone capture (cpal) and sleep prevention
     ├── converter/         # Audio format conversion via FFmpeg
     ├── history/           # SQLite history database with full-text search
+    ├── notion/            # Notion API client for exporting pages
+    ├── recording/         # Microphone capture (cpal) and sleep prevention
     ├── text_processing/   # llama-server lifecycle and LLM inference
-    └── notion/            # Notion API client for exporting pages
+    ├── whisper/           # Transcription with whisper-rs (+ Silero VAD)
+    ├── download.rs        # Shared download helper
+    ├── paths.rs           # App data path helpers
+    └── settings.rs        # Shared settings-store helpers
 
 docs/                      # End-user and contributor documentation
 ```
@@ -126,7 +129,7 @@ docs/                      # End-user and contributor documentation
 
 ## License
 
-This project is licensed under the [MIT License](#) (see `package.json`).
+This project is licensed under the MIT License (see `package.json`).
 
 Bundled and downloaded third-party components retain their respective licenses:
 

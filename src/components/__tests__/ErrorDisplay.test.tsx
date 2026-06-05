@@ -3,18 +3,14 @@ import { describe, expect, it, vi } from "vitest";
 import { renderWithI18n } from "~/test/helpers";
 import type { AppError } from "~/types/errors";
 import { ErrorCode } from "~/types/errors";
-import {
-  getErrorCategory,
-  getErrorMessage,
-  isRecoverable,
-} from "../../lib/errors";
+import { getErrorCategory, isRecoverable } from "../../lib/errors";
 import { ErrorDisplay } from "../ErrorDisplay";
 
 function makeError(overrides?: Partial<AppError>): AppError {
   return {
     code: ErrorCode.FILE_NOT_FOUND,
     category: getErrorCategory(ErrorCode.FILE_NOT_FOUND),
-    message: getErrorMessage(ErrorCode.FILE_NOT_FOUND),
+    messageKey: "errors.fileNotFound",
     recoverable: isRecoverable(ErrorCode.FILE_NOT_FOUND),
     ...overrides,
   };
@@ -25,7 +21,7 @@ describe("ErrorDisplay", () => {
     it("should display error message", () => {
       const error = makeError();
       renderWithI18n(() => <ErrorDisplay error={error} onDismiss={() => {}} />);
-      expect(screen.getByText(error.message)).toBeInTheDocument();
+      expect(screen.getByText("ファイルが見つかりません")).toBeInTheDocument();
     });
 
     it("should display details when present", () => {

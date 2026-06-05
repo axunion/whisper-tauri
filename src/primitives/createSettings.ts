@@ -14,13 +14,23 @@ const { settings, setSettings, isLoaded, setIsLoaded } = createRoot(() => {
 });
 
 let loadPromise: Promise<void> | null = null;
+let loadedFromStore = false;
 
 async function load(): Promise<void> {
   if (isLoaded()) return;
   if (loadPromise) return loadPromise;
   loadPromise = (async () => {
-    const saved = await store.get<Partial<AppSettings>>("app_settings");
-    setSettings({ ...DEFAULT_SETTINGS, ...saved });
+    try {
+      const saved = await store.get<Partial<AppSettings>>("app_settings");
+      setSettings({ ...DEFAULT_SETTINGS, ...saved });
+      loadedFromStore = true;
+    } catch (e) {
+      console.warn(
+        "[createSettings] Failed to load settings, using defaults:",
+        e,
+      );
+      setSettings({ ...DEFAULT_SETTINGS });
+    }
     setIsLoaded(true);
   })();
   return loadPromise;
@@ -29,6 +39,7 @@ async function load(): Promise<void> {
 async function update(partial: Partial<AppSettings>): Promise<void> {
   const updated = { ...settings(), ...partial };
   setSettings(updated);
+  if (!loadedFromStore) return;
   await store.set("app_settings", updated);
   await store.save();
 }
@@ -71,4 +82,5 @@ export function _resetSettingsForTesting(
   setSettings({ ...DEFAULT_SETTINGS, ...overrides });
   setIsLoaded(overrides?.loaded ?? false);
   loadPromise = null;
+  loadedFromStore = false;
 }
