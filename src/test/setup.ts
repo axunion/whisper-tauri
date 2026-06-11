@@ -7,6 +7,11 @@ vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({
   readText: vi.fn(() => Promise.resolve("")),
 }));
 
+// Mock @tauri-apps/api/app
+vi.mock("@tauri-apps/api/app", () => ({
+  getVersion: vi.fn(() => Promise.resolve("0.1.0")),
+}));
+
 // Mock @tauri-apps/api/core
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),

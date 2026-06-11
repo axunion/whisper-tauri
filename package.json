@@ -5,7 +5,6 @@
   "private": true,
   "type": "module",
   "license": "MIT",
-  "packageManager": "pnpm@11.5.1",
   "devEngines": {
     "runtime": {
       "name": "node",
@@ -14,7 +13,7 @@
     },
     "packageManager": {
       "name": "pnpm",
-      "version": "11.5.1",
+      "version": "11.x",
       "onFail": "warn"
     }
   },

@@ -5,6 +5,7 @@ import {
   FfmpegManager,
   NotionIntegration,
   SettingsSelect,
+  UpdateCheck,
 } from "~/components/settings";
 import {
   LegacyTextModelList,
@@ -112,6 +113,10 @@ export default function Settings() {
               />
             }
           />
+
+          <Separator />
+
+          <UpdateCheck />
         </CardContent>
       </Card>
 

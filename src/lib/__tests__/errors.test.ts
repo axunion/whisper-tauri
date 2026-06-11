@@ -135,6 +135,12 @@ describe("parseError", () => {
     expect(result.details).toBe("HTTP error: 500");
   });
 
+  it("should parse 'Invalid response from GitHub API' to NETWORK_ERROR", () => {
+    const result = parseError("Invalid response from GitHub API");
+    expect(result.code).toBe(ErrorCode.NETWORK_ERROR);
+    expect(result.details).toBe("Invalid response from GitHub API");
+  });
+
   it("should parse 'FFmpeg not found:' prefix to FILE_NOT_FOUND", () => {
     const result = parseError("FFmpeg not found: not installed");
     expect(result.code).toBe(ErrorCode.FILE_NOT_FOUND);

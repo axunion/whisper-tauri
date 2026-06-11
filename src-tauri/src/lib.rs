@@ -20,6 +20,7 @@ pub mod paths;
 pub mod recording;
 pub mod settings;
 pub mod text_processing;
+pub mod update;
 pub mod whisper;
 
 /// Run the Tauri application.
@@ -97,6 +98,7 @@ pub fn run() {
             notion::commands::notion_set_settings,
             notion::commands::notion_test_connection,
             notion::commands::notion_create_page,
+            update::check_latest_version,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

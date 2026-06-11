@@ -112,6 +112,14 @@ export interface Dictionary {
     update: string;
     vadEnabled: string;
     vadDescription: string;
+    appUpdate: string;
+    appUpdateCurrentVersion: string;
+    appUpdateCheck: string;
+    appUpdateChecking: string;
+    appUpdateLatest: string;
+    appUpdateAvailable: string;
+    appUpdateOpenReleases: string;
+    appUpdateCheckFailed: string;
     notionIntegration: string;
     notionConnect: string;
     notionConnectAndTest: string;

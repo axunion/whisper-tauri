@@ -54,6 +54,18 @@ chmod +x whisper-tauri_<version>_amd64.AppImage
 
 If your distribution does not provide GLib/GTK/WebKit2GTK runtimes, install them via your package manager (Tauri 2 targets `webkit2gtk-4.1`).
 
+## Updating
+
+Updating is simply installing the new version over the old one — no uninstall needed.
+
+- **macOS**: download the new zip and run `Install.command` again. It replaces the app in `/Applications`.
+- **Windows**: run the new `Whisper Tauri_<version>_x64-setup.exe`. It installs over the existing version.
+- **Linux**: install the new `.deb` with `sudo dpkg -i`, or replace the old `.AppImage` file with the new one.
+
+Your settings, history, and downloaded models live in a separate data directory (see [Uninstall](#uninstall) for paths) and are never touched by an update.
+
+New versions are published on the [Releases](../../../releases) page. You can also check from within the app: **Settings** → **App Updates** → **Check for Updates**. To get notified automatically, use GitHub **Watch** → **Custom** → **Releases** on the repository, or subscribe to the [releases.atom](../../../releases.atom) feed with any RSS reader.
+
 ## Uninstall
 
 ### macOS
