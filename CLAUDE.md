@@ -84,7 +84,7 @@ TypeScript types (`src/types/`) and Rust types (`src-tauri/src/*/types.rs`) must
   - What changed (summary of major hunks)
   - Why (background, alternatives considered and rejected)
   - Items explicitly left out / follow-up tasks
-- If the commit includes a `docs/improvements.md` status update, mention it briefly at the end.
+- If the commit includes a `notes/improvements.md` status update, mention it briefly at the end.
 - Good past examples: `7a48eed` (saving + permission), `574f270` (legacy cleanup), `416803b` (model drop).
 
 ## Rules (`.claude/rules/`)

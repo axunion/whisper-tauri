@@ -72,10 +72,27 @@ Notes:
 | `VALID_MODEL_IDS` | Supported IDs — add/remove here |
 | `get_model_filename` | ID → GGUF filename mapping |
 | `get_default_model_base_url` | HuggingFace base URL (up to `/resolve/main`) |
-| `LEGACY_MODEL_IDS` / `legacy_model_filename` | Retired-model cleanup (see `docs/improvements.md` #8) |
+| `LEGACY_MODEL_IDS` / `legacy_model_filename` | Retired-model cleanup (see "Retiring a model" below) |
 
 Keep i18n in sync:
 - `src/i18n/dict-ja.ts` / `src/i18n/dict-en.ts` — `models.text.<id>` (`name` / `description`)
+
+#### Retiring a model
+
+When a newer model replaces an existing one, the "Legacy models" card in Settings activates automatically once `src-tauri/src/text_processing/models.rs` is updated:
+
+1. Remove the retired ID from `VALID_MODEL_IDS` (and its entry in `get_model_list()`)
+2. Add the same ID to `LEGACY_MODEL_IDS`
+3. Add the ID → GGUF filename mapping to `legacy_model_filename`:
+
+   ```rust
+   match model_id {
+       "gemma-4-e2b" => Some("google_gemma-4-E2B-it-Q4_K_M.gguf"),
+       _ => None,
+   }
+   ```
+
+Also remove the retired `models.text.<id>` i18n entries and replace any test fixtures referencing the ID.
 
 ---
 
