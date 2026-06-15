@@ -23,7 +23,7 @@
 |-----|-----|----------------------------------------|------|----------|------|
 | F1  | F   | ドキュメント体制の再構成               | 高   | 完了 (2026-06-11) | notes/ 分離 + docs/dev/ 新設 |
 | F2  | F   | 更新手順の整備 (install.md + 更新確認ボタン) | 中   | 完了 (2026-06-11) | 方針 (c) 確定済み: 手動 DL + Watch/RSS 案内 + 手動チェック |
-| F3  | F   | 開発用クリーンアップスクリプト         | 中   | 未着手   | dev-reset script。設計案は本文 |
+| F3  | F   | 開発用クリーンアップスクリプト         | 中   | 完了 (2026-06-12) | scripts/dev-reset.sh + pnpm dev:reset |
 | F4  | F   | テストの見直し                         | 高   | 未着手   | リファクタ前の安全網 |
 | F5  | F   | リファクタ最終パス                     | 中   | 未着手   | /refactor-fe + /refactor-be 一巡 |
 | F6  | F   | セキュリティ最終チェック               | 高   | 未着手   | F5 の後、コードが落ち着いてから |
@@ -93,11 +93,22 @@ notes/       ← 開発中の作業ドキュメント (日本語可、リリー�
 ~/Library/WebKit/com.whisper-tauri.desktop/                # WKWebView データ (localStorage 等)
 ```
 
-- 既定はフルリセット (上記 3 ディレクトリ削除) + 削除前に対象一覧を表示して確認プロンプト (`--yes` でスキップ)
-- 選択フラグ: `--models` (廃止モデル含む Whisper/LLM モデルのみ) / `--bin` (ffmpeg / llama-server) / `--settings` / `--history` / `--webview` / `--build` (`cargo clean`)
 - まずは macOS のみ対応 (開発機が macOS のため)。Win/Linux パスは必要になったら追加
 
-**Status:** 未着手
+**方針転換 (2026-06-15)**: フルリセット案は撤回。「UI で削除できるものはスクリプト対象外」に絞り込んだ。アプリ UI には現行モデル・LLM モデル・バイナリ・履歴・設定すべてに削除手段があるため、スクリプトの責務は **UI から手の届かない蓄積物 + ビルド/キャッシュ起因の不具合解消** のみとする。
+
+**実装メモ (2026-06-15)**: `scripts/dev-reset.sh` + `package.json` の `dev:reset` で実装。
+
+- 既定 (フラグなし) = 以下3つをまとめて削除:
+  - `--stale-models`: `models/` 内の廃止 Whisper モデル (`ggml-medium.bin` / `ggml-large-v3.bin`) のみ。現行モデルには触れない。whisper には text_processing のような legacy 機構がないためファイル名はスクリプト内にハードコード (廃止時に追記が必要)
+  - `--recordings`: `recordings/` (UI 操作なしで残る孤児 WAV)
+  - `--cache`: `~/Library/Caches/<id>` + `~/Library/WebKit/<id>`
+- `--build` (`cargo clean`) は再ビルドコストが大きいため既定に含めず opt-in
+- 撤回: フルリセット / `--models` / `--bin` / `--settings` / `--history` (すべて UI で削除可能)
+- 削除前に対象一覧を表示して確認プロンプト (`--yes` でスキップ)、存在しないパスは一覧から除外、対象ゼロなら "Nothing to do"
+- 堅牢化 (コードレビュー反映): bundle identifier は `tauri.conf.json` から `node -p` で読む (ドリフト防止) / アプリ起動中は pgrep ガードで実行拒否 / `HOME` 空ガード / 確認プロンプト EOF 時も "Aborted." を表示
+
+**Status:** 完了 (2026-06-12)
 
 ---
 

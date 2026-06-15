@@ -16,7 +16,7 @@ Follow this checklist top to bottom before each release.
 | **GGUF text models** | LLM weights (gemma-4-e2b / qwen3.5-4b) | HuggingFace | `src-tauri/src/text_processing/models.rs` |
 
 **Out of this flow:**
-- Whisper models (`ggml-*.bin`): user-downloaded via Settings, managed inside `whisper` module
+- Whisper models (`ggml-*.bin`): user-downloaded via Settings, managed inside `whisper` module. The `whisper` module has no legacy-cleanup mechanism (unlike GGUF text models), so when retiring a Whisper model also add its filename to `STALE_WHISPER_MODELS` in `scripts/dev-reset.sh` so the dev cleanup script can remove the orphaned file.
 - Silero VAD (`ggml-silero-v5.1.2.bin`): pinned, rarely updated
 
 ---

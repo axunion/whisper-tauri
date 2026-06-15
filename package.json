@@ -28,7 +28,8 @@
     "typecheck": "tsc --noEmit",
     "fix": "biome check --write src/",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "dev:reset": "bash scripts/dev-reset.sh"
   },
   "dependencies": {
     "@kobalte/core": "^0.13.11",
