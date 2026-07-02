@@ -13,7 +13,7 @@ You are a security reviewer for whisper-tauri, a local-first audio transcription
 
 This app is a desktop client that:
 - Stores a Notion API token in `settings.json` in plaintext (intentional — keyring was rejected; see project memory). Do **not** flag this as an issue; flag only **leaks** of that token outside its intended path (logs, error strings, IPC payloads).
-- Talks to two external services via `reqwest`: Notion API and a local `llama-server` child process.
+- Talks to external endpoints via `reqwest`: the Notion API, the GitHub Releases API (manual update check, `src-tauri/src/update.rs`), model/binary downloads (Hugging Face etc., via `src-tauri/src/download.rs`), and a local `llama-server` child process.
 - Persists transcript history in SQLite (`rusqlite`, bundled-full).
 - Reads/writes user-selected audio files via `tauri-plugin-fs` and direct IO in `src-tauri/src/converter`, `src-tauri/src/recording`.
 - Spawns ffmpeg and llama-server child processes.
@@ -60,7 +60,7 @@ Run through these in order. For each, grep the relevant patterns and read the ma
 
 ### 6. unwrap / expect Residue
 
-- `Cargo.toml` warns on these (`unwrap_used = "warn"`, `expect_used = "warn"`). Confirm production paths in `src-tauri/src/{whisper,converter,history,recording,text_processing,notion}` have zero hits, or that hits are inside `#[cfg(test)]` only.
+- `Cargo.toml` warns on these (`unwrap_used = "warn"`, `expect_used = "warn"`). Confirm production paths in `src-tauri/src/` (all domain modules plus the top-level `download.rs` / `update.rs` / `paths.rs` / `settings.rs`) have zero hits, or that hits are inside `#[cfg(test)]` only.
 - `grep -rn "\.unwrap()\|\.expect(" src-tauri/src` then exclude `#[cfg(test)]` blocks and `tests/` modules
 
 ### 7. Tauri Configuration

@@ -1,3 +1,12 @@
+---
+paths:
+  - "src-tauri/capabilities/**"
+  - "src/components/**"
+  - "src/pages/**"
+  - "src/primitives/**"
+  - "src/lib/**"
+---
+
 # Tauri 2 Plugin Permissions
 
 When calling `@tauri-apps/plugin-*` APIs from the frontend, always verify that the required commands are registered in `src-tauri/capabilities/default.json`.

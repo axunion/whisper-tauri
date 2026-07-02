@@ -9,7 +9,7 @@ user-invocable: true
 
 Creates a new backend module that follows the project's standard layout (see `CLAUDE.md` → Architecture). Use this when introducing a new domain area before adding any commands. For adding individual commands to an existing module, use `/add-command` instead.
 
-All user-facing output and confirmations are in **English**.
+Code, doc comments, and identifiers are in **English**; conversational output and confirmations follow the session language.
 
 ## Argument Parsing
 
@@ -24,8 +24,7 @@ If absent or malformed, prompt via `AskUserQuestion`.
 
 Abort with a clear message on any of:
 
-- `src-tauri/src/<module>/` already exists
-- `<module>` matches an existing module (`whisper`, `converter`, `history`, `recording`, `text_processing`, `notion`) — tell the user to use `/add-command` instead
+- `src-tauri/src/<module>/` already exists — the module is already there; tell the user to use `/add-command` instead
 - `src/types/<module>.ts` already exists
 
 ## Phase 1 — Read the Reference Module
@@ -83,7 +82,7 @@ Next steps:
 
 ## Output Format
 
-Phase headers in English. End with:
+Structure the report with a header per phase. End with:
 
 ```
 ## Module Added

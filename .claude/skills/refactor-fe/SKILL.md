@@ -56,10 +56,5 @@ Refactor the file or target specified by `$ARGUMENTS` against project convention
 
 1. Read the target file(s) and identify violations
 2. Apply refactoring
-3. Verify:
-
-```bash
-pnpm check && pnpm test:run
-```
-
+3. Verify by running `/verify fe` — the check commands are defined there (single source of truth); do not re-implement them inline
 4. If anything fails, fix and repeat until everything passes.

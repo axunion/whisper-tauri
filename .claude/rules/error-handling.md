@@ -1,6 +1,8 @@
 ---
 paths:
   - "src-tauri/src/*/error.rs"
+  - "src-tauri/src/download.rs"
+  - "src-tauri/src/update.rs"
   - "src/lib/errors.ts"
   - "src/types/errors.ts"
 ---
@@ -8,6 +10,8 @@ paths:
 # Error Definition & Sync Rules
 
 Rust-side errors are stringified before crossing into the frontend. The frontend matches by prefix to convert them into `ErrorCode` values, so both sides must stay in sync.
+
+Top-level single-file modules (`download.rs`, `update.rs`) define their error enums inline rather than in a dedicated `error.rs` — the same rules apply there (e.g. `UpdateError` reuses the existing `"HTTP error:"` prefix).
 
 ## Rust side (`src-tauri/src/*/error.rs`)
 

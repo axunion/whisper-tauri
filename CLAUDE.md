@@ -29,6 +29,7 @@ pnpm tauri build                # Production build
 /add-command <mod> <cmd>        # Add a Tauri command (FE + BE in one pass)
 /add-module <name>              # Scaffold a new backend module
 /i18n                           # i18n quality audit
+/smoke [skip-build]             # Pre-release smoke test on a real build
 /release [version]              # Release driver (tag push → CI monitoring)
 ```
 

@@ -9,7 +9,7 @@ user-invocable: true
 
 Releases are fully automated by `.github/workflows/release.yml`, triggered by pushing a `v*` tag. This skill handles the **local** side: keeping the three version manifests in sync, validating preflight, composing release notes from git history, creating and pushing the tag, and watching the CI run.
 
-All user-facing output and confirmations are in **English**.
+Git artifacts (commit messages, tags, release notes) are in **English**; conversational reports and confirmations follow the session language.
 
 ## Argument Parsing
 
@@ -29,7 +29,7 @@ Run all checks; abort on any failure.
 | Tag does not exist | `git rev-parse "v$VERSION"` → must fail |
 | `gh` authenticated | `gh auth status` |
 
-If any check fails, report in Japanese and stop. Do not attempt to "fix" by stashing or resetting.
+If any check fails, report and stop. Do not attempt to "fix" by stashing or resetting.
 
 ## Phase 1 — Version Consistency Check
 
@@ -56,6 +56,8 @@ If the requested version differs from the current version:
 
 Recommend running `/verify all --with-build` before tagging — the `--with-build` flag runs `pnpm build`, which CI also runs and which catches Vite/asset issues `tsc` misses. Ask the user whether to invoke it now or whether they have already done so. Do not proceed until they confirm.
 
+When the release contains user-facing changes (UI, file saves, permissions, recording, integrations), also recommend `/smoke` — a real-build smoke-test checklist that catches what `tauri dev` cannot reproduce (capabilities silent failures, Info.plist-driven behavior). Ask whether it has been run for this release; a skipped smoke test is acceptable only with explicit user confirmation.
+
 This is intentionally manual — the build step is slow and the user may have just run it.
 
 ## Phase 4 — Release Notes Draft
@@ -67,7 +69,7 @@ LAST_TAG=$(git describe --tags --abbrev=0)
 git log "$LAST_TAG"..HEAD --pretty=format:"- %s" --no-merges
 ```
 
-Group commits by conventional-commit prefix when possible (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`). Present the draft to the user for review.
+Commit titles follow the project convention (one-line imperative English, **no** Conventional Commits prefixes — see `CLAUDE.md` → Git Commit Style), so infer each commit's change type from its content and group the notes under headings such as Features / Fixes / Improvements / Internal. Present the draft to the user for review.
 
 The CI workflow (`release.yml`) writes a fixed installation guide as the release body, so these notes are for the user to paste into the GitHub draft release manually after CI completes. Save them where the user can find them — print to terminal is sufficient.
 

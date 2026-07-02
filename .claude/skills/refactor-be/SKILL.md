@@ -55,10 +55,5 @@ Visibility is API surface. Anything `pub` is something a future change has to pr
 
 1. Read the target file(s) and identify violations
 2. Apply refactoring
-3. Verify in `src-tauri/`:
-
-```bash
-cd src-tauri && cargo fmt --check && cargo clippy -- -D warnings && cargo test
-```
-
+3. Verify by running `/verify be` — the check commands are defined there (single source of truth); do not re-implement them inline
 4. If anything fails, fix and repeat until everything passes.

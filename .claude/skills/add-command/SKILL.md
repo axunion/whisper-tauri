@@ -9,11 +9,11 @@ user-invocable: true
 
 Add a command end-to-end (Rust backend → TypeScript frontend) for the module and command name in `$ARGUMENTS`.
 
-All user-facing output and confirmations are in **English**.
+Code, doc comments, and identifiers are in **English**; conversational output and confirmations follow the session language.
 
 ## Argument Parsing
 
-- **module**: an existing module (`whisper`, `converter`, `history`, `recording`, `text_processing`, `notion`)
+- **module**: an existing domain module — validate by enumerating the directories under `src-tauri/src/`, not from a memorized list (modules get added over time)
 - **command name**: snake_case (e.g. `get_status`, `save_entry`)
 - **description** (optional)
 
