@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-> **Sync note:** `AGENTS.md` is a mirror of this file for other AI tools (Codex CLI, Cursor, etc.). When you edit this file, apply the identical change to `AGENTS.md` in the same commit.
+> **Sync note:** This file is a mirror of `CLAUDE.md`. When you edit this file, apply the identical change to `CLAUDE.md` in the same commit.
 
 Behavioral rules first, project reference below. Bias toward caution over speed; on trivial tasks, use judgment.
 
