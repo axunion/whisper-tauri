@@ -100,8 +100,7 @@ pub async fn history_search(
     params: HistorySearchParams,
 ) -> Result<Vec<HistoryMeta>, String> {
     let db_path = get_db_path(&app)?;
-    let conn =
-        rusqlite::Connection::open(&db_path).map_err(|e| HistoryError::Database(e.to_string()))?;
+    let conn = db::open_connection(&db_path)?;
     super::search::search_entries(&conn, &params).map_err(Into::into)
 }
 

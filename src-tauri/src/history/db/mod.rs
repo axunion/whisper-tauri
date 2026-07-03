@@ -24,6 +24,22 @@ pub fn db_path(app_data_dir: &Path) -> PathBuf {
     app_data_dir.join("history.db")
 }
 
+/// Opens a connection with foreign-key enforcement enabled.
+///
+/// The `foreign_keys` pragma is connection-scoped and stock `SQLite`
+/// defaults it to OFF, so every connection must opt in for the FK constraint
+/// (and `ON DELETE CASCADE` on `ai_content`) to be enforced. Always open
+/// history-db connections through this helper.
+///
+/// # Errors
+///
+/// Returns `HistoryError::Database` if the database cannot be opened.
+pub fn open_connection(db_path: &Path) -> Result<Connection, HistoryError> {
+    let conn = Connection::open(db_path)?;
+    conn.execute_batch("PRAGMA foreign_keys = ON;")?;
+    Ok(conn)
+}
+
 fn add_column_if_missing(
     conn: &Connection,
     table: &str,
@@ -53,7 +69,7 @@ fn add_column_if_missing(
 ///
 /// Returns `HistoryError::Database` if the database cannot be opened or initialized.
 pub fn init_db(db_path: &Path) -> Result<(), HistoryError> {
-    let conn = Connection::open(db_path)?;
+    let conn = open_connection(db_path)?;
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS history (
             id TEXT PRIMARY KEY,
@@ -77,7 +93,6 @@ pub fn init_db(db_path: &Path) -> Result<(), HistoryError> {
         super::search::rebuild_fts_index(&conn)?;
     }
 
-    conn.execute_batch("PRAGMA foreign_keys = ON;")?;
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS ai_content (
             id TEXT PRIMARY KEY,
@@ -99,7 +114,7 @@ pub fn init_db(db_path: &Path) -> Result<(), HistoryError> {
 #[cfg(test)]
 pub(crate) mod test_helpers {
     use super::init_db;
-    use crate::history::types::{HistorySaveParams, HistorySegment};
+    use crate::history::types::{AiContentSaveParams, HistorySaveParams, HistorySegment};
     use std::path::PathBuf;
     use tempfile::TempDir;
 
@@ -130,6 +145,16 @@ pub(crate) mod test_helpers {
                 },
             ],
             vad_enabled: Some(true),
+        }
+    }
+
+    pub fn sample_ai_params(history_id: &str) -> AiContentSaveParams {
+        AiContentSaveParams {
+            history_id: history_id.to_string(),
+            content_type: "summary".to_string(),
+            text: "Summary text".to_string(),
+            options_json: None,
+            text_model_id: "gemma-4-e2b".to_string(),
         }
     }
 }

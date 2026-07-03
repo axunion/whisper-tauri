@@ -1,8 +1,6 @@
 use std::fmt::Write;
 use std::path::Path;
 
-use rusqlite::Connection;
-
 use super::super::error::HistoryError;
 use super::super::search;
 use super::super::types::{
@@ -51,7 +49,7 @@ pub fn save_entry(db_path: &Path, params: &HistorySaveParams) -> Result<String, 
         .map_err(|e| HistoryError::Serialization(e.to_string()))?;
     let segments_compressed = compress_text(&segments_json)?;
 
-    let conn = Connection::open(db_path)?;
+    let conn = super::open_connection(db_path)?;
 
     let tx = conn.unchecked_transaction()?;
 
@@ -87,7 +85,7 @@ pub fn list_entries(
     db_path: &Path,
     filter: &HistoryFilter,
 ) -> Result<Vec<HistoryMeta>, HistoryError> {
-    let conn = Connection::open(db_path)?;
+    let conn = super::open_connection(db_path)?;
 
     let mut sql =
         String::from("SELECT id, created_at, file_name, language, model_id, duration, text_compressed, vad_enabled FROM history");
@@ -139,7 +137,7 @@ pub fn list_entries(
 /// Returns `HistoryError::NotFound` if no entry with the given ID exists.
 /// Returns `HistoryError::Database` if the query fails.
 pub fn get_entry(db_path: &Path, id: &str) -> Result<HistoryEntry, HistoryError> {
-    let conn = Connection::open(db_path)?;
+    let conn = super::open_connection(db_path)?;
 
     let mut stmt = conn.prepare(
         "SELECT id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed, vad_enabled
@@ -204,7 +202,7 @@ pub fn delete_entries(db_path: &Path, ids: &[String]) -> Result<u64, HistoryErro
         return Ok(0);
     }
 
-    let conn = Connection::open(db_path)?;
+    let conn = super::open_connection(db_path)?;
 
     let tx = conn.unchecked_transaction()?;
 
@@ -236,7 +234,7 @@ pub fn delete_entries(db_path: &Path, ids: &[String]) -> Result<u64, HistoryErro
 ///
 /// Returns `HistoryError::Database` if the delete operation fails.
 pub fn delete_all_entries(db_path: &Path) -> Result<u64, HistoryError> {
-    let conn = Connection::open(db_path)?;
+    let conn = super::open_connection(db_path)?;
 
     let tx = conn.unchecked_transaction()?;
 
@@ -256,7 +254,7 @@ pub fn delete_all_entries(db_path: &Path) -> Result<u64, HistoryError> {
 /// Returns `HistoryError::NotFound` if no entry with the given ID exists.
 /// Returns `HistoryError::Database` if the update fails.
 pub fn rename_entry(db_path: &Path, id: &str, new_file_name: &str) -> Result<(), HistoryError> {
-    let conn = Connection::open(db_path)?;
+    let conn = super::open_connection(db_path)?;
     let updated = conn.execute(
         "UPDATE history SET file_name = ?2 WHERE id = ?1",
         rusqlite::params![id, new_file_name],
@@ -269,8 +267,11 @@ pub fn rename_entry(db_path: &Path, id: &str, new_file_name: &str) -> Result<(),
 
 #[cfg(test)]
 mod tests {
+    use rusqlite::Connection;
+
     use super::*;
-    use crate::history::db::test_helpers::{sample_params, setup_db};
+    use crate::history::db::ai_content::{get_all_ai_content, save_ai_content};
+    use crate::history::db::test_helpers::{sample_ai_params, sample_params, setup_db};
     use crate::history::types::HistorySearchParams;
 
     #[test]
@@ -382,6 +383,40 @@ mod tests {
         let (_dir, path) = setup_db();
         let deleted = delete_entries(&path, &[]).expect("Failed to delete");
         assert_eq!(deleted, 0);
+    }
+
+    #[test]
+    fn delete_entries_cascades_ai_content() {
+        let (_dir, path) = setup_db();
+        let id1 = save_entry(&path, &sample_params()).expect("Failed to save");
+        let id2 = save_entry(&path, &sample_params()).expect("Failed to save");
+        save_ai_content(&path, &sample_ai_params(&id1)).expect("Failed to save ai content");
+        save_ai_content(&path, &sample_ai_params(&id2)).expect("Failed to save ai content");
+
+        delete_entries(&path, &[id1.clone(), id2.clone()]).expect("Failed to delete");
+
+        for id in [&id1, &id2] {
+            let remaining = get_all_ai_content(&path, id).expect("Failed to get ai content");
+            assert!(
+                remaining.is_empty(),
+                "ai_content rows must cascade-delete with their history entry"
+            );
+        }
+    }
+
+    #[test]
+    fn delete_all_entries_cascades_ai_content() {
+        let (_dir, path) = setup_db();
+        let id = save_entry(&path, &sample_params()).expect("Failed to save");
+        save_ai_content(&path, &sample_ai_params(&id)).expect("Failed to save ai content");
+
+        delete_all_entries(&path).expect("Failed to delete all");
+
+        let remaining = get_all_ai_content(&path, &id).expect("Failed to get ai content");
+        assert!(
+            remaining.is_empty(),
+            "ai_content rows must cascade-delete when all history is deleted"
+        );
     }
 
     #[test]

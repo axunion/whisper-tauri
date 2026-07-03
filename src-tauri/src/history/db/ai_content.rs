@@ -1,7 +1,5 @@
 use std::path::Path;
 
-use rusqlite::Connection;
-
 use super::super::error::HistoryError;
 use super::super::types::{AiContent, AiContentSaveParams};
 use super::compression::compress_text;
@@ -21,10 +19,7 @@ pub fn save_ai_content(
     let created_at = chrono_now();
     let text_compressed = compress_text(&params.text)?;
 
-    let conn = Connection::open(db_path)?;
-    // PRAGMA is connection-scoped; a fresh connection doesn't inherit init_db's setting,
-    // and we rely on the FK constraint to reject inserts with a missing history_id.
-    conn.execute_batch("PRAGMA foreign_keys = ON;")?;
+    let conn = super::open_connection(db_path)?;
 
     conn.execute(
         "INSERT OR REPLACE INTO ai_content (id, history_id, content_type, created_at, text_compressed, options_json, text_model_id)
@@ -53,7 +48,7 @@ pub fn get_ai_content(
     history_id: &str,
     content_type: &str,
 ) -> Result<Option<AiContent>, HistoryError> {
-    let conn = Connection::open(db_path)?;
+    let conn = super::open_connection(db_path)?;
 
     let mut stmt = conn.prepare(
         "SELECT id, history_id, content_type, created_at, text_compressed, options_json, text_model_id
@@ -81,7 +76,7 @@ pub fn get_all_ai_content(
     db_path: &Path,
     history_id: &str,
 ) -> Result<Vec<AiContent>, HistoryError> {
-    let conn = Connection::open(db_path)?;
+    let conn = super::open_connection(db_path)?;
 
     let mut stmt = conn.prepare(
         "SELECT id, history_id, content_type, created_at, text_compressed, options_json, text_model_id
@@ -186,33 +181,5 @@ mod tests {
 
         let all = get_all_ai_content(&path, &entry_id).expect("get all");
         assert_eq!(all.len(), 3);
-    }
-
-    #[test]
-    fn delete_history_cascades_ai_content() {
-        let (_dir, path) = setup_db();
-        let entry_id = save_entry(&path, &sample_params()).expect("save entry");
-
-        let params = AiContentSaveParams {
-            history_id: entry_id.clone(),
-            content_type: "summary".to_string(),
-            text: "Summary text".to_string(),
-            options_json: None,
-            text_model_id: "gemma-4-e2b".to_string(),
-        };
-        save_ai_content(&path, &params).expect("save ai");
-
-        let conn = Connection::open(&path).expect("open");
-        conn.execute_batch("PRAGMA foreign_keys = ON;")
-            .expect("pragma");
-        conn.execute(
-            "DELETE FROM history WHERE id = ?1",
-            rusqlite::params![entry_id],
-        )
-        .expect("delete");
-        drop(conn);
-
-        let content = get_ai_content(&path, &entry_id, "summary").expect("get");
-        assert!(content.is_none());
     }
 }

@@ -35,7 +35,7 @@ CREATE INDEX idx_ai_content_history ON ai_content(history_id);
 ```
 
 - 本文とセグメントは **gzip 圧縮 BLOB** (`compress_text` / `decompress_text`、flate2)
-- **既知の不整合**: スキーマは `ON DELETE CASCADE` を宣言し `init_db` は `PRAGMA foreign_keys = ON` を実行するが、SQLite のこの pragma は**コネクション単位**で、`delete_entries` / `delete_all_entries` (`db/entries.rs`) は pragma なしの新規コネクションを開くため **CASCADE は現状発火しない** — 履歴削除で `ai_content` の孤児行が残り得る。コード側の修正候補 (全コネクションで pragma を有効化) として F4/F6 で対応を検討する
+- FK 制約と CASCADE 削除 (履歴削除で `ai_content` も消える) は、**すべてのコネクションを `db/mod.rs::open_connection` ヘルパー経由で開き、そこで `PRAGMA foreign_keys = ON` を設定する**ことで保証する。SQLite のこの pragma はコネクション単位で標準デフォルトは OFF のため、素の `Connection::open` を直接使ってはいけない (rusqlite `bundled-full` の同梱 SQLite はデフォルト ON だが、ビルド構成に依存させない)。本番削除経路の CASCADE は `entries.rs` の `delete_entries_cascades_ai_content` / `delete_all_entries_cascades_ai_content` テストが回帰ガードする
 
 ## マイグレーション
 
