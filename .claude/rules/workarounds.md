@@ -24,6 +24,14 @@ params.set_abort_callback_safe(abort_fn);
 
 **Removal condition**: drop once whisper-rs ships a fixed release.
 
+## whisper.cpp Built-in VAD Ignores `vad_params`
+
+The built-in VAD integration (`enable_vad(true)` + `set_vad_params` on `FullParams`) silently ignores the configured `vad_params` — setting threshold to 0.01 produced results identical to the default (verified experimentally, 2026-05).
+
+**Workaround** (`src-tauri/src/whisper/process.rs`): run Silero VAD standalone via `WhisperVadContext` in `preprocess_with_vad()` — extract speech segments, concatenate, feed the result to whisper, and map timestamps back to the original timeline via `TimestampMap`. Do not "simplify" this back to the built-in integration: it looks cleaner but regresses to having no effective VAD control. Parameter values and their rationale live in `tuning.md` (Current Tuning Examples).
+
+**Removal condition**: whisper.cpp / whisper-rs honors `vad_params` in the built-in integration path.
+
 ## CI Build: GGML_NATIVE and SOURCE_DATE_EPOCH
 
 On CI runners, `GGML_NATIVE=ON` (the default) enables newer instruction sets and produces compile errors.

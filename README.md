@@ -18,6 +18,8 @@ Whisper Tauri is designed around an **offline-first** principle: there is no tel
 
 After initial setup, the app runs fully offline. The optional **Notion export** is the only feature that contacts an external service — and it only does so when the user explicitly clicks "Send to Notion", using the user's own integration token stored locally on the device.
 
+See **[docs/privacy.md](docs/privacy.md)** for the complete list of network endpoints and the data-handling policy.
+
 ## Tech Stack
 
 ### Frontend
@@ -45,7 +47,7 @@ These components are downloaded into the app's data directory on first use, not 
 | Component | Source | Purpose |
 | --- | --- | --- |
 | **FFmpeg** (LGPL) | [evermeet.cx](https://evermeet.cx/ffmpeg/) (macOS), [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds) (Windows / Linux) | Decoding non-WAV inputs and resampling to Whisper's 16 kHz mono PCM format |
-| **`llama-server`** (MIT) | [`ggml-org/llama.cpp` releases](https://github.com/ggml-org/llama.cpp/releases) — pinned at `b8672` | Local LLM inference HTTP server, managed as a child process with idle timeout |
+| **`llama-server`** (MIT) | [`ggml-org/llama.cpp` releases](https://github.com/ggml-org/llama.cpp/releases) — pinned at `b8672` | Local LLM inference HTTP server, managed as a child process (started on demand, stopped on app exit) |
 | **Whisper models** (MIT) | [`ggerganov/whisper.cpp` on Hugging Face](https://huggingface.co/ggerganov/whisper.cpp) | GGML format (`.bin`), user-selectable size |
 | **Silero VAD** | [`ggml-org/whisper-vad` on Hugging Face](https://huggingface.co/ggml-org/whisper-vad) | Voice activity detection for skipping silence |
 | **LLM models** | [Hugging Face GGUF mirrors](https://huggingface.co/) | User-selectable, see below |
@@ -68,7 +70,7 @@ Apple Silicon Metal acceleration delivers roughly 10× the throughput of x86_64 
 | `gemma-4-e2b` | ~3.5 GB | Google Gemma — Apache 2.0, 128K context, CJK-optimized |
 | `qwen3.5-4b` | ~2.7 GB | Alibaba Qwen — 201 languages, strong Japanese benchmarks |
 
-Both are distributed in `Q4_K_M` GGUF quantization. `llama-server` is started on demand and shut down after an idle period.
+Both are distributed in `Q4_K_M` GGUF quantization. `llama-server` is started on demand and shut down when the app exits.
 
 ## Installation
 
@@ -118,7 +120,8 @@ src-tauri/                 # Rust backend
     ├── paths.rs           # App data path helpers
     └── settings.rs        # Shared settings-store helpers
 
-docs/                      # End-user and contributor documentation
+docs/                      # Public documentation (English, GitHub Pages source)
+spec/                      # Internal development & specification docs (Japanese)
 ```
 
 ## Platform Support

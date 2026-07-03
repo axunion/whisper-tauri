@@ -37,7 +37,7 @@ WEBKIT_DIR="${HOME}/Library/WebKit/${APP_ID}"
 
 # Retired Whisper model files the app UI cannot delete (whisper has no
 # legacy-cleanup mechanism, unlike text_processing). Append here when a
-# Whisper model is retired — see docs/dev/binary-updates.md.
+# Whisper model is retired — see spec/binary-updates.md.
 STALE_WHISPER_MODELS=(
   "ggml-medium.bin"
   "ggml-large-v3.bin"

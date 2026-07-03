@@ -18,7 +18,9 @@ Whisper Tauri — a local audio transcription desktop app. Whisper models run en
 ## Language
 
 Write in **English only**: in-code comments, console output, error and log messages, and AI-readable config files (CLAUDE.md, AGENT.md, etc.).
-Exception: user-facing UI strings go through the i18n dictionaries (ja/en) — never hardcode them (see `.claude/rules/i18n.md`).
+Exceptions:
+- User-facing UI strings go through the i18n dictionaries (ja/en) — never hardcode them (see `.claude/rules/i18n.md`).
+- Documentation trees: `docs/` is the public tree and English-only (future GitHub Pages source); `spec/` holds internal dev/spec documentation and is written in **Japanese**.
 
 ## Testing
 
@@ -110,7 +112,7 @@ Domain modules follow a shared structure: `commands.rs` / `types.rs` / `error.rs
   - Why (background, alternatives considered and rejected)
   - Items explicitly left out / follow-up tasks
 - For simpler commits, a short body is enough: a one-sentence Why (only when the motivation is not evident from the diff) plus a bullet per distinct change (only for 2+ distinct changes).
-- If the commit includes a `notes/improvements.md` status update, mention it briefly at the end.
+- If the commit includes a `spec/improvements.md` status update, mention it briefly at the end.
 - Good past examples: `7a48eed` (saving + permission), `574f270` (legacy cleanup), `416803b` (model drop).
 - Never commit secrets (`*.key`, `*.pem`, `credentials*`).
 - Never use `--no-verify` or `--amend`; always create a new commit.
