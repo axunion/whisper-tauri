@@ -8,12 +8,12 @@
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": "24.16.0",
+      "version": "^24",
       "onFail": "warn"
     },
     "packageManager": {
       "name": "pnpm",
-      "version": "11.x",
+      "version": "^11",
       "onFail": "warn"
     }
   },
