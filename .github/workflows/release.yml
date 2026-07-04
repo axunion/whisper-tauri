@@ -100,8 +100,9 @@ jobs:
             ### macOS (Apple Silicon)
             1. Download `Whisper-Tauri-aarch64.zip`
             2. Double-click to extract — a folder "Whisper Tauri Installer" appears
-            3. Open the folder and double-click `Install.command`
-            4. Confirm in Terminal — the app installs to `/Applications` and launches
+            3. Double-click `Install.command` — macOS warns it could not verify the file; click **Done**
+            4. System Settings → Privacy & Security → **Open Anyway**, then authenticate
+            5. Terminal installs the app to `/Applications` and launches it (no warning afterwards)
 
             ### Windows
             Download the `.exe` installer from the assets below and follow the prompts. SmartScreen warning is expected for unsigned builds.

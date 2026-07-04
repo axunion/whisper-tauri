@@ -4,23 +4,27 @@
 
 1. Download the latest `Whisper-Tauri-aarch64.zip` from the [Releases](../../../releases) page.
 2. Double-click the zip to extract — a `Whisper Tauri Installer` folder appears.
-3. Open the folder and double-click `Install.command`.
-4. When prompted "Are you sure you want to open `Install.command`?", click **Open**.
-5. A Terminal window opens, runs the installer, and Whisper Tauri launches automatically from `/Applications`.
+3. Open the folder and double-click `Install.command`. macOS shows a warning that it could not verify the file — click **Done** (not "Move to Trash").
+4. Open **System Settings** → **Privacy & Security**, scroll to the bottom, find "`Install.command` was blocked...", and click **Open Anyway**.
+5. Authenticate with password or Touch ID, then confirm **Open**.
+6. A Terminal window opens, runs the installer, and Whisper Tauri launches automatically from `/Applications`. The installed app never shows this warning again.
 
 You may delete the downloaded zip and the extracted folder after installation completes.
 
-### If `Install.command` Is Blocked
+### Why This Warning Appears
 
-macOS may block the script depending on security settings:
+Pre-release builds are not signed with an Apple Developer certificate, so macOS cannot verify the publisher and blocks the first launch. This is expected and does not indicate a problem with the app itself. The approval applies to the downloaded copy of `Install.command`, so installing a future update (a new download) will ask for the same one-time approval again.
 
-1. Open **System Settings** → **Privacy & Security**.
-2. Near the bottom, find "`Install.command` was blocked..." and click **Open Anyway**.
-3. Authenticate with password or Touch ID.
+### On macOS 14 Sonoma and Earlier
 
-### About `.app` Direct-Launch Warnings
+The approval is simpler on older versions:
 
-If you launch the `.app` directly without `Install.command`, macOS Gatekeeper shows a "cannot be opened because it is damaged" warning. This is normal for unsigned apps. Always use `Install.command`.
+- **macOS 13–14**: Control-click (right-click) `Install.command`, choose **Open**, then click **Open** in the dialog. This shortcut was removed in macOS 15 Sequoia.
+- **macOS 12 and earlier**: the equivalent settings pane is **System Preferences** → **Security & Privacy** → **General**, with the same **Open Anyway** button.
+
+### If You Launch the `.app` Directly
+
+`Install.command` is the recommended path. If you instead copy `Whisper Tauri.app` somewhere and launch it directly, macOS shows the same "could not verify" warning — approve it the same way via **System Settings** → **Privacy & Security** → **Open Anyway**.
 
 ## Windows
 
@@ -58,7 +62,7 @@ If your distribution does not provide GLib/GTK/WebKit2GTK runtimes, install them
 
 Updating is simply installing the new version over the old one — no uninstall needed.
 
-- **macOS**: download the new zip and run `Install.command` again. It replaces the app in `/Applications`.
+- **macOS**: download the new zip and run `Install.command` again. It replaces the app in `/Applications`. macOS asks you to approve the newly downloaded script once, with the same steps as the first install.
 - **Windows**: run the new `Whisper Tauri_<version>_x64-setup.exe`. It installs over the existing version.
 - **Linux**: install the new `.deb` with `sudo dpkg -i`, or replace the old `.AppImage` file with the new one.
 

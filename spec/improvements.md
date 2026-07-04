@@ -220,6 +220,10 @@ docs/
 - **release.yml の `if` 分岐 2 回は仕様上正しい形**: tauri-action は `APPLE_CERTIFICATE` 等 env var の存在 (空文字含む) で codesign を自動起動するため統合不可 (f4fee36 で revert 済み)
 - **install.md のファイル名プレースホルダー**: 初リリース時に実 artifact 名を見て微調整する余地あり
 - **macOS は Install.command zip 経路のみ**: `.dmg` は署名なしダブル経路で UX が分散するため意図的に作らない
+- **macOS Gatekeeper 事情 (2026-07 調査)**: macOS 15 Sequoia で「右クリック→開く」回避が廃止され、未署名物の初回起動は全ユーザーが「システム設定 → プライバシーとセキュリティ → このまま開く」経路を通る (macOS 26 Tahoe でさらに強化)。`ditto --noqtn` の quarantine 除去は引き続き有効で、Install.command 方式は未署名配布のほぼベストプラクティス。Homebrew は未署名 cask を 2026-09 に公式 Tap から排除予定のため配布経路として不採用
+- **ad-hoc 署名 (`signingIdentity: "-"`)**: .app 直接起動時に「壊れています」(復旧不可) ではなく「検証できませんでした」(このまま開くで復旧可) になる保険として設定 (Tauri 公式推奨)。config ベースで tauri CLI 自身が `codesign -s -` するため、上記 tauri-action の APPLE_* env var 問題とは経路が別
+- **hardened runtime とマイク entitlement**: tauri の codesign は hardened runtime をデフォルト有効にするため、署名導入と同時に `Entitlements.plist` (`com.apple.security.device.audio-input`) を追加した。これがないと録音 (cpal) がマイクにアクセスできない。署名変更後は /smoke で録音の実機確認を必ず行うこと
+- **正式リリース時の完全解**: Apple Developer Program ($99/年) + Developer ID 署名 + notarization のみが警告を完全に消せる。加入すれば Homebrew cask 配布も解禁される。正式リリース時に加入を検討すること
 
 ## 将来候補バックログ (要望が出たら起票)
 
