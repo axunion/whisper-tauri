@@ -24,9 +24,9 @@
 | F1  | F   | ドキュメント体制の再構成               | 高   | 完了 (2026-06-11) | 2026-07-03 に spec/ へ再編 (F1 追記参照) |
 | F2  | F   | 更新手順の整備 (install.md + 更新確認ボタン) | 中   | 完了 (2026-06-11) | 方針 (c) 確定済み: 手動 DL + Watch/RSS 案内 + 手動チェック |
 | F3  | F   | 開発用クリーンアップスクリプト         | 中   | 完了 (2026-06-15) | scripts/dev-reset.sh + pnpm dev:reset |
-| F4  | F   | テストの見直し                         | 高   | 未着手   | リファクタ前の安全網 |
-| F5  | F   | リファクタ最終パス                     | 中   | 未着手   | /refactor-fe + /refactor-be 一巡 |
-| F6  | F   | セキュリティ最終チェック               | 高   | 未着手   | F5 の後、コードが落ち着いてから |
+| F4  | F   | テストの見直し                         | 高   | 完了 (2026-07-07) | リファクタ前の安全網 |
+| F5  | F   | リファクタ最終パス                     | 中   | 完了 (2026-07-07) | 手動リファクタで実施済み |
+| F6  | F   | セキュリティ最終チェック               | 高   | 完了 (2026-07-07) | 先行して実施済み |
 | F7  | F   | 品質監査バンドル (i18n / a11y / 型同期) | 中   | 未着手   | F5/F6 と並行可 |
 | F8  | F   | ライセンス・クレジット整備             | 高   | 未着手   | ffmpeg LGPL 表記など。docs/ の 1 ページに |
 | F9  | F   | ユーザードキュメント執筆 + Pages 公開  | 高   | 未着手   | 機能フリーズ後に着手 |
@@ -131,7 +131,16 @@ spec/        ← 恒久的な開発・仕様ドキュメント (日本語)
 
 **案**: カバレッジの穴の棚卸し — 特に IPC 境界、error 変換 (`errors.ts::PREFIX_MAP` と Rust error prefix の同期)、`lib/notion.ts` 等の純関数。壊れやすい / 実装詳細に依存したテストの修正もここで。
 
-**Status:** 未着手
+**実装メモ (2026-07-07)**: 4 本柱で実施。
+
+1. **PREFIX_MAP 同期テスト新設** (`src/lib/__tests__/errorPrefixSync.test.ts`): Rust ソースの `#[error("...")]` を `import.meta.glob` で全抽出し PREFIX_MAP と双方向照合。棚卸しで発覚した既存ドリフト 11 prefix (recording 系全滅・notion 設定系・`Path error:` 等) を既存 ErrorCode の範囲で補完。意味の合う既存コードが無い録音系などは意図的 UNKNOWN 割当として明示 (details は表示される)。録音系専用 ErrorCode + i18n 文言の新設はバックログ (下記) へ
+2. **未テスト大物**: `createTextProcessing.test.ts` (36 tests) / `notion/types.rs` serde テスト (13 tests、全 types.rs のうち唯一の未テストだった)
+3. **壊れやすいテスト修正**: Button.test.tsx の Tailwind クラス依存 → 挙動ベース化、コンポーネントテストの日本語文言リテラル → ja 辞書参照化 (辞書変更に自動追従)、BE の固定 temp パス書き込み → `tempfile::TempDir` 化
+4. **小粒**: createNotionShare / createNotionSettings / createAiActions テスト (34 tests)、i18n プレースホルダのロケール間パリティ検証
+
+結果: FE 327→401 tests / BE 364→377 tests、`/verify all` green。テスト規約上の残課題: `createTextProcessing` / `createNotionSettings` はモジュールレベル singleton に `_resetForTesting` フックが無く、テストは `vi.resetModules()` で回避している (兄弟 primitive との規約差。F5 リファクタで揃える余地あり)。
+
+**Status:** 完了 (2026-07-07)
 
 ---
 
@@ -139,7 +148,9 @@ spec/        ← 恒久的な開発・仕様ドキュメント (日本語)
 
 **案**: `/refactor-fe` + `/refactor-be` を主要モジュールに一巡。機能追加はせず、抽出・統合・dead code 削除・unwrap/expect 根絶に限定。
 
-**Status:** 未着手
+**追記 (2026-07-07)**: スキル一巡ではなく手動リファクタで実施済みのため完了扱い (直近の ModelDownloadAction 抽出・dead code 削除・モジュール可視性の絞り込みなどのコミット群)。
+
+**Status:** 完了 (2026-07-07)
 
 ---
 
@@ -147,7 +158,9 @@ spec/        ← 恒久的な開発・仕様ドキュメント (日本語)
 
 **案**: `security-reviewer` agent + `/security-review` を実施。重点: Notion トークン平文保存の扱い明文化 (F9 の privacy ページにも反映)、capabilities scope、SQL 構築、パス検証、ログへの秘匿情報漏れ。
 
-**Status:** 未着手
+**追記 (2026-07-07)**: F4/F5 に先行して実施済みのため完了扱い。Notion トークン平文保存は keyring 依存追加を避けて仕様として受容する判断済み — F9 の privacy ページへの明文化のみ残タスクとして引き継ぐ。
+
+**Status:** 完了 (2026-07-07)
 
 ---
 
@@ -232,6 +245,7 @@ docs/
 - release.yml リファクタ / Dependabot 有効化 / nightly フルビルド smoke (旧 #13)
 - Windows MSI / Linux RPM / AppImage の Ubuntu バージョン差異検証 (旧 #14)
 - Settings の「再ダウンロード推奨」バナー (`spec/binary-updates.md` §7 にも記載)
+- 録音系エラーの専用 ErrorCode + i18n 文言 (現状 `Device error:` 等は意図的 UNKNOWN 割当で details 表示のみ。F4 の PREFIX_MAP 補完時の判断)
 - アプリ起動時の**自動**新版チェック + 通知 (更新戦略の案 (b))。手動チェックは F2 で対応済みの想定。自動化はオプトイン設計が必須 (プライバシー原則との衝突回避)
 - リアルタイム文字起こし / 話者識別 (旧 #12、2026-05-26 保留 → 2026-06-11 リリース対象外として削除) — whisper はバッチ前提で逐次推論は精度劣化、話者識別は sherpa-onnx / ONNX Runtime 同梱でバイナリ数百 MB 増。詳細な保留根拠と再開時の論点は git log (旧 #12 セクション) を参照
 

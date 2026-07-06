@@ -349,18 +349,15 @@ mod tests {
 
     #[test]
     fn model_exists_returns_true_when_file_present() {
-        let app_data = Path::new("/tmp/claude/test-whisper-exists");
-        let dir = app_data.join("models");
+        let app_data = tempfile::TempDir::new().unwrap();
+        let dir = app_data.path().join("models");
         fs::create_dir_all(&dir).unwrap();
 
         let file_path = dir.join("ggml-small.bin");
         fs::write(&file_path, b"fake model data").unwrap();
 
-        let exists = model_exists(app_data, "small").unwrap();
+        let exists = model_exists(app_data.path(), "small").unwrap();
         assert!(exists);
-
-        // Cleanup
-        let _ = fs::remove_dir_all(app_data);
     }
 
     #[test]

@@ -29,6 +29,18 @@ function assertAllNonEmpty(dict: Dictionary, name: string) {
   }
 }
 
+function getValue(dict: Dictionary, key: string): string {
+  let current: unknown = dict;
+  for (const part of key.split(".")) {
+    current = (current as Record<string, unknown>)[part];
+  }
+  return current as string;
+}
+
+function getPlaceholders(value: string): string[] {
+  return [...value.matchAll(/\{[a-zA-Z0-9_]+\}/g)].map((m) => m[0]).sort();
+}
+
 describe("dictionaries", () => {
   it("ja dictionary has all non-empty string values", () => {
     assertAllNonEmpty(ja, "ja");
@@ -42,5 +54,15 @@ describe("dictionaries", () => {
     const jaKeys = getAllKeys(ja as unknown as Record<string, unknown>).sort();
     const enKeys = getAllKeys(en as unknown as Record<string, unknown>).sort();
     expect(jaKeys).toEqual(enKeys);
+  });
+
+  it("ja and en have matching placeholders for every key", () => {
+    const keys = getAllKeys(ja as unknown as Record<string, unknown>);
+    for (const key of keys) {
+      expect(
+        getPlaceholders(getValue(ja, key)),
+        `placeholders of "${key}" should match across locales`,
+      ).toEqual(getPlaceholders(getValue(en, key)));
+    }
   });
 });

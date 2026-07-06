@@ -601,16 +601,13 @@ mod tests {
 
     #[test]
     fn cleanup_existing_file_deletes_it() {
-        let dir = Path::new("/tmp/claude/test-recording-cleanup");
-        std::fs::create_dir_all(dir).unwrap();
-        let path = dir.join("test.wav");
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join("test.wav");
         std::fs::write(&path, b"test data").unwrap();
 
         let result = RecordingManager::cleanup(&path);
         assert!(result.is_ok());
         assert!(!path.exists());
-
-        let _ = std::fs::remove_dir_all(dir);
     }
 
     // --- compute_levels ---
@@ -668,9 +665,8 @@ mod tests {
 
     #[test]
     fn write_wav_file_creates_valid_file() {
-        let dir = Path::new("/tmp/claude/test-recording-wav");
-        std::fs::create_dir_all(dir).unwrap();
-        let path = dir.join("test_output.wav");
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join("test_output.wav");
 
         let samples = vec![0.0_f32; 16000]; // 1 second of silence
         let result = write_wav_file(&path, &samples, 16000);
@@ -684,7 +680,5 @@ mod tests {
         assert_eq!(spec.sample_rate, 16000);
         assert_eq!(spec.sample_format, hound::SampleFormat::Float);
         assert_eq!(spec.bits_per_sample, 32);
-
-        let _ = std::fs::remove_dir_all(dir);
     }
 }

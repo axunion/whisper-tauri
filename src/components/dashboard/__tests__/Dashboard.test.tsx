@@ -1,6 +1,7 @@
 import { MemoryRouter, Route } from "@solidjs/router";
 import { screen } from "@solidjs/testing-library";
 import { describe, expect, it, vi } from "vitest";
+import { ja } from "~/i18n/dictionaries/ja";
 import { renderWithI18n } from "~/test/helpers";
 import { Dashboard } from "../Dashboard";
 
@@ -23,12 +24,16 @@ function renderWithRouter() {
 describe("Dashboard", () => {
   it("shows QuickActions cards", () => {
     renderWithRouter();
-    expect(screen.getByText("ファイルを選択")).toBeInTheDocument();
-    expect(screen.getByText("録音して文字起こし")).toBeInTheDocument();
+    expect(screen.getByText(ja.dashboard.quickActionFile)).toBeInTheDocument();
+    expect(
+      screen.getByText(ja.dashboard.quickActionRecord),
+    ).toBeInTheDocument();
   });
 
   it("hides Recent Activity when no history entries", () => {
     renderWithRouter();
-    expect(screen.queryByText("最近のアクティビティ")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(ja.dashboard.recentActivity),
+    ).not.toBeInTheDocument();
   });
 });

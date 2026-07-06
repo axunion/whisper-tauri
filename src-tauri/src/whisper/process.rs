@@ -617,9 +617,8 @@ mod tests {
 
     #[test]
     fn load_wav_file_reads_mono_16bit_wav() {
-        let dir = Path::new("/tmp/claude/test-whisper-wav-mono");
-        std::fs::create_dir_all(dir).unwrap();
-        let path = dir.join("test_mono.wav");
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join("test_mono.wav");
 
         let spec = hound::WavSpec {
             channels: 1,
@@ -637,15 +636,12 @@ mod tests {
         let samples = load_wav_file(&path).unwrap();
         // 16kHz mono -> no conversion needed
         assert_eq!(samples.len(), 16000);
-
-        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]
     fn load_wav_file_converts_stereo_to_mono() {
-        let dir = Path::new("/tmp/claude/test-whisper-wav-stereo");
-        std::fs::create_dir_all(dir).unwrap();
-        let path = dir.join("test_stereo.wav");
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join("test_stereo.wav");
 
         let spec = hound::WavSpec {
             channels: 2,
@@ -666,15 +662,12 @@ mod tests {
         // Average of 1000/32768 and 3000/32768
         let expected = (1000.0 + 3000.0) / 2.0 / 32768.0;
         assert!((samples[0] - expected).abs() < 0.001);
-
-        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]
     fn load_wav_file_resamples_to_16khz() {
-        let dir = Path::new("/tmp/claude/test-whisper-wav-resample");
-        std::fs::create_dir_all(dir).unwrap();
-        let path = dir.join("test_48k.wav");
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join("test_48k.wav");
 
         let spec = hound::WavSpec {
             channels: 1,
@@ -693,7 +686,5 @@ mod tests {
         let samples = load_wav_file(&path).unwrap();
         // 48000 samples at 48kHz -> 16000 samples at 16kHz
         assert_eq!(samples.len(), 16000);
-
-        let _ = std::fs::remove_dir_all(dir);
     }
 }

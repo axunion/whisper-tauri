@@ -9,42 +9,34 @@ describe("Button", () => {
     expect(screen.getByRole("button")).toHaveTextContent("Click me");
   });
 
-  it("applies default variant classes", () => {
-    render(() => <Button>Default</Button>);
-    const button = screen.getByRole("button");
-    expect(button.className).toContain("bg-primary");
-    expect(button.className).toContain("text-primary-foreground");
+  it("calls onClick when clicked", () => {
+    const onClick = vi.fn();
+    render(() => <Button onClick={onClick}>Click me</Button>);
+    fireEvent.click(screen.getByRole("button"));
+    expect(onClick).toHaveBeenCalledTimes(1);
   });
 
-  it("applies destructive variant classes", () => {
-    render(() => <Button variant="destructive">Delete</Button>);
-    const button = screen.getByRole("button");
-    expect(button.className).toContain("bg-destructive");
-  });
-
-  it("applies outline variant classes", () => {
-    render(() => <Button variant="outline">Outline</Button>);
-    const button = screen.getByRole("button");
-    expect(button.className).toContain("border");
-    expect(button.className).toContain("border-input");
-  });
-
-  it("applies secondary variant classes", () => {
-    render(() => <Button variant="secondary">Secondary</Button>);
-    const button = screen.getByRole("button");
-    expect(button.className).toContain("bg-secondary");
-  });
-
-  it("applies ghost variant classes", () => {
-    render(() => <Button variant="ghost">Ghost</Button>);
-    const button = screen.getByRole("button");
-    expect(button.className).toContain("hover:bg-accent");
-  });
-
-  it("applies link variant classes", () => {
-    render(() => <Button variant="link">Link</Button>);
-    const button = screen.getByRole("button");
-    expect(button.className).toContain("underline-offset-4");
+  it("renders every variant as a button with distinct styling", () => {
+    // Verifies the variant prop affects the output without coupling the
+    // test to specific Tailwind class names.
+    const variants = [
+      "default",
+      "destructive",
+      "outline",
+      "secondary",
+      "ghost",
+      "link",
+    ] as const;
+    const classNames = variants.map((variant) => {
+      const { unmount } = render(() => (
+        <Button variant={variant}>{variant}</Button>
+      ));
+      const className = screen.getByRole("button").className;
+      expect(className).not.toBe("");
+      unmount();
+      return className;
+    });
+    expect(new Set(classNames).size).toBe(variants.length);
   });
 
   it("is disabled when disabled prop is set", () => {

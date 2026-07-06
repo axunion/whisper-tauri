@@ -442,10 +442,9 @@ mod tests {
 
     #[test]
     fn extract_ffmpeg_from_zip_finds_binary_at_root() {
-        let dir = std::env::temp_dir().join("whisper-test-zip-root");
-        let _ = std::fs::create_dir_all(&dir);
-        let archive_path = dir.join("test.zip");
-        let output_path = dir.join("ffmpeg");
+        let dir = tempfile::TempDir::new().expect("create temp dir");
+        let archive_path = dir.path().join("test.zip");
+        let output_path = dir.path().join("ffmpeg");
 
         create_test_zip(&archive_path, "ffmpeg", b"fake-ffmpeg-binary");
 
@@ -456,16 +455,13 @@ mod tests {
             std::fs::read(&output_path).expect("read output"),
             b"fake-ffmpeg-binary"
         );
-
-        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn extract_ffmpeg_from_zip_finds_binary_in_nested_directory() {
-        let dir = std::env::temp_dir().join("whisper-test-zip-nested");
-        let _ = std::fs::create_dir_all(&dir);
-        let archive_path = dir.join("test.zip");
-        let output_path = dir.join("ffmpeg");
+        let dir = tempfile::TempDir::new().expect("create temp dir");
+        let archive_path = dir.path().join("test.zip");
+        let output_path = dir.path().join("ffmpeg");
 
         create_test_zip(
             &archive_path,
@@ -479,38 +475,30 @@ mod tests {
             std::fs::read(&output_path).expect("read output"),
             b"nested-binary"
         );
-
-        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn extract_ffmpeg_from_zip_fails_when_binary_not_found() {
-        let dir = std::env::temp_dir().join("whisper-test-zip-missing");
-        let _ = std::fs::create_dir_all(&dir);
-        let archive_path = dir.join("test.zip");
-        let output_path = dir.join("ffmpeg");
+        let dir = tempfile::TempDir::new().expect("create temp dir");
+        let archive_path = dir.path().join("test.zip");
+        let output_path = dir.path().join("ffmpeg");
 
         create_test_zip(&archive_path, "README.txt", b"no ffmpeg here");
 
         let result = extract_ffmpeg_from_zip(&archive_path, &output_path);
         assert!(result.is_err(), "should fail when ffmpeg not in archive");
-
-        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn extract_ffmpeg_from_zip_fails_with_invalid_archive() {
-        let dir = std::env::temp_dir().join("whisper-test-zip-invalid");
-        let _ = std::fs::create_dir_all(&dir);
-        let archive_path = dir.join("not-a-zip.zip");
-        let output_path = dir.join("ffmpeg");
+        let dir = tempfile::TempDir::new().expect("create temp dir");
+        let archive_path = dir.path().join("not-a-zip.zip");
+        let output_path = dir.path().join("ffmpeg");
 
         std::fs::write(&archive_path, b"this is not a zip file").expect("write fake file");
 
         let result = extract_ffmpeg_from_zip(&archive_path, &output_path);
         assert!(result.is_err(), "should fail with invalid archive");
-
-        let _ = std::fs::remove_dir_all(&dir);
     }
 
     // --- version pinning ---
@@ -579,29 +567,25 @@ mod tests {
 
     #[test]
     fn ffmpeg_version_matches_returns_true_for_correct_version() {
-        let dir = std::env::temp_dir().join("whisper-test-version-match");
-        let bin_dir = dir.join("bin");
-        let _ = std::fs::create_dir_all(&bin_dir);
+        let dir = tempfile::TempDir::new().expect("create temp dir");
+        let bin_dir = dir.path().join("bin");
+        std::fs::create_dir_all(&bin_dir).expect("create bin dir");
 
         std::fs::write(bin_dir.join(".ffmpeg-version"), current_ffmpeg_version())
             .expect("write version");
 
-        assert!(ffmpeg_version_matches(&dir));
-
-        let _ = std::fs::remove_dir_all(&dir);
+        assert!(ffmpeg_version_matches(dir.path()));
     }
 
     #[test]
     fn ffmpeg_version_matches_returns_false_for_wrong_version() {
-        let dir = std::env::temp_dir().join("whisper-test-version-mismatch");
-        let bin_dir = dir.join("bin");
-        let _ = std::fs::create_dir_all(&bin_dir);
+        let dir = tempfile::TempDir::new().expect("create temp dir");
+        let bin_dir = dir.path().join("bin");
+        std::fs::create_dir_all(&bin_dir).expect("create bin dir");
 
         std::fs::write(bin_dir.join(".ffmpeg-version"), "old-version").expect("write version");
 
-        assert!(!ffmpeg_version_matches(&dir));
-
-        let _ = std::fs::remove_dir_all(&dir);
+        assert!(!ffmpeg_version_matches(dir.path()));
     }
 
     #[test]
@@ -613,9 +597,9 @@ mod tests {
 
     #[test]
     fn ffmpeg_needs_update_returns_true_for_version_mismatch() {
-        let dir = std::env::temp_dir().join("whisper-test-needs-update");
-        let bin_dir = dir.join("bin");
-        let _ = std::fs::create_dir_all(&bin_dir);
+        let dir = tempfile::TempDir::new().expect("create temp dir");
+        let bin_dir = dir.path().join("bin");
+        std::fs::create_dir_all(&bin_dir).expect("create bin dir");
 
         // Create fake ffmpeg binary
         let binary_name = if cfg!(target_os = "windows") {
@@ -627,16 +611,14 @@ mod tests {
         // Write wrong version
         std::fs::write(bin_dir.join(".ffmpeg-version"), "old-version").expect("write version");
 
-        assert!(ffmpeg_needs_update(&dir));
-
-        let _ = std::fs::remove_dir_all(&dir);
+        assert!(ffmpeg_needs_update(dir.path()));
     }
 
     #[test]
     fn ffmpeg_needs_update_returns_false_when_version_matches() {
-        let dir = std::env::temp_dir().join("whisper-test-no-update");
-        let bin_dir = dir.join("bin");
-        let _ = std::fs::create_dir_all(&bin_dir);
+        let dir = tempfile::TempDir::new().expect("create temp dir");
+        let bin_dir = dir.path().join("bin");
+        std::fs::create_dir_all(&bin_dir).expect("create bin dir");
 
         let binary_name = if cfg!(target_os = "windows") {
             "ffmpeg.exe"
@@ -647,8 +629,6 @@ mod tests {
         std::fs::write(bin_dir.join(".ffmpeg-version"), current_ffmpeg_version())
             .expect("write version");
 
-        assert!(!ffmpeg_needs_update(&dir));
-
-        let _ = std::fs::remove_dir_all(&dir);
+        assert!(!ffmpeg_needs_update(dir.path()));
     }
 }

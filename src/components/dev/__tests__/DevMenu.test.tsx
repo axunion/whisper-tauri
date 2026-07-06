@@ -1,6 +1,7 @@
 import { screen } from "@solidjs/testing-library";
 import { invoke } from "@tauri-apps/api/core";
 import { describe, expect, it, vi } from "vitest";
+import { ja } from "~/i18n/dictionaries/ja";
 import DevMenu from "~/pages/DevMenu";
 import { renderWithI18n } from "~/test/helpers";
 
@@ -11,18 +12,18 @@ vi.mock("@tauri-apps/api/core", () => ({
 describe("DevMenu", () => {
   it("shows Data Reset section", () => {
     renderWithI18n(() => <DevMenu />);
-    expect(screen.getByText("データリセット")).toBeInTheDocument();
+    expect(screen.getByText(ja.dev.dataReset)).toBeInTheDocument();
   });
 
   it("shows Audio Model Manager section", () => {
     renderWithI18n(() => <DevMenu />);
-    expect(screen.getByText("音声モデル管理")).toBeInTheDocument();
+    expect(screen.getByText(ja.settings.modelManagement)).toBeInTheDocument();
   });
 
   it("shows Clear History button", () => {
     renderWithI18n(() => <DevMenu />);
     expect(
-      screen.getByText("履歴クリア", { selector: "button" }),
+      screen.getByText(ja.dev.clearHistory, { selector: "button" }),
     ).toBeInTheDocument();
   });
 
@@ -40,9 +41,7 @@ describe("DevMenu in production", () => {
     env.DEV = false;
 
     renderWithI18n(() => <DevMenu />);
-    expect(
-      screen.getByText("このページは開発モードでのみ表示されます。"),
-    ).toBeInTheDocument();
+    expect(screen.getByText(ja.dev.devOnlyMessage)).toBeInTheDocument();
 
     env.DEV = originalDEV;
   });

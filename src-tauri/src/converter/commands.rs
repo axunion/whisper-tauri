@@ -260,7 +260,9 @@ mod tests {
 
     #[tokio::test]
     async fn cleanup_converted_file_deletes_temp_file() {
-        let temp_file = std::env::temp_dir().join("whisper-test-cleanup.wav");
+        // Anchor in std::env::temp_dir() because the command only deletes files under it.
+        let dir = tempfile::TempDir::new_in(std::env::temp_dir()).expect("create temp dir");
+        let temp_file = dir.path().join("whisper-test-cleanup.wav");
         std::fs::write(&temp_file, b"dummy wav").expect("create temp file");
         assert!(temp_file.exists());
 
@@ -280,7 +282,9 @@ mod tests {
 
     #[tokio::test]
     async fn cleanup_converted_file_succeeds_for_nonexistent_file() {
-        let temp_file = std::env::temp_dir().join("whisper-test-nonexistent-cleanup.wav");
+        // Anchor in std::env::temp_dir() because the command only deletes files under it.
+        let dir = tempfile::TempDir::new_in(std::env::temp_dir()).expect("create temp dir");
+        let temp_file = dir.path().join("whisper-test-nonexistent-cleanup.wav");
         assert!(!temp_file.exists());
 
         let result = cleanup_converted_file(temp_file.to_string_lossy().to_string()).await;

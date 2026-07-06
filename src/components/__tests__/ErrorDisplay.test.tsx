@@ -1,5 +1,6 @@
 import { fireEvent, screen } from "@solidjs/testing-library";
 import { describe, expect, it, vi } from "vitest";
+import { ja } from "~/i18n/dictionaries/ja";
 import { renderWithI18n } from "~/test/helpers";
 import type { AppError } from "~/types/errors";
 import { ErrorCode } from "~/types/errors";
@@ -21,7 +22,7 @@ describe("ErrorDisplay", () => {
     it("should display error message", () => {
       const error = makeError();
       renderWithI18n(() => <ErrorDisplay error={error} onDismiss={() => {}} />);
-      expect(screen.getByText("ファイルが見つかりません")).toBeInTheDocument();
+      expect(screen.getByText(ja.errors.fileNotFound)).toBeInTheDocument();
     });
 
     it("should display details when present", () => {
@@ -53,7 +54,9 @@ describe("ErrorDisplay", () => {
       renderWithI18n(() => (
         <ErrorDisplay error={error} onDismiss={onDismiss} />
       ));
-      const closeButton = screen.getByRole("button", { name: "閉じる" });
+      const closeButton = screen.getByRole("button", {
+        name: ja.common.close,
+      });
       fireEvent.click(closeButton);
       expect(onDismiss).toHaveBeenCalledOnce();
     });
@@ -66,7 +69,9 @@ describe("ErrorDisplay", () => {
       renderWithI18n(() => (
         <ErrorDisplay error={error} onDismiss={() => {}} onRetry={onRetry} />
       ));
-      const retryButton = screen.getByRole("button", { name: "再試行" });
+      const retryButton = screen.getByRole("button", {
+        name: ja.common.retry,
+      });
       expect(retryButton).toBeInTheDocument();
     });
 
@@ -76,7 +81,9 @@ describe("ErrorDisplay", () => {
       renderWithI18n(() => (
         <ErrorDisplay error={error} onDismiss={() => {}} onRetry={onRetry} />
       ));
-      const retryButton = screen.getByRole("button", { name: "再試行" });
+      const retryButton = screen.getByRole("button", {
+        name: ja.common.retry,
+      });
       fireEvent.click(retryButton);
       expect(onRetry).toHaveBeenCalledOnce();
     });
@@ -88,7 +95,7 @@ describe("ErrorDisplay", () => {
         <ErrorDisplay error={error} onDismiss={() => {}} onRetry={onRetry} />
       ));
       expect(
-        screen.queryByRole("button", { name: "再試行" }),
+        screen.queryByRole("button", { name: ja.common.retry }),
       ).not.toBeInTheDocument();
     });
 
@@ -96,7 +103,7 @@ describe("ErrorDisplay", () => {
       const error = makeError({ recoverable: true });
       renderWithI18n(() => <ErrorDisplay error={error} onDismiss={() => {}} />);
       expect(
-        screen.queryByRole("button", { name: "再試行" }),
+        screen.queryByRole("button", { name: ja.common.retry }),
       ).not.toBeInTheDocument();
     });
   });

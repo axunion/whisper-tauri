@@ -153,6 +153,29 @@ describe("parseError", () => {
     expect(result.details).toBe("Transcription cancelled");
   });
 
+  it("should parse 'Path error:' prefix to FILE_READ_ERROR", () => {
+    const result = parseError("Path error: Invalid path encoding");
+    expect(result.code).toBe(ErrorCode.FILE_READ_ERROR);
+    expect(result.details).toBe("Path error: Invalid path encoding");
+  });
+
+  it("should parse 'WAV error:' prefix to FILE_READ_ERROR", () => {
+    const result = parseError("WAV error: unsupported sample format");
+    expect(result.code).toBe(ErrorCode.FILE_READ_ERROR);
+    expect(result.details).toBe("WAV error: unsupported sample format");
+  });
+
+  it("should parse 'Database has no title property' to NETWORK_ERROR", () => {
+    const result = parseError("Database has no title property");
+    expect(result.code).toBe(ErrorCode.NETWORK_ERROR);
+  });
+
+  it("should parse recording errors to UNKNOWN_ERROR keeping details", () => {
+    const result = parseError("Device not found: Built-in Microphone");
+    expect(result.code).toBe(ErrorCode.UNKNOWN_ERROR);
+    expect(result.details).toBe("Device not found: Built-in Microphone");
+  });
+
   it("should parse Error object using its message", () => {
     const result = parseError(new Error("Model not found: test-model"));
     expect(result.code).toBe(ErrorCode.MODEL_NOT_FOUND);
