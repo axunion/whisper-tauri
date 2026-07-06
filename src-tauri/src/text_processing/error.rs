@@ -1,6 +1,6 @@
 /// Errors that can occur during text processing operations.
 #[derive(Debug, thiserror::Error)]
-pub enum TextProcessingError {
+pub(crate) enum TextProcessingError {
     /// The specified model was not found.
     #[error("Model not found: {0}")]
     ModelNotFound(String),
@@ -32,10 +32,6 @@ pub enum TextProcessingError {
     /// An HTTP error occurred.
     #[error("HTTP error: {0}")]
     Http(#[from] reqwest::Error),
-
-    /// A JSON parsing error occurred.
-    #[error("JSON error: {0}")]
-    JsonError(String),
 }
 
 impl From<crate::download::DownloadError> for TextProcessingError {
@@ -88,12 +84,6 @@ mod tests {
     fn error_display_cancelled() {
         let err = TextProcessingError::Cancelled;
         assert_eq!(err.to_string(), "Inference cancelled");
-    }
-
-    #[test]
-    fn error_display_json_error() {
-        let err = TextProcessingError::JsonError("parse failed".to_string());
-        assert_eq!(err.to_string(), "JSON error: parse failed");
     }
 
     #[test]

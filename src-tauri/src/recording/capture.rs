@@ -109,11 +109,10 @@ impl RecordingManager {
         let sample_rate = Arc::clone(&self.sample_rate);
         let stop_flag = Arc::clone(&self.stop_flag);
         let is_recording = Arc::clone(&self.is_recording);
-        let device_id_clone = device_id;
 
         let handle = std::thread::spawn(move || {
             if let Err(e) = run_capture_thread(
-                device_id_clone.as_deref(),
+                device_id.as_deref(),
                 &samples,
                 &sample_rate,
                 &stop_flag,

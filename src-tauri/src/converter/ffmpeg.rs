@@ -9,7 +9,7 @@ use super::error::ConverterError;
 ///
 /// Returns `ConverterError::FfmpegNotFound` if the binary is not found or
 /// cannot be executed.
-pub fn check_available(ffmpeg_path: &Path) -> Result<(), ConverterError> {
+pub(crate) fn check_available(ffmpeg_path: &Path) -> Result<(), ConverterError> {
     let output = Command::new(ffmpeg_path)
         .arg("-version")
         .output()
@@ -29,7 +29,7 @@ pub fn check_available(ffmpeg_path: &Path) -> Result<(), ConverterError> {
 ///
 /// Output format: WAV PCM, 16kHz, mono, 16-bit
 #[must_use]
-pub fn build_convert_args(input_path: &Path, output_path: &Path) -> Vec<String> {
+fn build_convert_args(input_path: &Path, output_path: &Path) -> Vec<String> {
     vec![
         "-i".to_string(),
         input_path.to_string_lossy().to_string(),
@@ -51,7 +51,7 @@ pub fn build_convert_args(input_path: &Path, output_path: &Path) -> Vec<String> 
 /// # Errors
 ///
 /// Returns `ConverterError::ConversionFailed` if ffmpeg fails.
-pub fn convert_to_wav(
+pub(crate) fn convert_to_wav(
     ffmpeg_path: &Path,
     input_path: &Path,
     output_path: &Path,

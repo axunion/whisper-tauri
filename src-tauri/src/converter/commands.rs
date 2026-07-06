@@ -202,12 +202,11 @@ pub async fn convert_audio_file(
     let output_path = std::env::temp_dir().join(output_name);
 
     // Run conversion on a blocking thread (ffmpeg is CPU-bound)
-    let ffmpeg_path_clone = ffmpeg_path.clone();
     let input_clone = input.to_path_buf();
     let output_clone = output_path.clone();
 
     tokio::task::spawn_blocking(move || {
-        ffmpeg::convert_to_wav(&ffmpeg_path_clone, &input_clone, &output_clone)
+        ffmpeg::convert_to_wav(&ffmpeg_path, &input_clone, &output_clone)
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))?

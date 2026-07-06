@@ -22,7 +22,7 @@ const CONVERTIBLE_VIDEO_FORMATS: &[&str] = &[
 
 /// Checks whether the given file extension is a supported format.
 #[must_use]
-pub fn is_supported_format(extension: &str) -> bool {
+pub(crate) fn is_supported_format(extension: &str) -> bool {
     let ext = extension.to_lowercase();
     NATIVE_FORMATS.contains(&ext.as_str())
         || CONVERTIBLE_AUDIO_FORMATS.contains(&ext.as_str())
@@ -33,7 +33,7 @@ pub fn is_supported_format(extension: &str) -> bool {
 ///
 /// Returns `true` for all supported formats except WAV.
 #[must_use]
-pub fn needs_conversion(extension: &str) -> bool {
+pub(crate) fn needs_conversion(extension: &str) -> bool {
     let ext = extension.to_lowercase();
     if !is_supported_format(&ext) {
         return false;
@@ -43,7 +43,7 @@ pub fn needs_conversion(extension: &str) -> bool {
 
 /// Returns the list of all supported formats with metadata.
 #[must_use]
-pub fn get_supported_formats() -> Vec<SupportedFormat> {
+pub(crate) fn get_supported_formats() -> Vec<SupportedFormat> {
     let native = NATIVE_FORMATS.iter().map(|&ext| (ext, false));
     let convertible = CONVERTIBLE_AUDIO_FORMATS
         .iter()

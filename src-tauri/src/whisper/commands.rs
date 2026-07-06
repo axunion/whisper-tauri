@@ -1,9 +1,6 @@
 use std::path::{Path, PathBuf};
-use std::time::Instant;
 
-use futures_util::StreamExt;
 use tauri::{AppHandle, Emitter};
-use tokio::io::AsyncWriteExt;
 
 use crate::download;
 use crate::paths;
@@ -14,20 +11,12 @@ use super::models;
 use super::process;
 use super::types::{DownloadProgress, ModelInfo, TranscriptionProgress, TranscriptionResult};
 
-/// Progress event throttle interval in milliseconds.
-const PROGRESS_THROTTLE_MS: u128 = 100;
-
 /// Store key for custom model download base URL.
 const MODEL_DOWNLOAD_URL_KEY: &str = "modelDownloadBaseUrl";
 
 /// Returns the models directory under the app data directory.
-///
-/// # Errors
-///
-/// Returns an error if the path cannot be constructed.
-pub fn models_dir(app_data_dir: &Path) -> Result<PathBuf, WhisperError> {
-    let dir = app_data_dir.join("models");
-    Ok(dir)
+fn models_dir(app_data_dir: &Path) -> PathBuf {
+    app_data_dir.join("models")
 }
 
 /// Returns the path to a specific model file.
@@ -35,11 +24,11 @@ pub fn models_dir(app_data_dir: &Path) -> Result<PathBuf, WhisperError> {
 /// # Errors
 ///
 /// Returns `WhisperError::ModelNotFound` if the model ID is invalid.
-pub fn model_path(app_data_dir: &Path, model_id: &str) -> Result<PathBuf, WhisperError> {
+fn model_path(app_data_dir: &Path, model_id: &str) -> Result<PathBuf, WhisperError> {
     if !models::is_valid_model_id(model_id) {
         return Err(WhisperError::ModelNotFound(model_id.to_string()));
     }
-    let dir = models_dir(app_data_dir)?;
+    let dir = models_dir(app_data_dir);
     Ok(dir.join(models::get_model_filename(model_id)))
 }
 
@@ -48,7 +37,7 @@ pub fn model_path(app_data_dir: &Path, model_id: &str) -> Result<PathBuf, Whispe
 /// # Errors
 ///
 /// Returns `WhisperError::ModelNotFound` if the model ID is invalid.
-pub fn model_exists(app_data_dir: &Path, model_id: &str) -> Result<bool, WhisperError> {
+fn model_exists(app_data_dir: &Path, model_id: &str) -> Result<bool, WhisperError> {
     let path = model_path(app_data_dir, model_id)?;
     Ok(path.exists())
 }
@@ -64,15 +53,11 @@ pub async fn get_available_models(app: AppHandle) -> Result<Vec<ModelInfo>, Stri
     let mut model_list = models::get_model_list_with_speed_factors();
 
     for model in &mut model_list {
-        match model_exists(&app_data_dir, &model.id) {
-            Ok(true) => {
-                model.downloaded = true;
-                if let Ok(path) = model_path(&app_data_dir, &model.id) {
-                    model.path = path.to_str().map(std::string::ToString::to_string);
-                }
+        if model_exists(&app_data_dir, &model.id)? {
+            model.downloaded = true;
+            if let Ok(path) = model_path(&app_data_dir, &model.id) {
+                model.path = path.to_str().map(std::string::ToString::to_string);
             }
-            Ok(false) => {}
-            Err(e) => return Err(e.into()),
         }
     }
 
@@ -111,7 +96,7 @@ pub async fn download_model(
     }
 
     let app_data_dir = paths::app_data_dir(&app)?;
-    let dir = models_dir(&app_data_dir)?;
+    let dir = models_dir(&app_data_dir);
 
     // Create models directory if it doesn't exist
     std::fs::create_dir_all(&dir).map_err(WhisperError::from)?;
@@ -124,53 +109,25 @@ pub async fn download_model(
     let final_path = model_path(&app_data_dir, &model_id)?;
     let part_path = final_path.with_extension("bin.part");
 
-    // Start download
-    let response = reqwest::get(&url).await.map_err(WhisperError::from)?;
-
-    let status = response.status();
-    if !status.is_success() {
-        return Err(WhisperError::DownloadFailed(format!("HTTP {status} for {url}")).into());
-    }
-
-    let total_bytes = response.content_length().unwrap_or(0);
-    let mut stream = response.bytes_stream();
-    let mut file = tokio::fs::File::create(&part_path)
-        .await
-        .map_err(WhisperError::from)?;
-    let mut downloaded_bytes: u64 = 0;
-    let mut last_emit = Instant::now();
-
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(WhisperError::from)?;
-        file.write_all(&chunk).await.map_err(WhisperError::from)?;
-        downloaded_bytes += chunk.len() as u64;
-
-        // Throttle progress events
-        if last_emit.elapsed().as_millis() >= PROGRESS_THROTTLE_MS {
-            let progress = if total_bytes > 0 {
-                #[allow(clippy::cast_precision_loss)]
-                {
-                    (downloaded_bytes as f64 / total_bytes as f64) * 100.0
-                }
-            } else {
-                0.0
-            };
-
-            let _ = app.emit(
+    let app_cb = app.clone();
+    let model_id_cb = model_id.clone();
+    download::download_file(
+        &url,
+        &part_path,
+        move |downloaded_bytes, total_bytes, progress| {
+            let _ = app_cb.emit(
                 "model:download-progress",
                 DownloadProgress {
-                    model_id: model_id.clone(),
+                    model_id: model_id_cb.clone(),
                     downloaded_bytes,
                     total_bytes,
                     progress,
                 },
             );
-            last_emit = Instant::now();
-        }
-    }
-
-    file.flush().await.map_err(WhisperError::from)?;
-    drop(file);
+        },
+    )
+    .await
+    .map_err(WhisperError::from)?;
 
     // Rename .part to final path
     tokio::fs::rename(&part_path, &final_path)
@@ -182,8 +139,8 @@ pub async fn download_model(
         "model:download-progress",
         DownloadProgress {
             model_id,
-            downloaded_bytes,
-            total_bytes,
+            downloaded_bytes: 0,
+            total_bytes: 0,
             progress: 100.0,
         },
     );
@@ -229,13 +186,8 @@ pub async fn set_model_download_url(app: AppHandle, url: Option<String>) -> Resu
 }
 
 /// Returns the path to the VAD model file.
-///
-/// # Errors
-///
-/// Returns an error if the models directory path cannot be constructed.
-pub fn vad_model_path(app_data_dir: &Path) -> Result<PathBuf, WhisperError> {
-    let dir = models_dir(app_data_dir)?;
-    Ok(dir.join(models::get_vad_model_filename()))
+fn vad_model_path(app_data_dir: &Path) -> PathBuf {
+    models_dir(app_data_dir).join(models::get_vad_model_filename())
 }
 
 /// Ensures the Silero VAD model is downloaded, downloading it if necessary.
@@ -249,13 +201,13 @@ pub fn vad_model_path(app_data_dir: &Path) -> Result<PathBuf, WhisperError> {
 #[tauri::command]
 pub async fn ensure_vad_model(app: AppHandle) -> Result<String, String> {
     let app_data_dir = paths::app_data_dir(&app)?;
-    let path = vad_model_path(&app_data_dir)?;
+    let path = vad_model_path(&app_data_dir);
 
     if path.exists() {
         return paths::path_to_owned_string(&path).map_err(Into::into);
     }
 
-    let dir = models_dir(&app_data_dir)?;
+    let dir = models_dir(&app_data_dir);
     std::fs::create_dir_all(&dir).map_err(WhisperError::from)?;
 
     let part_path = path.with_extension("bin.part");
@@ -367,7 +319,7 @@ mod tests {
     #[test]
     fn models_dir_returns_models_subdirectory() {
         let app_data = Path::new("/tmp/test-app-data");
-        let dir = models_dir(app_data).unwrap();
+        let dir = models_dir(app_data);
         assert_eq!(dir, PathBuf::from("/tmp/test-app-data/models"));
     }
 
@@ -423,7 +375,7 @@ mod tests {
     #[test]
     fn vad_model_path_returns_correct_path() {
         let app_data = Path::new("/tmp/test-app-data");
-        let path = vad_model_path(app_data).unwrap();
+        let path = vad_model_path(app_data);
         assert_eq!(
             path,
             PathBuf::from("/tmp/test-app-data/models/ggml-silero-v5.1.2.bin")
@@ -433,8 +385,8 @@ mod tests {
     #[test]
     fn vad_model_path_is_in_models_dir() {
         let app_data = Path::new("/tmp/test-app-data");
-        let path = vad_model_path(app_data).unwrap();
-        let dir = models_dir(app_data).unwrap();
+        let path = vad_model_path(app_data);
+        let dir = models_dir(app_data);
         assert!(path.starts_with(&dir));
     }
 }

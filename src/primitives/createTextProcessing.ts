@@ -2,11 +2,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { batch, createRoot, createSignal } from "solid-js";
 import { parseError } from "~/lib/errors";
-import { sumBytes, sumDownloadedBytes } from "~/lib/format";
+import { sumDownloadedBytes } from "~/lib/format";
 import { createSettings } from "~/primitives/createSettings";
 import type {
   InferenceProgress,
-  LegacyTextModelInfo,
   ServerStatus,
   TextDownloadProgress,
   TextModelInfo,
@@ -17,8 +16,6 @@ import type { AppError } from "~/types/errors";
 const {
   models,
   setModels,
-  legacyModels,
-  setLegacyModels,
   selectedModelId,
   setSelectedModelId,
   downloadProgress,
@@ -43,9 +40,6 @@ const {
   setError,
 } = createRoot(() => {
   const [models, setModels] = createSignal<TextModelInfo[]>([]);
-  const [legacyModels, setLegacyModels] = createSignal<LegacyTextModelInfo[]>(
-    [],
-  );
   const [selectedModelId, setSelectedModelId] = createSignal<string | null>(
     null,
   );
@@ -71,8 +65,6 @@ const {
   return {
     models,
     setModels,
-    legacyModels,
-    setLegacyModels,
     selectedModelId,
     setSelectedModelId,
     downloadProgress,
@@ -121,26 +113,6 @@ async function loadModels(): Promise<void> {
         }
       }
     }
-  } catch (e) {
-    setError(parseError(e));
-  }
-}
-
-async function loadLegacyModels(): Promise<void> {
-  try {
-    const res = await invoke<LegacyTextModelInfo[]>(
-      "text_processing_get_legacy_models",
-    );
-    setLegacyModels(res);
-  } catch (e) {
-    setError(parseError(e));
-  }
-}
-
-async function deleteLegacyModel(modelId: string): Promise<void> {
-  try {
-    await invoke("text_processing_delete_model", { modelId });
-    setLegacyModels((prev) => prev.filter((m) => m.id !== modelId));
   } catch (e) {
     setError(parseError(e));
   }
@@ -313,13 +285,12 @@ function clearError(): void {
 }
 
 function totalSizeBytes(): number {
-  return sumDownloadedBytes(models()) + sumBytes(legacyModels());
+  return sumDownloadedBytes(models());
 }
 
 const textProcessingInstance = {
   // State (Accessors)
   models,
-  legacyModels,
   totalSizeBytes,
   selectedModelId,
   downloadProgress,
@@ -338,10 +309,8 @@ const textProcessingInstance = {
   selectModel,
   chat,
   loadModels,
-  loadLegacyModels,
   downloadModel,
   deleteModel,
-  deleteLegacyModel,
   downloadServer,
   deleteServer,
   checkServer,
@@ -358,7 +327,6 @@ export function createTextProcessing() {
 /** @internal Reset singleton state for testing only. */
 export function _resetTextProcessingForTesting(): void {
   setModels([]);
-  setLegacyModels([]);
   setSelectedModelId(null);
   setDownloadProgress(null);
   setServerStatus({ running: false });

@@ -3,17 +3,29 @@ use std::path::{Path, PathBuf};
 use super::error::ConverterError;
 
 /// Pinned `FFmpeg` release version for macOS (evermeet.cx).
-pub const FFMPEG_MACOS_VERSION: &str = "8.1";
+#[cfg(target_os = "macos")]
+const FFMPEG_MACOS_VERSION: &str = "8.1";
 
 /// Pinned `FFmpeg` autobuild release tag for Windows/Linux (`BtbN/FFmpeg-Builds`).
-pub const FFMPEG_BTBN_TAG: &str = "autobuild-2026-03-26-13-16";
+#[cfg(not(target_os = "macos"))]
+const FFMPEG_BTBN_TAG: &str = "autobuild-2026-03-26-13-16";
 
 /// Pinned `FFmpeg` build identifier for the `BtbN` autobuild (appears in asset filenames).
-pub const FFMPEG_BTBN_BUILD_ID: &str = "N-123625-gfd9f1e9c52";
+#[cfg(not(target_os = "macos"))]
+const FFMPEG_BTBN_BUILD_ID: &str = "N-123625-gfd9f1e9c52";
+
+/// Returns the platform-specific ffmpeg binary filename.
+const fn ffmpeg_binary_name() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "ffmpeg.exe"
+    } else {
+        "ffmpeg"
+    }
+}
 
 /// Archive format of the download.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ArchiveFormat {
+enum ArchiveFormat {
     /// Zip archive (macOS, Windows)
     Zip,
     /// tar.xz archive (Linux)
@@ -100,30 +112,25 @@ fn get_archive_format() -> ArchiveFormat {
 ///
 /// Located in the `bin/` subdirectory of the app data directory.
 #[must_use]
-pub fn get_ffmpeg_path(app_data_dir: &Path) -> PathBuf {
-    let binary_name = if cfg!(target_os = "windows") {
-        "ffmpeg.exe"
-    } else {
-        "ffmpeg"
-    };
-    app_data_dir.join("bin").join(binary_name)
+pub(crate) fn get_ffmpeg_path(app_data_dir: &Path) -> PathBuf {
+    app_data_dir.join("bin").join(ffmpeg_binary_name())
 }
 
 /// Checks whether the bundled ffmpeg binary exists.
 #[must_use]
-pub fn ffmpeg_exists(app_data_dir: &Path) -> bool {
+fn ffmpeg_exists(app_data_dir: &Path) -> bool {
     get_ffmpeg_path(app_data_dir).exists()
 }
 
 /// Returns the path to the `FFmpeg` version marker file.
 #[must_use]
-pub fn ffmpeg_version_path(app_data_dir: &Path) -> PathBuf {
+pub(crate) fn ffmpeg_version_path(app_data_dir: &Path) -> PathBuf {
     app_data_dir.join("bin").join(".ffmpeg-version")
 }
 
 /// Checks whether the installed ffmpeg matches the pinned version.
 #[must_use]
-pub fn ffmpeg_version_matches(app_data_dir: &Path) -> bool {
+fn ffmpeg_version_matches(app_data_dir: &Path) -> bool {
     let version_file = ffmpeg_version_path(app_data_dir);
     std::fs::read_to_string(version_file).is_ok_and(|v| v.trim() == current_ffmpeg_version())
 }
@@ -133,13 +140,13 @@ pub fn ffmpeg_version_matches(app_data_dir: &Path) -> bool {
 /// Returns `true` if the binary exists but the version marker does not match
 /// the pinned version (or is missing).
 #[must_use]
-pub fn ffmpeg_needs_update(app_data_dir: &Path) -> bool {
+pub(crate) fn ffmpeg_needs_update(app_data_dir: &Path) -> bool {
     ffmpeg_exists(app_data_dir) && !ffmpeg_version_matches(app_data_dir)
 }
 
 /// Returns the bin directory under the app data directory.
 #[must_use]
-pub fn bin_dir(app_data_dir: &Path) -> PathBuf {
+fn bin_dir(app_data_dir: &Path) -> PathBuf {
     app_data_dir.join("bin")
 }
 
@@ -157,11 +164,7 @@ fn extract_ffmpeg_from_zip(archive_path: &Path, output_path: &Path) -> Result<()
     let mut archive =
         zip::ZipArchive::new(file).map_err(|e| ConverterError::ConversionFailed(e.to_string()))?;
 
-    let target_name = if cfg!(target_os = "windows") {
-        "ffmpeg.exe"
-    } else {
-        "ffmpeg"
-    };
+    let target_name = ffmpeg_binary_name();
 
     for i in 0..archive.len() {
         let mut entry = archive
@@ -275,7 +278,7 @@ fn extract_ffmpeg_from_tar_xz(
 /// # Errors
 ///
 /// Returns an error if the download fails or the file cannot be written.
-pub async fn download_ffmpeg<F>(
+pub(crate) async fn download_ffmpeg<F>(
     app_data_dir: &Path,
     custom_url: Option<&str>,
     on_progress: F,
@@ -514,9 +517,13 @@ mod tests {
 
     #[test]
     fn ffmpeg_version_constants_are_not_empty() {
+        #[cfg(target_os = "macos")]
         assert!(!FFMPEG_MACOS_VERSION.is_empty());
-        assert!(!FFMPEG_BTBN_TAG.is_empty());
-        assert!(!FFMPEG_BTBN_BUILD_ID.is_empty());
+        #[cfg(not(target_os = "macos"))]
+        {
+            assert!(!FFMPEG_BTBN_TAG.is_empty());
+            assert!(!FFMPEG_BTBN_BUILD_ID.is_empty());
+        }
     }
 
     #[test]

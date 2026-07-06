@@ -11,7 +11,7 @@ use super::time::chrono_now;
 /// # Errors
 ///
 /// Returns `HistoryError` if database operations or compression fail.
-pub fn save_ai_content(
+pub(crate) fn save_ai_content(
     db_path: &Path,
     params: &AiContentSaveParams,
 ) -> Result<String, HistoryError> {
@@ -43,7 +43,7 @@ pub fn save_ai_content(
 /// # Errors
 ///
 /// Returns `HistoryError::Database` if the query fails.
-pub fn get_ai_content(
+pub(crate) fn get_ai_content(
     db_path: &Path,
     history_id: &str,
     content_type: &str,
@@ -72,7 +72,7 @@ pub fn get_ai_content(
 /// # Errors
 ///
 /// Returns `HistoryError::Database` if the query fails.
-pub fn get_all_ai_content(
+pub(crate) fn get_all_ai_content(
     db_path: &Path,
     history_id: &str,
 ) -> Result<Vec<AiContent>, HistoryError> {

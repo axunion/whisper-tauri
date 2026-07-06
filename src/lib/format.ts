@@ -101,13 +101,6 @@ export function sumDownloadedBytes<
   return items.reduce((sum, m) => (m.downloaded ? sum + m.sizeBytes : sum), 0);
 }
 
-/** Sums `sizeBytes` over all items. */
-export function sumBytes<T extends { sizeBytes: number }>(
-  items: readonly T[],
-): number {
-  return items.reduce((sum, m) => sum + m.sizeBytes, 0);
-}
-
 const BYTE_UNITS = ["KB", "MB", "GB", "TB"] as const;
 const BYTE_UNIT_BASE = 1024;
 

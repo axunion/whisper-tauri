@@ -10,7 +10,7 @@ use crate::whisper::process::{CancellationToken, TaskManager};
 use futures_util::StreamExt;
 
 /// Global inference task manager for cancellation.
-pub static INFERENCE_TASK_MANAGER: Lazy<TaskManager> = Lazy::new(TaskManager::new);
+pub(crate) static INFERENCE_TASK_MANAGER: Lazy<TaskManager> = Lazy::new(TaskManager::new);
 
 /// Maximum characters (Unicode scalar values) per chunk for text splitting.
 /// For Japanese text (~3 bytes per char in UTF-8), this corresponds to ~12KB.
@@ -18,7 +18,7 @@ const MAX_CHUNK_CHARS: usize = 4000;
 
 /// Builds chat messages for a simple chat response (dev testing).
 #[must_use]
-pub fn build_chat_messages(text: &str) -> Vec<ChatMessage> {
+pub(crate) fn build_chat_messages(text: &str) -> Vec<ChatMessage> {
     vec![
         ChatMessage {
             role: "system".to_string(),
@@ -36,10 +36,10 @@ pub fn build_chat_messages(text: &str) -> Vec<ChatMessage> {
 /// Returned by [`summary_params_for_length`] so the prompt's `keyPoints` size
 /// hint and the request's `max_tokens` scale with the transcription length.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SummaryParams {
-    pub key_points_min: u32,
-    pub key_points_max: u32,
-    pub max_tokens: u32,
+pub(crate) struct SummaryParams {
+    pub(crate) key_points_min: u32,
+    pub(crate) key_points_max: u32,
+    pub(crate) max_tokens: u32,
 }
 
 /// Derives [`SummaryParams`] from the original transcription length.
@@ -49,7 +49,7 @@ pub struct SummaryParams {
 /// are coarse on purpose — finer tuning chases LLM noise rather than real
 /// signal.
 #[must_use]
-pub fn summary_params_for_length(text_chars: usize) -> SummaryParams {
+pub(crate) fn summary_params_for_length(text_chars: usize) -> SummaryParams {
     if text_chars < 1_500 {
         SummaryParams {
             key_points_min: 2,
@@ -87,7 +87,7 @@ pub fn summary_params_for_length(text_chars: usize) -> SummaryParams {
 /// number of bullet points scales with input length (see
 /// [`summary_params_for_length`]).
 #[must_use]
-pub fn build_summarize_messages(
+pub(crate) fn build_summarize_messages(
     text: &str,
     key_points_min: u32,
     key_points_max: u32,
@@ -130,7 +130,7 @@ pub fn build_summarize_messages(
 /// llama.cpp's server converts this into a grammar internally. Keep field
 /// names in sync with [`super::types::StructuredSummary`].
 #[must_use]
-pub fn summary_json_schema() -> Value {
+pub(crate) fn summary_json_schema() -> Value {
     json!({
         "type": "object",
         "additionalProperties": false,
@@ -164,7 +164,7 @@ pub fn summary_json_schema() -> Value {
 
 /// Builds the `response_format` payload for structured summarization.
 #[must_use]
-pub fn summary_response_format() -> Value {
+pub(crate) fn summary_response_format() -> Value {
     json!({
         "type": "json_schema",
         "json_schema": {
@@ -181,7 +181,7 @@ pub fn summary_response_format() -> Value {
 /// reduced to a plain-text paragraph, then the combined output is fed to
 /// [`build_summarize_messages`] for the final structured pass.
 #[must_use]
-pub fn build_chunk_condense_messages(text: &str) -> Vec<ChatMessage> {
+pub(crate) fn build_chunk_condense_messages(text: &str) -> Vec<ChatMessage> {
     vec![
         ChatMessage {
             role: "system".to_string(),
@@ -203,7 +203,7 @@ pub fn build_chunk_condense_messages(text: &str) -> Vec<ChatMessage> {
 
 /// Builds chat messages for title generation.
 #[must_use]
-pub fn build_title_messages(text: &str) -> Vec<ChatMessage> {
+pub(crate) fn build_title_messages(text: &str) -> Vec<ChatMessage> {
     vec![
         ChatMessage {
             role: "system".to_string(),
@@ -224,7 +224,7 @@ pub fn build_title_messages(text: &str) -> Vec<ChatMessage> {
 
 /// Builds chat messages for text cleanup (filler removal, punctuation, paragraphs).
 #[must_use]
-pub fn build_clean_text_messages(text: &str) -> Vec<ChatMessage> {
+pub(crate) fn build_clean_text_messages(text: &str) -> Vec<ChatMessage> {
     vec![
         ChatMessage {
             role: "system".to_string(),
@@ -251,7 +251,7 @@ pub fn build_clean_text_messages(text: &str) -> Vec<ChatMessage> {
 /// Each chunk is at most `max_chars` Unicode characters. If a sentence exceeds
 /// `max_chars`, it is included as its own chunk.
 #[must_use]
-pub fn chunk_text(text: &str, max_chars: usize) -> Vec<String> {
+pub(crate) fn chunk_text(text: &str, max_chars: usize) -> Vec<String> {
     if text.chars().count() <= max_chars {
         return vec![text.to_string()];
     }
@@ -282,7 +282,7 @@ pub fn chunk_text(text: &str, max_chars: usize) -> Vec<String> {
 /// Expected format: `data: {"choices":[{"delta":{"content":"token"}}]}`
 /// Returns `None` for non-data lines, `[DONE]` markers, or parse errors.
 #[must_use]
-pub fn parse_sse_line(line: &str) -> Option<String> {
+pub(crate) fn parse_sse_line(line: &str) -> Option<String> {
     let data = line.strip_prefix("data: ")?;
     if data.trim() == "[DONE]" {
         return None;
@@ -297,36 +297,22 @@ pub fn parse_sse_line(line: &str) -> Option<String> {
         .map(std::string::ToString::to_string)
 }
 
-/// Runs a streaming inference request against the llama-server.
-///
-/// # Errors
-///
-/// Returns an error if the HTTP request fails or is cancelled.
-pub async fn run_inference(
+/// Sends a chat-completions request to the local llama-server and validates
+/// the response status. Shared by the streaming and non-streaming inference
+/// paths — the request body (including the `stream` flag) is built by callers.
+async fn send_chat_request(
     port: u16,
-    messages: &[ChatMessage],
-    temperature: f64,
-    max_tokens: u32,
-    task_id: &str,
-    token: &Arc<CancellationToken>,
-    app: &AppHandle,
-) -> Result<String, TextProcessingError> {
+    body: &Value,
+) -> Result<reqwest::Response, TextProcessingError> {
     let url = format!("http://127.0.0.1:{port}/v1/chat/completions");
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(120))
         .build()
         .map_err(TextProcessingError::from)?;
 
-    let body = serde_json::json!({
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-        "stream": true,
-    });
-
     let response = client
         .post(&url)
-        .json(&body)
+        .json(body)
         .send()
         .await
         .map_err(TextProcessingError::from)?;
@@ -337,6 +323,32 @@ pub async fn run_inference(
             response.status()
         )));
     }
+
+    Ok(response)
+}
+
+/// Runs a streaming inference request against the llama-server.
+///
+/// # Errors
+///
+/// Returns an error if the HTTP request fails or is cancelled.
+pub(crate) async fn run_inference(
+    port: u16,
+    messages: &[ChatMessage],
+    temperature: f64,
+    max_tokens: u32,
+    task_id: &str,
+    token: &Arc<CancellationToken>,
+    app: &AppHandle,
+) -> Result<String, TextProcessingError> {
+    let body = serde_json::json!({
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": true,
+    });
+
+    let response = send_chat_request(port, &body).await?;
 
     let mut accumulated = String::new();
     let mut stream = response.bytes_stream();
@@ -383,7 +395,7 @@ pub async fn run_inference(
 /// success, the body is not a valid OpenAI-compatible chat completion, or
 /// the task is cancelled.
 #[allow(clippy::too_many_arguments)]
-pub async fn run_inference_blocking(
+pub(crate) async fn run_inference_blocking(
     port: u16,
     messages: &[ChatMessage],
     temperature: f64,
@@ -397,12 +409,6 @@ pub async fn run_inference_blocking(
         return Err(TextProcessingError::Cancelled);
     }
 
-    let url = format!("http://127.0.0.1:{port}/v1/chat/completions");
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
-        .build()
-        .map_err(TextProcessingError::from)?;
-
     let mut body = json!({
         "messages": messages,
         "temperature": temperature,
@@ -413,19 +419,7 @@ pub async fn run_inference_blocking(
         body["response_format"] = format;
     }
 
-    let response = client
-        .post(&url)
-        .json(&body)
-        .send()
-        .await
-        .map_err(TextProcessingError::from)?;
-
-    if !response.status().is_success() {
-        return Err(TextProcessingError::InferenceError(format!(
-            "HTTP {}",
-            response.status()
-        )));
-    }
+    let response = send_chat_request(port, &body).await?;
 
     if token.is_cancelled() {
         return Err(TextProcessingError::Cancelled);
@@ -471,7 +465,7 @@ pub(super) fn emit_initial_progress(app: &AppHandle, task_id: &str) {
 
 /// Default chunk size for text processing.
 #[must_use]
-pub fn default_max_chunk_chars() -> usize {
+pub(crate) fn default_max_chunk_chars() -> usize {
     MAX_CHUNK_CHARS
 }
 
@@ -482,7 +476,7 @@ pub fn default_max_chunk_chars() -> usize {
 /// breaks; 256 is a floor for very short inputs; 4096 caps the request body to
 /// the server context size.
 #[must_use]
-pub fn clean_text_max_tokens(text: &str) -> u32 {
+pub(crate) fn clean_text_max_tokens(text: &str) -> u32 {
     #[allow(
         clippy::cast_precision_loss,
         clippy::cast_possible_truncation,

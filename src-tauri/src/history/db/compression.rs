@@ -5,7 +5,7 @@ use super::super::error::HistoryError;
 /// # Errors
 ///
 /// Returns `HistoryError::Compression` if compression fails.
-pub fn compress_text(text: &str) -> Result<Vec<u8>, HistoryError> {
+pub(crate) fn compress_text(text: &str) -> Result<Vec<u8>, HistoryError> {
     use flate2::write::GzEncoder;
     use flate2::Compression;
     use std::io::Write;
@@ -24,7 +24,7 @@ pub fn compress_text(text: &str) -> Result<Vec<u8>, HistoryError> {
 /// # Errors
 ///
 /// Returns `HistoryError::Compression` if decompression fails.
-pub fn decompress_text(data: &[u8]) -> Result<String, HistoryError> {
+pub(crate) fn decompress_text(data: &[u8]) -> Result<String, HistoryError> {
     use flate2::read::GzDecoder;
     use std::io::Read;
 

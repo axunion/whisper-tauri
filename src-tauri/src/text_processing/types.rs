@@ -21,22 +21,10 @@ pub struct TextModelInfo {
     pub path: Option<String>,
 }
 
-/// Information about a legacy (retired) text model file present on disk.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct LegacyTextModelInfo {
-    /// Model identifier (e.g., the retired model ID)
-    pub id: String,
-    /// Size in bytes
-    pub size_bytes: u64,
-    /// Path to the model file
-    pub path: String,
-}
-
 /// Text model download progress.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct TextDownloadProgress {
+pub(crate) struct TextDownloadProgress {
     /// Model identifier being downloaded
     pub model_id: String,
     /// Downloaded bytes
@@ -50,7 +38,7 @@ pub struct TextDownloadProgress {
 /// Inference progress update (streaming tokens).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct InferenceProgress {
+pub(crate) struct InferenceProgress {
     /// Task identifier
     pub task_id: String,
     /// Latest token
@@ -78,7 +66,7 @@ pub struct ServerStatus {
 /// OpenAI-compatible chat message.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct ChatMessage {
+pub(crate) struct ChatMessage {
     /// Message role (system, user, assistant)
     pub role: String,
     /// Message content
@@ -157,20 +145,6 @@ mod tests {
 
         let json = serde_json::to_string(&model).expect("Failed to serialize");
         assert!(!json.contains("\"path\""));
-    }
-
-    #[test]
-    fn legacy_text_model_info_serializes_to_camel_case() {
-        let info = LegacyTextModelInfo {
-            id: "retired-model".to_string(),
-            size_bytes: 1_234_567_890,
-            path: "/path/to/retired-model.gguf".to_string(),
-        };
-
-        let json = serde_json::to_string(&info).expect("Failed to serialize");
-        assert!(json.contains("\"id\":\"retired-model\""));
-        assert!(json.contains("\"sizeBytes\":1234567890"));
-        assert!(json.contains("\"path\":\"/path/to/retired-model.gguf\""));
     }
 
     #[test]

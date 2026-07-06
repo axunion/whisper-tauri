@@ -74,7 +74,7 @@ fn centiseconds_to_ms(cs: i64) -> u64 {
 }
 
 /// Token for cancelling an in-progress transcription.
-pub struct CancellationToken {
+pub(crate) struct CancellationToken {
     cancelled: AtomicBool,
 }
 
@@ -106,7 +106,7 @@ impl CancellationToken {
 }
 
 /// Manages active transcription tasks and their cancellation tokens.
-pub struct TaskManager {
+pub(crate) struct TaskManager {
     tasks: RwLock<HashMap<String, Arc<CancellationToken>>>,
 }
 
@@ -173,13 +173,13 @@ impl TaskManager {
 }
 
 /// Global task manager instance.
-pub static TASK_MANAGER: Lazy<TaskManager> = Lazy::new(TaskManager::new);
+pub(crate) static TASK_MANAGER: Lazy<TaskManager> = Lazy::new(TaskManager::new);
 
 /// Resamples audio data using linear interpolation.
 ///
 /// Converts from `from_rate` Hz to `to_rate` Hz.
 #[must_use]
-pub fn resample(samples: &[f32], from_rate: u32, to_rate: u32) -> Vec<f32> {
+pub(crate) fn resample(samples: &[f32], from_rate: u32, to_rate: u32) -> Vec<f32> {
     if from_rate == to_rate || samples.is_empty() {
         return samples.to_vec();
     }
@@ -220,7 +220,7 @@ pub fn resample(samples: &[f32], from_rate: u32, to_rate: u32) -> Vec<f32> {
 /// # Errors
 ///
 /// Returns an error if the file cannot be found, read, or has an unsupported format.
-pub fn load_wav_file(path: &Path) -> Result<Vec<f32>, WhisperError> {
+pub(crate) fn load_wav_file(path: &Path) -> Result<Vec<f32>, WhisperError> {
     if !path.exists() {
         return Err(WhisperError::FileNotFound(path.display().to_string()));
     }
@@ -359,7 +359,7 @@ fn preprocess_with_vad(
 ///
 /// Returns an error if the model cannot be loaded, transcription fails,
 /// or the task is cancelled.
-pub fn transcribe(
+pub(crate) fn transcribe(
     model_path: &str,
     samples: &[f32],
     task_id: &str,

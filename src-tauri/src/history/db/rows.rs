@@ -3,7 +3,7 @@ use super::super::types::{AiContent, HistoryMeta};
 use super::compression::decompress_text;
 
 /// Row shape for the list/meta query against the `history` table.
-pub struct MetaRow {
+pub(crate) struct MetaRow {
     pub(super) id: String,
     pub(super) created_at: String,
     pub(super) file_name: String,
@@ -15,7 +15,7 @@ pub struct MetaRow {
 }
 
 /// Row shape for a query against the `ai_content` table.
-pub struct AiContentRow {
+pub(crate) struct AiContentRow {
     pub(super) id: String,
     pub(super) history_id: String,
     pub(super) content_type: String,
@@ -33,7 +33,7 @@ pub struct AiContentRow {
 /// # Errors
 ///
 /// Returns an error if any column extraction fails.
-pub fn meta_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<MetaRow> {
+pub(crate) fn meta_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<MetaRow> {
     Ok(MetaRow {
         id: row.get(0)?,
         created_at: row.get(1)?,
@@ -51,7 +51,7 @@ pub fn meta_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<MetaRow> {
 /// # Errors
 ///
 /// Returns an error if text decompression fails.
-pub fn meta_from_row(row: MetaRow) -> Result<HistoryMeta, HistoryError> {
+pub(crate) fn meta_from_row(row: MetaRow) -> Result<HistoryMeta, HistoryError> {
     let text = decompress_text(&row.text_compressed)?;
     let preview = text_preview(&text, 100);
     Ok(HistoryMeta {
@@ -74,7 +74,7 @@ pub fn meta_from_row(row: MetaRow) -> Result<HistoryMeta, HistoryError> {
 /// # Errors
 ///
 /// Returns an error if column extraction fails.
-pub fn ai_content_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<AiContentRow> {
+pub(crate) fn ai_content_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<AiContentRow> {
     Ok(AiContentRow {
         id: row.get(0)?,
         history_id: row.get(1)?,
@@ -91,7 +91,7 @@ pub fn ai_content_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<AiContentR
 /// # Errors
 ///
 /// Returns an error if text decompression fails.
-pub fn ai_content_from_row(row: AiContentRow) -> Result<AiContent, HistoryError> {
+pub(crate) fn ai_content_from_row(row: AiContentRow) -> Result<AiContent, HistoryError> {
     let text = decompress_text(&row.text_compressed)?;
     Ok(AiContent {
         id: row.id,

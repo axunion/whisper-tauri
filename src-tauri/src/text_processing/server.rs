@@ -1,14 +1,11 @@
 use std::path::Path;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{Child, Command};
 
 use super::error::TextProcessingError;
 use super::models;
-
-/// Default idle timeout in seconds.
-const DEFAULT_IDLE_TIMEOUT_SECS: u64 = 300;
 
 /// Health check polling interval in milliseconds.
 const HEALTH_CHECK_INTERVAL_MS: u64 = 1000;
@@ -21,8 +18,6 @@ pub struct LlamaServerManager {
     child: Option<Child>,
     port: Option<u16>,
     model_id: Option<String>,
-    last_activity: Option<Instant>,
-    idle_timeout: Duration,
 }
 
 impl Default for LlamaServerManager {
@@ -34,13 +29,11 @@ impl Default for LlamaServerManager {
 impl LlamaServerManager {
     /// Creates a new server manager in the stopped state.
     #[must_use]
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             child: None,
             port: None,
             model_id: None,
-            last_activity: None,
-            idle_timeout: Duration::from_secs(DEFAULT_IDLE_TIMEOUT_SECS),
         }
     }
 
@@ -49,7 +42,7 @@ impl LlamaServerManager {
     /// Checks the child process with `try_wait()` to detect crashes.
     /// If the process has exited, internal state is cleaned up automatically.
     #[must_use]
-    pub fn is_running(&mut self) -> bool {
+    pub(crate) fn is_running(&mut self) -> bool {
         let Some(ref mut child) = self.child else {
             return false;
         };
@@ -59,7 +52,6 @@ impl LlamaServerManager {
                 self.child = None;
                 self.port = None;
                 self.model_id = None;
-                self.last_activity = None;
                 false
             }
             Ok(None) => true, // Still running
@@ -68,29 +60,14 @@ impl LlamaServerManager {
 
     /// Returns the port the server is listening on, if running.
     #[must_use]
-    pub fn port(&self) -> Option<u16> {
+    pub(crate) fn port(&self) -> Option<u16> {
         self.port
     }
 
     /// Returns the model ID loaded on the server, if running.
     #[must_use]
-    pub fn model_id(&self) -> Option<&str> {
+    pub(crate) fn model_id(&self) -> Option<&str> {
         self.model_id.as_deref()
-    }
-
-    /// Updates the last activity timestamp.
-    pub fn touch_activity(&mut self) {
-        self.last_activity = Some(Instant::now());
-    }
-
-    /// Returns whether the server should be stopped due to idle timeout.
-    #[must_use]
-    pub fn should_idle_stop(&mut self) -> bool {
-        if !self.is_running() {
-            return false;
-        }
-        self.last_activity
-            .is_some_and(|t| t.elapsed() >= self.idle_timeout)
     }
 
     /// Starts the llama-server subprocess.
@@ -98,23 +75,17 @@ impl LlamaServerManager {
     /// # Errors
     ///
     /// Returns an error if the server binary is not found or fails to start.
-    pub async fn start(
+    pub(crate) async fn start(
         &mut self,
         app_data_dir: &Path,
         model_id: &str,
-        idle_timeout_secs: Option<u64>,
     ) -> Result<u16, TextProcessingError> {
         // Stop existing server if running with a different model
         if self.is_running() {
             if self.model_id.as_deref() == Some(model_id) {
-                self.touch_activity();
                 return self.port.ok_or(TextProcessingError::ServerNotRunning);
             }
             self.stop().await?;
-        }
-
-        if let Some(timeout) = idle_timeout_secs {
-            self.idle_timeout = Duration::from_secs(timeout);
         }
 
         let server_path = models::llama_server_path(app_data_dir);
@@ -172,7 +143,6 @@ impl LlamaServerManager {
         self.child = Some(child);
         self.port = Some(port);
         self.model_id = Some(model_id.to_string());
-        self.touch_activity();
 
         // Wait for health check
         wait_for_health(port).await?;
@@ -185,19 +155,18 @@ impl LlamaServerManager {
     /// # Errors
     ///
     /// Returns an error if the process cannot be killed.
-    pub async fn stop(&mut self) -> Result<(), TextProcessingError> {
+    pub(crate) async fn stop(&mut self) -> Result<(), TextProcessingError> {
         if let Some(mut child) = self.child.take() {
             child.kill().await.map_err(TextProcessingError::from)?;
             let _ = child.wait().await;
         }
         self.port = None;
         self.model_id = None;
-        self.last_activity = None;
         Ok(())
     }
 
     /// Stops the server, ignoring any errors (for app shutdown).
-    pub async fn shutdown(&mut self) {
+    pub(crate) async fn shutdown(&mut self) {
         let _ = self.stop().await;
     }
 }
@@ -273,12 +242,6 @@ mod tests {
     fn new_manager_model_id_is_none() {
         let manager = LlamaServerManager::new();
         assert!(manager.model_id().is_none());
-    }
-
-    #[test]
-    fn should_idle_stop_false_when_not_running() {
-        let mut manager = LlamaServerManager::new();
-        assert!(!manager.should_idle_stop());
     }
 
     #[test]

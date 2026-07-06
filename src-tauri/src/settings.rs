@@ -17,6 +17,14 @@ impl From<SettingsError> for String {
     }
 }
 
+/// Opens the settings store, mapping failures to [`SettingsError::Store`].
+fn open_store(
+    app: &AppHandle,
+) -> Result<std::sync::Arc<tauri_plugin_store::Store<tauri::Wry>>, SettingsError> {
+    app.store(SETTINGS_STORE)
+        .map_err(|e| SettingsError::Store(e.to_string()))
+}
+
 /// Reads a string value from the settings store.
 ///
 /// Returns `Ok(None)` if the key is missing or the value is not a string.
@@ -25,9 +33,7 @@ impl From<SettingsError> for String {
 ///
 /// Returns [`SettingsError::Store`] if the store cannot be opened.
 pub fn get_string(app: &AppHandle, key: &str) -> Result<Option<String>, SettingsError> {
-    let store = app
-        .store(SETTINGS_STORE)
-        .map_err(|e| SettingsError::Store(e.to_string()))?;
+    let store = open_store(app)?;
     let value = store
         .get(key)
         .and_then(|v| v.as_str().map(std::string::ToString::to_string));
@@ -46,9 +52,7 @@ pub fn set_or_delete_string(
     key: &str,
     value: Option<String>,
 ) -> Result<(), SettingsError> {
-    let store = app
-        .store(SETTINGS_STORE)
-        .map_err(|e| SettingsError::Store(e.to_string()))?;
+    let store = open_store(app)?;
     match value {
         Some(v) => store.set(key, serde_json::Value::String(v)),
         None => {
@@ -67,9 +71,7 @@ pub fn set_or_delete_string(
 ///
 /// Returns [`SettingsError::Store`] if the store cannot be opened.
 pub fn get_strings(app: &AppHandle, keys: &[&str]) -> Result<Vec<Option<String>>, SettingsError> {
-    let store = app
-        .store(SETTINGS_STORE)
-        .map_err(|e| SettingsError::Store(e.to_string()))?;
+    let store = open_store(app)?;
     Ok(keys
         .iter()
         .map(|k| {
@@ -91,9 +93,7 @@ pub fn set_or_delete_strings(
     app: &AppHandle,
     entries: &[(&str, Option<String>)],
 ) -> Result<(), SettingsError> {
-    let store = app
-        .store(SETTINGS_STORE)
-        .map_err(|e| SettingsError::Store(e.to_string()))?;
+    let store = open_store(app)?;
     for (key, value) in entries {
         match value {
             Some(v) => store.set(*key, serde_json::Value::String(v.clone())),

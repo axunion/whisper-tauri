@@ -93,7 +93,7 @@ fn bulleted_item_block(content: &str) -> Value {
 /// `Label: Value` lines joined by `\n`. Returns `None` when the input is
 /// empty so the caller can skip emitting an empty block.
 #[must_use]
-pub fn build_meta_callout(fields: &[NotionMetaField]) -> Option<Value> {
+fn build_meta_callout(fields: &[NotionMetaField]) -> Option<Value> {
     if fields.is_empty() {
         return None;
     }
@@ -118,7 +118,7 @@ pub fn build_meta_callout(fields: &[NotionMetaField]) -> Option<Value> {
 /// followed by `paragraph` / `bulleted_list_item` children. Empty sections
 /// (empty string, empty vec) are skipped entirely.
 #[must_use]
-pub fn build_summary_blocks(summary: &NotionSummary) -> Vec<Value> {
+fn build_summary_blocks(summary: &NotionSummary) -> Vec<Value> {
     let mut blocks: Vec<Value> = Vec::new();
 
     if !summary.headline.is_empty() {
@@ -159,7 +159,7 @@ pub fn build_summary_blocks(summary: &NotionSummary) -> Vec<Value> {
 }
 
 #[must_use]
-pub fn build_divider_block() -> Value {
+fn build_divider_block() -> Value {
     json!({"object": "block", "type": "divider", "divider": {}})
 }
 
@@ -195,7 +195,7 @@ fn body_paragraph_blocks(text: &str) -> Vec<Value> {
 /// meta callout → summary blocks → divider (only when both upper and body
 /// sections exist) → body paragraphs.
 #[must_use]
-pub fn build_create_page_children(payload: &NotionPagePayload) -> Vec<Value> {
+fn build_create_page_children(payload: &NotionPagePayload) -> Vec<Value> {
     let mut children: Vec<Value> = Vec::new();
 
     if let Some(callout) = build_meta_callout(&payload.meta) {
@@ -224,7 +224,7 @@ pub fn build_create_page_children(payload: &NotionPagePayload) -> Vec<Value> {
 /// The tail is moved (not cloned) into the appendix batches — for long
 /// transcripts that can be hundreds of `Value` trees worth of allocations.
 #[must_use]
-pub fn split_children_for_create(mut children: Vec<Value>) -> (Vec<Value>, Vec<Vec<Value>>) {
+fn split_children_for_create(mut children: Vec<Value>) -> (Vec<Value>, Vec<Vec<Value>>) {
     if children.len() <= MAX_BLOCKS {
         return (children, Vec::new());
     }
@@ -258,7 +258,7 @@ fn build_title_properties(title_property: &str, title: &str) -> Value {
 /// Returns [`NotionError::InvalidResponse`] when the response shape is
 /// unexpected, or [`NotionError::NoTitleProperty`] when no property has
 /// `type == "title"`.
-pub fn parse_database_response(value: &Value) -> Result<NotionDatabaseInfo, NotionError> {
+fn parse_database_response(value: &Value) -> Result<NotionDatabaseInfo, NotionError> {
     let id = value
         .get("id")
         .and_then(Value::as_str)
@@ -304,7 +304,7 @@ pub fn parse_database_response(value: &Value) -> Result<NotionDatabaseInfo, Noti
 /// # Errors
 ///
 /// Returns [`NotionError::InvalidResponse`] when `id` is missing.
-pub fn parse_page_response(value: &Value) -> Result<NotionPageRef, NotionError> {
+fn parse_page_response(value: &Value) -> Result<NotionPageRef, NotionError> {
     let page_id = value
         .get("id")
         .and_then(Value::as_str)
@@ -358,6 +358,14 @@ fn build_client() -> Result<reqwest::Client, NotionError> {
         .map_err(NotionError::from)
 }
 
+/// Attaches the authentication and API-version headers required by every
+/// Notion API request.
+fn with_notion_headers(builder: reqwest::RequestBuilder, token: &str) -> reqwest::RequestBuilder {
+    builder
+        .bearer_auth(token)
+        .header("Notion-Version", NOTION_VERSION)
+}
+
 /// Fetches database metadata to verify connectivity and discover the title
 /// property name.
 ///
@@ -371,10 +379,7 @@ pub async fn fetch_database(
 ) -> Result<NotionDatabaseInfo, NotionError> {
     let client = build_client()?;
     let url = format!("{NOTION_BASE_URL}/databases/{database_id}");
-    let req = client
-        .get(&url)
-        .bearer_auth(token)
-        .header("Notion-Version", NOTION_VERSION);
+    let req = with_notion_headers(client.get(&url), token);
     let body = execute_request(req).await?;
     parse_database_response(&body)
 }
@@ -386,11 +391,11 @@ async fn append_block_children(
     children: &[Value],
 ) -> Result<(), NotionError> {
     let body = json!({"children": children});
-    let req = client
-        .patch(format!("{NOTION_BASE_URL}/blocks/{block_id}/children"))
-        .bearer_auth(token)
-        .header("Notion-Version", NOTION_VERSION)
-        .json(&body);
+    let req = with_notion_headers(
+        client.patch(format!("{NOTION_BASE_URL}/blocks/{block_id}/children")),
+        token,
+    )
+    .json(&body);
     execute_request(req).await?;
     Ok(())
 }
@@ -423,11 +428,8 @@ pub async fn create_page(
         "properties": build_title_properties(title_property, &payload.title),
         "children": initial,
     });
-    let req = client
-        .post(format!("{NOTION_BASE_URL}/pages"))
-        .bearer_auth(token)
-        .header("Notion-Version", NOTION_VERSION)
-        .json(&body);
+    let req =
+        with_notion_headers(client.post(format!("{NOTION_BASE_URL}/pages")), token).json(&body);
     let response_body = execute_request(req).await?;
     let mut page_ref = parse_page_response(&response_body)?;
 

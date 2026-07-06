@@ -9,11 +9,11 @@ use super::super::types::{
 };
 use super::compression::{compress_text, decompress_text};
 use super::rows::{meta_from_row, meta_row_mapper};
-use super::time::chrono_now;
+use super::time::{chrono_now, day_end, day_start};
 
 /// Builds an ORDER BY clause based on the sort option and direction.
 #[must_use]
-pub fn sort_clause(
+pub(crate) fn sort_clause(
     sort_by: Option<&HistorySortBy>,
     sort_order: Option<&SortOrder>,
     prefix: &str,
@@ -40,7 +40,10 @@ pub fn sort_clause(
 /// # Errors
 ///
 /// Returns `HistoryError` if database operations or compression fail.
-pub fn save_entry(db_path: &Path, params: &HistorySaveParams) -> Result<String, HistoryError> {
+pub(crate) fn save_entry(
+    db_path: &Path,
+    params: &HistorySaveParams,
+) -> Result<String, HistoryError> {
     let id = uuid::Uuid::new_v4().to_string();
     let created_at = chrono_now();
 
@@ -81,7 +84,7 @@ pub fn save_entry(db_path: &Path, params: &HistorySaveParams) -> Result<String, 
 /// # Errors
 ///
 /// Returns `HistoryError::Database` if the query fails.
-pub fn list_entries(
+pub(crate) fn list_entries(
     db_path: &Path,
     filter: &HistoryFilter,
 ) -> Result<Vec<HistoryMeta>, HistoryError> {
@@ -94,11 +97,11 @@ pub fn list_entries(
 
     if let Some(ref from) = filter.date_from {
         conditions.push(format!("created_at >= ?{}", params_vec.len() + 1));
-        params_vec.push(Box::new(format!("{from}T00:00:00")));
+        params_vec.push(Box::new(day_start(from)));
     }
     if let Some(ref to) = filter.date_to {
         conditions.push(format!("created_at <= ?{}", params_vec.len() + 1));
-        params_vec.push(Box::new(format!("{to}T23:59:59")));
+        params_vec.push(Box::new(day_end(to)));
     }
 
     if !conditions.is_empty() {
@@ -136,7 +139,7 @@ pub fn list_entries(
 ///
 /// Returns `HistoryError::NotFound` if no entry with the given ID exists.
 /// Returns `HistoryError::Database` if the query fails.
-pub fn get_entry(db_path: &Path, id: &str) -> Result<HistoryEntry, HistoryError> {
+pub(crate) fn get_entry(db_path: &Path, id: &str) -> Result<HistoryEntry, HistoryError> {
     let conn = super::open_connection(db_path)?;
 
     let mut stmt = conn.prepare(
@@ -197,7 +200,7 @@ pub fn get_entry(db_path: &Path, id: &str) -> Result<HistoryEntry, HistoryError>
 /// # Errors
 ///
 /// Returns `HistoryError::Database` if the delete operation fails.
-pub fn delete_entries(db_path: &Path, ids: &[String]) -> Result<u64, HistoryError> {
+pub(crate) fn delete_entries(db_path: &Path, ids: &[String]) -> Result<u64, HistoryError> {
     if ids.is_empty() {
         return Ok(0);
     }
@@ -233,7 +236,7 @@ pub fn delete_entries(db_path: &Path, ids: &[String]) -> Result<u64, HistoryErro
 /// # Errors
 ///
 /// Returns `HistoryError::Database` if the delete operation fails.
-pub fn delete_all_entries(db_path: &Path) -> Result<u64, HistoryError> {
+pub(crate) fn delete_all_entries(db_path: &Path) -> Result<u64, HistoryError> {
     let conn = super::open_connection(db_path)?;
 
     let tx = conn.unchecked_transaction()?;
@@ -253,7 +256,11 @@ pub fn delete_all_entries(db_path: &Path) -> Result<u64, HistoryError> {
 ///
 /// Returns `HistoryError::NotFound` if no entry with the given ID exists.
 /// Returns `HistoryError::Database` if the update fails.
-pub fn rename_entry(db_path: &Path, id: &str, new_file_name: &str) -> Result<(), HistoryError> {
+pub(crate) fn rename_entry(
+    db_path: &Path,
+    id: &str,
+    new_file_name: &str,
+) -> Result<(), HistoryError> {
     let conn = super::open_connection(db_path)?;
     let updated = conn.execute(
         "UPDATE history SET file_name = ?2 WHERE id = ?1",

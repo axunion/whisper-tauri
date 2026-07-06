@@ -250,13 +250,6 @@ export const en: Dictionary = {
     deleteModelConfirmation:
       "{name} will be deleted. This action cannot be undone.",
     modelDeletedToast: "Language model deleted",
-    legacyModelsTitle: "Deprecated Models",
-    legacyModelsDescription:
-      "These language models are no longer offered. Delete them to free up disk space.",
-    legacyModelBadge: "Deprecated",
-    deleteLegacyModelConfirmation:
-      "{id} will be deleted. This model cannot be re-downloaded.",
-    legacyModelDeletedToast: "Deleted {id}",
     serverDownloadedToast: "llama-server downloaded",
     deleteServer: "Delete Server",
     deleteServerConfirmation:

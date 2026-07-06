@@ -238,11 +238,6 @@ export interface Dictionary {
     deleteModel: string;
     deleteModelConfirmation: string;
     modelDeletedToast: string;
-    legacyModelsTitle: string;
-    legacyModelsDescription: string;
-    legacyModelBadge: string;
-    deleteLegacyModelConfirmation: string;
-    legacyModelDeletedToast: string;
     serverDownloadedToast: string;
     deleteServer: string;
     deleteServerConfirmation: string;

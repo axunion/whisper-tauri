@@ -7,10 +7,7 @@ import {
   SettingsSelect,
   UpdateCheck,
 } from "~/components/settings";
-import {
-  LegacyTextModelList,
-  TextModelManager,
-} from "~/components/text-processing";
+import { TextModelManager } from "~/components/text-processing";
 import {
   Card,
   CardContent,
@@ -146,9 +143,6 @@ export default function Settings() {
 
       {/* Text Model Management */}
       <TextModelManager />
-
-      {/* Legacy (Deprecated) Text Models */}
-      <LegacyTextModelList />
 
       {/* FFmpeg */}
       <FfmpegManager />

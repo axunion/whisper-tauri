@@ -11,7 +11,7 @@ use super::error::ConverterError;
 ///
 /// Returns `ConverterError::ConversionFailed` if the file cannot be probed or
 /// duration cannot be determined.
-pub fn get_duration_via_symphonia(input_path: &Path) -> Result<u64, ConverterError> {
+pub(crate) fn get_duration_via_symphonia(input_path: &Path) -> Result<u64, ConverterError> {
     use symphonia::core::formats::FormatOptions;
     use symphonia::core::io::MediaSourceStream;
     use symphonia::core::meta::MetadataOptions;
@@ -97,7 +97,7 @@ pub fn get_duration_via_symphonia(input_path: &Path) -> Result<u64, ConverterErr
 /// # Errors
 ///
 /// Returns `ConverterError::ConversionFailed` if ffmpeg fails or duration cannot be parsed.
-pub fn get_duration_via_ffmpeg(
+pub(crate) fn get_duration_via_ffmpeg(
     ffmpeg_path: &Path,
     input_path: &Path,
 ) -> Result<u64, ConverterError> {

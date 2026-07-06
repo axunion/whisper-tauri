@@ -34,7 +34,7 @@ fn should_extract(filename: &str) -> bool {
 /// Returns whether a filename is an auxiliary artifact extracted alongside the
 /// main binary (shared libraries), excluding the main binary itself.
 #[must_use]
-pub fn is_extracted_artifact(filename: &str) -> bool {
+pub(crate) fn is_extracted_artifact(filename: &str) -> bool {
     is_shared_library(filename)
 }
 
@@ -59,7 +59,7 @@ fn write_file(reader: &mut impl Read, out_path: &Path) -> Result<(), String> {
 /// # Errors
 ///
 /// Returns an error string if the archive cannot be read or the binary is missing.
-pub fn extract_from_tar_gz(archive_path: &Path, bin_dir: &Path) -> Result<(), String> {
+pub(crate) fn extract_from_tar_gz(archive_path: &Path, bin_dir: &Path) -> Result<(), String> {
     let file = std::fs::File::open(archive_path).map_err(dl_err)?;
     let decoder = flate2::read::GzDecoder::new(file);
     let mut archive = tar::Archive::new(decoder);
@@ -114,7 +114,7 @@ pub fn extract_from_tar_gz(archive_path: &Path, bin_dir: &Path) -> Result<(), St
 /// # Errors
 ///
 /// Returns an error string if the archive cannot be read or the binary is missing.
-pub fn extract_from_zip(archive_path: &Path, bin_dir: &Path) -> Result<(), String> {
+pub(crate) fn extract_from_zip(archive_path: &Path, bin_dir: &Path) -> Result<(), String> {
     let file = std::fs::File::open(archive_path).map_err(dl_err)?;
     let mut archive = zip::ZipArchive::new(file).map_err(dl_err)?;
 

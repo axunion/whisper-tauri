@@ -81,21 +81,6 @@ pub struct DownloadProgress {
     pub progress: f64,
 }
 
-/// Audio file information.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct FileInfo {
-    /// Full file path
-    pub path: String,
-    /// File name
-    pub name: String,
-    /// File size in bytes
-    pub size: u64,
-    /// Duration in milliseconds (if known)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub duration: Option<u64>,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -198,31 +183,5 @@ mod tests {
         assert!(json.contains("\"modelId\":\"base\""));
         assert!(json.contains("\"downloadedBytes\":50000000"));
         assert!(json.contains("\"totalBytes\":148897792"));
-    }
-
-    #[test]
-    fn file_info_skips_none_duration() {
-        let file = FileInfo {
-            path: "/path/to/audio.wav".to_string(),
-            name: "audio.wav".to_string(),
-            size: 1_024_000,
-            duration: None,
-        };
-
-        let json = serde_json::to_string(&file).expect("Failed to serialize");
-        assert!(!json.contains("\"duration\""));
-    }
-
-    #[test]
-    fn file_info_includes_duration_when_present() {
-        let file = FileInfo {
-            path: "/path/to/audio.wav".to_string(),
-            name: "audio.wav".to_string(),
-            size: 1_024_000,
-            duration: Some(60_000),
-        };
-
-        let json = serde_json::to_string(&file).expect("Failed to serialize");
-        assert!(json.contains("\"duration\":60000"));
     }
 }

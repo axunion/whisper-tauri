@@ -88,7 +88,7 @@ pub async fn notion_create_page(
     app: AppHandle,
     payload: NotionPagePayload,
 ) -> Result<NotionPageRef, String> {
-    let settings = read_settings(&app).map_err(String::from)?;
+    let settings = read_settings(&app).map_err(Into::<String>::into)?;
     let token = settings
         .token
         .ok_or_else(|| NotionError::NotConfigured.to_string())?;

@@ -10,17 +10,17 @@ use rusqlite::Connection;
 
 use super::error::HistoryError;
 
-pub use ai_content::{get_ai_content, get_all_ai_content, save_ai_content};
-pub use compression::{compress_text, decompress_text};
-pub use entries::{
+pub(crate) use ai_content::{get_ai_content, get_all_ai_content, save_ai_content};
+pub(crate) use compression::decompress_text;
+pub(crate) use entries::{
     delete_all_entries, delete_entries, get_entry, list_entries, rename_entry, save_entry,
     sort_clause,
 };
-pub use rows::{meta_from_row, meta_row_mapper};
+pub(crate) use rows::{meta_from_row, meta_row_mapper};
 
 /// Returns the path to the history database file.
 #[must_use]
-pub fn db_path(app_data_dir: &Path) -> PathBuf {
+pub(crate) fn db_path(app_data_dir: &Path) -> PathBuf {
     app_data_dir.join("history.db")
 }
 
@@ -34,7 +34,7 @@ pub fn db_path(app_data_dir: &Path) -> PathBuf {
 /// # Errors
 ///
 /// Returns `HistoryError::Database` if the database cannot be opened.
-pub fn open_connection(db_path: &Path) -> Result<Connection, HistoryError> {
+pub(crate) fn open_connection(db_path: &Path) -> Result<Connection, HistoryError> {
     let conn = Connection::open(db_path)?;
     conn.execute_batch("PRAGMA foreign_keys = ON;")?;
     Ok(conn)
@@ -68,7 +68,7 @@ fn add_column_if_missing(
 /// # Errors
 ///
 /// Returns `HistoryError::Database` if the database cannot be opened or initialized.
-pub fn init_db(db_path: &Path) -> Result<(), HistoryError> {
+pub(crate) fn init_db(db_path: &Path) -> Result<(), HistoryError> {
     let conn = open_connection(db_path)?;
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS history (
@@ -240,8 +240,9 @@ mod tests {
         )
         .expect("create table");
 
-        let text_compressed = compress_text("マイグレーション対象テキスト").expect("compress");
-        let segments_compressed = compress_text("[]").expect("compress");
+        let text_compressed =
+            compression::compress_text("マイグレーション対象テキスト").expect("compress");
+        let segments_compressed = compression::compress_text("[]").expect("compress");
         conn.execute(
             "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",

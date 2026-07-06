@@ -2,6 +2,7 @@ use std::fmt::Write;
 
 use rusqlite::Connection;
 
+use super::db::time::{day_end, day_start};
 use super::error::HistoryError;
 use super::types::{HistoryMeta, HistorySearchParams};
 
@@ -13,7 +14,7 @@ use super::types::{HistoryMeta, HistorySearchParams};
 /// # Errors
 ///
 /// Returns `HistoryError::Database` if the table cannot be created.
-pub fn init_fts(conn: &Connection) -> Result<(), HistoryError> {
+pub(crate) fn init_fts(conn: &Connection) -> Result<(), HistoryError> {
     conn.execute_batch(
         "CREATE VIRTUAL TABLE IF NOT EXISTS history_fts USING fts5(
             history_id UNINDEXED,
@@ -29,7 +30,7 @@ pub fn init_fts(conn: &Connection) -> Result<(), HistoryError> {
 /// # Errors
 ///
 /// Returns `HistoryError::Database` if the index entry cannot be inserted.
-pub fn index_entry(conn: &Connection, id: &str, text: &str) -> Result<(), HistoryError> {
+pub(crate) fn index_entry(conn: &Connection, id: &str, text: &str) -> Result<(), HistoryError> {
     conn.execute(
         "INSERT INTO history_fts (history_id, text) VALUES (?1, ?2)",
         rusqlite::params![id, text],
@@ -42,7 +43,7 @@ pub fn index_entry(conn: &Connection, id: &str, text: &str) -> Result<(), Histor
 /// # Errors
 ///
 /// Returns `HistoryError::Database` if the index entry cannot be deleted.
-pub fn delete_entry_index(conn: &Connection, id: &str) -> Result<(), HistoryError> {
+pub(crate) fn delete_entry_index(conn: &Connection, id: &str) -> Result<(), HistoryError> {
     conn.execute(
         "DELETE FROM history_fts WHERE history_id = ?1",
         rusqlite::params![id],
@@ -55,7 +56,7 @@ pub fn delete_entry_index(conn: &Connection, id: &str) -> Result<(), HistoryErro
 /// # Errors
 ///
 /// Returns `HistoryError::Database` if the index cannot be cleared.
-pub fn delete_all_indices(conn: &Connection) -> Result<(), HistoryError> {
+pub(crate) fn delete_all_indices(conn: &Connection) -> Result<(), HistoryError> {
     conn.execute("DELETE FROM history_fts", [])?;
     Ok(())
 }
@@ -81,7 +82,7 @@ fn build_fts_query(query: &str) -> String {
 /// # Errors
 ///
 /// Returns `HistoryError::Database` if the search query fails.
-pub fn search_entries(
+pub(crate) fn search_entries(
     conn: &Connection,
     params: &HistorySearchParams,
 ) -> Result<Vec<HistoryMeta>, HistoryError> {
@@ -102,11 +103,11 @@ pub fn search_entries(
 
     if let Some(ref from) = params.date_from {
         write!(sql, " AND h.created_at >= ?{}", param_values.len() + 1).ok();
-        param_values.push(Box::new(format!("{from}T00:00:00")));
+        param_values.push(Box::new(day_start(from)));
     }
     if let Some(ref to) = params.date_to {
         write!(sql, " AND h.created_at <= ?{}", param_values.len() + 1).ok();
-        param_values.push(Box::new(format!("{to}T23:59:59")));
+        param_values.push(Box::new(day_end(to)));
     }
 
     write!(
@@ -141,7 +142,7 @@ pub fn search_entries(
 /// # Errors
 ///
 /// Returns `HistoryError::Database` if the rebuild fails.
-pub fn rebuild_fts_index(conn: &Connection) -> Result<(), HistoryError> {
+pub(crate) fn rebuild_fts_index(conn: &Connection) -> Result<(), HistoryError> {
     // Clear existing index
     delete_all_indices(conn)?;
 
@@ -168,7 +169,7 @@ pub fn rebuild_fts_index(conn: &Connection) -> Result<(), HistoryError> {
 /// # Errors
 ///
 /// Returns `HistoryError::Database` if the query fails.
-pub fn needs_fts_migration(conn: &Connection) -> Result<bool, HistoryError> {
+pub(crate) fn needs_fts_migration(conn: &Connection) -> Result<bool, HistoryError> {
     let history_count: u64 =
         conn.query_row("SELECT COUNT(*) FROM history", [], |row| row.get(0))?;
 
@@ -185,7 +186,7 @@ pub fn needs_fts_migration(conn: &Connection) -> Result<bool, HistoryError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::history::db::{compress_text, init_db};
+    use crate::history::db::{compression::compress_text, init_db};
     use tempfile::TempDir;
 
     fn setup() -> (TempDir, Connection) {

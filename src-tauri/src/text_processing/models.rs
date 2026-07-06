@@ -3,28 +3,16 @@ use std::path::{Path, PathBuf};
 use super::types::TextModelInfo;
 
 /// Pinned llama-server release version (verified to work).
-pub const LLAMA_SERVER_VERSION: &str = "b8672";
+const LLAMA_SERVER_VERSION: &str = "b8672";
 
 /// Valid text model IDs.
 const VALID_MODEL_IDS: [&str; 2] = ["gemma-4-e2b", "qwen3.5-4b"];
-
-/// Text model IDs that are kept reachable for cleanup but no longer offered
-/// for download. Pair each entry with a [`legacy_model_filename`] match arm.
-const LEGACY_MODEL_IDS: &[&str] = &[];
 
 /// Model filenames (GGUF `Q4_K_M` quantization).
 fn get_model_filename(model_id: &str) -> Option<&'static str> {
     match model_id {
         "gemma-4-e2b" => Some("google_gemma-4-E2B-it-Q4_K_M.gguf"),
         "qwen3.5-4b" => Some("Qwen3.5-4B-Q4_K_M.gguf"),
-        _ => None,
-    }
-}
-
-/// Filenames for legacy (retired) text models. Pair with [`LEGACY_MODEL_IDS`].
-#[allow(clippy::match_single_binding)]
-fn legacy_model_filename(model_id: &str) -> Option<&'static str> {
-    match model_id {
         _ => None,
     }
 }
@@ -42,47 +30,26 @@ fn get_default_model_base_url(model_id: &str) -> Option<&'static str> {
 
 /// Returns whether the given model ID is valid.
 #[must_use]
-pub fn is_valid_model_id(model_id: &str) -> bool {
+pub(crate) fn is_valid_model_id(model_id: &str) -> bool {
     VALID_MODEL_IDS.contains(&model_id)
 }
 
-/// Returns whether the given model ID is a legacy (retired) text model.
-///
-/// Legacy models cannot be downloaded but can still be deleted when their
-/// files remain on disk from earlier app versions.
+/// Returns the filename for a valid text model ID, if any.
 #[must_use]
-pub fn is_legacy_model_id(model_id: &str) -> bool {
-    LEGACY_MODEL_IDS.contains(&model_id)
+pub(crate) fn known_model_filename(model_id: &str) -> Option<&'static str> {
+    get_model_filename(model_id)
 }
 
-/// Returns whether the given model ID is either a valid or legacy text model.
+/// Returns the on-disk path for a valid text model ID.
 #[must_use]
-pub fn is_known_model_id(model_id: &str) -> bool {
-    is_valid_model_id(model_id) || is_legacy_model_id(model_id)
-}
-
-/// Returns the list of legacy text model IDs.
-#[must_use]
-pub fn legacy_model_ids() -> &'static [&'static str] {
-    LEGACY_MODEL_IDS
-}
-
-/// Returns the filename for a valid or legacy text model ID, if any.
-#[must_use]
-pub fn known_model_filename(model_id: &str) -> Option<&'static str> {
-    get_model_filename(model_id).or_else(|| legacy_model_filename(model_id))
-}
-
-/// Returns the on-disk path for a valid or legacy text model ID.
-#[must_use]
-pub fn known_model_path(app_data_dir: &Path, model_id: &str) -> Option<PathBuf> {
+pub(crate) fn known_model_path(app_data_dir: &Path, model_id: &str) -> Option<PathBuf> {
     let filename = known_model_filename(model_id)?;
     Some(text_models_dir(app_data_dir).join(filename))
 }
 
 /// Returns the download URL for a given model ID and optional custom base URL.
 #[must_use]
-pub fn get_model_url(model_id: &str, custom_base_url: Option<&str>) -> Option<String> {
+pub(crate) fn get_model_url(model_id: &str, custom_base_url: Option<&str>) -> Option<String> {
     let filename = get_model_filename(model_id)?;
     let base = custom_base_url.or_else(|| get_default_model_base_url(model_id))?;
     let base = base.trim_end_matches('/');
@@ -91,20 +58,20 @@ pub fn get_model_url(model_id: &str, custom_base_url: Option<&str>) -> Option<St
 
 /// Returns the text models directory under the app data directory.
 #[must_use]
-pub fn text_models_dir(app_data_dir: &Path) -> PathBuf {
+pub(crate) fn text_models_dir(app_data_dir: &Path) -> PathBuf {
     app_data_dir.join("text-models")
 }
 
 /// Returns the path to a specific text model file.
 #[must_use]
-pub fn text_model_path(app_data_dir: &Path, model_id: &str) -> Option<PathBuf> {
+pub(crate) fn text_model_path(app_data_dir: &Path, model_id: &str) -> Option<PathBuf> {
     let filename = get_model_filename(model_id)?;
     Some(text_models_dir(app_data_dir).join(filename))
 }
 
 /// Returns the path to the llama-server version marker file.
 #[must_use]
-pub fn llama_server_version_path(app_data_dir: &Path) -> PathBuf {
+pub(crate) fn llama_server_version_path(app_data_dir: &Path) -> PathBuf {
     app_data_dir.join("bin").join("llama-server.version")
 }
 
@@ -113,7 +80,7 @@ pub fn llama_server_version_path(app_data_dir: &Path) -> PathBuf {
 /// # Errors
 ///
 /// Returns an error if the version file cannot be written.
-pub fn write_server_version(app_data_dir: &Path) -> Result<(), std::io::Error> {
+pub(crate) fn write_server_version(app_data_dir: &Path) -> Result<(), std::io::Error> {
     std::fs::write(
         llama_server_version_path(app_data_dir),
         LLAMA_SERVER_VERSION,
@@ -121,20 +88,20 @@ pub fn write_server_version(app_data_dir: &Path) -> Result<(), std::io::Error> {
 }
 
 /// Deletes the version marker file (best-effort, ignores errors).
-pub fn delete_server_version(app_data_dir: &Path) {
+pub(crate) fn delete_server_version(app_data_dir: &Path) {
     let _ = std::fs::remove_file(llama_server_version_path(app_data_dir));
 }
 
 /// Returns `true` if the version marker matches the pinned version.
 #[must_use]
-pub fn is_server_version_current(app_data_dir: &Path) -> bool {
+pub(crate) fn is_server_version_current(app_data_dir: &Path) -> bool {
     std::fs::read_to_string(llama_server_version_path(app_data_dir))
         .is_ok_and(|v| v.trim() == LLAMA_SERVER_VERSION)
 }
 
 /// Returns the path where the llama-server binary will be stored.
 #[must_use]
-pub fn llama_server_path(app_data_dir: &Path) -> PathBuf {
+pub(crate) fn llama_server_path(app_data_dir: &Path) -> PathBuf {
     let binary_name = if cfg!(target_os = "windows") {
         "llama-server.exe"
     } else {
@@ -145,7 +112,7 @@ pub fn llama_server_path(app_data_dir: &Path) -> PathBuf {
 
 /// Returns the default llama-server download URL for the current platform.
 #[must_use]
-pub fn get_default_server_url() -> &'static str {
+pub(crate) fn get_default_server_url() -> &'static str {
     use std::sync::OnceLock;
 
     static URL: OnceLock<String> = OnceLock::new();
@@ -199,7 +166,7 @@ pub fn get_default_server_url() -> &'static str {
 ///
 /// All models have `downloaded` set to `false` by default.
 #[must_use]
-pub fn get_model_list() -> Vec<TextModelInfo> {
+pub(crate) fn get_model_list() -> Vec<TextModelInfo> {
     vec![
         TextModelInfo {
             id: "gemma-4-e2b".to_string(),
@@ -267,28 +234,6 @@ mod tests {
     fn is_valid_model_id_rejects_unknown() {
         assert!(!is_valid_model_id("llama-3"));
         assert!(!is_valid_model_id(""));
-    }
-
-    #[test]
-    fn legacy_model_ids_is_currently_empty() {
-        // Bookkeeping: when this assertion fails, also update the legacy UI
-        // path tests and ensure `legacy_model_filename` returns a filename
-        // for the newly retired ID.
-        assert!(legacy_model_ids().is_empty());
-    }
-
-    #[test]
-    fn is_legacy_model_id_rejects_valid_and_unknown() {
-        assert!(!is_legacy_model_id("gemma-4-e2b"));
-        assert!(!is_legacy_model_id("qwen3.5-4b"));
-        assert!(!is_legacy_model_id("nonexistent"));
-    }
-
-    #[test]
-    fn is_known_model_id_accepts_valid_only_for_now() {
-        assert!(is_known_model_id("gemma-4-e2b"));
-        assert!(is_known_model_id("qwen3.5-4b"));
-        assert!(!is_known_model_id("nonexistent"));
     }
 
     #[test]

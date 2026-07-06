@@ -26,7 +26,7 @@ const VALID_MODEL_IDS: [&str; 2] = ["small", "large-v3-turbo"];
 
 /// Returns the default base URL for downloading Whisper models.
 #[must_use]
-pub fn get_default_base_url() -> &'static str {
+pub(crate) fn get_default_base_url() -> &'static str {
     DEFAULT_BASE_URL
 }
 
@@ -34,7 +34,7 @@ pub fn get_default_base_url() -> &'static str {
 ///
 /// Format: `ggml-{model_id}.bin`
 #[must_use]
-pub fn get_model_filename(model_id: &str) -> String {
+pub(crate) fn get_model_filename(model_id: &str) -> String {
     format!("ggml-{model_id}.bin")
 }
 
@@ -42,26 +42,26 @@ pub fn get_model_filename(model_id: &str) -> String {
 ///
 /// Strips trailing slashes from the base URL before constructing.
 #[must_use]
-pub fn get_model_url(model_id: &str, base_url: &str) -> String {
+pub(crate) fn get_model_url(model_id: &str, base_url: &str) -> String {
     let base = base_url.trim_end_matches('/');
     format!("{base}/{}", get_model_filename(model_id))
 }
 
 /// Returns whether the given model ID is a known valid model.
 #[must_use]
-pub fn is_valid_model_id(model_id: &str) -> bool {
+pub(crate) fn is_valid_model_id(model_id: &str) -> bool {
     VALID_MODEL_IDS.contains(&model_id)
 }
 
 /// Returns the filename for the Silero VAD model.
 #[must_use]
-pub fn get_vad_model_filename() -> &'static str {
+pub(crate) fn get_vad_model_filename() -> &'static str {
     VAD_MODEL_FILENAME
 }
 
 /// Returns the download URL for the Silero VAD model.
 #[must_use]
-pub fn get_vad_model_url() -> &'static str {
+pub(crate) fn get_vad_model_url() -> &'static str {
     VAD_MODEL_URL
 }
 
@@ -69,7 +69,7 @@ pub fn get_vad_model_url() -> &'static str {
 ///
 /// Returns `(0.0, 0.0)` for unknown combinations.
 #[must_use]
-pub fn get_speed_factors(model_id: &str, arch: &str) -> (f64, f64) {
+pub(crate) fn get_speed_factors(model_id: &str, arch: &str) -> (f64, f64) {
     match (model_id, arch) {
         ("large-v3-turbo", "aarch64") => (3.0, 7.0),
         ("small", "aarch64") => (1.5, 3.5),
@@ -84,7 +84,7 @@ pub fn get_speed_factors(model_id: &str, arch: &str) -> (f64, f64) {
 /// All models have `downloaded` and `bundled` set to `false`.
 /// Use [`get_model_list_with_speed_factors`] for architecture-aware speed estimates.
 #[must_use]
-pub fn get_model_list() -> Vec<ModelInfo> {
+fn get_model_list() -> Vec<ModelInfo> {
     vec![
         ModelInfo {
             id: "small".to_string(),
@@ -115,7 +115,7 @@ pub fn get_model_list() -> Vec<ModelInfo> {
 
 /// Returns the model list with architecture-aware speed factor estimates.
 #[must_use]
-pub fn get_model_list_with_speed_factors() -> Vec<ModelInfo> {
+pub(crate) fn get_model_list_with_speed_factors() -> Vec<ModelInfo> {
     let arch = std::env::consts::ARCH;
     let mut models = get_model_list();
     for model in &mut models {

@@ -19,18 +19,6 @@ export interface TextModelInfo {
 }
 
 /**
- * Information about a legacy (retired) text model file present on disk.
- */
-export interface LegacyTextModelInfo {
-  /** Model identifier (the retired model ID) */
-  id: string;
-  /** Size in bytes */
-  sizeBytes: number;
-  /** Path to the model file */
-  path: string;
-}
-
-/**
  * Text model download progress.
  */
 export interface TextDownloadProgress {

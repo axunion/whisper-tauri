@@ -42,6 +42,12 @@ pub enum WhisperError {
     Cancelled,
 }
 
+impl From<crate::download::DownloadError> for WhisperError {
+    fn from(err: crate::download::DownloadError) -> Self {
+        Self::DownloadFailed(err.to_string())
+    }
+}
+
 impl From<WhisperError> for String {
     fn from(err: WhisperError) -> Self {
         err.to_string()
@@ -98,6 +104,17 @@ mod tests {
     fn error_display_download_failed() {
         let err = WhisperError::DownloadFailed("timeout".to_string());
         assert_eq!(err.to_string(), "Download failed: timeout");
+    }
+
+    #[test]
+    fn download_error_converts_to_download_failed() {
+        let err: WhisperError =
+            crate::download::DownloadError::HttpStatus(404, "https://example.com/f".to_string())
+                .into();
+        assert_eq!(
+            err.to_string(),
+            "Download failed: HTTP 404 for https://example.com/f"
+        );
     }
 
     #[test]
