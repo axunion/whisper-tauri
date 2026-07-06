@@ -9,7 +9,12 @@ user-invocable: true
 
 Refactor the file or target specified by `$ARGUMENTS` against project conventions.
 
-**Conventions**: see `.claude/agents/rust-backend.md` (Rust patterns, error handling, module structure, Tauri commands) and `CLAUDE.md` (architecture, type definitions). This skill does not duplicate them; it focuses on the **refactoring decisions** below. For error mapping specifics, see `.claude/rules/error-handling.md`.
+**Conventions**: see `CLAUDE.md` (architecture, module structure, type sync). For error mapping specifics, see `.claude/rules/error-handling.md`. Key Rust patterns to preserve while refactoring:
+
+- `#[serde(rename_all = "camelCase")]` on all structs crossing the IPC boundary; `#[serde(skip_serializing_if = "Option::is_none")]` for optional fields
+- Error types with `thiserror`, propagate with `?`
+- `/// doc comments` on all public items
+- Tauri commands: `#[tauri::command]` returning `Result<T, String>`
 
 ## Refactoring Decisions
 

@@ -9,7 +9,12 @@ user-invocable: true
 
 Refactor the file or target specified by `$ARGUMENTS` against project conventions.
 
-**Conventions**: see `.claude/agents/solidjs-frontend.md` (stack, SolidJS patterns, IPC, UI library) and `CLAUDE.md` (architecture, TypeScript strict flags). This skill does not duplicate them; it focuses on the **refactoring decisions** below.
+**Conventions**: see `CLAUDE.md` (architecture, TypeScript strict flags). Key SolidJS patterns to preserve while refactoring:
+
+- `createSignal` for simple state, `createStore` for objects/arrays, `createMemo` for derived values
+- `splitProps` for forwarding props, not spread; no React patterns (`useState`, virtual DOM assumptions)
+- solid-ui components with their default styles; minimize custom CSS — prefer Tailwind utilities
+- IPC types in `src/types/` must match `src-tauri/src/*/types.rs`
 
 ## Refactoring Decisions
 
