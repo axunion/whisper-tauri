@@ -323,19 +323,3 @@ const textProcessingInstance = {
 export function createTextProcessing() {
   return textProcessingInstance;
 }
-
-/** @internal Reset singleton state for testing only. */
-export function _resetTextProcessingForTesting(): void {
-  setModels([]);
-  setSelectedModelId(null);
-  setDownloadProgress(null);
-  setServerStatus({ running: false });
-  setInferenceProgress(null);
-  setChatResult(null);
-  setIsDownloading(false);
-  setIsProcessing(false);
-  setServerAvailable(false);
-  setDownloadPhase("idle");
-  setDownloadingModelId(null);
-  setError(null);
-}

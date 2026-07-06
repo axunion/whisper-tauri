@@ -18,15 +18,6 @@ export function formatDurationColon(ms: number): string {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-/** Format milliseconds as `Xh Ym` or `Xm` — coarser granularity for aggregate stats. */
-export function formatDurationShort(ms: number): string {
-  const totalMinutes = Math.floor(ms / 60_000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours > 0) return `${String(hours)}h ${String(minutes)}m`;
-  return `${String(minutes)}m`;
-}
-
 function toBcp47(locale: string): string {
   return locale === "ja" ? "ja-JP" : "en-US";
 }

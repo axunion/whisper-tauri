@@ -61,7 +61,6 @@ export interface Dictionary {
   history: {
     detail: string;
     noEntries: string;
-    deleteCount: string;
     deleteSelected: string;
     deleteConfirmation: string;
     deletedToast: string;
@@ -86,7 +85,6 @@ export interface Dictionary {
     processingCancelledToast: string;
   };
   settings: {
-    title: string;
     general: string;
     language: string;
     languageDescription: string;

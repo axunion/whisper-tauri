@@ -61,7 +61,6 @@ export const en: Dictionary = {
   history: {
     detail: "Detail",
     noEntries: "No history entries found.",
-    deleteCount: "Delete ({count})",
     deleteSelected: "Delete Selected",
     deleteConfirmation:
       "{count} entries will be permanently deleted. This action cannot be undone.",
@@ -89,7 +88,6 @@ export const en: Dictionary = {
     processingCancelledToast: "Processing cancelled",
   },
   settings: {
-    title: "Settings",
     general: "General Settings",
     language: "Language",
     languageDescription: "App display language",

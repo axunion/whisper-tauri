@@ -1,15 +1,13 @@
-import { FiCpu, FiDownload, FiServer, FiTrash2 } from "solid-icons/fi";
+import { FiCpu, FiServer } from "solid-icons/fi";
 import { createSignal, For, onMount, Show } from "solid-js";
-import { Button } from "~/components/ui/Button";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitleWithIcon,
 } from "~/components/ui/Card";
-import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
-import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { HelpHint } from "~/components/ui/HelpHint";
+import { ModelDownloadAction } from "~/components/ui/ModelDownloadAction";
 import { ModelListItem } from "~/components/ui/ModelListItem";
 import { SectionRow } from "~/components/ui/SectionRow";
 import { TotalSizeFooter } from "~/components/ui/TotalSizeFooter";
@@ -110,70 +108,28 @@ export default function TextModelManager(props: TextModelManagerProps) {
                   selected={isSelected(model.id)}
                   onSelect={() => tp.selectModel(model.id)}
                   actionSlot={
-                    <Show
-                      when={model.downloaded}
-                      fallback={
-                        <Show
-                          when={
-                            tp.isDownloading() &&
-                            tp.downloadingModelId() === model.id
-                          }
-                          fallback={
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              class="w-28"
-                              onClick={() => handleDownloadModel(model.id)}
-                              disabled={tp.isDownloading()}
-                            >
-                              <FiDownload />
-                              {t("common.download")}
-                            </Button>
-                          }
-                        >
-                          <DownloadProgress
-                            progress={tp.downloadProgress()?.progress ?? 0}
-                            label={
-                              tp.downloadPhase() === "server"
-                                ? t("textProcessing.settingUp")
-                                : undefined
-                            }
-                          />
-                        </Show>
+                    <ModelDownloadAction
+                      downloaded={model.downloaded}
+                      downloading={
+                        tp.isDownloading() &&
+                        tp.downloadingModelId() === model.id
                       }
-                    >
-                      <ConfirmDialog
-                        title={t("textProcessing.deleteModel")}
-                        description={t(
-                          "textProcessing.deleteModelConfirmation",
-                          {
-                            name: model.name,
-                          },
-                        )}
-                        confirmLabel={
-                          <>
-                            <FiTrash2 />
-                            {t("common.delete")}
-                          </>
-                        }
-                        onConfirm={() => handleDeleteModel(model.id)}
-                      >
-                        {(openDialog) => (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            class="w-28"
-                            disabled={deletingModelId() === model.id}
-                            onClick={openDialog}
-                          >
-                            <FiTrash2 />
-                            {deletingModelId() === model.id
-                              ? t("common.deleting")
-                              : t("common.delete")}
-                          </Button>
-                        )}
-                      </ConfirmDialog>
-                    </Show>
+                      progress={tp.downloadProgress()?.progress ?? 0}
+                      progressLabel={
+                        tp.downloadPhase() === "server"
+                          ? t("textProcessing.settingUp")
+                          : undefined
+                      }
+                      downloadDisabled={tp.isDownloading()}
+                      onDownload={() => handleDownloadModel(model.id)}
+                      deleteTitle={t("textProcessing.deleteModel")}
+                      deleteDescription={t(
+                        "textProcessing.deleteModelConfirmation",
+                        { name: model.name },
+                      )}
+                      deleting={deletingModelId() === model.id}
+                      onDelete={() => handleDeleteModel(model.id)}
+                    />
                   }
                 />
               )}
@@ -194,57 +150,20 @@ export default function TextModelManager(props: TextModelManagerProps) {
             <SectionRow
               title="llama-server"
               right={
-                <Show
-                  when={tp.serverAvailable()}
-                  fallback={
-                    <Show
-                      when={
-                        tp.downloadPhase() === "server" &&
-                        !tp.downloadingModelId()
-                      }
-                      fallback={
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          class="w-28"
-                          onClick={handleDownloadServer}
-                          disabled={tp.isDownloading()}
-                        >
-                          <FiDownload />
-                          {t("common.download")}
-                        </Button>
-                      }
-                    >
-                      <DownloadProgress
-                        progress={tp.downloadProgress()?.progress ?? 0}
-                      />
-                    </Show>
+                <ModelDownloadAction
+                  downloaded={tp.serverAvailable()}
+                  downloading={
+                    tp.downloadPhase() === "server" && !tp.downloadingModelId()
                   }
-                >
-                  <ConfirmDialog
-                    title={t("textProcessing.deleteServer")}
-                    description={t("textProcessing.deleteServerConfirmation")}
-                    confirmLabel={
-                      <>
-                        <FiTrash2 />
-                        {t("common.delete")}
-                      </>
-                    }
-                    onConfirm={handleDeleteServer}
-                  >
-                    {(openDialog) => (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        class="w-28"
-                        onClick={openDialog}
-                      >
-                        <FiTrash2 />
-                        {t("common.delete")}
-                      </Button>
-                    )}
-                  </ConfirmDialog>
-                </Show>
+                  progress={tp.downloadProgress()?.progress ?? 0}
+                  downloadDisabled={tp.isDownloading()}
+                  onDownload={handleDownloadServer}
+                  deleteTitle={t("textProcessing.deleteServer")}
+                  deleteDescription={t(
+                    "textProcessing.deleteServerConfirmation",
+                  )}
+                  onDelete={handleDeleteServer}
+                />
               }
             />
           </CardContent>

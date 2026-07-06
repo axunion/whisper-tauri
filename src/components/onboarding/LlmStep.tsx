@@ -4,7 +4,7 @@ import { For, Show } from "solid-js";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
 import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
-import { Progress } from "~/components/ui/Progress";
+import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { useI18n } from "~/i18n";
 import { getModelDescription } from "~/lib/modelDescription";
 import { toast } from "~/lib/toast";
@@ -75,23 +75,19 @@ export function LlmStep(props: LlmStepProps) {
                           </Button>
                         }
                       >
-                        <div class="w-28 space-y-1">
-                          <Progress
-                            value={
-                              props.textProcessing.downloadPhase() === "server"
-                                ? 0
-                                : (props.textProcessing.downloadProgress()
-                                    ?.progress ?? 0)
-                            }
-                            minValue={0}
-                            maxValue={100}
-                          />
-                          <p class="text-center text-xs text-muted-foreground">
-                            {props.textProcessing.downloadPhase() === "server"
+                        <DownloadProgress
+                          progress={
+                            props.textProcessing.downloadPhase() === "server"
+                              ? 0
+                              : (props.textProcessing.downloadProgress()
+                                  ?.progress ?? 0)
+                          }
+                          label={
+                            props.textProcessing.downloadPhase() === "server"
                               ? t("textProcessing.settingUp")
-                              : `${Math.round(props.textProcessing.downloadProgress()?.progress ?? 0)}%`}
-                          </p>
-                        </div>
+                              : undefined
+                          }
+                        />
                       </Show>
                     }
                   >

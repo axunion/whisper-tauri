@@ -52,6 +52,7 @@ export function createHistory() {
     setSearchQuery(trimmed);
     setIsSearching(true);
     setIsLoading(true);
+    const isStale = () => searchQuery() !== trimmed;
     try {
       const currentFilter = filter();
       const params: HistorySearchParams = {
@@ -66,15 +67,15 @@ export function createHistory() {
       };
       const result = await invoke<HistoryMeta[]>("history_search", { params });
       // Discard stale results if query changed while awaiting
-      if (searchQuery() === trimmed) {
+      if (!isStale()) {
         setEntries(result);
       }
     } catch (e) {
-      if (searchQuery() === trimmed) {
+      if (!isStale()) {
         setError(parseError(e));
       }
     } finally {
-      if (searchQuery() === trimmed) {
+      if (!isStale()) {
         setIsLoading(false);
       }
     }

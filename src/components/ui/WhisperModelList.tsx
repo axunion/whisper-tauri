@@ -1,9 +1,6 @@
-import { FiDownload, FiTrash2 } from "solid-icons/fi";
 import type { Component } from "solid-js";
 import { createSignal, For, Show } from "solid-js";
-import { Button } from "~/components/ui/Button";
-import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
-import { DownloadProgress } from "~/components/ui/DownloadProgress";
+import { ModelDownloadAction } from "~/components/ui/ModelDownloadAction";
 import { ModelListItem } from "~/components/ui/ModelListItem";
 import { useI18n } from "~/i18n";
 import type { DictionaryKey } from "~/i18n/types";
@@ -55,62 +52,22 @@ const WhisperModelList: Component<WhisperModelListProps> = (props) => {
             selected={isSelected(model.id)}
             onSelect={() => props.whisper.selectModel(model)}
             actionSlot={
-              <Show
-                when={model.downloaded}
-                fallback={
-                  <Show
-                    when={
-                      props.whisper.isDownloading() &&
-                      props.whisper.downloadProgress()?.modelId === model.id
-                    }
-                    fallback={
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        class="w-28"
-                        onClick={() => props.whisper.downloadModel(model.id)}
-                        disabled={props.whisper.isDownloading()}
-                      >
-                        <FiDownload />
-                        {t("common.download")}
-                      </Button>
-                    }
-                  >
-                    <DownloadProgress
-                      progress={props.whisper.downloadProgress()?.progress ?? 0}
-                    />
-                  </Show>
+              <ModelDownloadAction
+                downloaded={model.downloaded}
+                downloading={
+                  props.whisper.isDownloading() &&
+                  props.whisper.downloadProgress()?.modelId === model.id
                 }
-              >
-                <ConfirmDialog
-                  title={t(props.labels.deleteTitle)}
-                  description={t(props.labels.deleteDescription, {
-                    name: model.name,
-                  })}
-                  confirmLabel={
-                    <>
-                      <FiTrash2 />
-                      {t("common.delete")}
-                    </>
-                  }
-                  onConfirm={() => handleDeleteModel(model.id)}
-                >
-                  {(openDialog) => (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      class="w-28"
-                      disabled={deletingModelId() === model.id}
-                      onClick={openDialog}
-                    >
-                      <FiTrash2 />
-                      {deletingModelId() === model.id
-                        ? t("common.deleting")
-                        : t("common.delete")}
-                    </Button>
-                  )}
-                </ConfirmDialog>
-              </Show>
+                progress={props.whisper.downloadProgress()?.progress ?? 0}
+                downloadDisabled={props.whisper.isDownloading()}
+                onDownload={() => props.whisper.downloadModel(model.id)}
+                deleteTitle={t(props.labels.deleteTitle)}
+                deleteDescription={t(props.labels.deleteDescription, {
+                  name: model.name,
+                })}
+                deleting={deletingModelId() === model.id}
+                onDelete={() => handleDeleteModel(model.id)}
+              />
             }
           />
         )}

@@ -74,12 +74,3 @@ const notionSettingsInstance = {
 export function createNotionSettings() {
   return notionSettingsInstance;
 }
-
-/** @internal Reset singleton state for testing only. */
-export function _resetNotionSettingsForTesting(
-  overrides?: Partial<NotionSettings> & { loaded?: boolean },
-): void {
-  setSettings({ ...DEFAULT_NOTION_SETTINGS, ...overrides });
-  setIsLoaded(overrides?.loaded ?? false);
-  loadPromise = null;
-}

@@ -260,6 +260,34 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     });
   }
 
+  function notifyShareResult(ref: { url: string; partial: boolean }) {
+    const toastActions = [
+      {
+        label: t("notionShare.openInNotion"),
+        onClick: () => openNotionUrl(ref.url),
+      },
+      {
+        label: t("notionShare.copyUrlAction"),
+        onClick: () => {
+          void copyAndNotify(ref.url);
+        },
+      },
+    ];
+
+    if (ref.partial) {
+      toast.warning(t("notionShare.successPartialToastTitle"), {
+        description: t("notionShare.successPartialNote"),
+        actions: toastActions,
+        duration: 8000,
+      });
+    } else {
+      toast.success(t("notionShare.successToastTitle"), {
+        actions: toastActions,
+        duration: 6000,
+      });
+    }
+  }
+
   async function handleShareToNotion(retryTab?: ResultTab) {
     if (isSharingNotion()) return;
     const tab = retryTab ?? activeTab();
@@ -297,32 +325,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         return;
       }
       setFailedShareTab(null);
-
-      const toastActions = [
-        {
-          label: t("notionShare.openInNotion"),
-          onClick: () => openNotionUrl(ref.url),
-        },
-        {
-          label: t("notionShare.copyUrlAction"),
-          onClick: () => {
-            void copyAndNotify(ref.url);
-          },
-        },
-      ];
-
-      if (ref.partial) {
-        toast.warning(t("notionShare.successPartialToastTitle"), {
-          description: t("notionShare.successPartialNote"),
-          actions: toastActions,
-          duration: 8000,
-        });
-      } else {
-        toast.success(t("notionShare.successToastTitle"), {
-          actions: toastActions,
-          duration: 6000,
-        });
-      }
+      notifyShareResult(ref);
     } finally {
       setIsSharingNotion(false);
     }

@@ -62,7 +62,6 @@ export const ja: Dictionary = {
   history: {
     detail: "詳細",
     noEntries: "履歴が見つかりません。",
-    deleteCount: "削除 ({count})",
     deleteSelected: "選択した履歴を削除",
     deleteConfirmation:
       "{count} 件の履歴が完全に削除されます。この操作は取り消せません。",
@@ -90,7 +89,6 @@ export const ja: Dictionary = {
     processingCancelledToast: "処理を中断しました",
   },
   settings: {
-    title: "設定",
     general: "一般設定",
     language: "言語",
     languageDescription: "アプリの表示言語",

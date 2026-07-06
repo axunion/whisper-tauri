@@ -21,7 +21,7 @@ describe("t()", () => {
 
   it("resolves a nested key", () => {
     const i18n = createI18n("en");
-    expect(i18n.t("settings.title")).toBe("Settings");
+    expect(i18n.t("history.detail")).toBe("Detail");
   });
 
   it("returns the key itself for a non-existent key", () => {
@@ -32,8 +32,8 @@ describe("t()", () => {
 
   it("interpolates parameters", () => {
     const i18n = createI18n("ja");
-    const result = i18n.t("history.deleteCount", { count: 5 });
-    expect(result).toBe("削除 (5)");
+    const result = i18n.t("history.selectedCount", { count: 5 });
+    expect(result).toBe("5件選択中");
   });
 
   it("interpolates multiple parameters", () => {
@@ -57,8 +57,8 @@ describe("setLocale()", () => {
 
   it("changes the dictionary", () => {
     const i18n = createI18n("ja");
-    expect(i18n.t("settings.title")).toBe("設定");
+    expect(i18n.t("history.detail")).toBe("詳細");
     i18n.setLocale("en");
-    expect(i18n.t("settings.title")).toBe("Settings");
+    expect(i18n.t("history.detail")).toBe("Detail");
   });
 });

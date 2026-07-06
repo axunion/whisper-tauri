@@ -2,7 +2,7 @@ import { FiCheck, FiDownload, FiTool } from "solid-icons/fi";
 import { Show } from "solid-js";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
 import { Button } from "~/components/ui/Button";
-import { Progress } from "~/components/ui/Progress";
+import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
 import type { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
@@ -56,17 +56,10 @@ export function FfmpegStep(props: FfmpegStepProps) {
                   </Button>
                 }
               >
-                <div class="w-32 space-y-1">
-                  <Progress
-                    value={props.ffmpeg.downloadProgress()?.progress ?? 0}
-                    minValue={0}
-                    maxValue={100}
-                  />
-                  <p class="text-center text-xs text-muted-foreground">
-                    {Math.round(props.ffmpeg.downloadProgress()?.progress ?? 0)}
-                    %
-                  </p>
-                </div>
+                <DownloadProgress
+                  progress={props.ffmpeg.downloadProgress()?.progress ?? 0}
+                  class="w-32"
+                />
               </Show>
             }
           >
