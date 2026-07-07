@@ -28,7 +28,7 @@
 | F5  | F   | リファクタ最終パス                     | 中   | 完了 (2026-07-07) | 手動リファクタで実施済み |
 | F6  | F   | セキュリティ最終チェック               | 高   | 完了 (2026-07-07) | 先行して実施済み |
 | F7  | F   | 品質監査バンドル (i18n / a11y / 型同期) | 中   | 完了 (2026-07-07) | a11y 指摘 20 件を全件修正 |
-| F8  | F   | ライセンス・クレジット整備             | 高   | 未着手   | ffmpeg LGPL 表記など。docs/ の 1 ページに |
+| F8  | F   | ライセンス・クレジット整備             | 高   | 完了 (2026-07-07) | docs/licenses.md 新設。全文はリンクのみ |
 | F9  | F   | ユーザードキュメント執筆 + Pages 公開  | 高   | 未着手   | 機能フリーズ後に着手 |
 | F10 | F   | 実機最終確認                           | 高   | 未着手   | 内容は着手前に別途詰める (placeholder) |
 
@@ -186,7 +186,15 @@ spec/        ← 恒久的な開発・仕様ドキュメント (日本語)
 
 **案**: `docs/licenses.md` (英語) を公開ツリーに新設。対象: ffmpeg (LGPL 2.1+) / llama.cpp (MIT) / whisper.cpp (MIT) / Gemma (Gemma Terms) / Qwen (Apache 2.0) / Silero VAD。`spec/binary-updates.md` §5 の表をベースに利用者向けに書く。配布物としての表記義務 (LGPL の動的利用 + 別バイナリDL形態) の確認もここで。
 
-**Status:** 未着手
+**実装メモ (2026-07-07)**: `docs/licenses.md` を新設 (英語、公開ツリー)。
+
+- **対象と方針**: 再配布/自動ダウンロードする第三者成果物のみを対象。すべて「アプリ本体に同梱せず初回にユーザーが取得する」ダウンロード配布形態。ライセンス本文は**公式全文へのリンクのみ**とし同梱しない (F8 案の「docs/ の 1 ページに」の意図に沿う)。
+- **列挙 7 件**: FFmpeg (LGPL-2.1-or-later) / llama.cpp = `llama-server` (MIT) / whisper.cpp = whisper-rs 経由 (MIT) / Silero VAD model (MIT) / Whisper models = ggml `*.bin` (MIT) / Gemma models (Gemma Terms of Use) / Qwen models (Apache-2.0)。§5 に無い whisper.cpp / Silero VAD / Whisper モデルの3件はいずれも MIT であることを確認して追加。
+- **LGPL 義務の整理**: FFmpeg は静的リンクではなく**別バイナリを子プロセス起動**する動的利用のため、義務は帰属表示 + ライセンス提示 + 入手元 (バイナリ配布元 + ソース ffmpeg.org) へのリンクで満たせる。未改変で使用している旨も明記。
+- **スコープ外**: Rust/JS のソース依存 (Tauri / SolidJS / tokio 等) はソースツリーに組み込まれる通常の OSS 依存で再配布バイナリではないため対象外とし、その旨を本文に一行明記。
+- **相互リンク**: `docs/privacy.md` / `docs/install.md` からの導線追加は F9 (ドキュメント整備) に委ね今回は未実施。
+
+**Status:** 完了 (2026-07-07)
 
 ---
 
