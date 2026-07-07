@@ -1,6 +1,6 @@
 import { FiX } from "solid-icons/fi";
 import type { Component, JSX } from "solid-js";
-import { Show } from "solid-js";
+import { createMemo, Show } from "solid-js";
 import { Button } from "~/components/ui/Button";
 import { useI18n } from "~/i18n";
 
@@ -21,15 +21,24 @@ const ResultProcessingShell: Component<ResultProcessingShellProps> = (
 ) => {
   const { t } = useI18n();
 
+  // Keep the live region on a single persistent node with reactive content
+  // (same technique as TranscriptionProgress). Announce completion only after
+  // an actual processing run, not when a stored result renders on mount.
+  const statusText = createMemo<string>((prev) => {
+    if (props.isProcessing) return props.processingLabel;
+    return prev ? (props.hasResult ? t("common.done") : "") : "";
+  }, "");
+
   return (
-    <div class="flex h-full flex-col overflow-y-auto rounded-lg border bg-muted/50 p-4">
+    <div
+      class="flex h-full flex-col overflow-y-auto rounded-lg border bg-muted/50 p-4"
+      aria-busy={props.isProcessing}
+    >
+      <span role="status" aria-live="polite" class="sr-only">
+        {statusText()}
+      </span>
       <Show when={props.isProcessing}>
-        <div
-          role="status"
-          aria-live="polite"
-          aria-busy="true"
-          class="flex flex-1 flex-col items-center justify-center gap-4"
-        >
+        <div class="flex flex-1 flex-col items-center justify-center gap-4">
           <p class="animate-pulse text-sm text-muted-foreground">
             {props.processingLabel}
           </p>

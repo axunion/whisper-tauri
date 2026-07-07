@@ -1,5 +1,6 @@
 import { FiCheck, FiX } from "solid-icons/fi";
 import { createSignal, Show } from "solid-js";
+import { useI18n } from "~/i18n";
 import type { NotionMetaContext } from "~/lib/notion";
 import { createTitleEditor } from "~/primitives/createTitleEditor";
 import type { TranscriptionResult as TranscriptionResultType } from "~/types";
@@ -15,6 +16,7 @@ interface TranscriptionResultProps {
 }
 
 export function TranscriptionResult(props: TranscriptionResultProps) {
+  const { t } = useI18n();
   const [isGeneratingTitle, setIsGeneratingTitle] = createSignal(false);
 
   const title = createTitleEditor({
@@ -43,6 +45,7 @@ export function TranscriptionResult(props: TranscriptionResultProps) {
               type="text"
               autofocus
               class="w-full border-b border-muted-foreground/40 bg-transparent text-lg font-semibold outline-none"
+              aria-label={t("common.editTitle")}
               value={title.editValue()}
               onInput={(e) => title.setEditValue(e.currentTarget.value)}
               onKeyDown={title.handleKeyDown}
@@ -53,16 +56,18 @@ export function TranscriptionResult(props: TranscriptionResultProps) {
           <button
             type="button"
             class="shrink-0 text-muted-foreground hover:text-foreground"
+            aria-label={t("common.confirm")}
             onClick={title.confirm}
           >
-            <FiCheck class="size-3.5" />
+            <FiCheck class="size-3.5" aria-hidden="true" />
           </button>
           <button
             type="button"
             class="shrink-0 text-muted-foreground hover:text-foreground"
+            aria-label={t("common.cancel")}
             onClick={title.cancel}
           >
-            <FiX class="size-3.5" />
+            <FiX class="size-3.5" aria-hidden="true" />
           </button>
         </Show>
       </div>

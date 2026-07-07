@@ -115,7 +115,7 @@ export interface AiContent {
   /** The generated text content */
   text: string;
   /** JSON string of options used for generation */
-  optionsJson?: string | undefined;
+  optionsJson?: string;
   /** ID of the text model used for generation */
   textModelId: string;
 }
@@ -131,7 +131,7 @@ export interface AiContentSaveParams {
   /** The generated text content */
   text: string;
   /** JSON string of options used for generation */
-  optionsJson?: string | undefined;
+  optionsJson?: string;
   /** ID of the text model used for generation */
   textModelId: string;
 }

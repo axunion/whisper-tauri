@@ -16,6 +16,8 @@ export const en: Dictionary = {
     downloadingTextModel: "Downloading language model",
     downloadingServer: "Downloading llama-server",
     helpHintLabel: "Show term description",
+    editTitle: "Edit Title",
+    notifications: "Notifications",
   },
   nav: {
     dashboard: "Dashboard",
@@ -23,6 +25,7 @@ export const en: Dictionary = {
     history: "History",
     settings: "Settings",
     dev: "Dev",
+    toggleSidebar: "Toggle Sidebar",
   },
   dashboard: {
     quickActionFile: "Select File",
@@ -51,6 +54,7 @@ export const en: Dictionary = {
     languageEs: "Spanish",
     selectAudioFile: "Click to select an audio file",
     changeFile: "Change File",
+    clearFile: "Clear Selected File",
     supportedFormats: "WAV, MP3, M4A, FLAC, OGG, AAC, MP4, MOV, etc.",
     completedToast: "Transcription completed",
     estimatedTime: "~{minutes} min",
@@ -67,15 +71,18 @@ export const en: Dictionary = {
     deletedToast: "History deleted",
     searchPlaceholder: "Search by keyword",
     searchNoResults: "No search results found.",
+    clearSearch: "Clear Search",
     filterLast7days: "7 Days",
     filterLast30days: "30 Days",
     filterAll: "All",
+    sortBy: "Sort By",
     sortDate: "Date",
     sortLength: "Length",
     sortFileName: "Name",
     sortAsc: "Sort Ascending",
     sortDesc: "Sort Descending",
     select: "Select",
+    selectAll: "Select All",
     selectedCount: "{count} selected",
     vadEnabledLabel: "VAD: ON",
     vadDisabledLabel: "VAD: OFF",
@@ -277,7 +284,7 @@ export const en: Dictionary = {
     },
     text: {
       gemma4_e2b: {
-        description: "By Google. Apache 2.0 license, 128K context window",
+        description: "By Google. 128K context window",
       },
       qwen35_4b: {
         description:
@@ -288,6 +295,7 @@ export const en: Dictionary = {
   onboarding: {
     next: "Next",
     back: "Back",
+    stepIndicator: "Step {current} of {total}",
     welcomeTitle: "Welcome to Whisper Tauri",
     welcomeSubtitle: "Secure, local, high-accuracy transcription",
     privacyMessage: "Your audio data never leaves your device",

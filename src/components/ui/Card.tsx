@@ -55,6 +55,28 @@ const CardFooter: Component<ComponentProps<"div">> = (props) => {
   );
 };
 
+/**
+ * A fully clickable Card: keyboard-focusable button filling the card, with the
+ * hover state on the Card and the focus ring hugging the Card's rounded-lg.
+ */
+const CardButton: Component<ComponentProps<"button">> = (props) => {
+  const [local, others] = splitProps(props, ["class", "children"]);
+  return (
+    <Card class="transition-colors hover:bg-muted/50">
+      <button
+        type="button"
+        class={cn(
+          "w-full cursor-pointer rounded-lg ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          local.class,
+        )}
+        {...others}
+      >
+        {local.children}
+      </button>
+    </Card>
+  );
+};
+
 const CardTitleWithIcon: Component<
   ComponentProps<"div"> & {
     icon: () => JSX.Element;
@@ -77,6 +99,7 @@ const CardTitleWithIcon: Component<
 
 export {
   Card,
+  CardButton,
   CardContent,
   CardDescription,
   CardFooter,

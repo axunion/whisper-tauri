@@ -161,7 +161,7 @@ export function createAiSession(
         historyId,
         contentType,
         text,
-        optionsJson,
+        ...(optionsJson !== undefined && { optionsJson }),
         textModelId: modelId,
       },
     }).catch(console.error);

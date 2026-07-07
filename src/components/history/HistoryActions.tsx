@@ -53,12 +53,16 @@ const HistoryActions: Component<HistoryActionsProps> = (props) => {
                 type="checkbox"
                 checked={allSelected()}
                 class="peer sr-only"
+                aria-label={t("history.selectAll")}
                 onChange={() =>
                   allSelected() ? props.onClearSelection() : props.onSelectAll()
                 }
                 disabled={props.totalCount === 0}
               />
-              <span aria-hidden="true">
+              <span
+                aria-hidden="true"
+                class="rounded-sm ring-ring peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background"
+              >
                 <CheckIndicator
                   checked={allSelected()}
                   indeterminate={indeterminate()}

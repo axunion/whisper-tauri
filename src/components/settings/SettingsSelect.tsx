@@ -38,7 +38,7 @@ export function SettingsSelect<T extends { value: string; label: string }>(
             </SelectItem>
           )}
         >
-          <SelectTrigger class="w-48">
+          <SelectTrigger class="w-48" aria-label={props.label}>
             <SelectValue<T>>
               {(state) => state.selectedOption().label}
             </SelectValue>

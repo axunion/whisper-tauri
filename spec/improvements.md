@@ -27,7 +27,7 @@
 | F4  | F   | テストの見直し                         | 高   | 完了 (2026-07-07) | リファクタ前の安全網 |
 | F5  | F   | リファクタ最終パス                     | 中   | 完了 (2026-07-07) | 手動リファクタで実施済み |
 | F6  | F   | セキュリティ最終チェック               | 高   | 完了 (2026-07-07) | 先行して実施済み |
-| F7  | F   | 品質監査バンドル (i18n / a11y / 型同期) | 中   | 未着手   | F5/F6 と並行可 |
+| F7  | F   | 品質監査バンドル (i18n / a11y / 型同期) | 中   | 完了 (2026-07-07) | a11y 指摘 20 件を全件修正 |
 | F8  | F   | ライセンス・クレジット整備             | 高   | 未着手   | ffmpeg LGPL 表記など。docs/ の 1 ページに |
 | F9  | F   | ユーザードキュメント執筆 + Pages 公開  | 高   | 未着手   | 機能フリーズ後に着手 |
 | F10 | F   | 実機最終確認                           | 高   | 未着手   | 内容は着手前に別途詰める (placeholder) |
@@ -168,7 +168,15 @@ spec/        ← 恒久的な開発・仕様ドキュメント (日本語)
 
 **案**: `/i18n` 監査 + `a11y-reviewer` agent + `type-sync-checker` agent をまとめて一巡。専用チェック手段が揃っているので低コスト。F5/F6 と並行可。
 
-**Status:** 未着手
+**実装メモ (2026-07-07)**: 3 監査を並列実施し、指摘を全件修正した (FE のみ、BE 変更なし)。
+
+1. **i18n 監査**: キー欠落・空値・プレースホルダ不一致・未使用キー・ハードコード UI 文字列はゼロ。修正 2 件 — `models.text.gemma4_e2b.description` の「Apache 2.0」誤記を削除 (Gemma は Gemma Terms。`spec/binary-updates.md` §5 と整合、ライセンス情報は F8 の licenses.md に集約)、`history.processingCloseTitle` の半角 `?` を全角 `？` に統一
+2. **型同期監査**: 28 型 + IPC イベント 6 本を照合し 26 型が完全一致。唯一の指摘 `optionsJson?: string | undefined` (history.ts 2 箇所) を `?: string` に統一し、`createAiSession.ts` を条件付きスプレッド化 (実行時影響なしの一貫性修正)
+3. **a11y 監査**: 指摘 20 件 (Critical 2 / High 2 / Medium 11 / Low 5) を全件修正。主なもの — QuickActions / SetupBanner のクリッカブル div Card を button 化 (キーボード到達不能の解消)、履歴 Sheet 閉じるボタンのラベル + フォーカスリング復活、アイコンボタン aria-label 一括付与、Kobalte Select 4 箇所のラベル関連付け、Notion 入力の aria-labelledby/describedby、sidebar「Toggle Sidebar」の i18n 化、ダウンロード進捗 / AI 処理完了のライブリージョン (TranscriptionProgress の単一永続ノード方式を踏襲)、`prefers-reduced-motion` 対応 (スピナーは慣例通り除外)。新規 i18n キー 8 個 (editTitle / notifications / toggleSidebar / clearFile / clearSearch / sortBy / selectAll / stepIndicator)
+
+結果: FE 401 tests green (Sidebar テストの英語リテラル依存 1 件を ja 辞書参照に修正)、`pnpm check` green。
+
+**Status:** 完了 (2026-07-07)
 
 ---
 

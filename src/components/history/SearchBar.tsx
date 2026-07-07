@@ -42,6 +42,7 @@ const SearchBar: Component<SearchBarProps> = (props) => {
         type="text"
         class="h-9 w-full rounded-md border border-input bg-background pl-9 pr-9 text-sm placeholder:text-muted-foreground"
         placeholder={t("history.searchPlaceholder")}
+        aria-label={t("history.searchPlaceholder")}
         onInput={handleInput}
         onKeyDown={handleKeyDown}
       />
@@ -49,9 +50,10 @@ const SearchBar: Component<SearchBarProps> = (props) => {
         <button
           type="button"
           class="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:text-foreground"
+          aria-label={t("history.clearSearch")}
           onClick={handleClear}
         >
-          <FiX class="size-4" />
+          <FiX class="size-4" aria-hidden="true" />
         </button>
       </Show>
     </div>

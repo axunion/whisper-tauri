@@ -121,3 +121,17 @@
   background-size: 1rem 1rem;
   animation: progress-stripe 0.5s linear infinite;
 }
+
+/*
+ * Disable all animations under reduced motion, from every source (custom
+ * keyframes above, Tailwind built-ins, tw-animate-css enter/exit utilities).
+ * Spinners (animate-spin) stay animated as a conventional loading indicator.
+ * Near-zero duration instead of `animation: none` preserves fill-mode end
+ * states and still fires animationend, which Kobalte exit animations rely on.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *:not(.animate-spin) {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

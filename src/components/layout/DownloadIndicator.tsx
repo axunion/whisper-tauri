@@ -48,8 +48,11 @@ export function DownloadIndicator() {
     return null;
   });
 
+  // Non-keyed <Show> so per-tick progress updates stay fine-grained text/attr
+  // updates instead of rebuilding the subtree. The live region covers only the
+  // label (changes once per download), never the per-tick percentage.
   return (
-    <Show when={downloadInfo()} keyed>
+    <Show when={downloadInfo()}>
       {(info) => (
         <SidebarGroup>
           <SidebarMenu>
@@ -58,19 +61,35 @@ export function DownloadIndicator() {
                 when={sidebar.state() === "expanded"}
                 fallback={
                   <div class="flex justify-center py-2">
-                    <FiDownload class="size-4 animate-pulse text-primary" />
+                    <FiDownload
+                      class="size-4 animate-pulse text-primary"
+                      aria-hidden="true"
+                    />
+                    <span class="sr-only" role="status" aria-live="polite">
+                      {info().label}
+                    </span>
                   </div>
                 }
               >
                 <div class="space-y-1.5 px-2 py-2">
                   <div class="flex items-center gap-2 text-xs text-muted-foreground">
-                    <FiDownload class="size-3 shrink-0 animate-pulse text-primary" />
-                    <span class="truncate">{info.label}</span>
+                    <FiDownload
+                      class="size-3 shrink-0 animate-pulse text-primary"
+                      aria-hidden="true"
+                    />
+                    <span class="truncate" role="status" aria-live="polite">
+                      {info().label}
+                    </span>
                     <span class="ml-auto tabular-nums">
-                      {Math.round(info.progress)}%
+                      {Math.round(info().progress)}%
                     </span>
                   </div>
-                  <Progress value={info.progress} minValue={0} maxValue={100} />
+                  <Progress
+                    value={info().progress}
+                    minValue={0}
+                    maxValue={100}
+                    aria-label={info().label}
+                  />
                 </div>
               </Show>
             </SidebarMenuItem>

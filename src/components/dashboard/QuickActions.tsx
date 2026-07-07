@@ -1,7 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import { open } from "@tauri-apps/plugin-dialog";
 import { FiMic, FiUpload } from "solid-icons/fi";
-import { Card, CardContent } from "~/components/ui/Card";
+import { CardButton, CardContent } from "~/components/ui/Card";
 import { useI18n } from "~/i18n";
 import { AUDIO_EXTENSIONS } from "~/lib/constants";
 
@@ -32,10 +32,7 @@ export function QuickActions() {
 
   return (
     <div class="grid grid-cols-2 gap-3">
-      <Card
-        class="cursor-pointer transition-colors hover:bg-muted/50"
-        onClick={handleFileSelect}
-      >
+      <CardButton onClick={handleFileSelect}>
         <CardContent class="flex flex-col items-center justify-center gap-3 p-6">
           <div class="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
             <FiUpload class="size-6" />
@@ -49,12 +46,9 @@ export function QuickActions() {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </CardButton>
 
-      <Card
-        class="cursor-pointer transition-colors hover:bg-muted/50"
-        onClick={handleRecord}
-      >
+      <CardButton onClick={handleRecord}>
         <CardContent class="flex flex-col items-center justify-center gap-3 p-6">
           <div class="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
             <FiMic class="size-6" />
@@ -68,7 +62,7 @@ export function QuickActions() {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </CardButton>
     </div>
   );
 }

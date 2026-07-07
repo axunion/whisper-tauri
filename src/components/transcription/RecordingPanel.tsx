@@ -97,7 +97,7 @@ const RecordingPanel: Component<RecordingPanelProps> = (props) => {
                 </SelectItem>
               )}
             >
-              <SelectTrigger>
+              <SelectTrigger aria-label={t("recording.selectDevice")}>
                 <SelectValue<AudioDevice>>
                   {(state) =>
                     state.selectedOption()?.name ?? t("recording.selectDevice")

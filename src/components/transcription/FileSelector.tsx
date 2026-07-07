@@ -81,10 +81,11 @@ const FileSelector: Component<FileSelectorProps> = (props) => {
             <button
               type="button"
               class="mt-0.5 shrink-0 text-muted-foreground/40 transition-colors hover:text-destructive disabled:pointer-events-none disabled:opacity-50"
+              aria-label={t("transcription.clearFile")}
               disabled={props.disabled}
               onClick={() => props.onFileClear()}
             >
-              <FiXCircle class="size-5" />
+              <FiXCircle class="size-5" aria-hidden="true" />
             </button>
           </div>
           <button

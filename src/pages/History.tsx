@@ -246,10 +246,11 @@ export default function History() {
             <Button
               variant="ghost"
               size="icon"
-              class="absolute left-2 top-2 size-7 text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+              class="absolute left-2 top-2 size-7 text-muted-foreground"
+              aria-label={t("common.close")}
               onClick={attemptClose}
             >
-              <FiX class="size-4" />
+              <FiX class="size-4" aria-hidden="true" />
             </Button>
             <Show when={history.selectedEntry()} keyed>
               {(entry) => (

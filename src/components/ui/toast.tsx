@@ -6,6 +6,7 @@ import type { JSX, ValidComponent } from "solid-js";
 import { For, Match, Switch, splitProps } from "solid-js";
 import { Portal } from "solid-js/web";
 
+import { useI18n } from "~/i18n";
 import { cn } from "~/lib/utils";
 
 const toastVariants = cva(
@@ -42,9 +43,10 @@ const Toaster = <T extends ValidComponent = "ol">(
   props: PolymorphicProps<T, ToastListProps<T>>,
 ) => {
   const [local, others] = splitProps(props as ToastListProps, ["class"]);
+  const { t } = useI18n();
   return (
     <Portal>
-      <ToastPrimitive.Region>
+      <ToastPrimitive.Region aria-label={t("common.notifications")}>
         <ToastPrimitive.List
           class={cn(
             "fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse gap-2 p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]",
@@ -83,8 +85,10 @@ const ToastClose = <T extends ValidComponent = "button">(
   props: PolymorphicProps<T, ToastCloseButtonProps<T>>,
 ) => {
   const [local, others] = splitProps(props as ToastCloseButtonProps, ["class"]);
+  const { t } = useI18n();
   return (
     <ToastPrimitive.CloseButton
+      aria-label={t("common.close")}
       class={cn(
         "absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100 group-[.destructive]:text-destructive-foreground group-[.error]:text-error-foreground group-[.success]:text-success-foreground group-[.warning]:text-warning-foreground group-[.info]:text-info-foreground",
         local.class,

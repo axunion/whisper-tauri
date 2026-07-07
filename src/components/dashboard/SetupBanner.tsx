@@ -4,7 +4,7 @@ import { FiArrowRight, FiMic, FiTool } from "solid-icons/fi";
 import { TbOutlineSparkles } from "solid-icons/tb";
 import type { JSX } from "solid-js";
 import { createSignal, onMount, Show } from "solid-js";
-import { Card, CardContent } from "~/components/ui/Card";
+import { CardButton, CardContent } from "~/components/ui/Card";
 import { useI18n } from "~/i18n";
 import type { TextModelInfo } from "~/types/text-processing";
 import type { ModelInfo } from "~/types/whisper";
@@ -41,10 +41,7 @@ export function SetupBanner() {
 
   return (
     <Show when={visible()}>
-      <Card
-        class="cursor-pointer transition-colors hover:bg-muted/50"
-        onClick={() => navigate("/settings")}
-      >
+      <CardButton class="text-left" onClick={() => navigate("/settings")}>
         <CardContent class="flex items-center gap-4 p-4">
           <div class="flex flex-1 items-center gap-3">
             <Show when={!whisperReady()}>
@@ -68,7 +65,7 @@ export function SetupBanner() {
           </div>
           <FiArrowRight class="size-4 shrink-0 text-muted-foreground" />
         </CardContent>
-      </Card>
+      </CardButton>
     </Show>
   );
 }

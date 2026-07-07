@@ -51,7 +51,7 @@ describe("AppSidebar", () => {
   it("shows toggle sidebar button", () => {
     renderWithRouter();
     expect(
-      screen.getByRole("button", { name: /toggle sidebar/i }),
+      screen.getByRole("button", { name: ja.nav.toggleSidebar }),
     ).toBeInTheDocument();
   });
 });

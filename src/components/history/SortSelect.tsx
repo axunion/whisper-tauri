@@ -44,7 +44,10 @@ const SortToggleGroup: Component<SortToggleGroupProps> = (props) => {
           </SelectItem>
         )}
       >
-        <SelectPrimitive.Trigger class="inline-flex items-center focus:outline-none">
+        <SelectPrimitive.Trigger
+          class="inline-flex items-center rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={t("history.sortBy")}
+        >
           <SelectPrimitive.Value<HistorySortBy>>
             {(state) => t(SORT_KEYS[state.selectedOption()])}
           </SelectPrimitive.Value>
@@ -59,7 +62,7 @@ const SortToggleGroup: Component<SortToggleGroupProps> = (props) => {
             ? t("history.sortDesc")
             : t("history.sortAsc")
         }
-        class="inline-flex items-center focus:outline-none"
+        class="inline-flex items-center rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {props.sortOrder === "asc" ? (
           <FiArrowUp class="size-3.5" />

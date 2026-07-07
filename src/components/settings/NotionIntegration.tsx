@@ -169,7 +169,10 @@ export default function NotionIntegration() {
         <Show when={editMode()}>
           <div class="space-y-4">
             <div class="space-y-1.5">
-              <div class="flex items-center gap-2 text-sm font-medium">
+              <div
+                id="notion-token-label"
+                class="flex items-center gap-2 text-sm font-medium"
+              >
                 {t("settings.notionToken")}
                 <HelpHint term="notionToken" />
               </div>
@@ -181,6 +184,8 @@ export default function NotionIntegration() {
                   class={cn(inputClass, "pr-10")}
                   autocomplete="off"
                   spellcheck={false}
+                  aria-labelledby="notion-token-label"
+                  aria-describedby="notion-token-note"
                 />
                 <button
                   type="button"
@@ -197,13 +202,16 @@ export default function NotionIntegration() {
                   </Show>
                 </button>
               </div>
-              <p class="text-xs text-muted-foreground">
+              <p id="notion-token-note" class="text-xs text-muted-foreground">
                 {t("settings.notionTokenStorageNote")}
               </p>
             </div>
 
             <div class="space-y-1.5">
-              <div class="flex items-center gap-2 text-sm font-medium">
+              <div
+                id="notion-database-id-label"
+                class="flex items-center gap-2 text-sm font-medium"
+              >
                 {t("settings.notionDatabaseId")}
                 <HelpHint term="notionDatabaseId" />
               </div>
@@ -214,8 +222,13 @@ export default function NotionIntegration() {
                 class={inputClass}
                 autocomplete="off"
                 spellcheck={false}
+                aria-labelledby="notion-database-id-label"
+                aria-describedby="notion-database-id-help"
               />
-              <p class="text-xs text-muted-foreground">
+              <p
+                id="notion-database-id-help"
+                class="text-xs text-muted-foreground"
+              >
                 {t("settings.notionDatabaseIdHelp")}
               </p>
             </div>

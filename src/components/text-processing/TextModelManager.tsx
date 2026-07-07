@@ -93,7 +93,11 @@ export default function TextModelManager(props: TextModelManagerProps) {
           </CardTitleWithIcon>
         </CardHeader>
         <CardContent class="space-y-4">
-          <div class="space-y-4" role="radiogroup">
+          <div
+            class="space-y-4"
+            role="radiogroup"
+            aria-label={t("textProcessing.modelManagement")}
+          >
             <For each={tp.models()}>
               {(model) => (
                 <ModelListItem

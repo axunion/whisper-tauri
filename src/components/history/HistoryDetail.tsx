@@ -36,7 +36,7 @@ function toTranscriptionResult(entry: HistoryEntry): TranscriptionResult {
 }
 
 const HistoryDetail: Component<HistoryDetailProps> = (props) => {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const [isSuggestion, setIsSuggestion] = createSignal(false);
   const [isGeneratingTitle, setIsGeneratingTitle] = createSignal(false);
 
@@ -96,6 +96,7 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
                 type="text"
                 autofocus
                 class="w-full border-b border-muted-foreground/40 bg-transparent text-lg font-semibold outline-none"
+                aria-label={t("common.editTitle")}
                 value={title.editValue()}
                 onInput={(e) => title.setEditValue(e.currentTarget.value)}
                 onKeyDown={title.handleKeyDown}
@@ -120,17 +121,21 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
               type="button"
               class="shrink-0 text-muted-foreground transition-opacity"
               classList={{
-                "opacity-0 group-hover/title:opacity-100": !title.isEditing(),
+                "opacity-0 group-hover/title:opacity-100 focus-visible:opacity-100":
+                  !title.isEditing(),
               }}
+              aria-label={
+                title.isEditing() ? t("common.confirm") : t("common.editTitle")
+              }
               onClick={() =>
                 title.isEditing() ? title.confirm() : startEditing()
               }
             >
               <Show
                 when={title.isEditing()}
-                fallback={<FiEdit2 class="size-3.5" />}
+                fallback={<FiEdit2 class="size-3.5" aria-hidden="true" />}
               >
-                <FiCheck class="size-3.5" />
+                <FiCheck class="size-3.5" aria-hidden="true" />
               </Show>
             </button>
           }
@@ -138,16 +143,18 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
           <button
             type="button"
             class="shrink-0 text-muted-foreground hover:text-foreground"
+            aria-label={t("common.confirm")}
             onClick={title.confirm}
           >
-            <FiCheck class="size-3.5" />
+            <FiCheck class="size-3.5" aria-hidden="true" />
           </button>
           <button
             type="button"
             class="shrink-0 text-muted-foreground hover:text-foreground"
+            aria-label={t("common.cancel")}
             onClick={cancelEditing}
           >
-            <FiX class="size-3.5" />
+            <FiX class="size-3.5" aria-hidden="true" />
           </button>
         </Show>
       </div>

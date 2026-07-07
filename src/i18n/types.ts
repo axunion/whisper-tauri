@@ -16,6 +16,8 @@ export interface Dictionary {
     downloadingTextModel: string;
     downloadingServer: string;
     helpHintLabel: string;
+    editTitle: string;
+    notifications: string;
   };
   nav: {
     dashboard: string;
@@ -23,6 +25,7 @@ export interface Dictionary {
     history: string;
     settings: string;
     dev: string;
+    toggleSidebar: string;
   };
   dashboard: {
     quickActionFile: string;
@@ -51,6 +54,7 @@ export interface Dictionary {
     languageEs: string;
     selectAudioFile: string;
     changeFile: string;
+    clearFile: string;
     supportedFormats: string;
     completedToast: string;
     estimatedTime: string;
@@ -66,15 +70,18 @@ export interface Dictionary {
     deletedToast: string;
     searchPlaceholder: string;
     searchNoResults: string;
+    clearSearch: string;
     filterLast7days: string;
     filterLast30days: string;
     filterAll: string;
+    sortBy: string;
     sortDate: string;
     sortLength: string;
     sortFileName: string;
     sortAsc: string;
     sortDesc: string;
     select: string;
+    selectAll: string;
     selectedCount: string;
     vadEnabledLabel: string;
     vadDisabledLabel: string;
@@ -269,6 +276,7 @@ export interface Dictionary {
   onboarding: {
     next: string;
     back: string;
+    stepIndicator: string;
     welcomeTitle: string;
     welcomeSubtitle: string;
     privacyMessage: string;

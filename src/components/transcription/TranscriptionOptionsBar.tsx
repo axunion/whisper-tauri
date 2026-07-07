@@ -74,7 +74,10 @@ export function TranscriptionOptionsBar(props: TranscriptionOptionsBarProps) {
                 </SelectItem>
               )}
             >
-              <SelectTrigger class="h-11 border-0 bg-muted/50">
+              <SelectTrigger
+                class="h-11 border-0 bg-muted/50"
+                aria-label={t("transcription.model")}
+              >
                 <SelectValue<ModelInfo>>
                   {(state) =>
                     state.selectedOption()?.name ?? t("transcription.model")
@@ -113,7 +116,10 @@ export function TranscriptionOptionsBar(props: TranscriptionOptionsBarProps) {
                 </SelectItem>
               )}
             >
-              <SelectTrigger class="h-11 border-0 bg-muted/50">
+              <SelectTrigger
+                class="h-11 border-0 bg-muted/50"
+                aria-label={t("transcription.languageLabel")}
+              >
                 <SelectValue<LanguageOption>>
                   {(state) =>
                     state.selectedOption()?.label ??

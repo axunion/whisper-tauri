@@ -61,6 +61,7 @@ export function LlmTester(props: LlmTesterProps) {
           class="w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           rows={4}
           placeholder={t("dev.defaultInput")}
+          aria-label={t("dev.llmTester")}
           onFocus={(e) => e.currentTarget.select()}
           value={inputText()}
           onInput={(e) => setInputText(e.currentTarget.value)}
@@ -107,9 +108,10 @@ export function LlmTester(props: LlmTesterProps) {
             <button
               type="button"
               class="ml-2 text-destructive/60 hover:text-destructive"
+              aria-label={t("common.close")}
               onClick={() => props.textProcessing.clearError()}
             >
-              <FiX class="size-3.5" />
+              <FiX class="size-3.5" aria-hidden="true" />
             </button>
           </div>
         )}

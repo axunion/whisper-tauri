@@ -41,7 +41,11 @@ const WhisperModelList: Component<WhisperModelListProps> = (props) => {
   }
 
   return (
-    <div class="space-y-4" role="radiogroup">
+    <div
+      class="space-y-4"
+      role="radiogroup"
+      aria-label={t("settings.modelManagement")}
+    >
       <For each={props.whisper.models()}>
         {(model) => (
           <ModelListItem

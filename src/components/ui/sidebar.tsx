@@ -22,6 +22,7 @@ import {
 } from "solid-js";
 import type { ButtonProps } from "~/components/ui/Button";
 import { Button } from "~/components/ui/Button";
+import { useI18n } from "~/i18n";
 import { cn } from "~/lib/utils";
 
 const SIDEBAR_WIDTH = "16rem";
@@ -216,6 +217,7 @@ const SidebarTrigger = <T extends ValidComponent = "button">(
     "onClick",
   ]);
   const { toggleSidebar } = useSidebar();
+  const { t } = useI18n();
 
   return (
     <Button
@@ -242,7 +244,7 @@ const SidebarTrigger = <T extends ValidComponent = "button">(
         <rect width="18" height="18" x="3" y="3" rx="2" />
         <path d="M9 3v18" />
       </svg>
-      <span class="sr-only">Toggle Sidebar</span>
+      <span class="sr-only">{t("nav.toggleSidebar")}</span>
     </Button>
   );
 };

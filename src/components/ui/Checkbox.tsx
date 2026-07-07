@@ -66,7 +66,6 @@ const Checkbox = <T extends ValidComponent = "div">(
             class="size-3.5"
             aria-hidden="true"
           >
-            <title>Check</title>
             <path d="M20 6 9 17l-5-5" />
           </svg>
         </CheckboxPrimitive.Indicator>
