@@ -30,7 +30,7 @@
 | F7  | F   | 品質監査バンドル (i18n / a11y / 型同期) | 中   | 完了 (2026-07-07) | a11y 指摘 20 件を全件修正 |
 | F8  | F   | ライセンス・クレジット整備             | 高   | 完了 (2026-07-07) | docs/licenses.md 新設。全文はリンクのみ |
 | F9  | F   | ユーザードキュメント執筆 + Pages 公開  | 高   | 完了 (2026-07-10) | VitePress + Actions デプロイ。手動残タスクも 2026-07-11 消化 |
-| F10 | F   | 実機最終確認                           | 高   | 進行中   | チェックリスト確定 (2026-07-11)。macOS 実機 + Win/Linux は CI green まで |
+| F10 | F   | 実機最終確認                           | 高   | 完了 (2026-07-11) | スモーク 18/18 GO・3 プラットフォーム CI green。install.md 微調整は /release へ引き継ぎ |
 
 ---
 
@@ -244,7 +244,14 @@ docs/
 3. **3 プラットフォーム CI ビルド確認**: `release.yml` を workflow_dispatch で起動し (タグ不要・build-only 経路)、macOS / Windows / Linux 全て green を確認
 4. **install.md のファイル名プレースホルダー照合**: 3 の CI artifact 実名と `docs/install.md` の記載を突き合わせて微調整 (`spec/releasing.md` の「初リリース時に微調整」メモの消化)
 
-**Status:** 進行中 (2026-07-11)
+**実施メモ (2026-07-11)**: 全 4 項目を実施し **GO 判定**。
+
+1. `/verify all` green (FE 401 / BE 377 tests)
+2. macOS スモーク: release ビルドの .app で A〜F 全 18 項目パス。更新チェックのみ「リリース未公開による 404」がネットワークエラー文言で表示されるが、通信・エラー表示の仕組み自体は正常動作 — v0.1.0 公開で自然解消するため対応せず (条件付きパス)。ローカル `tauri build` の .dmg バンドル失敗は配布対象外 (CI は `--bundles app`) のため問題なし
+3. release.yml workflow_dispatch (build-only) で 3 プラットフォーム green (run 29104209061)
+4. Linux ファイル名 2 件の不一致 (小文字ハイフン表記 vs 実出力 `Whisper Tauri_...`) を発見。GitHub の asset 名スペース→ドット置換もあるため、修正は `/release` の draft 確認時に実施 — `spec/releasing.md` に引き継ぎ済み
+
+**Status:** 完了 (2026-07-11)
 
 ---
 
