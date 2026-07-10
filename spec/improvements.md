@@ -30,7 +30,7 @@
 | F7  | F   | 品質監査バンドル (i18n / a11y / 型同期) | 中   | 完了 (2026-07-07) | a11y 指摘 20 件を全件修正 |
 | F8  | F   | ライセンス・クレジット整備             | 高   | 完了 (2026-07-07) | docs/licenses.md 新設。全文はリンクのみ |
 | F9  | F   | ユーザードキュメント執筆 + Pages 公開  | 高   | 完了 (2026-07-10) | VitePress + Actions デプロイ。手動残タスクも 2026-07-11 消化 |
-| F10 | F   | 実機最終確認                           | 高   | 未着手   | 内容は着手前に別途詰める (placeholder) |
+| F10 | F   | 実機最終確認                           | 高   | 進行中   | チェックリスト確定 (2026-07-11)。macOS 実機 + Win/Linux は CI green まで |
 
 ---
 
@@ -235,9 +235,16 @@ docs/
 
 ## F10. 実機最終確認
 
-リリース直前の最終ゲート。Win/Linux 実機起動確認 (旧 #14 の残課題) とスモーク一巡を含む想定だが、**具体的な内容・チェックリストは着手前に別途詰める** (このセクションは placeholder)。
+リリース直前の最終ゲート。Win/Linux の実機・VM は手元にないため (2026-07-11 確認)、実機起動確認は macOS のみとし、Win/Linux は CI ビルド green の確認までとする (既知の制約としてリリースノートに明記 — `spec/releasing.md` に引き継ぎ済み)。
 
-**Status:** 未着手
+**チェックリスト (2026-07-11 確定)**:
+
+1. `/verify all` green
+2. **macOS 本番相当スモーク**: `pnpm tauri build` (release) でビルドし、生成された .app に対して `/smoke skip-build` のチェックリスト (A〜F 全グループ) を一巡。debug ではなく release ビルドを使うのは最終ゲートとして本番挙動に最も近づけるため
+3. **3 プラットフォーム CI ビルド確認**: `release.yml` を workflow_dispatch で起動し (タグ不要・build-only 経路)、macOS / Windows / Linux 全て green を確認
+4. **install.md のファイル名プレースホルダー照合**: 3 の CI artifact 実名と `docs/install.md` の記載を突き合わせて微調整 (`spec/releasing.md` の「初リリース時に微調整」メモの消化)
+
+**Status:** 進行中 (2026-07-11)
 
 ---
 

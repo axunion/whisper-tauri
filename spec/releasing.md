@@ -29,6 +29,7 @@
 - **`bundle.targets: "all"` + CI の `--bundles` 上書き**: macOS `app` / Windows `nsis` / Linux `deb,appimage`。ローカルで素の `pnpm tauri build` を叩くとホスト OS のフル形式が作られる
 - **release.yml の `if` 分岐 2 回は仕様上正しい形**: tauri-action は `APPLE_CERTIFICATE` 等 env var の存在 (空文字含む) で codesign を自動起動するため統合不可 (f4fee36 で revert 済み)
 - **install.md のファイル名プレースホルダー**: 初リリース時に実 artifact 名を見て微調整する余地あり
+- **Windows / Linux は実機検証未実施 (2026-07-11, F10)**: 実機・VM の確認手段がないため CI ビルド green の確認のみ。リリースノートに既知の制約として明記すること (実機検証が済んだらこの行を削除)
 - **macOS は Install.command zip 経路のみ**: `.dmg` は署名なしダブル経路で UX が分散するため意図的に作らない
 - **macOS Gatekeeper 事情 (2026-07 調査)**: macOS 15 Sequoia で「右クリック→開く」回避が廃止され、未署名物の初回起動は全ユーザーが「システム設定 → プライバシーとセキュリティ → このまま開く」経路を通る (macOS 26 Tahoe でさらに強化)。`ditto --noqtn` の quarantine 除去は引き続き有効で、Install.command 方式は未署名配布のほぼベストプラクティス。Homebrew は未署名 cask を 2026-09 に公式 Tap から排除予定のため配布経路として不採用
 - **ad-hoc 署名 (`signingIdentity: "-"`)**: .app 直接起動時に「壊れています」(復旧不可) ではなく「検証できませんでした」(このまま開くで復旧可) になる保険として設定 (Tauri 公式推奨)。config ベースで tauri CLI 自身が `codesign -s -` するため、上記 tauri-action の APPLE_* env var 問題とは経路が別
