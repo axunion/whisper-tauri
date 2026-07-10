@@ -29,7 +29,7 @@
 | F6  | F   | セキュリティ最終チェック               | 高   | 完了 (2026-07-07) | 先行して実施済み |
 | F7  | F   | 品質監査バンドル (i18n / a11y / 型同期) | 中   | 完了 (2026-07-07) | a11y 指摘 20 件を全件修正 |
 | F8  | F   | ライセンス・クレジット整備             | 高   | 完了 (2026-07-07) | docs/licenses.md 新設。全文はリンクのみ |
-| F9  | F   | ユーザードキュメント執筆 + Pages 公開  | 高   | 完了 (2026-07-10) | VitePress + Actions デプロイ。Pages 有効化のみ手動残 |
+| F9  | F   | ユーザードキュメント執筆 + Pages 公開  | 高   | 完了 (2026-07-10) | VitePress + Actions デプロイ。手動残タスクも 2026-07-11 消化 |
 | F10 | F   | 実機最終確認                           | 高   | 未着手   | 内容は着手前に別途詰める (placeholder) |
 
 ---
@@ -227,7 +227,7 @@ docs/
 - **スクリーンショットは初回リリースでは見送り** (テキストのみ。必要になったら別起票)
 - **アーキテクチャの公開版は作らない**と判断 — ユーザー向け説明は privacy.md が担い、開発者向けは spec/architecture.md で足りる
 - `spec/releasing.md` を新設 (リリースフロー + 旧 #13/#14 の知見を移送)
-- **手動残タスク**: ① リポジトリ Settings → Pages → Source を「GitHub Actions」に設定 (初回のみ)、② 公開確認後に README へサイト URL (`https://axunion.github.io/whisper-tauri/`) を追記
+- **手動残タスク (2026-07-11 消化)**: ① Pages の Source を「GitHub Actions」に設定 (`gh api -X POST .../pages -f build_type=workflow`)、② README へサイト URL (`https://axunion.github.io/whisper-tauri/`) を追記 — 両方完了
 
 **Status:** 完了 (2026-07-10)
 

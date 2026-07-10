@@ -2,6 +2,8 @@
 
 A privacy-first desktop app for local audio transcription. All inference runs on-device — audio data never leaves your machine.
 
+**User documentation:** [axunion.github.io/whisper-tauri](https://axunion.github.io/whisper-tauri/) — installation, getting started, FAQ, privacy, and licenses.
+
 ## Features
 
 - **Transcription** from audio files (MP3, M4A, FLAC, OGG, AAC, MP4, MKV, WAV) and direct microphone recording
