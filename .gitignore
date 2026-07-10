@@ -22,6 +22,10 @@ coverage
 # Vite cache
 .vite
 
+# VitePress
+docs/.vitepress/dist
+docs/.vitepress/cache
+
 # macOS
 .DS_Store
 .AppleDouble

@@ -29,7 +29,7 @@
 | F6  | F   | セキュリティ最終チェック               | 高   | 完了 (2026-07-07) | 先行して実施済み |
 | F7  | F   | 品質監査バンドル (i18n / a11y / 型同期) | 中   | 完了 (2026-07-07) | a11y 指摘 20 件を全件修正 |
 | F8  | F   | ライセンス・クレジット整備             | 高   | 完了 (2026-07-07) | docs/licenses.md 新設。全文はリンクのみ |
-| F9  | F   | ユーザードキュメント執筆 + Pages 公開  | 高   | 未着手   | 機能フリーズ後に着手 |
+| F9  | F   | ユーザードキュメント執筆 + Pages 公開  | 高   | 完了 (2026-07-10) | VitePress + Actions デプロイ。Pages 有効化のみ手動残 |
 | F10 | F   | 実機最終確認                           | 高   | 未着手   | 内容は着手前に別途詰める (placeholder) |
 
 ---
@@ -219,7 +219,17 @@ docs/
 
 **レンダリング方式**: 着手時に確定。第一候補 VitePress (pnpm に馴染む・デフォルトテーマの見栄え)、省力案 Jekyll (Deploy from branch)。
 
-**Status:** 未着手
+**実装メモ (2026-07-10)**: レンダリング方式は VitePress で確定 (devDependency + `docs:dev` / `docs:build` / `docs:preview` scripts)。
+
+- **新規ページ 3 本**: `index.md` (home レイアウト、README から特徴を抽出) / `getting-started.md` (オンボーディング5ステップ〜文字起こし〜AI 処理〜History〜Notion〜Settings の順) / `faq.md` (Gatekeeper / SmartScreen / ディスク容量 / オフライン / データ保存場所ほか、詳細は install.md / privacy.md へのリンク中心)
+- **既存 3 ページの再点検**: privacy.md — Notion トークン平文保存の明文化済みを確認 (F6 引き継ぎ完了)。install.md — GitHub blob ビュー専用の `../../../releases` 相対リンクを絶対 URL 化 (Pages 上で壊れるため)。licenses.md — 変更なし
+- **デプロイ**: `.github/workflows/docs.yml` (main への docs/** push で VitePress ビルド → Pages デプロイ)。ナビゲーション導線は VitePress の nav/sidebar に集約
+- **スクリーンショットは初回リリースでは見送り** (テキストのみ。必要になったら別起票)
+- **アーキテクチャの公開版は作らない**と判断 — ユーザー向け説明は privacy.md が担い、開発者向けは spec/architecture.md で足りる
+- `spec/releasing.md` を新設 (リリースフロー + 旧 #13/#14 の知見を移送)
+- **手動残タスク**: ① リポジトリ Settings → Pages → Source を「GitHub Actions」に設定 (初回のみ)、② 公開確認後に README へサイト URL (`https://axunion.github.io/whisper-tauri/`) を追記
+
+**Status:** 完了 (2026-07-10)
 
 ---
 
@@ -233,26 +243,11 @@ docs/
 
 # 引き継ぎ知見 (完了済み旧項目から移送)
 
-リリース時、CI/リリース運用の節は `spec/releasing.md` (F9) に移す。バックログは要望が出たら個別に起票する。
+バックログは要望が出たら個別に起票する。
 
-## CI 運用 (旧 #13)
+## CI 運用 (旧 #13) / リリースビルド運用 (旧 #14)
 
-- **Rust toolchain の齟齬**: ローカルと CI stable のバージョン差で「ローカル green / CI fail」が起きる。`rustup update stable` でローカルを追従させる運用 (`rust-toolchain.toml` 固定は tuning.md の「標準設定優先」に反するため不採用)
-- **`#[cfg(target_os = ...)]` ガード下の lint**: macOS ローカル clippy では Linux/Windows 固有コードの lint がスキップされる。Linux 固有コードを書いた直後は CI run を見るまで完了扱いにしない
-- **Linux deps 必須リスト**: `libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libasound2-dev` (cpal が ALSA を要求。ci.yml / release.yml で同期)
-- **SOURCE_DATE_EPOCH**: CI で `GGML_NATIVE=OFF` を効かせるため必須 (`.claude/rules/workarounds.md`)
-- **ビルド時間目安**: backend ジョブ初回 5〜6 分、rust-cache ヒットで 1〜3 分
-
-## リリースビルド運用 (旧 #14)
-
-- **`bundle.targets: "all"` + CI の `--bundles` 上書き**: macOS `app` / Windows `nsis` / Linux `deb,appimage`。ローカルで素の `pnpm tauri build` を叩くとホスト OS のフル形式が作られる
-- **release.yml の `if` 分岐 2 回は仕様上正しい形**: tauri-action は `APPLE_CERTIFICATE` 等 env var の存在 (空文字含む) で codesign を自動起動するため統合不可 (f4fee36 で revert 済み)
-- **install.md のファイル名プレースホルダー**: 初リリース時に実 artifact 名を見て微調整する余地あり
-- **macOS は Install.command zip 経路のみ**: `.dmg` は署名なしダブル経路で UX が分散するため意図的に作らない
-- **macOS Gatekeeper 事情 (2026-07 調査)**: macOS 15 Sequoia で「右クリック→開く」回避が廃止され、未署名物の初回起動は全ユーザーが「システム設定 → プライバシーとセキュリティ → このまま開く」経路を通る (macOS 26 Tahoe でさらに強化)。`ditto --noqtn` の quarantine 除去は引き続き有効で、Install.command 方式は未署名配布のほぼベストプラクティス。Homebrew は未署名 cask を 2026-09 に公式 Tap から排除予定のため配布経路として不採用
-- **ad-hoc 署名 (`signingIdentity: "-"`)**: .app 直接起動時に「壊れています」(復旧不可) ではなく「検証できませんでした」(このまま開くで復旧可) になる保険として設定 (Tauri 公式推奨)。config ベースで tauri CLI 自身が `codesign -s -` するため、上記 tauri-action の APPLE_* env var 問題とは経路が別
-- **hardened runtime とマイク entitlement**: tauri の codesign は hardened runtime をデフォルト有効にするため、署名導入と同時に `Entitlements.plist` (`com.apple.security.device.audio-input`) を追加した。これがないと録音 (cpal) がマイクにアクセスできない。署名変更後は /smoke で録音の実機確認を必ず行うこと
-- **正式リリース時の完全解**: Apple Developer Program ($99/年) + Developer ID 署名 + notarization のみが警告を完全に消せる。加入すれば Homebrew cask 配布も解禁される。正式リリース時に加入を検討すること
+`spec/releasing.md` へ移送済み (2026-07-10、F9)。
 
 ## 将来候補バックログ (要望が出たら起票)
 

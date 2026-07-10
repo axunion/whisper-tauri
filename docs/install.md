@@ -2,7 +2,7 @@
 
 ## macOS (Apple Silicon)
 
-1. Download the latest `Whisper-Tauri-aarch64.zip` from the [Releases](../../../releases) page.
+1. Download the latest `Whisper-Tauri-aarch64.zip` from the [Releases](https://github.com/axunion/whisper-tauri/releases) page.
 2. Double-click the zip to extract — a `Whisper Tauri Installer` folder appears.
 3. Open the folder and double-click `Install.command`. macOS shows a warning that it could not verify the file — click **Done** (not "Move to Trash").
 4. Open **System Settings** → **Privacy & Security**, scroll to the bottom, find "`Install.command` was blocked...", and click **Open Anyway**.
@@ -28,7 +28,7 @@ The approval is simpler on older versions:
 
 ## Windows
 
-1. Download the latest `Whisper Tauri_<version>_x64-setup.exe` from the [Releases](../../../releases) page.
+1. Download the latest `Whisper Tauri_<version>_x64-setup.exe` from the [Releases](https://github.com/axunion/whisper-tauri/releases) page.
 2. Double-click to run.
 3. Windows Defender SmartScreen will likely warn "Microsoft Defender SmartScreen prevented an unrecognized app from starting." This is expected — the build is unsigned. Click **More info** → **Run anyway**.
 4. Follow the installer prompts to complete installation.
@@ -68,7 +68,7 @@ Updating is simply installing the new version over the old one — no uninstall 
 
 Your settings, history, and downloaded models live in a separate data directory (see [Uninstall](#uninstall) for paths) and are never touched by an update.
 
-New versions are published on the [Releases](../../../releases) page. You can also check from within the app: **Settings** → **App Updates** → **Check for Updates**. To get notified automatically, use GitHub **Watch** → **Custom** → **Releases** on the repository, or subscribe to the [releases.atom](../../../releases.atom) feed with any RSS reader.
+New versions are published on the [Releases](https://github.com/axunion/whisper-tauri/releases) page. You can also check from within the app: **Settings** → **App Updates** → **Check for Updates**. To get notified automatically, use GitHub **Watch** → **Custom** → **Releases** on the repository, or subscribe to the [releases.atom](https://github.com/axunion/whisper-tauri/releases.atom) feed with any RSS reader.
 
 ## Uninstall
 
