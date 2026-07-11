@@ -49,7 +49,7 @@ These components are downloaded into the app's data directory on first use, not 
 | Component | Source | Purpose |
 | --- | --- | --- |
 | **FFmpeg** (LGPL) | [evermeet.cx](https://evermeet.cx/ffmpeg/) (macOS), [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds) (Windows / Linux) | Decoding non-WAV inputs and resampling to Whisper's 16 kHz mono PCM format |
-| **`llama-server`** (MIT) | [`ggml-org/llama.cpp` releases](https://github.com/ggml-org/llama.cpp/releases) — pinned at `b8672` | Local LLM inference HTTP server, managed as a child process (started on demand, stopped on app exit) |
+| **`llama-server`** (MIT) | [`ggml-org/llama.cpp` releases](https://github.com/ggml-org/llama.cpp/releases) — pinned at `b9950` | Local LLM inference HTTP server, managed as a child process (started on demand, stopped on app exit) |
 | **Whisper models** (MIT) | [`ggerganov/whisper.cpp` on Hugging Face](https://huggingface.co/ggerganov/whisper.cpp) | GGML format (`.bin`), user-selectable size |
 | **Silero VAD** | [`ggml-org/whisper-vad` on Hugging Face](https://huggingface.co/ggml-org/whisper-vad) | Voice activity detection for skipping silence |
 | **LLM models** | [Hugging Face GGUF mirrors](https://huggingface.co/) | User-selectable, see below |

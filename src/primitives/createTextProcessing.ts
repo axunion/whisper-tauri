@@ -259,18 +259,13 @@ async function generateTitle(
   text: string,
   modelId?: string,
 ): Promise<string | null> {
-  // Title generation doesn't use isProcessing to avoid blocking other operations
-  try {
-    const result = await invoke<string>("text_processing_generate_title", {
-      text,
-      modelId: effectiveModelId(modelId),
-    });
-    return result;
-  } catch (e) {
-    // Best-effort: silently fail
-    console.error("Title generation failed:", e);
-    return null;
-  }
+  // Title generation doesn't use isProcessing to avoid blocking other
+  // operations. Errors propagate so the caller (createAiSession) can set
+  // its session error and surface a toast.
+  return invoke<string>("text_processing_generate_title", {
+    text,
+    modelId: effectiveModelId(modelId),
+  });
 }
 
 async function cancel(): Promise<void> {

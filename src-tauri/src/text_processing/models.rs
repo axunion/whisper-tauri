@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use super::types::TextModelInfo;
 
 /// Pinned llama-server release version (verified to work).
-const LLAMA_SERVER_VERSION: &str = "b8672";
+const LLAMA_SERVER_VERSION: &str = "b9950";
 
 /// Valid text model IDs.
 const VALID_MODEL_IDS: [&str; 2] = ["gemma-4-e2b", "qwen3.5-4b"];
@@ -32,6 +32,43 @@ fn get_default_model_base_url(model_id: &str) -> Option<&'static str> {
 #[must_use]
 pub(crate) fn is_valid_model_id(model_id: &str) -> bool {
     VALID_MODEL_IDS.contains(&model_id)
+}
+
+/// Sampling parameters sent with every chat-completions request.
+///
+/// Fields the model authors leave unrecommended stay `None` and are omitted
+/// from the request body so llama-server defaults apply (tuning.md: do not
+/// specify values identical to the standard).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct SamplingParams {
+    pub(crate) temperature: f64,
+    pub(crate) top_p: f64,
+    pub(crate) top_k: u32,
+    pub(crate) min_p: Option<f64>,
+}
+
+/// Returns the official recommended sampling parameters for a model.
+///
+/// Values are the model authors' published recommendations, not task-specific
+/// tuning: Gemma 4 model card (all-purpose), Qwen3.5-4B model card
+/// (non-thinking general mode — thinking is disabled at server startup).
+#[must_use]
+pub(crate) fn sampling_params(model_id: &str) -> Option<SamplingParams> {
+    match model_id {
+        "gemma-4-e2b" => Some(SamplingParams {
+            temperature: 1.0,
+            top_p: 0.95,
+            top_k: 64,
+            min_p: None,
+        }),
+        "qwen3.5-4b" => Some(SamplingParams {
+            temperature: 0.7,
+            top_p: 0.8,
+            top_k: 20,
+            min_p: Some(0.0),
+        }),
+        _ => None,
+    }
 }
 
 /// Returns the filename for a valid text model ID, if any.
@@ -234,6 +271,18 @@ mod tests {
     fn is_valid_model_id_rejects_unknown() {
         assert!(!is_valid_model_id("llama-3"));
         assert!(!is_valid_model_id(""));
+    }
+
+    #[test]
+    fn sampling_params_unknown_returns_none() {
+        assert!(sampling_params("unknown").is_none());
+    }
+
+    #[test]
+    fn sampling_params_covers_every_valid_model() {
+        for id in VALID_MODEL_IDS {
+            assert!(sampling_params(id).is_some(), "missing sampling for {id}");
+        }
     }
 
     #[test]

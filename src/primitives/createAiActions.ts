@@ -1,9 +1,10 @@
 import type { Accessor, Setter } from "solid-js";
-import { createSignal } from "solid-js";
+import { createEffect, createSignal, on } from "solid-js";
 import type { DictionaryKey } from "~/i18n/types";
 import { toast } from "~/lib/toast";
 import type { AiSession } from "~/primitives/createAiSession";
 import type { createTextProcessing } from "~/primitives/createTextProcessing";
+import { ErrorCode } from "~/types/errors";
 
 export interface CreateAiActionsOptions {
   session: AiSession;
@@ -54,6 +55,22 @@ export function createAiActions(options: CreateAiActionsOptions): AiActions {
       action();
     }
   }
+
+  // Surface failed AI actions the moment the session records an error —
+  // keying on the error transition (rather than inferring failure from a
+  // null result in each completion handler) avoids re-toasting stale errors
+  // and covers future actions automatically. User cancellation stays silent.
+  createEffect(
+    on(
+      session.error,
+      (err) => {
+        if (err && err.code !== ErrorCode.CANCELLED) {
+          toast.error(t(err.messageKey));
+        }
+      },
+      { defer: true },
+    ),
+  );
 
   function executeSummarize(): void {
     options.onOpenSummary();

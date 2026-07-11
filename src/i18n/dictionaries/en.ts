@@ -166,6 +166,7 @@ export const en: Dictionary = {
     modelLoadError: "Failed to load model",
     modelDownloadError: "Failed to download model",
     transcriptionError: "Transcription failed",
+    inferenceError: "AI processing failed",
     networkError: "Network error",
     processCancelled: "Processing cancelled",
     unknownError: "An unexpected error occurred",

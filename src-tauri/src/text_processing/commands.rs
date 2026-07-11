@@ -252,7 +252,7 @@ pub async fn text_processing_chat(
     let result = inference::run_inference(
         task.port,
         &messages,
-        0.7,
+        task.sampling,
         2048,
         &task.task_id,
         &task.token,
@@ -302,7 +302,7 @@ pub async fn text_processing_summarize(
             let summary = inference::run_inference(
                 task.port,
                 &messages,
-                0.3,
+                task.sampling,
                 1024,
                 &task.task_id,
                 &task.token,
@@ -323,7 +323,7 @@ pub async fn text_processing_summarize(
     let json = inference::run_inference_blocking(
         task.port,
         &messages,
-        0.3,
+        task.sampling,
         params.max_tokens,
         Some(inference::summary_response_format()),
         &task.task_id,
@@ -368,7 +368,7 @@ pub async fn text_processing_generate_title(
     let result = inference::run_inference(
         task.port,
         &messages,
-        0.3,
+        task.sampling,
         64,
         &task.task_id,
         &task.token,
@@ -409,7 +409,7 @@ pub async fn text_processing_clean_text(
         inference::run_inference(
             task.port,
             &messages,
-            0.3,
+            task.sampling,
             max_tokens,
             &task.task_id,
             &task.token,
@@ -428,7 +428,7 @@ pub async fn text_processing_clean_text(
             let chunk_result = inference::run_inference(
                 task.port,
                 &messages,
-                0.3,
+                task.sampling,
                 max_tokens,
                 &task.task_id,
                 &task.token,
@@ -465,6 +465,9 @@ struct InferenceTask {
     task_id: String,
     token: Arc<CancellationToken>,
     port: u16,
+    /// Official recommended sampling for the effective model (`None` falls
+    /// back to llama-server defaults).
+    sampling: Option<models::SamplingParams>,
     // Held for its Drop side-effect only. The leading underscore documents
     // intent and silences the `dead_code` lint without `#[allow]`.
     _guard: TaskGuard,
@@ -486,7 +489,7 @@ async fn begin_task(
         task_id: task_id.clone(),
     };
     inference::emit_initial_progress(app, &task_id);
-    let port = ensure_server_running(app, manager, model_id).await?;
+    let (port, effective_model_id) = ensure_server_running(app, manager, model_id).await?;
     if token.is_cancelled() {
         return Err(TextProcessingError::Cancelled.into());
     }
@@ -494,6 +497,7 @@ async fn begin_task(
         task_id,
         token,
         port,
+        sampling: models::sampling_params(&effective_model_id),
         _guard: guard,
     })
 }
@@ -547,11 +551,13 @@ pub async fn set_text_processing_server_url(
 // --- Helper functions ---
 
 /// Ensures the server is running with the given (or first available) model.
+/// Returns the port together with the effective model id so callers can
+/// resolve model-specific request parameters.
 async fn ensure_server_running(
     app: &AppHandle,
     manager: &State<'_, tokio::sync::Mutex<LlamaServerManager>>,
     model_id: Option<&str>,
-) -> Result<u16, String> {
+) -> Result<(u16, String), String> {
     let app_data_dir = paths::app_data_dir(app)?;
 
     let model_id = if let Some(id) = model_id {
@@ -577,7 +583,7 @@ async fn ensure_server_running(
     if mgr.is_running() && mgr.model_id() == Some(model_id.as_str()) {
         if let Some(port) = mgr.port() {
             if quick_health_check(port).await {
-                return Ok(port);
+                return Ok((port, model_id));
             }
             // Server process alive but unresponsive — stop and restart
             eprintln!("llama-server process alive but unresponsive, restarting");
@@ -591,7 +597,7 @@ async fn ensure_server_running(
         .await
         .map_err::<String, _>(Into::into)?;
 
-    Ok(port)
+    Ok((port, model_id))
 }
 
 /// Quick health check with a short timeout to verify the server is responsive.

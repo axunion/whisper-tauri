@@ -1,7 +1,9 @@
-import { createRoot } from "solid-js";
+import { createRoot, createSignal } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { parseError } from "~/lib/errors";
 import { toast } from "~/lib/toast";
 import type { StructuredSummary, TextModelInfo } from "~/types";
+import type { AppError } from "~/types/errors";
 import {
   type CreateAiActionsOptions,
   createAiActions,
@@ -31,6 +33,26 @@ const summaryFixture: StructuredSummary = {
   actionItems: [],
   keyPoints: [],
 };
+
+/**
+ * Builds a session whose given operation fails: it records the error (via a
+ * real signal, mirroring createAiSession's setError) and resolves to null.
+ * The AppError comes from the production parseError mapping so fixtures
+ * cannot drift from src/lib/errors.ts.
+ */
+function makeFailingSession(
+  operation: "summarize" | "cleanText" | "generateTitle",
+  rustError: string,
+): AiSession {
+  const [error, setError] = createSignal<AppError | null>(null);
+  return makeSession({
+    error,
+    [operation]: vi.fn(async () => {
+      setError(parseError(rustError));
+      return null;
+    }),
+  });
+}
 
 function makeModel(downloaded: boolean): TextModelInfo {
   return {
@@ -90,6 +112,7 @@ function makeOptions(
 describe("createAiActions", () => {
   beforeEach(() => {
     vi.mocked(toast.success).mockClear();
+    vi.mocked(toast.error).mockClear();
   });
 
   describe("isReady", () => {
@@ -220,6 +243,79 @@ describe("createAiActions", () => {
     });
   });
 
+  describe("error surfacing", () => {
+    it("should toast the mapped message when summarize fails", async () => {
+      await createRoot(async (dispose) => {
+        const session = makeFailingSession(
+          "summarize",
+          "Inference error: boom",
+        );
+        const actions = createAiActions(makeOptions({ session }));
+        // Let the effect's initial tracking run flush before triggering.
+        await flushPromises();
+
+        actions.onSummarize();
+        await flushPromises();
+
+        expect(toast.error).toHaveBeenCalledWith("errors.inferenceError");
+        expect(toast.success).not.toHaveBeenCalled();
+        dispose();
+      });
+    });
+
+    it("should toast the mapped message when clean text fails", async () => {
+      await createRoot(async (dispose) => {
+        const session = makeFailingSession(
+          "cleanText",
+          "Inference error: boom",
+        );
+        const actions = createAiActions(makeOptions({ session }));
+        // Let the effect's initial tracking run flush before triggering.
+        await flushPromises();
+
+        actions.onCleanText();
+        await flushPromises();
+
+        expect(toast.error).toHaveBeenCalledWith("errors.inferenceError");
+        dispose();
+      });
+    });
+
+    it("should stay silent when the failure is a user cancellation", async () => {
+      await createRoot(async (dispose) => {
+        const session = makeFailingSession("summarize", "Inference cancelled");
+        const actions = createAiActions(makeOptions({ session }));
+        // Let the effect's initial tracking run flush before triggering.
+        await flushPromises();
+
+        actions.onSummarize();
+        await flushPromises();
+
+        expect(toast.error).not.toHaveBeenCalled();
+        expect(toast.success).not.toHaveBeenCalled();
+        dispose();
+      });
+    });
+
+    it("should toast the mapped message when title generation fails", async () => {
+      await createRoot(async (dispose) => {
+        const session = makeFailingSession(
+          "generateTitle",
+          "Inference error: boom",
+        );
+        const actions = createAiActions(makeOptions({ session }));
+        // Let the effect's initial tracking run flush before triggering.
+        await flushPromises();
+
+        actions.onGenerateTitle();
+        await flushPromises();
+
+        expect(toast.error).toHaveBeenCalledWith("errors.inferenceError");
+        dispose();
+      });
+    });
+  });
+
   describe("onCleanText", () => {
     it("should open the clean-text view and clean the result text immediately", async () => {
       await createRoot(async (dispose) => {
@@ -314,6 +410,8 @@ describe("createAiActions", () => {
       await createRoot(async (dispose) => {
         const session = makeSession();
         const actions = createAiActions(makeOptions({ session }));
+        // Let the effect's initial tracking run flush before triggering.
+        await flushPromises();
 
         actions.onGenerateTitle();
         await flushPromises();

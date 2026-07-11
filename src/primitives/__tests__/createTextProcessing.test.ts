@@ -543,7 +543,7 @@ describe("createTextProcessing", () => {
       expect(tp.isProcessing()).toBe(false);
       expect(tp.error()).toEqual(
         expect.objectContaining({
-          code: "TRANSCRIPTION_ERROR",
+          code: "INFERENCE_ERROR",
           details: "Inference error: boom",
         }),
       );
@@ -583,21 +583,18 @@ describe("createTextProcessing", () => {
       });
     });
 
-    it("fails silently: returns null and leaves error untouched", async () => {
-      const consoleError = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+    it("propagates failures so the caller can surface them", async () => {
       mockInvoke({
         text_processing_generate_title: () =>
           Promise.reject("Inference error: boom"),
       });
       const { tp } = await setup();
 
-      const title = await tp.generateTitle("text");
-
-      expect(title).toBeNull();
+      await expect(tp.generateTitle("text")).rejects.toBe(
+        "Inference error: boom",
+      );
+      // The primitive itself stays error-free; createAiSession owns the error.
       expect(tp.error()).toBeNull();
-      consoleError.mockRestore();
     });
   });
 

@@ -7,6 +7,12 @@ use tokio::process::{Child, Command};
 use super::error::TextProcessingError;
 use super::models;
 
+/// Server context window in tokens (`--ctx-size`). Sized so a worst-case
+/// chunk (kanji-dense Japanese approaches ~1 token/char) plus the output
+/// budget always fit — see the assertion next to
+/// [`super::inference::MAX_OUTPUT_TOKENS`].
+pub(crate) const SERVER_CTX_SIZE: usize = 8192;
+
 /// Health check polling interval in milliseconds.
 const HEALTH_CHECK_INTERVAL_MS: u64 = 1000;
 
@@ -114,7 +120,7 @@ impl LlamaServerManager {
                 "--model",
                 &model_path.to_string_lossy(),
                 "--ctx-size",
-                "4096",
+                &SERVER_CTX_SIZE.to_string(),
                 "--threads",
                 &num_threads().to_string(),
                 "--jinja",

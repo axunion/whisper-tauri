@@ -5,6 +5,7 @@ use serde_json::{json, Value};
 use tauri::{AppHandle, Emitter};
 
 use super::error::TextProcessingError;
+use super::models::SamplingParams;
 use super::types::{ChatMessage, InferenceProgress};
 use crate::whisper::process::{CancellationToken, TaskManager};
 use futures_util::StreamExt;
@@ -15,6 +16,16 @@ pub(crate) static INFERENCE_TASK_MANAGER: Lazy<TaskManager> = Lazy::new(TaskMana
 /// Maximum characters (Unicode scalar values) per chunk for text splitting.
 /// For Japanese text (~3 bytes per char in UTF-8), this corresponds to ~12KB.
 const MAX_CHUNK_CHARS: usize = 4000;
+
+/// Upper bound on `max_tokens` for any single request (summary buckets and
+/// the clean-text cap).
+pub(crate) const MAX_OUTPUT_TOKENS: u32 = 4096;
+
+// A full chunk (worst case ~1 token/char for kanji-dense Japanese) plus the
+// output budget must fit in the server context, or long requests fail with
+// HTTP 400 exceed_context_size_error.
+const _: () =
+    assert!(MAX_CHUNK_CHARS + MAX_OUTPUT_TOKENS as usize <= super::server::SERVER_CTX_SIZE);
 
 /// Builds chat messages for a simple chat response (dev testing).
 #[must_use]
@@ -72,7 +83,7 @@ pub(crate) fn summary_params_for_length(text_chars: usize) -> SummaryParams {
         SummaryParams {
             key_points_min: 7,
             key_points_max: 15,
-            max_tokens: 4_096,
+            max_tokens: MAX_OUTPUT_TOKENS,
         }
     }
 }
@@ -246,28 +257,59 @@ pub(crate) fn build_clean_text_messages(text: &str) -> Vec<ChatMessage> {
     ]
 }
 
+/// Boundary preference for chunk splitting: sentence enders first, then
+/// clause/line breaks. Parts still oversized after the last tier are
+/// hard-split at a fixed width.
+const SEPARATOR_TIERS: [&[char]; 2] = [&['。'], &['、', '\n']];
+
 /// Splits text into chunks at sentence boundaries (Japanese period `。`).
 ///
-/// Each chunk is at most `max_chars` Unicode characters. If a sentence exceeds
-/// `max_chars`, it is included as its own chunk.
+/// Every chunk is guaranteed to be at most `max_chars` Unicode characters:
+/// a sentence that exceeds `max_chars` (or text with no `。` at all — Whisper
+/// output can lack punctuation entirely) falls back to `、`/newline
+/// boundaries, then to a fixed-width split. Without this guarantee, an
+/// unsplittable transcript is sent as one request and overflows the server
+/// context (`HTTP 400 exceed_context_size_error`).
 #[must_use]
 pub(crate) fn chunk_text(text: &str, max_chars: usize) -> Vec<String> {
     if text.chars().count() <= max_chars {
         return vec![text.to_string()];
     }
+    pack(text, max_chars, &SEPARATOR_TIERS)
+}
+
+/// Packs `text` into chunks of at most `max_chars`, splitting at the first
+/// tier's separators; oversized parts fall through to the next tier, then to
+/// a fixed-width split once the tiers are exhausted.
+fn pack(text: &str, max_chars: usize, tiers: &[&[char]]) -> Vec<String> {
+    let Some((separators, rest)) = tiers.split_first() else {
+        let chars: Vec<char> = text.chars().collect();
+        return chars
+            .chunks(max_chars)
+            .map(|c| c.iter().collect())
+            .collect();
+    };
 
     let mut chunks = Vec::new();
     let mut current = String::new();
     let mut current_chars: usize = 0;
 
-    for sentence in text.split_inclusive('。') {
-        let sentence_chars = sentence.chars().count();
-        if current_chars + sentence_chars > max_chars && !current.is_empty() {
+    for part in text.split_inclusive(*separators) {
+        let part_chars = part.chars().count();
+        if part_chars > max_chars {
+            if !current.is_empty() {
+                chunks.push(std::mem::take(&mut current));
+                current_chars = 0;
+            }
+            chunks.extend(pack(part, max_chars, rest));
+            continue;
+        }
+        if current_chars + part_chars > max_chars && !current.is_empty() {
             chunks.push(std::mem::take(&mut current));
             current_chars = 0;
         }
-        current.push_str(sentence);
-        current_chars += sentence_chars;
+        current.push_str(part);
+        current_chars += part_chars;
     }
 
     if !current.is_empty() {
@@ -295,6 +337,35 @@ pub(crate) fn parse_sse_line(line: &str) -> Option<String> {
         .get("content")?
         .as_str()
         .map(std::string::ToString::to_string)
+}
+
+/// Builds the chat-completions request body.
+///
+/// Sampling fields come from the model's official recommendation
+/// ([`super::models::sampling_params`]); when `None` (unknown model), they
+/// are omitted entirely so llama-server defaults apply. `top_k` / `min_p`
+/// are llama-server extensions to the OpenAI-compatible endpoint.
+#[must_use]
+pub(crate) fn build_request_body(
+    messages: &[ChatMessage],
+    sampling: Option<SamplingParams>,
+    max_tokens: u32,
+    stream: bool,
+) -> Value {
+    let mut body = json!({
+        "messages": messages,
+        "max_tokens": max_tokens,
+        "stream": stream,
+    });
+    if let Some(s) = sampling {
+        body["temperature"] = json!(s.temperature);
+        body["top_p"] = json!(s.top_p);
+        body["top_k"] = json!(s.top_k);
+        if let Some(min_p) = s.min_p {
+            body["min_p"] = json!(min_p);
+        }
+    }
+    body
 }
 
 /// Sends a chat-completions request to the local llama-server and validates
@@ -335,18 +406,13 @@ async fn send_chat_request(
 pub(crate) async fn run_inference(
     port: u16,
     messages: &[ChatMessage],
-    temperature: f64,
+    sampling: Option<SamplingParams>,
     max_tokens: u32,
     task_id: &str,
     token: &Arc<CancellationToken>,
     app: &AppHandle,
 ) -> Result<String, TextProcessingError> {
-    let body = serde_json::json!({
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-        "stream": true,
-    });
+    let body = build_request_body(messages, sampling, max_tokens, true);
 
     let response = send_chat_request(port, &body).await?;
 
@@ -398,7 +464,7 @@ pub(crate) async fn run_inference(
 pub(crate) async fn run_inference_blocking(
     port: u16,
     messages: &[ChatMessage],
-    temperature: f64,
+    sampling: Option<SamplingParams>,
     max_tokens: u32,
     response_format: Option<Value>,
     task_id: &str,
@@ -409,12 +475,7 @@ pub(crate) async fn run_inference_blocking(
         return Err(TextProcessingError::Cancelled);
     }
 
-    let mut body = json!({
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-        "stream": false,
-    });
+    let mut body = build_request_body(messages, sampling, max_tokens, false);
     if let Some(format) = response_format {
         body["response_format"] = format;
     }
@@ -473,8 +534,8 @@ pub(crate) fn default_max_chunk_chars() -> usize {
 ///
 /// Cleanup reformats existing text, so the output length is roughly proportional
 /// to the input. A 1.5× factor leaves room for added punctuation and paragraph
-/// breaks; 256 is a floor for very short inputs; 4096 caps the request body to
-/// the server context size.
+/// breaks; 256 is a floor for very short inputs; [`MAX_OUTPUT_TOKENS`] caps the
+/// output so the prompt + response stay within the server context.
 #[must_use]
 pub(crate) fn clean_text_max_tokens(text: &str) -> u32 {
     #[allow(
@@ -483,7 +544,7 @@ pub(crate) fn clean_text_max_tokens(text: &str) -> u32 {
         clippy::cast_sign_loss
     )]
     let approx = (text.chars().count() as f64 * 1.5) as u32 + 256;
-    approx.min(4096)
+    approx.min(MAX_OUTPUT_TOKENS)
 }
 
 #[cfg(test)]
@@ -634,12 +695,51 @@ mod tests {
     }
 
     #[test]
-    fn chunk_text_no_period_returns_single_chunk() {
+    fn chunk_text_no_period_still_respects_max_chars() {
+        // Regression: text without 。 used to be sent as one giant chunk and
+        // overflow the server context.
         let text = "句点のない長いテキスト";
         let chunks = chunk_text(text, 5);
-        // Without periods, the entire text is one chunk
-        assert_eq!(chunks.len(), 1);
-        assert_eq!(chunks[0], text);
+        assert!(chunks.len() > 1);
+        for chunk in &chunks {
+            assert!(chunk.chars().count() <= 5, "oversized chunk: {chunk}");
+        }
+        assert_eq!(chunks.concat(), text);
+    }
+
+    #[test]
+    fn chunk_text_oversized_sentence_prefers_comma_boundaries() {
+        let text = "あいうえお、かきくけこ、さしすせそ。";
+        let chunks = chunk_text(text, 8);
+        for chunk in &chunks {
+            assert!(chunk.chars().count() <= 8, "oversized chunk: {chunk}");
+        }
+        // Boundaries land after 、 rather than mid-phrase.
+        assert_eq!(chunks[0], "あいうえお、");
+        assert_eq!(chunks.concat(), text);
+    }
+
+    #[test]
+    fn chunk_text_oversized_run_without_separators_hard_splits() {
+        let text: String = "あ".repeat(23);
+        let chunks = chunk_text(&text, 10);
+        assert_eq!(chunks.len(), 3);
+        assert_eq!(chunks[0].chars().count(), 10);
+        assert_eq!(chunks[2].chars().count(), 3);
+        assert_eq!(chunks.concat(), text);
+    }
+
+    #[test]
+    fn chunk_text_long_transcript_without_periods_reconstructs() {
+        // Realistic failure case: a long filler-heavy transcript with 、 but
+        // no 。 must produce bounded chunks with no content loss.
+        let text = "えーと本日はですね、あのー機械学習の話を、まあしたいと思います、".repeat(400);
+        let chunks = chunk_text(&text, 4000);
+        assert!(chunks.len() > 1);
+        for chunk in &chunks {
+            assert!(chunk.chars().count() <= 4000);
+        }
+        assert_eq!(chunks.concat(), text);
     }
 
     #[test]
@@ -647,6 +747,52 @@ mod tests {
         let chunks = chunk_text("", 100);
         assert_eq!(chunks.len(), 1);
         assert_eq!(chunks[0], "");
+    }
+
+    // --- build_request_body ---
+
+    #[test]
+    fn request_body_includes_sampling_params() {
+        let messages = build_chat_messages("hi");
+        let sampling = SamplingParams {
+            temperature: 0.7,
+            top_p: 0.8,
+            top_k: 20,
+            min_p: Some(0.0),
+        };
+        let body = build_request_body(&messages, Some(sampling), 512, true);
+        assert_eq!(body["temperature"], 0.7);
+        assert_eq!(body["top_p"], 0.8);
+        assert_eq!(body["top_k"], 20);
+        assert_eq!(body["min_p"], 0.0);
+        assert_eq!(body["max_tokens"], 512);
+        assert_eq!(body["stream"], true);
+    }
+
+    #[test]
+    fn request_body_omits_min_p_when_unrecommended() {
+        let messages = build_chat_messages("hi");
+        let sampling = SamplingParams {
+            temperature: 1.0,
+            top_p: 0.95,
+            top_k: 64,
+            min_p: None,
+        };
+        let body = build_request_body(&messages, Some(sampling), 256, false);
+        assert_eq!(body["temperature"], 1.0);
+        assert!(body.get("min_p").is_none());
+        assert_eq!(body["stream"], false);
+    }
+
+    #[test]
+    fn request_body_without_sampling_defers_to_server_defaults() {
+        let messages = build_chat_messages("hi");
+        let body = build_request_body(&messages, None, 128, true);
+        assert!(body.get("temperature").is_none());
+        assert!(body.get("top_p").is_none());
+        assert!(body.get("top_k").is_none());
+        assert!(body.get("min_p").is_none());
+        assert_eq!(body["max_tokens"], 128);
     }
 
     // --- parse_sse_line ---

@@ -55,7 +55,7 @@
 
 | 定数 | 例 | 用途 |
 |---|---|---|
-| `LLAMA_SERVER_VERSION` | `"b8672"` | llama.cpp のリリースタグ (`b<N>`) |
+| `LLAMA_SERVER_VERSION` | `"b9950"` | llama.cpp のリリースタグ (`b<N>`) |
 
 取得元: <https://github.com/ggml-org/llama.cpp/releases>
 
@@ -72,27 +72,18 @@
 | `VALID_MODEL_IDS` | サポート対象 ID — 追加/削除はここ |
 | `get_model_filename` | ID → GGUF ファイル名のマッピング |
 | `get_default_model_base_url` | HuggingFace のベース URL (`/resolve/main` まで) |
-| `LEGACY_MODEL_IDS` / `legacy_model_filename` | 廃止モデルのクリーンアップ (下記「モデルの廃止」参照) |
+| `sampling_params` | モデル公式推奨のサンプリング値 (モデル追加時に model card から転記) |
 
 i18n の同期を忘れない:
 - `src/i18n/dictionaries/ja.ts` / `src/i18n/dictionaries/en.ts` — `models.text.<id>` (`name` / `description`)
 
 #### モデルの廃止
 
-新モデルが既存モデルを置き換えるとき、`src-tauri/src/text_processing/models.rs` を更新すれば設定画面の「レガシーモデル」カードが自動で有効になる:
+アプリ内のレガシーモデル削除機構 (`LEGACY_MODEL_IDS` / `legacy_model_filename` / 設定画面のカード) は削除済み (2026-07 確認)。廃止手順は Whisper モデル (§1) と同じ手動運用に統一する:
 
-1. 廃止する ID を `VALID_MODEL_IDS` から削除 (`get_model_list()` のエントリも)
-2. 同じ ID を `LEGACY_MODEL_IDS` に追加
-3. ID → GGUF ファイル名のマッピングを `legacy_model_filename` に追加:
-
-   ```rust
-   match model_id {
-       "gemma-4-e2b" => Some("google_gemma-4-E2B-it-Q4_K_M.gguf"),
-       _ => None,
-   }
-   ```
-
-あわせて廃止した `models.text.<id>` の i18n エントリを削除し、その ID を参照するテストフィクスチャを差し替える。
+1. 廃止する ID を `VALID_MODEL_IDS` / `get_model_filename` / `get_default_model_base_url` / `sampling_params` / `get_model_list()` から削除
+2. 残存 GGUF は UI から削除できなくなるため、`scripts/dev-reset.sh` の stale ファイルリストに GGUF ファイル名を追記する
+3. あわせて廃止した `models.text.<id>` の i18n エントリを削除し、その ID を参照するテストフィクスチャを差し替える。
 
 ---
 
@@ -165,7 +156,7 @@ GPL コーデックが必要になった場合 (動画エンコード、高度�
 ### llama.cpp
 
 - **REST API は安定** (`/v1/chat/completions` などの OpenAI 互換エンドポイント)
-- **CLI フラグは変わる。** `src-tauri/src/text_processing/server.rs` のフラグ (`--port` / `--ctx-size` / `--threads` / `--n-gpu-layers`) をリリースごとに再検証する
+- **CLI フラグは変わる。** `src-tauri/src/text_processing/server.rs` のフラグ (`--port` / `--ctx-size` / `--threads` / `--jinja` / `--chat-template-kwargs`) をリリースごとに再検証する
 - **GGUF フォーマットはおおむね後方互換**だが、メジャーバンプ (例: v3 → v4) では再量子化が必要になることがある
 
 ### ffmpeg

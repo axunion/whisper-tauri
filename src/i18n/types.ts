@@ -157,6 +157,7 @@ export interface Dictionary {
     modelLoadError: string;
     modelDownloadError: string;
     transcriptionError: string;
+    inferenceError: string;
     networkError: string;
     processCancelled: string;
     unknownError: string;

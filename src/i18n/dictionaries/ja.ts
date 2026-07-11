@@ -167,6 +167,7 @@ export const ja: Dictionary = {
     modelLoadError: "モデルの読み込みに失敗しました",
     modelDownloadError: "モデルのダウンロードに失敗しました",
     transcriptionError: "文字起こし処理に失敗しました",
+    inferenceError: "AI 処理に失敗しました",
     networkError: "ネットワークエラーが発生しました",
     processCancelled: "処理がキャンセルされました",
     unknownError: "予期しないエラーが発生しました",
