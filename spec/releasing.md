@@ -35,6 +35,7 @@
 - **ad-hoc 署名 (`signingIdentity: "-"`)**: .app 直接起動時に「壊れています」(復旧不可) ではなく「検証できませんでした」(このまま開くで復旧可) になる保険として設定 (Tauri 公式推奨)。config ベースで tauri CLI 自身が `codesign -s -` するため、上記 tauri-action の APPLE_* env var 問題とは経路が別
 - **hardened runtime とマイク entitlement**: tauri の codesign は hardened runtime をデフォルト有効にするため、署名導入と同時に `Entitlements.plist` (`com.apple.security.device.audio-input`) を追加した。これがないと録音 (cpal) がマイクにアクセスできない。署名変更後は /smoke で録音の実機確認を必ず行うこと
 - **正式リリース時の完全解**: Apple Developer Program ($99/年) + Developer ID 署名 + notarization のみが警告を完全に消せる。加入すれば Homebrew cask 配布も解禁される。正式リリース時に加入を検討すること
+- **v0.1.0 で実際に踏んだ罠 (2026-07-11)**: 上記の「tauri-action codesign 自動起動」は理論上の注意点で終わらず、初回の実タグ push (`workflow_dispatch` の build-only では再現しない) で macOS ビルドが `security: SecKeychainItemImport: One or more parameters passed to a function were not valid` で実際に失敗した。原因は「Build and release」ステップに `APPLE_CERTIFICATE` 等 6 個の env var を未設定のまま残していたこと (ad-hoc 署名は tauri.conf.json 側で完結するため元々不要だった)。修正として該当 6 env var を削除 (`e3d6ac6`)、v0.1.0 タグを削除して同コミットに打ち直し再push した。**Apple Developer Program に加入し Developer ID 署名を導入する際は、この 6 env var を「Build and release」ステップにのみ再追加すること** (build-only ステップには入れない — 2 ステップ分離を維持する理由がまさにこれ)
 
 ## ドキュメントサイトのデプロイ (F9, 2026-07-10)
 
