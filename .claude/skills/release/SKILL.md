@@ -69,7 +69,7 @@ LAST_TAG=$(git describe --tags --abbrev=0)
 git log "$LAST_TAG"..HEAD --pretty=format:"- %s" --no-merges
 ```
 
-Commit titles follow the project convention (one-line imperative English, **no** Conventional Commits prefixes — see `CLAUDE.md` → Git Commit Style), so infer each commit's change type from its content and group the notes under headings such as Features / Fixes / Improvements / Internal. Present the draft to the user for review.
+Commit titles follow the project convention (one-line imperative English, **no** Conventional Commits prefixes — see `AGENTS.md` → Commits), so infer each commit's change type from its content and group the notes under headings such as Features / Fixes / Improvements / Internal. Present the draft to the user for review.
 
 The CI workflow (`release.yml`) writes a fixed installation guide as the release body, so these notes are for the user to paste into the GitHub draft release manually after CI completes. Save them where the user can find them — print to terminal is sufficient.
 

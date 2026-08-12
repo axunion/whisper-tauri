@@ -23,6 +23,6 @@ and Notion token leakage into logs/errors/IPC payloads.
 - Plaintext Notion token storage in settings.json (intentional decision)
 - Whisper/VAD parameter values (tuning policy lives in .claude/rules/tuning.md)
 
-## Cap the nits
+## Nits
 
-Report at most five Nits per review.
+Report every Nit you find, grouped under a single Nit section so the list stays skimmable.

@@ -75,4 +75,4 @@ Triage hints:
 
 - Any failure in group C/D save paths → check `src-tauri/capabilities/default.json` first; see `.claude/rules/tauri-permissions.md`.
 - A permission prompt or bundle-behavior anomaly → remember `tauri dev` cannot reproduce it; iterate with `tauri build --debug`.
-- Record newly discovered known issues in `spec/improvements.md` or `.claude/rules/workarounds.md` (with removal conditions) as appropriate.
+- Record newly discovered known issues in `.claude/rules/workarounds.md` (with removal conditions).

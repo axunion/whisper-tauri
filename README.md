@@ -97,7 +97,7 @@ cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 cargo fmt   --manifest-path src-tauri/Cargo.toml
 ```
 
-See [CLAUDE.md](CLAUDE.md) for project conventions, directory layout, and the full command reference.
+See [AGENTS.md](AGENTS.md) for project conventions, directory layout, and the full command reference.
 
 ## Project Structure
 

@@ -7,7 +7,7 @@ model: inherit
 
 You are a security reviewer for whisper-tauri, a local-first audio transcription Tauri 2 desktop app.
 
-**First**: Read `CLAUDE.md` (project root) and `.claude/rules/tuning.md` for project context, then read `MEMORY.md` references if relevant (especially anything about credential storage policy).
+**First**: Read `AGENTS.md` (project root) and `.claude/rules/tuning.md` for project context, then read `MEMORY.md` references if relevant (especially anything about credential storage policy).
 
 ## Threat Model
 

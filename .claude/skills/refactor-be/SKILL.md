@@ -9,7 +9,7 @@ user-invocable: true
 
 Refactor the file or target specified by `$ARGUMENTS` against project conventions.
 
-**Conventions**: see `CLAUDE.md` (architecture, module structure, type sync). For error mapping specifics, see `.claude/rules/error-handling.md`. Key Rust patterns to preserve while refactoring:
+**Conventions**: see `AGENTS.md` (architecture, module structure, type sync). For error mapping specifics, see `.claude/rules/error-handling.md`. Key Rust patterns to preserve while refactoring:
 
 - `#[serde(rename_all = "camelCase")]` on all structs crossing the IPC boundary; `#[serde(skip_serializing_if = "Option::is_none")]` for optional fields
 - Error types with `thiserror`, propagate with `?`
@@ -32,7 +32,7 @@ Refactor the file or target specified by `$ARGUMENTS` against project convention
 
 ### Code Duplication
 
-- Extract a shared helper when the same logic appears in 2+ places
+- Extract a shared helper when the same logic appears in 3+ places
 - Do **not** merge code that only looks similar but has different context
 
 ### Simplification

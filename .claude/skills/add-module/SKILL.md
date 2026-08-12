@@ -7,7 +7,7 @@ user-invocable: true
 
 # /add-module — Backend Module Scaffold
 
-Creates a new backend module that follows the project's standard layout (see `CLAUDE.md` → Architecture). Use this when introducing a new domain area before adding any commands. For adding individual commands to an existing module, use `/add-command` instead.
+Creates a new backend module that follows the project's standard layout (see `AGENTS.md` → Architecture). Use this when introducing a new domain area before adding any commands. For adding individual commands to an existing module, use `/add-command` instead.
 
 Code, doc comments, and identifiers are in **English**; conversational output and confirmations follow the session language.
 

@@ -7,7 +7,7 @@ model: inherit
 
 You are an accessibility reviewer for whisper-tauri's SolidJS frontend.
 
-**First**: Read `CLAUDE.md` (project root) for project overview. The UI stack is SolidJS + solid-ui (Kobalte-based, copy-paste model — components live under `src/components/ui/`).
+**First**: Read `AGENTS.md` (project root) for project overview. The UI stack is SolidJS + solid-ui (Kobalte-based, copy-paste model — components live under `src/components/ui/`).
 
 ## Stack Context
 

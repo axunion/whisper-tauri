@@ -9,7 +9,7 @@ user-invocable: true
 
 Refactor the file or target specified by `$ARGUMENTS` against project conventions.
 
-**Conventions**: see `CLAUDE.md` (architecture, TypeScript strict flags). Key SolidJS patterns to preserve while refactoring:
+**Conventions**: see `AGENTS.md` (architecture, TypeScript strict flags). Key SolidJS patterns to preserve while refactoring:
 
 - `createSignal` for simple state, `createStore` for objects/arrays, `createMemo` for derived values
 - `splitProps` for forwarding props, not spread; no React patterns (`useState`, virtual DOM assumptions)
@@ -37,7 +37,7 @@ Refactor the file or target specified by `$ARGUMENTS` against project convention
 
 ### Code Duplication
 
-- Extract a shared helper when the same logic appears in 2+ places
+- Extract a shared helper when the same logic appears in 3+ places
 - Do **not** force-merge code that only looks similar but has different context
 
 ### Simplification
