@@ -46,7 +46,7 @@ fn add_column_if_missing(
     conn: &Connection,
     table: &str,
     column: &str,
-    column_type: &str,
+    column_def: &str,
 ) -> Result<bool, HistoryError> {
     let mut stmt = conn.prepare(&format!("PRAGMA table_info({table})"))?;
     let exists = stmt
@@ -59,7 +59,7 @@ fn add_column_if_missing(
     }
 
     conn.execute(
-        &format!("ALTER TABLE {table} ADD COLUMN {column} {column_type}"),
+        &format!("ALTER TABLE {table} ADD COLUMN {column} {column_def}"),
         [],
     )?;
     Ok(true)
@@ -96,8 +96,8 @@ pub(crate) fn init_db(db_path: &Path) -> Result<(), HistoryError> {
     // then the column — not the file name — is the source of truth.
     if add_column_if_missing(&conn, "history", "source", "TEXT NOT NULL DEFAULT 'file'")? {
         conn.execute(
-            "UPDATE history SET source = 'recording' WHERE instr(file_name, '.') = 0",
-            [],
+            "UPDATE history SET source = ?1 WHERE instr(file_name, '.') = 0",
+            [super::types::HistorySource::Recording.as_str()],
         )?;
     }
 
@@ -234,29 +234,25 @@ mod tests {
 
         init_db(&path).expect("init db with migration");
 
-        let conn = Connection::open(&path).expect("open");
-        let source = |id: &str| -> String {
-            conn.query_row("SELECT source FROM history WHERE id = ?1", [id], |row| {
-                row.get(0)
-            })
-            .expect("read source")
+        let read_source = |id: &str| -> String {
+            Connection::open(&path)
+                .expect("open")
+                .query_row("SELECT source FROM history WHERE id = ?1", [id], |row| {
+                    row.get(0)
+                })
+                .expect("read source")
         };
-        assert_eq!(source("rec-1"), "recording");
-        assert_eq!(source("file-1"), "file");
+        assert_eq!(read_source("rec-1"), "recording");
+        assert_eq!(read_source("file-1"), "file");
 
         // A second init must not re-run the backfill over corrected values.
-        conn.execute("UPDATE history SET source = 'file' WHERE id = 'rec-1'", [])
+        Connection::open(&path)
+            .expect("open")
+            .execute("UPDATE history SET source = 'file' WHERE id = 'rec-1'", [])
             .expect("correct source");
-        drop(conn);
         init_db(&path).expect("second init");
 
-        let conn = Connection::open(&path).expect("open");
-        let corrected: String = conn
-            .query_row("SELECT source FROM history WHERE id = 'rec-1'", [], |row| {
-                row.get(0)
-            })
-            .expect("read source");
-        assert_eq!(corrected, "file");
+        assert_eq!(read_source("rec-1"), "file");
     }
 
     #[test]

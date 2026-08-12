@@ -58,4 +58,4 @@ hound で読み込み、Int (ビット深度対応) / Float 両対応 → ステ
 ## コマンド一覧
 
 `get_available_models` / `check_model_exists` / `download_model` / `delete_model` / `get_model_download_url` / `set_model_download_url` / `transcribe_audio` / `cancel_transcription` / `ensure_vad_model`
-`check_ffmpeg_bundled` / `check_ffmpeg_needs_update` / `download_ffmpeg` / `delete_ffmpeg` / `get_ffmpeg_download_url` / `set_ffmpeg_download_url` / `get_audio_duration` / `convert_audio_file` / `get_supported_formats` / `cleanup_converted_file`
+`check_ffmpeg_bundled` / `check_ffmpeg_needs_update` / `download_ffmpeg` / `delete_ffmpeg` / `get_audio_duration` / `convert_audio_file` / `cleanup_converted_file`

@@ -29,12 +29,12 @@ Source: `src-tauri/src/settings.rs` / `src-tauri/src/update.rs` / `src/primitive
 | キー | 用途 |
 |---|---|
 | `modelDownloadBaseUrl` | Whisper モデルの取得元差し替え |
-| `ffmpegDownloadUrl` | ffmpeg の取得元差し替え |
+| `ffmpegDownloadUrl` | ffmpeg の取得元差し替え (手編集のみ) |
 | `textModelDownloadBaseUrl` | LLM GGUF の取得元差し替え |
 | `textServerDownloadUrl` | llama-server の取得元差し替え |
 | `notionEnabled` / `notionToken` / `notionDatabaseId` / `notionTitleProperty` | Notion 連携 ([notion.md](notion.md)) |
 
-カスタム URL キーは未設定ならコード内のデフォルト URL を使う。社内ミラーなどへの差し替え用。
+カスタム URL キーは未設定ならコード内のデフォルト URL を使う。社内ミラーなどへの差し替え用。`ffmpegDownloadUrl` だけは get / set コマンドを持たず読み取り専用で、`settings.json` の手編集で与える。
 
 ## 更新確認 (`update.rs`)
 

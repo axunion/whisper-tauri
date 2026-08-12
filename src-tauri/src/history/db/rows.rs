@@ -45,7 +45,7 @@ pub(crate) fn meta_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<MetaRow> 
         duration: row.get(5)?,
         text_compressed: row.get(6)?,
         vad_enabled: row.get(7)?,
-        source: HistorySource::from_db(&row.get::<_, String>(8)?),
+        source: HistorySource::from_db(row.get_ref(8)?.as_str()?),
     })
 }
 

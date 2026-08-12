@@ -12,6 +12,10 @@ use super::ffmpeg;
 use super::types::{ConversionResult, FfmpegDownloadProgress};
 
 /// Store key for custom ffmpeg download URL.
+///
+/// Read-only from the app's side by design: unlike the sibling model/server URL
+/// keys, this one has no get/set command, so it is populated by hand-editing
+/// `settings.json` — an escape hatch for internal mirrors, not a UI setting.
 const FFMPEG_DOWNLOAD_URL_KEY: &str = "ffmpegDownloadUrl";
 
 /// Resolves the bundled ffmpeg binary path.
