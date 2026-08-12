@@ -205,6 +205,71 @@ describe("createWhisper", () => {
         dispose();
       });
     });
+
+    it("should fetch only once across repeated calls", async () => {
+      vi.mocked(invoke).mockResolvedValue([mockModel()]);
+
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        await whisper.loadModels();
+        await whisper.loadModels();
+
+        expect(vi.mocked(invoke).mock.calls).toHaveLength(1);
+        dispose();
+      });
+    });
+
+    it("should share one request between concurrent callers", async () => {
+      vi.mocked(invoke).mockResolvedValue([mockModel()]);
+
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        await Promise.all([whisper.loadModels(), whisper.loadModels()]);
+
+        expect(vi.mocked(invoke).mock.calls).toHaveLength(1);
+        dispose();
+      });
+    });
+
+    it("should retry after a failed load instead of latching an empty list", async () => {
+      const models = [mockModel()];
+      vi.mocked(invoke)
+        .mockRejectedValueOnce(new Error("Failed to load models"))
+        .mockResolvedValueOnce(models);
+
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        await whisper.loadModels();
+        expect(whisper.models()).toEqual([]);
+
+        await whisper.loadModels();
+
+        expect(vi.mocked(invoke).mock.calls).toHaveLength(2);
+        expect(whisper.models()).toEqual(models);
+        dispose();
+      });
+    });
+
+    it("should refresh the list after a download despite the load-once guard", async () => {
+      const before = [mockModel({ downloaded: false })];
+      const after = [mockModel({ downloaded: true })];
+      vi.mocked(invoke)
+        .mockResolvedValueOnce(before)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(after);
+
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        await whisper.loadModels();
+
+        await expect(whisper.downloadModel("large-v3-turbo")).resolves.toBe(
+          true,
+        );
+
+        expect(whisper.models()).toEqual(after);
+        dispose();
+      });
+    });
   });
 
   describe("selectModel", () => {

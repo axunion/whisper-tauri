@@ -3,7 +3,7 @@ import { Button } from "~/components/ui/Button";
 import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { SectionRow } from "~/components/ui/SectionRow";
 import { useI18n } from "~/i18n";
-import { toast } from "~/lib/toast";
+import { runWithToast } from "~/lib/actionToast";
 import type { createHistory } from "~/primitives/createHistory";
 
 interface CacheClearProps {
@@ -26,10 +26,14 @@ export function CacheClear(props: CacheClearProps) {
               {t("dev.deleteAll")}
             </>
           }
-          onConfirm={async () => {
-            await props.history.deleteAllEntries();
-            toast.success(t("dev.historyClearedToast"));
-          }}
+          onConfirm={() =>
+            runWithToast({
+              action: () => props.history.deleteAllEntries(),
+              successKey: "dev.historyClearedToast",
+              error: props.history.error,
+              t,
+            })
+          }
         >
           {(openDialog) => (
             <Button

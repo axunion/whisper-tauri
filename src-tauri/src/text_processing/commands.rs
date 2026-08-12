@@ -12,7 +12,7 @@ use super::extract;
 use super::inference;
 use super::models;
 use super::server::LlamaServerManager;
-use super::types::{ServerStatus, StructuredSummary, TextDownloadProgress, TextModelInfo};
+use super::types::{StructuredSummary, TextDownloadProgress, TextModelInfo};
 
 /// Store key for custom text model download URL.
 const TEXT_MODEL_URL_KEY: &str = "textModelDownloadBaseUrl";
@@ -215,23 +215,6 @@ pub async fn text_processing_check_server(app: AppHandle) -> Result<bool, String
     let exists = models::llama_server_path(&app_data_dir).exists()
         && models::is_server_version_current(&app_data_dir);
     Ok(exists)
-}
-
-/// Returns the current server status.
-///
-/// # Errors
-///
-/// Returns an error string if the operation fails.
-#[tauri::command]
-pub async fn text_processing_server_status(
-    manager: State<'_, tokio::sync::Mutex<LlamaServerManager>>,
-) -> Result<ServerStatus, String> {
-    let mut manager = manager.lock().await;
-    Ok(ServerStatus {
-        running: manager.is_running(),
-        port: manager.port(),
-        model_id: manager.model_id().map(std::string::ToString::to_string),
-    })
 }
 
 /// Runs a simple chat response (for dev testing).

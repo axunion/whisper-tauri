@@ -12,7 +12,7 @@ interface HistoryFilterProps {
 }
 
 /** Computes dateFrom/dateTo for a quick filter range. */
-export function computeDateRange(range: QuickFilterRange): {
+function computeDateRange(range: QuickFilterRange): {
   dateFrom: string | undefined;
   dateTo: string | undefined;
 } {

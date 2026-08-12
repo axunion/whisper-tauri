@@ -22,24 +22,50 @@ function toBcp47(locale: string): string {
   return locale === "ja" ? "ja-JP" : "en-US";
 }
 
+const DATE_ONLY_OPTIONS: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+};
+
+const DATE_TIME_OPTIONS: Intl.DateTimeFormatOptions = {
+  ...DATE_ONLY_OPTIONS,
+  hour: "2-digit",
+  minute: "2-digit",
+};
+
+/**
+ * Formatters are cached because constructing an `Intl.DateTimeFormat` resolves
+ * locale data and dominates the cost of formatting, while the history list
+ * formats one date per row on every render.
+ */
+const formatterCache = new Map<string, Intl.DateTimeFormat>();
+
+function dateFormatter(
+  locale: string,
+  options: Intl.DateTimeFormatOptions,
+  variant: string,
+): Intl.DateTimeFormat {
+  const key = `${locale}:${variant}`;
+  const cached = formatterCache.get(key);
+  if (cached) return cached;
+  const formatter = new Intl.DateTimeFormat(toBcp47(locale), options);
+  formatterCache.set(key, formatter);
+  return formatter;
+}
+
 /** Format ISO date string as localized date+time (e.g. "2024/01/15 14:30"). */
 export function formatDate(isoString: string, locale: string): string {
-  return new Date(isoString).toLocaleDateString(toBcp47(locale), {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return dateFormatter(locale, DATE_TIME_OPTIONS, "dateTime").format(
+    new Date(isoString),
+  );
 }
 
 /** Format ISO date string as localized date only (e.g. "2024/01/15"). */
 export function formatDateShort(isoString: string, locale: string): string {
-  return new Date(isoString).toLocaleDateString(toBcp47(locale), {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
+  return dateFormatter(locale, DATE_ONLY_OPTIONS, "date").format(
+    new Date(isoString),
+  );
 }
 
 /**

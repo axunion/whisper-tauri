@@ -22,7 +22,6 @@ import { TotalSizeFooter } from "~/components/ui/TotalSizeFooter";
 import { WhisperModelList } from "~/components/ui/WhisperModelList";
 import { useI18n } from "~/i18n";
 import { createSettings } from "~/primitives/createSettings";
-import { applyTheme } from "~/primitives/createTheme";
 import { createWhisper } from "~/primitives/createWhisper";
 import type { AppSettings } from "~/types";
 
@@ -43,8 +42,6 @@ export default function Settings() {
     { value: "dark", label: t("settings.themeDark") },
     { value: "system", label: t("settings.themeSystem") },
   ];
-
-  applyTheme(settings.theme);
 
   onMount(() => {
     settings.load();

@@ -144,18 +144,39 @@ function autoSelectModel(): void {
   }
 }
 
-async function loadModels(): Promise<void> {
+// Load-once guard for the model list. `modelsLoaded` flips only on success and
+// the in-flight promise is released either way, so a transient IPC failure
+// still retries on the next call instead of latching an empty list.
+let modelsLoaded = false;
+let loadModelsPromise: Promise<void> | null = null;
+
+/** Unguarded refresh — used after mutations that change what is on disk. */
+async function fetchModels(): Promise<void> {
   try {
     const res = await invoke<ModelInfo[]>("get_available_models");
     setModels(res);
     autoSelectModel();
+    modelsLoaded = true;
   } catch (e) {
     setError(parseError(e));
   }
 }
 
+async function loadModels(): Promise<void> {
+  if (modelsLoaded) return;
+  if (loadModelsPromise) return loadModelsPromise;
+  loadModelsPromise = fetchModels().finally(() => {
+    loadModelsPromise = null;
+  });
+  return loadModelsPromise;
+}
+
 function totalSizeBytes(): number {
   return sumDownloadedBytes(models());
+}
+
+function hasDownloadedModel(): boolean {
+  return models().some((m) => m.downloaded);
 }
 
 function selectModel(model: ModelInfo): void {
@@ -164,36 +185,40 @@ function selectModel(model: ModelInfo): void {
   createSettings().update({ whisperModelId: model.id });
 }
 
-async function downloadModel(modelId: string): Promise<void> {
-  if (isDownloading()) return;
+async function downloadModel(modelId: string): Promise<boolean> {
+  if (isDownloading()) return false;
   setIsDownloading(true);
   try {
     await invoke("download_model", { modelId });
-    await loadModels();
+    await fetchModels();
+    return true;
   } catch (e) {
     setError(parseError(e));
+    return false;
   } finally {
     setIsDownloading(false);
   }
 }
 
-async function deleteModel(modelId: string): Promise<void> {
+async function deleteModel(modelId: string): Promise<boolean> {
   try {
     await invoke("delete_model", { modelId });
     const wasSelected = selectedModel()?.id === modelId;
     if (wasSelected) {
       setSelectedModel(null);
     }
-    await loadModels();
-    // autoSelectModel (called by loadModels) picks the next model when
+    await fetchModels();
+    // autoSelectModel (called by fetchModels) picks the next model when
     // selectedModel is null, then we sync the choice back to settings.
     if (wasSelected) {
       createSettings().update({
         whisperModelId: selectedModel()?.id ?? null,
       });
     }
+    return true;
   } catch (e) {
     setError(parseError(e));
+    return false;
   }
 }
 
@@ -275,6 +300,7 @@ const whisperInstance = {
   // State (Accessors)
   models,
   totalSizeBytes,
+  hasDownloadedModel,
   selectedModel,
   file,
   language,
@@ -309,6 +335,8 @@ export function createWhisper() {
 
 /** @internal Reset singleton state for testing only. */
 export function _resetWhisperForTesting(): void {
+  modelsLoaded = false;
+  loadModelsPromise = null;
   setModels([]);
   setSelectedModel(null);
   setFile(null);

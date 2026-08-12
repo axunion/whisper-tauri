@@ -44,7 +44,13 @@ listen<FfmpegDownloadProgress>("ffmpeg:download-progress", (event) => {
   setDownloadProgress(event.payload);
 }).catch(console.error);
 
-async function checkStatus(): Promise<void> {
+// Load-once guard for the on-disk status probe. `statusChecked` flips only on
+// success and the in-flight promise is released either way, so a transient IPC
+// failure still retries on the next call.
+let statusChecked = false;
+let checkStatusPromise: Promise<void> | null = null;
+
+async function fetchStatus(): Promise<void> {
   try {
     const [bundled, update] = await Promise.all([
       invoke<boolean>("check_ffmpeg_bundled"),
@@ -52,50 +58,47 @@ async function checkStatus(): Promise<void> {
     ]);
     setIsBundled(bundled);
     setNeedsUpdate(update);
+    statusChecked = true;
   } catch (e) {
     setError(parseError(e));
   }
 }
 
-async function download(): Promise<void> {
-  if (isDownloading()) return;
+async function checkStatus(): Promise<void> {
+  if (statusChecked) return;
+  if (checkStatusPromise) return checkStatusPromise;
+  checkStatusPromise = fetchStatus().finally(() => {
+    checkStatusPromise = null;
+  });
+  return checkStatusPromise;
+}
+
+async function download(): Promise<boolean> {
+  if (isDownloading()) return false;
   setIsDownloading(true);
   setError(null);
   try {
     await invoke<string>("download_ffmpeg");
     setIsBundled(true);
     setNeedsUpdate(false);
+    return true;
   } catch (e) {
     setError(parseError(e));
+    return false;
   } finally {
     setIsDownloading(false);
   }
 }
 
-async function getDownloadUrl(): Promise<string | null> {
-  try {
-    return await invoke<string | null>("get_ffmpeg_download_url");
-  } catch (e) {
-    setError(parseError(e));
-    return null;
-  }
-}
-
-async function setDownloadUrl(url: string | null): Promise<void> {
-  try {
-    await invoke("set_ffmpeg_download_url", { url });
-  } catch (e) {
-    setError(parseError(e));
-  }
-}
-
-async function deleteBundled(): Promise<void> {
+async function deleteBundled(): Promise<boolean> {
   try {
     await invoke("delete_ffmpeg");
     setIsBundled(false);
     setNeedsUpdate(false);
+    return true;
   } catch (e) {
     setError(parseError(e));
+    return false;
   }
 }
 
@@ -115,8 +118,6 @@ const ffmpegDownloaderInstance = {
   checkStatus,
   download,
   deleteBundled,
-  getDownloadUrl,
-  setDownloadUrl,
   clearError,
 };
 
@@ -126,6 +127,8 @@ export function createFfmpegDownloader() {
 
 /** @internal Reset singleton state for testing only. */
 export function _resetFfmpegDownloaderForTesting(): void {
+  statusChecked = false;
+  checkStatusPromise = null;
   setIsBundled(false);
   setIsDownloading(false);
   setNeedsUpdate(false);

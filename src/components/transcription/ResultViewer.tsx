@@ -6,6 +6,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import type { Component, JSX } from "solid-js";
 import { createEffect, createSignal, onMount, Show } from "solid-js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/Tabs";
+import type { DictionaryKey } from "~/i18n";
 import { useI18n } from "~/i18n";
 import type { ExportFormat } from "~/lib/export";
 import { exportResult, getExtension } from "~/lib/export";
@@ -18,7 +19,7 @@ import { createAiSession } from "~/primitives/createAiSession";
 import { createNotionSettings } from "~/primitives/createNotionSettings";
 import { createNotionShare } from "~/primitives/createNotionShare";
 import { createTextProcessing } from "~/primitives/createTextProcessing";
-import type { TranscriptionResult } from "~/types";
+import type { StructuredSummary, TranscriptionResult } from "~/types";
 import { AiActionDialogs } from "./AiActionDialogs";
 import { NotionShareDialog } from "./NotionShareDialog";
 import { ResultCleanTextTab } from "./ResultCleanTextTab";
@@ -101,47 +102,93 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     props.onProcessingChange?.(session.currentOperation(), session.cancel);
   });
 
-  // Per-tab strategy for "what's on this tab" queries — used by Copy, Save,
-  // and Notion share so the three consumers don't drift in how they interpret
-  // each tab's content.
-  function tabContent(tab: ResultTab) {
-    if (tab === "summary") {
-      const summary = session.summaryResult();
-      return {
-        copyText: summary ? formatSummaryAsText(summary) : "",
-        notionBody: "",
-        notionSummary: summary,
-        titleSuffixKey: "notionShare.titleSummary" as const,
-      };
-    }
-    if (tab === "cleanText") {
-      const cleaned = session.cleanTextResult() ?? "";
-      return {
-        copyText: cleaned,
-        notionBody: cleaned,
-        notionSummary: null,
-        titleSuffixKey: "notionShare.titleCleanText" as const,
-      };
-    }
-    if (tab === "timeline") {
-      const formatted = formatTimeline(props.result.segments);
-      return {
-        copyText: formatted,
-        notionBody: formatted,
-        notionSummary: null,
-        titleSuffixKey: "notionShare.titleTimeline" as const,
-      };
-    }
-    return {
-      copyText: props.result.text,
-      notionBody: props.result.text,
-      notionSummary: null,
-      titleSuffixKey: undefined,
+  type SaveOptions = {
+    title: string;
+    filter: string;
+    ext: string;
+    defaultPath: string;
+    content: string;
+  };
+
+  type TabSpec = {
+    /** What Copy puts on the clipboard. */
+    copyText: () => string;
+    /** Plain-text body for a Notion page; empty when summary blocks carry it. */
+    notionBody: () => string;
+    notionSummary: () => StructuredSummary | null;
+    titleSuffixKey?: DictionaryKey;
+    /**
+     * Present only on tabs whose Save button writes the AI artifact straight to
+     * disk, bypassing the export-format chooser.
+     */
+    directSave?: {
+      hasResult: () => boolean;
+      saveOptions: () => SaveOptions | null;
     };
-  }
+  };
+
+  // One table per tab, read by Copy, Save and Notion share alike, so the three
+  // never drift in how they interpret a tab. Being a Record over ResultTab, a
+  // new tab is a compile error until every consumer's behaviour is spelled out.
+  const tabSpecs: Record<ResultTab, TabSpec> = {
+    text: {
+      copyText: () => props.result.text,
+      notionBody: () => props.result.text,
+      notionSummary: () => null,
+    },
+    timeline: {
+      copyText: () => formatTimeline(props.result.segments),
+      notionBody: () => formatTimeline(props.result.segments),
+      notionSummary: () => null,
+      titleSuffixKey: "notionShare.titleTimeline",
+    },
+    cleanText: {
+      copyText: () => session.cleanTextResult() ?? "",
+      notionBody: () => session.cleanTextResult() ?? "",
+      notionSummary: () => null,
+      titleSuffixKey: "notionShare.titleCleanText",
+      directSave: {
+        hasResult: () => session.cleanTextResult() !== null,
+        saveOptions: () => {
+          const cleaned = session.cleanTextResult();
+          if (!cleaned) return null;
+          return {
+            title: t("dialog.saveCleanTextTitle"),
+            filter: t("dialog.txtFilter"),
+            ext: "txt",
+            defaultPath: "transcription-cleaned.txt",
+            content: cleaned,
+          };
+        },
+      },
+    },
+    summary: {
+      copyText: () => {
+        const summary = session.summaryResult();
+        return summary ? formatSummaryAsText(summary) : "";
+      },
+      notionBody: () => "",
+      notionSummary: () => session.summaryResult(),
+      titleSuffixKey: "notionShare.titleSummary",
+      directSave: {
+        hasResult: () => session.summaryResult() !== null,
+        saveOptions: () => {
+          const summary = session.summaryResult();
+          if (!summary) return null;
+          return {
+            title: t("dialog.saveSummaryTitle"),
+            filter: t("dialog.mdFilter"),
+            ext: "md",
+            defaultPath: "transcription-summary.md",
+            content: formatSummaryAsText(summary),
+          };
+        },
+      },
+    },
+  };
 
   async function handleCopy() {
-    const text = tabContent(activeTab()).copyText;
+    const text = tabSpecs[activeTab()].copyText();
     if (!text) return;
     try {
       await writeText(text);
@@ -150,14 +197,6 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
       toast.error(t("result.copyFailedToast"));
     }
   }
-
-  type SaveOptions = {
-    title: string;
-    filter: string;
-    ext: string;
-    defaultPath: string;
-    content: string;
-  };
 
   async function performSave(opts: SaveOptions) {
     try {
@@ -184,61 +223,17 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     });
   }
 
-  // Tabs whose Save button writes the AI-generated artifact directly (no
-  // format chooser). Derived from AiOperation so adding a third AI op there
-  // is a compile error here until aiTabSpecs is extended too.
-  type AiTab = NonNullable<AiOperation>;
-
-  function isAiTab(tab: ResultTab): tab is AiTab {
-    return tab === "summary" || tab === "cleanText";
-  }
-
-  const aiTabSpecs: Record<
-    AiTab,
-    { hasResult: () => boolean; saveOptions: () => SaveOptions | null }
-  > = {
-    summary: {
-      hasResult: () => session.summaryResult() !== null,
-      saveOptions: () => {
-        const summary = session.summaryResult();
-        if (!summary) return null;
-        return {
-          title: t("dialog.saveSummaryTitle"),
-          filter: t("dialog.mdFilter"),
-          ext: "md",
-          defaultPath: "transcription-summary.md",
-          content: formatSummaryAsText(summary),
-        };
-      },
-    },
-    cleanText: {
-      hasResult: () => session.cleanTextResult() !== null,
-      saveOptions: () => {
-        const cleaned = session.cleanTextResult();
-        if (!cleaned) return null;
-        return {
-          title: t("dialog.saveCleanTextTitle"),
-          filter: t("dialog.txtFilter"),
-          ext: "txt",
-          defaultPath: "transcription-cleaned.txt",
-          content: cleaned,
-        };
-      },
-    },
-  };
-
   async function handleDirectSave() {
-    const tab = activeTab();
-    if (!isAiTab(tab)) return;
-    const opts = aiTabSpecs[tab].saveOptions();
+    const opts = tabSpecs[activeTab()].directSave?.saveOptions();
     if (opts) await performSave(opts);
   }
 
   const canSave = () => {
     const tab = activeTab();
-    if (!isAiTab(tab)) return props.result.text.length > 0;
+    const directSave = tabSpecs[tab].directSave;
+    if (!directSave) return props.result.text.length > 0;
     return (
-      aiTabSpecs[tab].hasResult() &&
+      directSave.hasResult() &&
       !(session.isProcessing() && session.currentOperation() === tab)
     );
   };
@@ -291,8 +286,10 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
   async function handleShareToNotion(retryTab?: ResultTab) {
     if (isSharingNotion()) return;
     const tab = retryTab ?? activeTab();
-    const content = tabContent(tab);
-    if (!content.notionSummary && !content.notionBody.trim()) {
+    const spec = tabSpecs[tab];
+    const notionSummary = spec.notionSummary();
+    const notionBody = spec.notionBody();
+    if (!notionSummary && !notionBody.trim()) {
       toast.error(t("notionShare.emptyContentToast"));
       // Clear any lingering error dialog so the toast isn't stacked on top.
       notionShare.reset();
@@ -302,18 +299,16 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
 
     // Tag the page title with the tab kind so multiple sends from the same
     // recording stay distinguishable in the Notion DB list.
-    const suffix = content.titleSuffixKey
-      ? ` (${t(content.titleSuffixKey)})`
-      : "";
+    const suffix = spec.titleSuffixKey ? ` (${t(spec.titleSuffixKey)})` : "";
 
     const payload = buildNotionPagePayload({
       title: `${props.fileNameText}${suffix}`,
-      body: content.notionBody,
+      body: notionBody,
       meta: {
         ...(props.notionMeta ?? {}),
         fileName: props.fileNameText.trim() || undefined,
       },
-      summary: content.notionSummary,
+      summary: notionSummary,
       t,
       locale: locale(),
     });

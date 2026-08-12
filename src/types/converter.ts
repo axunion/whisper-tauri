@@ -1,16 +1,4 @@
 /**
- * Supported audio/video format information.
- */
-export interface SupportedFormat {
-  /** File extension (e.g., "mp3", "wav") */
-  extension: string;
-  /** Human-readable description */
-  description: string;
-  /** Whether this format requires conversion to WAV */
-  needsConversion: boolean;
-}
-
-/**
  * Result of an audio file conversion.
  */
 export interface ConversionResult {

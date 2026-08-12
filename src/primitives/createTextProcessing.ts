@@ -6,7 +6,6 @@ import { sumDownloadedBytes } from "~/lib/format";
 import { createSettings } from "~/primitives/createSettings";
 import type {
   InferenceProgress,
-  ServerStatus,
   TextDownloadProgress,
   TextModelInfo,
 } from "~/types";
@@ -20,8 +19,6 @@ const {
   setSelectedModelId,
   downloadProgress,
   setDownloadProgress,
-  serverStatus,
-  setServerStatus,
   inferenceProgress,
   setInferenceProgress,
   chatResult,
@@ -45,9 +42,6 @@ const {
   );
   const [downloadProgress, setDownloadProgress] =
     createSignal<TextDownloadProgress | null>(null);
-  const [serverStatus, setServerStatus] = createSignal<ServerStatus>({
-    running: false,
-  });
   const [inferenceProgress, setInferenceProgress] =
     createSignal<InferenceProgress | null>(null);
   const [chatResult, setChatResult] = createSignal<string | null>(null);
@@ -69,8 +63,6 @@ const {
     setSelectedModelId,
     downloadProgress,
     setDownloadProgress,
-    serverStatus,
-    setServerStatus,
     inferenceProgress,
     setInferenceProgress,
     chatResult,
@@ -99,7 +91,16 @@ listen<InferenceProgress>("text-processing:inference-progress", (event) => {
   setInferenceProgress(event.payload);
 }).catch(console.error);
 
-async function loadModels(): Promise<void> {
+// Load-once guards for the model list and the server probe. Each flag flips
+// only on success and the in-flight promise is released either way, so a
+// transient IPC failure still retries on the next call.
+let modelsLoaded = false;
+let loadModelsPromise: Promise<void> | null = null;
+let serverChecked = false;
+let checkServerPromise: Promise<void> | null = null;
+
+/** Unguarded refresh — used after mutations that change what is on disk. */
+async function fetchModels(): Promise<void> {
   try {
     const result = await invoke<TextModelInfo[]>("text_processing_list_models");
     setModels(result);
@@ -113,9 +114,19 @@ async function loadModels(): Promise<void> {
         }
       }
     }
+    modelsLoaded = true;
   } catch (e) {
     setError(parseError(e));
   }
+}
+
+async function loadModels(): Promise<void> {
+  if (modelsLoaded) return;
+  if (loadModelsPromise) return loadModelsPromise;
+  loadModelsPromise = fetchModels().finally(() => {
+    loadModelsPromise = null;
+  });
+  return loadModelsPromise;
 }
 
 function selectModel(modelId: string): void {
@@ -174,18 +185,18 @@ async function downloadModel(modelId: string): Promise<boolean> {
     }
     // Phase 2: download the model
     await invoke("text_processing_download_model", { modelId });
-    await loadModels();
+    await fetchModels();
   });
 }
 
-async function deleteModel(modelId: string): Promise<void> {
+async function deleteModel(modelId: string): Promise<boolean> {
   try {
     await invoke("text_processing_delete_model", { modelId });
     const wasSelected = selectedModelId() === modelId;
     if (wasSelected) {
       setSelectedModelId(null);
     }
-    await loadModels();
+    await fetchModels();
     if (wasSelected) {
       const next = models().find((m) => m.downloaded);
       if (next) {
@@ -194,8 +205,10 @@ async function deleteModel(modelId: string): Promise<void> {
         createSettings().update({ textModelId: null });
       }
     }
+    return true;
   } catch (e) {
     setError(parseError(e));
+    return false;
   }
 }
 
@@ -217,22 +230,23 @@ async function deleteServer(): Promise<boolean> {
   }
 }
 
-async function checkServer(): Promise<void> {
+async function fetchServerAvailability(): Promise<void> {
   try {
     const exists = await invoke<boolean>("text_processing_check_server");
     setServerAvailable(exists);
+    serverChecked = true;
   } catch (e) {
     setError(parseError(e));
   }
 }
 
-async function checkServerStatus(): Promise<void> {
-  try {
-    const status = await invoke<ServerStatus>("text_processing_server_status");
-    setServerStatus(status);
-  } catch (e) {
-    setError(parseError(e));
-  }
+async function checkServer(): Promise<void> {
+  if (serverChecked) return;
+  if (checkServerPromise) return checkServerPromise;
+  checkServerPromise = fetchServerAvailability().finally(() => {
+    checkServerPromise = null;
+  });
+  return checkServerPromise;
 }
 
 async function chat(text: string, modelId?: string): Promise<string | null> {
@@ -283,18 +297,28 @@ function totalSizeBytes(): number {
   return sumDownloadedBytes(models());
 }
 
+function hasDownloadedModel(): boolean {
+  return models().some((m) => m.downloaded);
+}
+
+/** The single definition of "the LLM stack is usable". */
+function isReady(): boolean {
+  return serverAvailable() && hasDownloadedModel();
+}
+
 const textProcessingInstance = {
   // State (Accessors)
   models,
   totalSizeBytes,
   selectedModelId,
   downloadProgress,
-  serverStatus,
   inferenceProgress,
   chatResult,
   isDownloading,
   isProcessing,
   serverAvailable,
+  hasDownloadedModel,
+  isReady,
   downloadPhase,
   downloadingModelId,
   error,
@@ -309,7 +333,6 @@ const textProcessingInstance = {
   downloadServer,
   deleteServer,
   checkServer,
-  checkServerStatus,
   generateTitle,
   cancel,
   clearError,

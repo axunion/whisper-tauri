@@ -46,9 +46,6 @@ export function CompletionStep(props: CompletionStepProps) {
   const downloadedModel = () =>
     props.whisper.models().find((m) => m.downloaded);
 
-  const hasTextModel = () =>
-    props.textProcessing.models().some((m) => m.downloaded);
-
   return (
     <div class="animate-fade-in flex flex-col items-center gap-5 text-center">
       <div class="flex size-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-500 animate-scale-in">
@@ -77,7 +74,7 @@ export function CompletionStep(props: CompletionStepProps) {
         />
         <SummaryRow
           label={t("onboarding.summaryLlm")}
-          ready={hasTextModel()}
+          ready={props.textProcessing.hasDownloadedModel()}
           readyText={t("onboarding.summaryReady")}
         />
       </div>

@@ -8,7 +8,7 @@ import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { SectionRow } from "~/components/ui/SectionRow";
 import { useI18n } from "~/i18n";
 import type { DictionaryKey } from "~/i18n/types";
-import { toast } from "~/lib/toast";
+import { runWithToast } from "~/lib/actionToast";
 import type { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
 
 export interface FfmpegControlLabels {
@@ -29,13 +29,21 @@ const FfmpegControl: Component<FfmpegControlProps> = (props) => {
   const { t } = useI18n();
 
   async function handleDownload() {
-    await props.ffmpeg.download();
-    toast.success(t(props.labels.downloadedToast));
+    await runWithToast({
+      action: () => props.ffmpeg.download(),
+      successKey: props.labels.downloadedToast,
+      error: props.ffmpeg.error,
+      t,
+    });
   }
 
   async function handleDelete() {
-    await props.ffmpeg.deleteBundled();
-    toast.success(t(props.labels.deletedToast));
+    await runWithToast({
+      action: () => props.ffmpeg.deleteBundled(),
+      successKey: props.labels.deletedToast,
+      error: props.ffmpeg.error,
+      t,
+    });
   }
 
   return (

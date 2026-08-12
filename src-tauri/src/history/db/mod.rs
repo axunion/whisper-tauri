@@ -40,26 +40,29 @@ pub(crate) fn open_connection(db_path: &Path) -> Result<Connection, HistoryError
     Ok(conn)
 }
 
+/// Returns `true` when the column was actually added, i.e. an existing database
+/// was just migrated — the caller can use that to run a one-time backfill.
 fn add_column_if_missing(
     conn: &Connection,
     table: &str,
     column: &str,
     column_type: &str,
-) -> Result<(), HistoryError> {
+) -> Result<bool, HistoryError> {
     let mut stmt = conn.prepare(&format!("PRAGMA table_info({table})"))?;
     let exists = stmt
         .query_map([], |row| row.get::<_, String>(1))?
         .filter_map(Result::ok)
         .any(|name| name == column);
 
-    if !exists {
-        conn.execute(
-            &format!("ALTER TABLE {table} ADD COLUMN {column} {column_type}"),
-            [],
-        )?;
+    if exists {
+        return Ok(false);
     }
 
-    Ok(())
+    conn.execute(
+        &format!("ALTER TABLE {table} ADD COLUMN {column} {column_type}"),
+        [],
+    )?;
+    Ok(true)
 }
 
 /// Initializes the history database, creating tables and indices if they don't exist.
@@ -80,12 +83,23 @@ pub(crate) fn init_db(db_path: &Path) -> Result<(), HistoryError> {
             duration INTEGER NOT NULL,
             text_compressed BLOB NOT NULL,
             segments_compressed BLOB NOT NULL,
-            vad_enabled INTEGER
+            vad_enabled INTEGER,
+            source TEXT NOT NULL DEFAULT 'file'
         );
         CREATE INDEX IF NOT EXISTS idx_history_created_at ON history(created_at);",
     )?;
 
     add_column_if_missing(&conn, "history", "vad_enabled", "INTEGER")?;
+
+    // Rows written before `source` existed carry the old convention that
+    // recordings were saved without a file extension. Backfill once from that,
+    // then the column — not the file name — is the source of truth.
+    if add_column_if_missing(&conn, "history", "source", "TEXT NOT NULL DEFAULT 'file'")? {
+        conn.execute(
+            "UPDATE history SET source = 'recording' WHERE instr(file_name, '.') = 0",
+            [],
+        )?;
+    }
 
     super::search::init_fts(&conn)?;
 
@@ -114,7 +128,9 @@ pub(crate) fn init_db(db_path: &Path) -> Result<(), HistoryError> {
 #[cfg(test)]
 pub(crate) mod test_helpers {
     use super::init_db;
-    use crate::history::types::{AiContentSaveParams, HistorySaveParams, HistorySegment};
+    use crate::history::types::{
+        AiContentSaveParams, HistorySaveParams, HistorySegment, HistorySource,
+    };
     use std::path::PathBuf;
     use tempfile::TempDir;
 
@@ -145,6 +161,7 @@ pub(crate) mod test_helpers {
                 },
             ],
             vad_enabled: Some(true),
+            source: HistorySource::File,
         }
     }
 
@@ -182,6 +199,64 @@ mod tests {
     fn init_db_is_idempotent() {
         let (_dir, path) = setup_db();
         init_db(&path).expect("Second init should succeed");
+    }
+
+    #[test]
+    fn init_db_backfills_source_from_the_legacy_file_name_convention() {
+        let dir = tempfile::TempDir::new().expect("create temp dir");
+        let path = dir.path().join("history.db");
+
+        let conn = Connection::open(&path).expect("open");
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS history (
+                id TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL,
+                file_name TEXT NOT NULL,
+                language TEXT NOT NULL,
+                model_id TEXT NOT NULL,
+                duration INTEGER NOT NULL,
+                text_compressed BLOB NOT NULL,
+                segments_compressed BLOB NOT NULL
+            );",
+        )
+        .expect("create old table");
+        let text_compressed = compression::compress_text("レガシー行").expect("compress");
+        let segments_compressed = compression::compress_text("[]").expect("compress");
+        for (id, file_name) in [("rec-1", "録音"), ("file-1", "audio.wav")] {
+            conn.execute(
+                "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed)
+                 VALUES (?1, '2026-01-01T00:00:00Z', ?2, 'ja', 'small', 1000, ?3, ?4)",
+                rusqlite::params![id, file_name, text_compressed, segments_compressed],
+            )
+            .expect("insert legacy row");
+        }
+        drop(conn);
+
+        init_db(&path).expect("init db with migration");
+
+        let conn = Connection::open(&path).expect("open");
+        let source = |id: &str| -> String {
+            conn.query_row("SELECT source FROM history WHERE id = ?1", [id], |row| {
+                row.get(0)
+            })
+            .expect("read source")
+        };
+        assert_eq!(source("rec-1"), "recording");
+        assert_eq!(source("file-1"), "file");
+
+        // A second init must not re-run the backfill over corrected values.
+        conn.execute("UPDATE history SET source = 'file' WHERE id = 'rec-1'", [])
+            .expect("correct source");
+        drop(conn);
+        init_db(&path).expect("second init");
+
+        let conn = Connection::open(&path).expect("open");
+        let corrected: String = conn
+            .query_row("SELECT source FROM history WHERE id = 'rec-1'", [], |row| {
+                row.get(0)
+            })
+            .expect("read source");
+        assert_eq!(corrected, "file");
     }
 
     #[test]

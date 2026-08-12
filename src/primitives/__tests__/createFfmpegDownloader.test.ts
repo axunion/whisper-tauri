@@ -214,51 +214,6 @@ describe("createFfmpegDownloader", () => {
     });
   });
 
-  describe("getDownloadUrl", () => {
-    it("should invoke get_ffmpeg_download_url", async () => {
-      vi.mocked(invoke).mockResolvedValueOnce("https://custom.url/ffmpeg");
-
-      await createRoot(async (dispose) => {
-        const downloader = createFfmpegDownloader();
-        const url = await downloader.getDownloadUrl();
-
-        expect(invoke).toHaveBeenCalledWith("get_ffmpeg_download_url");
-        expect(url).toBe("https://custom.url/ffmpeg");
-        dispose();
-      });
-    });
-  });
-
-  describe("setDownloadUrl", () => {
-    it("should invoke set_ffmpeg_download_url", async () => {
-      vi.mocked(invoke).mockResolvedValueOnce(undefined);
-
-      await createRoot(async (dispose) => {
-        const downloader = createFfmpegDownloader();
-        await downloader.setDownloadUrl("https://custom.url/ffmpeg");
-
-        expect(invoke).toHaveBeenCalledWith("set_ffmpeg_download_url", {
-          url: "https://custom.url/ffmpeg",
-        });
-        dispose();
-      });
-    });
-
-    it("should invoke with null to clear", async () => {
-      vi.mocked(invoke).mockResolvedValueOnce(undefined);
-
-      await createRoot(async (dispose) => {
-        const downloader = createFfmpegDownloader();
-        await downloader.setDownloadUrl(null);
-
-        expect(invoke).toHaveBeenCalledWith("set_ffmpeg_download_url", {
-          url: null,
-        });
-        dispose();
-      });
-    });
-  });
-
   describe("event listeners", () => {
     it("should update downloadProgress on ffmpeg:download-progress event", () => {
       const downloader = createFfmpegDownloader();

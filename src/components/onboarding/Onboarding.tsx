@@ -57,8 +57,6 @@ export function Onboarding(props: OnboardingProps) {
   const ffmpeg = createFfmpegDownloader();
   const textProcessing = createTextProcessing();
 
-  const hasDownloadedModel = () => whisper.models().some((m) => m.downloaded);
-
   onMount(() => {
     whisper.loadModels();
     ffmpeg.checkStatus();
@@ -87,7 +85,7 @@ export function Onboarding(props: OnboardingProps) {
   }
 
   const canGoNext = () => {
-    if (step() === 2) return hasDownloadedModel();
+    if (step() === 2) return whisper.hasDownloadedModel();
     return true;
   };
 

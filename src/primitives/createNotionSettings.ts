@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { createRoot, createSignal } from "solid-js";
+import { parseError } from "~/lib/errors";
 import type { NotionDatabaseInfo, NotionSettings } from "~/types";
+import type { AppError } from "~/types/errors";
 
 const DEFAULT_NOTION_SETTINGS: NotionSettings = {
   enabled: false,
@@ -9,31 +11,52 @@ const DEFAULT_NOTION_SETTINGS: NotionSettings = {
   titleProperty: null,
 };
 
-const { settings, setSettings, isLoaded, setIsLoaded } = createRoot(() => {
-  const [settings, setSettings] = createSignal<NotionSettings>({
-    ...DEFAULT_NOTION_SETTINGS,
+const { settings, setSettings, isLoaded, setIsLoaded, error, setError } =
+  createRoot(() => {
+    const [settings, setSettings] = createSignal<NotionSettings>({
+      ...DEFAULT_NOTION_SETTINGS,
+    });
+    const [isLoaded, setIsLoaded] = createSignal(false);
+    const [error, setError] = createSignal<AppError | null>(null);
+    return { settings, setSettings, isLoaded, setIsLoaded, error, setError };
   });
-  const [isLoaded, setIsLoaded] = createSignal(false);
-  return { settings, setSettings, isLoaded, setIsLoaded };
-});
 
 let loadPromise: Promise<void> | null = null;
 
+/**
+ * Loads the persisted Notion settings once. Failures surface through `error`
+ * rather than rejecting: callers fire this without awaiting, and a rejected
+ * promise held in `loadPromise` would be handed to every later caller,
+ * disabling Notion sharing for the rest of the session.
+ */
 async function load(): Promise<void> {
   if (isLoaded()) return;
   if (loadPromise) return loadPromise;
   loadPromise = (async () => {
-    const fetched = await invoke<NotionSettings>("notion_get_settings");
-    setSettings({ ...DEFAULT_NOTION_SETTINGS, ...fetched });
-    setIsLoaded(true);
+    try {
+      const fetched = await invoke<NotionSettings>("notion_get_settings");
+      setSettings({ ...DEFAULT_NOTION_SETTINGS, ...fetched });
+      setIsLoaded(true);
+    } catch (e) {
+      setError(parseError(e));
+    } finally {
+      loadPromise = null;
+    }
   })();
   return loadPromise;
 }
 
-async function update(partial: Partial<NotionSettings>): Promise<void> {
+/** Persists a partial update, reporting failure through `error` and the return value. */
+async function update(partial: Partial<NotionSettings>): Promise<boolean> {
   const merged: NotionSettings = { ...settings(), ...partial };
   setSettings(merged);
-  await invoke("notion_set_settings", { settings: merged });
+  try {
+    await invoke("notion_set_settings", { settings: merged });
+    return true;
+  } catch (e) {
+    setError(parseError(e));
+    return false;
+  }
 }
 
 async function testConnection(
@@ -58,6 +81,10 @@ const isConfigured = () =>
   !!settings().databaseId &&
   !!settings().titleProperty;
 
+function clearError(): void {
+  setError(null);
+}
+
 const notionSettingsInstance = {
   settings,
   isLoaded,
@@ -66,9 +93,11 @@ const notionSettingsInstance = {
   databaseId,
   titleProperty,
   isConfigured,
+  error,
   load,
   update,
   testConnection,
+  clearError,
 };
 
 export function createNotionSettings() {

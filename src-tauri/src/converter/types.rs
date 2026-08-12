@@ -1,17 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-/// Supported audio/video formats for conversion.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct SupportedFormat {
-    /// File extension (e.g., "mp3", "wav")
-    pub extension: String,
-    /// Human-readable description
-    pub description: String,
-    /// Whether this format requires conversion to WAV
-    pub needs_conversion: bool,
-}
-
 /// Result of an audio file conversion.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -37,19 +25,6 @@ pub struct FfmpegDownloadProgress {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn supported_format_serializes_to_camel_case() {
-        let format = SupportedFormat {
-            extension: "mp3".to_string(),
-            description: "MP3 Audio".to_string(),
-            needs_conversion: true,
-        };
-
-        let json = serde_json::to_string(&format).expect("Failed to serialize");
-        assert!(json.contains("\"needsConversion\":true"));
-        assert!(json.contains("\"extension\":\"mp3\""));
-    }
 
     #[test]
     fn conversion_result_serializes_to_camel_case() {

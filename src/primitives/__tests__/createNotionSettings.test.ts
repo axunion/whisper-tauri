@@ -56,6 +56,23 @@ describe("createNotionSettings", () => {
       expect(notion.isLoaded()).toBe(true);
     });
 
+    it("should record the error and stay retryable when the fetch fails", async () => {
+      const notion = await freshNotionSettings();
+      vi.mocked(invoke).mockRejectedValueOnce("Store error: unreadable");
+
+      // Must not reject: callers fire this without awaiting.
+      await expect(notion.load()).resolves.toBeUndefined();
+      expect(notion.error()).not.toBeNull();
+      expect(notion.isLoaded()).toBe(false);
+
+      // A failed load must not latch — the next call retries and succeeds.
+      vi.mocked(invoke).mockResolvedValueOnce(fetchedSettings);
+      await notion.load();
+
+      expect(notion.settings()).toEqual(fetchedSettings);
+      expect(notion.isLoaded()).toBe(true);
+    });
+
     it("should keep the first loaded settings when load is called again", async () => {
       const notion = await freshNotionSettings();
       vi.mocked(invoke)
@@ -100,15 +117,14 @@ describe("createNotionSettings", () => {
       });
     });
 
-    it("should keep the optimistic local value when persisting fails", async () => {
+    it("should report failure and keep the optimistic local value when persisting fails", async () => {
       const notion = await freshNotionSettings();
       vi.mocked(invoke).mockRejectedValueOnce("Store error: disk full");
 
-      await expect(notion.update({ enabled: true })).rejects.toBe(
-        "Store error: disk full",
-      );
+      await expect(notion.update({ enabled: true })).resolves.toBe(false);
 
       expect(notion.enabled()).toBe(true);
+      expect(notion.error()).not.toBeNull();
     });
   });
 

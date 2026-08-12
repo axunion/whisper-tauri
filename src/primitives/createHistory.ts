@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { createSignal } from "solid-js";
+import { createSignal, onCleanup } from "solid-js";
 import { parseError } from "~/lib/errors";
 import type {
   HistoryEntry,
@@ -11,6 +11,10 @@ import type {
 import type { AppError } from "~/types/errors";
 
 const DEFAULT_LIMIT = 200;
+
+/** Shortest query worth sending to FTS — below this the list is held back. */
+const SEARCH_MIN_LENGTH = 3;
+const SEARCH_DEBOUNCE_MS = 300;
 
 export function createHistory() {
   const [entries, setEntries] = createSignal<HistoryMeta[]>([]);
@@ -25,6 +29,21 @@ export function createHistory() {
   const [isLoading, setIsLoading] = createSignal(false);
   const [isSearching, setIsSearching] = createSignal(false);
   const [error, setError] = createSignal<AppError | null>(null);
+
+  // Raw text as typed, plus the debounce bookkeeping that turns it into
+  // searches. `queryPending` is only ever set next to the timer that clears
+  // it, so it cannot be left stuck on.
+  const [query, setQuery] = createSignal("");
+  const [queryPending, setQueryPending] = createSignal(false);
+  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function cancelDebounce(): void {
+    clearTimeout(debounceTimer);
+    debounceTimer = undefined;
+    setQueryPending(false);
+  }
+
+  onCleanup(cancelDebounce);
 
   async function loadEntries(): Promise<void> {
     setIsLoading(true);
@@ -119,13 +138,15 @@ export function createHistory() {
     }
   }
 
-  async function deleteAllEntries(): Promise<void> {
+  async function deleteAllEntries(): Promise<boolean> {
     try {
       await invoke("history_delete_all");
       setSelectedIds(new Set<string>());
       await loadEntries();
+      return true;
     } catch (e) {
       setError(parseError(e));
+      return false;
     }
   }
 
@@ -166,8 +187,62 @@ export function createHistory() {
     setSelectedIds(new Set<string>());
   }
 
-  function updateFilter(newFilter: HistoryFilter): void {
+  // Empty → back to all entries. >= MIN → search. In between → hold the list
+  // without fetching, so a half-typed word doesn't churn the DB.
+  async function runQuery(): Promise<void> {
+    const trimmed = query().trim();
+    if (!trimmed) {
+      clearSearch();
+      await loadEntries();
+    } else if (trimmed.length >= SEARCH_MIN_LENGTH) {
+      await searchEntries(trimmed);
+    }
+  }
+
+  function updateQuery(value: string): void {
+    setQuery(value);
+    cancelDebounce();
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      void runQuery();
+      return;
+    }
+    if (trimmed.length < SEARCH_MIN_LENGTH) {
+      if (isSearching()) clearSearch();
+      return;
+    }
+    // Keep showing the previous results while a search is already on screen.
+    if (!isSearching()) setQueryPending(true);
+    debounceTimer = setTimeout(() => {
+      debounceTimer = undefined;
+      void runQuery().finally(() => setQueryPending(false));
+    }, SEARCH_DEBOUNCE_MS);
+  }
+
+  function clearQuery(): void {
+    setQuery("");
+    cancelDebounce();
+    void runQuery();
+  }
+
+  async function updateFilter(newFilter: HistoryFilter): Promise<void> {
+    cancelDebounce();
     setFilter(newFilter);
+    const trimmed = query().trim();
+    if (trimmed && trimmed.length < SEARCH_MIN_LENGTH) return;
+    if (trimmed) setQueryPending(true);
+    try {
+      await runQuery();
+    } finally {
+      setQueryPending(false);
+    }
+  }
+
+  /** True while the typed query is too short for the list to mean anything. */
+  function isQueryTooShort(): boolean {
+    const len = query().trim().length;
+    return len > 0 && len < SEARCH_MIN_LENGTH;
   }
 
   function clearError(): void {
@@ -187,12 +262,16 @@ export function createHistory() {
     searchQuery,
     isLoading,
     isSearching,
+    queryPending,
+    isQueryTooShort,
     error,
 
     // Actions
     loadEntries,
     searchEntries,
     clearSearch,
+    updateQuery,
+    clearQuery,
     saveEntry,
     getEntry,
     deleteEntries,

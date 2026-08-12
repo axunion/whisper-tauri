@@ -4,7 +4,7 @@ import { ErrorDisplay } from "~/components/ErrorDisplay";
 import { Button } from "~/components/ui/Button";
 import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { useI18n } from "~/i18n";
-import { toast } from "~/lib/toast";
+import { runWithToast } from "~/lib/actionToast";
 import type { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
 
 interface FfmpegStepProps {
@@ -15,8 +15,12 @@ export function FfmpegStep(props: FfmpegStepProps) {
   const { t } = useI18n();
 
   async function handleDownload() {
-    await props.ffmpeg.download();
-    toast.success(t("settings.ffmpegDownloadedToast"));
+    await runWithToast({
+      action: () => props.ffmpeg.download(),
+      successKey: "settings.ffmpegDownloadedToast",
+      error: props.ffmpeg.error,
+      t,
+    });
   }
 
   const isReady = () => props.ffmpeg.isBundled();

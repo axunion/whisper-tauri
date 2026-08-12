@@ -49,20 +49,6 @@ pub(crate) struct InferenceProgress {
     pub done: bool,
 }
 
-/// Server status information.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ServerStatus {
-    /// Whether the server is running
-    pub running: bool,
-    /// The port the server is listening on
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub port: Option<u16>,
-    /// The model ID loaded on the server
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub model_id: Option<String>,
-}
-
 /// OpenAI-compatible chat message.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -174,33 +160,6 @@ mod tests {
         let json = serde_json::to_string(&progress).expect("Failed to serialize");
         assert!(json.contains("\"taskId\":\"task-123\""));
         assert!(json.contains("\"accumulatedText\":\"hello world\""));
-    }
-
-    #[test]
-    fn server_status_serializes_correctly() {
-        let status = ServerStatus {
-            running: true,
-            port: Some(8080),
-            model_id: Some("qwen3.5-4b".to_string()),
-        };
-
-        let json = serde_json::to_string(&status).expect("Failed to serialize");
-        assert!(json.contains("\"running\":true"));
-        assert!(json.contains("\"port\":8080"));
-        assert!(json.contains("\"modelId\":\"qwen3.5-4b\""));
-    }
-
-    #[test]
-    fn server_status_skips_none_fields() {
-        let status = ServerStatus {
-            running: false,
-            port: None,
-            model_id: None,
-        };
-
-        let json = serde_json::to_string(&status).expect("Failed to serialize");
-        assert!(!json.contains("\"port\""));
-        assert!(!json.contains("\"modelId\""));
     }
 
     #[test]

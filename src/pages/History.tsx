@@ -16,27 +16,17 @@ import { useI18n } from "~/i18n";
 import { toast } from "~/lib/toast";
 import type { AiOperation } from "~/primitives/createAiSession";
 import { createHistory } from "~/primitives/createHistory";
-import type {
-  HistoryFilter as HistoryFilterType,
-  HistorySortBy,
-  SortOrder,
-} from "~/types";
-
-const SEARCH_MIN_LENGTH = 3;
-const DEBOUNCE_MS = 300;
+import type { HistorySortBy, SortOrder } from "~/types";
 
 export default function History() {
   const { t } = useI18n();
   const history = createHistory();
-  const [rawInput, setRawInput] = createSignal("");
-  const [isWaitingForSearch, setIsWaitingForSearch] = createSignal(false);
   const [selectionMode, setSelectionMode] = createSignal(false);
   const [currentOp, setCurrentOp] = createSignal<AiOperation>(null);
   const [cancelFn, setCancelFn] = createSignal<(() => Promise<void>) | null>(
     null,
   );
   const [showCloseDialog, setShowCloseDialog] = createSignal(false);
-  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
   createEffect(() => {
     if (!history.selectedEntry()) {
@@ -73,7 +63,6 @@ export default function History() {
   });
 
   onCleanup(() => {
-    clearTimeout(debounceTimer);
     document.removeEventListener("keydown", handleKeyDown);
   });
 
@@ -87,67 +76,8 @@ export default function History() {
     history.toggleSelect(id);
   }
 
-  // Empty → reset to all entries. >= MIN → run search. Otherwise no-op so the
-  // caller's "clear in-flight search" or "do nothing" choice stays local.
-  async function runQuery(trimmed: string): Promise<void> {
-    if (!trimmed) {
-      history.clearSearch();
-      await history.loadEntries();
-    } else if (trimmed.length >= SEARCH_MIN_LENGTH) {
-      await history.searchEntries(trimmed);
-    }
-  }
-
-  function handleSearchInput(value: string): void {
-    setRawInput(value);
-    clearTimeout(debounceTimer);
-
-    const trimmed = value.trim();
-    if (!trimmed) {
-      setIsWaitingForSearch(false);
-      void runQuery("");
-      return;
-    }
-    if (trimmed.length < SEARCH_MIN_LENGTH) {
-      // Always reset the waiting flag — the gate was an in-flight search,
-      // but the flag is set unconditionally before debounce fires, so it
-      // can be stuck-true even when isSearching is still false.
-      setIsWaitingForSearch(false);
-      if (history.isSearching()) {
-        history.clearSearch();
-      }
-      return;
-    }
-    if (!history.isSearching()) {
-      setIsWaitingForSearch(true);
-    }
-    debounceTimer = setTimeout(() => {
-      void runQuery(trimmed).finally(() => setIsWaitingForSearch(false));
-    }, DEBOUNCE_MS);
-  }
-
-  function handleClearSearch(): void {
-    clearTimeout(debounceTimer);
-    setRawInput("");
-    setIsWaitingForSearch(false);
-    void runQuery("");
-  }
-
-  async function handleFilterChange(filter: HistoryFilterType): Promise<void> {
-    clearTimeout(debounceTimer);
-    history.updateFilter(filter);
-    const trimmed = rawInput().trim();
-    if (trimmed && trimmed.length < SEARCH_MIN_LENGTH) return;
-    if (trimmed) setIsWaitingForSearch(true);
-    try {
-      await runQuery(trimmed);
-    } finally {
-      setIsWaitingForSearch(false);
-    }
-  }
-
   function handleSortChange(sortBy: HistorySortBy, sortOrder: SortOrder): void {
-    handleFilterChange({ ...history.filter(), sortBy, sortOrder });
+    void history.updateFilter({ ...history.filter(), sortBy, sortOrder });
   }
 
   async function handleDeleteSelected(): Promise<void> {
@@ -161,16 +91,8 @@ export default function History() {
     }
   }
 
-  async function handleRename(id: string, newFileName: string): Promise<void> {
-    await history.renameEntry(id, newFileName);
-  }
-
-  const shouldHideList = () => {
-    const len = rawInput().trim().length;
-    if (len === 0) return false;
-    if (len < SEARCH_MIN_LENGTH) return true;
-    return isWaitingForSearch();
-  };
+  const shouldHideList = () =>
+    history.isQueryTooShort() || history.queryPending();
 
   return (
     <>
@@ -184,8 +106,8 @@ export default function History() {
         <div class="flex items-center gap-2">
           <div class="flex-1">
             <SearchBar
-              onInput={handleSearchInput}
-              onClear={handleClearSearch}
+              onInput={history.updateQuery}
+              onClear={history.clearQuery}
             />
           </div>
           <Button
@@ -205,7 +127,7 @@ export default function History() {
         <div class="flex items-center justify-between">
           <HistoryFilter
             filter={history.filter()}
-            onFilterChange={handleFilterChange}
+            onFilterChange={history.updateFilter}
           />
           <SortToggleGroup
             sortBy={history.filter().sortBy ?? "date"}
@@ -256,7 +178,7 @@ export default function History() {
               {(entry) => (
                 <HistoryDetail
                   entry={entry}
-                  onRename={handleRename}
+                  onRename={history.renameEntry}
                   onProcessingChange={(op, cancel) => {
                     setCurrentOp(op);
                     setCancelFn(() => cancel);

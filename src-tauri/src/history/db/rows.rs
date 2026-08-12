@@ -1,5 +1,5 @@
 use super::super::error::HistoryError;
-use super::super::types::{AiContent, HistoryMeta};
+use super::super::types::{AiContent, HistoryMeta, HistorySource};
 use super::compression::decompress_text;
 
 /// Row shape for the list/meta query against the `history` table.
@@ -12,6 +12,7 @@ pub(crate) struct MetaRow {
     pub(super) duration: u64,
     pub(super) text_compressed: Vec<u8>,
     pub(super) vad_enabled: Option<bool>,
+    pub(super) source: HistorySource,
 }
 
 /// Row shape for a query against the `ai_content` table.
@@ -28,7 +29,8 @@ pub(crate) struct AiContentRow {
 /// Extracts a [`MetaRow`] from a rusqlite row.
 ///
 /// Expects columns: `id(0)`, `created_at(1)`, `file_name(2)`, `language(3)`,
-/// `model_id(4)`, `duration(5)`, `text_compressed(6)`, `vad_enabled(7)`.
+/// `model_id(4)`, `duration(5)`, `text_compressed(6)`, `vad_enabled(7)`,
+/// `source(8)`.
 ///
 /// # Errors
 ///
@@ -43,6 +45,7 @@ pub(crate) fn meta_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<MetaRow> 
         duration: row.get(5)?,
         text_compressed: row.get(6)?,
         vad_enabled: row.get(7)?,
+        source: HistorySource::from_db(&row.get::<_, String>(8)?),
     })
 }
 
@@ -63,6 +66,7 @@ pub(crate) fn meta_from_row(row: MetaRow) -> Result<HistoryMeta, HistoryError> {
         duration: row.duration,
         text_preview: preview,
         vad_enabled: row.vad_enabled,
+        source: row.source,
     })
 }
 

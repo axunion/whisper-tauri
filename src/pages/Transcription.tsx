@@ -30,13 +30,7 @@ import { createHistory } from "~/primitives/createHistory";
 import { createRecording } from "~/primitives/createRecording";
 import { createSettings } from "~/primitives/createSettings";
 import { createWhisper } from "~/primitives/createWhisper";
-
-const WAV_EXTENSIONS = new Set(["wav"]);
-
-function getExtension(filename: string): string {
-  const parts = filename.split(".");
-  return (parts.length > 1 ? parts[parts.length - 1] : "")?.toLowerCase() ?? "";
-}
+import type { HistorySource } from "~/types";
 
 export default function Transcription() {
   const { t } = useI18n();
@@ -53,9 +47,18 @@ export default function Transcription() {
   const [activeTab, setActiveTab] = createSignal("file");
   const [historyId, setHistoryId] = createSignal<string | null>(null);
 
+  // Device enumeration walks CoreAudio inputs, and the list genuinely changes
+  // when a mic is plugged in, so it runs on entry to the record tab instead of
+  // at page mount — file-only users never pay for it.
+  function activateTab(tab: string): void {
+    setActiveTab(tab);
+    if (tab === "record") {
+      recording.loadDevices();
+    }
+  }
+
   onMount(async () => {
     whisper.loadModels();
-    recording.loadDevices();
     await settings.load();
     const saved = settings.whisperLanguage();
     if (saved !== undefined) {
@@ -72,7 +75,7 @@ export default function Transcription() {
           whisper.selectFile({ path, name: extractFilename(path), size: 0 });
         }
         if (state?.tab === "record") {
-          setActiveTab("record");
+          activateTab("record");
         }
       },
     ),
@@ -81,8 +84,7 @@ export default function Transcription() {
   const needsConversion = () => {
     const f = whisper.file();
     if (!f) return false;
-    const ext = getExtension(f.name);
-    return !WAV_EXTENSIONS.has(ext);
+    return !f.name.toLowerCase().endsWith(".wav");
   };
 
   const downloadedModels = createMemo(() =>
@@ -142,7 +144,7 @@ export default function Transcription() {
       await whisper.startTranscription();
     }
 
-    await saveToHistory(currentFile.name);
+    await saveToHistory(currentFile.name, "file");
   }
 
   async function handleStartRecording() {
@@ -152,12 +154,12 @@ export default function Transcription() {
     whisper.setFile({ path: tempPath, name: t("recording.title"), size: 0 });
     await whisper.startTranscription(tempPath);
 
-    await saveToHistory(t("recording.title"));
+    await saveToHistory(t("recording.title"), "recording");
 
     await recording.cleanup();
   }
 
-  async function saveToHistory(fileName: string) {
+  async function saveToHistory(fileName: string, source: HistorySource) {
     const transcriptionResult = whisper.result();
     const currentModel = whisper.selectedModel();
     if (transcriptionResult && currentModel) {
@@ -170,6 +172,7 @@ export default function Transcription() {
         text: transcriptionResult.text,
         segments: transcriptionResult.segments,
         vadEnabled: whisper.vadEnabled(),
+        source,
       });
       if (id) setHistoryId(id);
     }
@@ -230,7 +233,7 @@ export default function Transcription() {
               <div class="flex h-93 flex-col">
                 <Tabs
                   value={activeTab()}
-                  onChange={setActiveTab}
+                  onChange={activateTab}
                   class="flex flex-1 flex-col"
                 >
                   <TabsList class="w-full">

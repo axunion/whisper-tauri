@@ -9,7 +9,7 @@ use super::downloader;
 use super::duration;
 use super::error::ConverterError;
 use super::ffmpeg;
-use super::types::{ConversionResult, FfmpegDownloadProgress, SupportedFormat};
+use super::types::{ConversionResult, FfmpegDownloadProgress};
 
 /// Store key for custom ffmpeg download URL.
 const FFMPEG_DOWNLOAD_URL_KEY: &str = "ffmpegDownloadUrl";
@@ -108,26 +108,6 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
     paths::path_to_owned_string(&path).map_err(Into::into)
 }
 
-/// Gets the custom ffmpeg download base URL from settings.
-///
-/// # Errors
-///
-/// Returns an error if the settings store cannot be accessed.
-#[tauri::command]
-pub async fn get_ffmpeg_download_url(app: AppHandle) -> Result<Option<String>, String> {
-    settings::get_string(&app, FFMPEG_DOWNLOAD_URL_KEY).map_err(Into::into)
-}
-
-/// Sets or clears the custom ffmpeg download base URL in settings.
-///
-/// # Errors
-///
-/// Returns an error if the settings store cannot be accessed.
-#[tauri::command]
-pub async fn set_ffmpeg_download_url(app: AppHandle, url: Option<String>) -> Result<(), String> {
-    settings::set_or_delete_string(&app, FFMPEG_DOWNLOAD_URL_KEY, url).map_err(Into::into)
-}
-
 /// Gets the duration of an audio/video file in milliseconds.
 ///
 /// Uses Symphonia (pure Rust) as the primary method, falling back to
@@ -218,16 +198,6 @@ pub async fn convert_audio_file(
         output_path: output_str,
         original_path: input_path,
     })
-}
-
-/// Returns the list of supported audio/video formats.
-///
-/// # Errors
-///
-/// This command does not produce errors.
-#[tauri::command]
-pub async fn get_supported_formats() -> Result<Vec<SupportedFormat>, String> {
-    Ok(super::get_supported_formats())
 }
 
 /// Cleans up a converted temporary WAV file.

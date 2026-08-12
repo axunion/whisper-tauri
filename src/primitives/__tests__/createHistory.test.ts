@@ -18,6 +18,7 @@ const mockMeta = (overrides?: Partial<HistoryMeta>): HistoryMeta => ({
   duration: 60000,
   textPreview: "This is a test transcription...",
   vadEnabled: true,
+  source: "file",
   ...overrides,
 });
 
@@ -46,6 +47,7 @@ const mockSaveParams: HistorySaveParams = {
     { start: 0, end: 3000, text: "This is a test" },
     { start: 3000, end: 5000, text: "transcription." },
   ],
+  source: "file",
 };
 
 describe("createHistory", () => {
@@ -500,6 +502,78 @@ describe("createHistory", () => {
         expect(history.isSearching()).toBe(false);
         dispose();
       });
+    });
+  });
+
+  describe("updateQuery", () => {
+    it("should hold the list back without searching while the query is too short", async () => {
+      vi.mocked(invoke).mockClear();
+
+      await createRoot(async (dispose) => {
+        const history = createHistory();
+        history.updateQuery("会");
+
+        expect(history.isQueryTooShort()).toBe(true);
+        expect(invoke).not.toHaveBeenCalled();
+        dispose();
+      });
+    });
+
+    it("should debounce into a single search and clear the pending flag", async () => {
+      vi.useFakeTimers();
+      vi.mocked(invoke).mockClear();
+      vi.mocked(invoke).mockResolvedValue([mockMeta({ id: "hit" })]);
+
+      try {
+        await createRoot(async (dispose) => {
+          const history = createHistory();
+          history.updateQuery("会議");
+          history.updateQuery("会議録");
+
+          expect(history.queryPending()).toBe(true);
+          expect(invoke).not.toHaveBeenCalled();
+
+          await vi.advanceTimersByTimeAsync(400);
+
+          expect(vi.mocked(invoke).mock.calls).toHaveLength(1);
+          expect(invoke).toHaveBeenCalledWith("history_search", {
+            params: { query: "会議録", limit: 200 },
+          });
+          expect(history.queryPending()).toBe(false);
+          expect(history.isQueryTooShort()).toBe(false);
+          dispose();
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("should reset to all entries and drop the pending flag when emptied", async () => {
+      vi.useFakeTimers();
+      vi.mocked(invoke).mockClear();
+      vi.mocked(invoke).mockResolvedValue([]);
+
+      try {
+        await createRoot(async (dispose) => {
+          const history = createHistory();
+          history.updateQuery("会議録");
+          expect(history.queryPending()).toBe(true);
+
+          history.updateQuery("");
+
+          // Clearing cancels the debounce outright — no stuck pending flag.
+          expect(history.queryPending()).toBe(false);
+          await vi.advanceTimersByTimeAsync(400);
+
+          expect(invoke).toHaveBeenCalledWith("history_list", {
+            filter: { limit: 200 },
+          });
+          expect(history.isSearching()).toBe(false);
+          dispose();
+        });
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 

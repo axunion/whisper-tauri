@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { createRoot } from "solid-js";
 import { describe, expect, it, vi } from "vitest";
-import type { ConversionResult, SupportedFormat } from "~/types";
+import type { ConversionResult } from "~/types";
 import { createFileConverter } from "../createFileConverter";
 
 describe("createFileConverter", () => {
@@ -86,25 +86,6 @@ describe("createFileConverter", () => {
           }),
         );
         expect(result).toBeNull();
-        dispose();
-      });
-    });
-  });
-
-  describe("getSupportedFormats", () => {
-    it("should invoke get_supported_formats", async () => {
-      const mockFormats: SupportedFormat[] = [
-        { extension: "wav", description: "WAV Audio", needsConversion: false },
-        { extension: "mp3", description: "MP3 Audio", needsConversion: true },
-      ];
-      vi.mocked(invoke).mockResolvedValueOnce(mockFormats);
-
-      await createRoot(async (dispose) => {
-        const converter = createFileConverter();
-        const formats = await converter.getSupportedFormats();
-
-        expect(invoke).toHaveBeenCalledWith("get_supported_formats");
-        expect(formats).toEqual(mockFormats);
         dispose();
       });
     });

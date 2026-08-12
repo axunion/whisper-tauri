@@ -4,8 +4,8 @@ import { ModelDownloadAction } from "~/components/ui/ModelDownloadAction";
 import { ModelListItem } from "~/components/ui/ModelListItem";
 import { useI18n } from "~/i18n";
 import type { DictionaryKey } from "~/i18n/types";
+import { runWithToast } from "~/lib/actionToast";
 import { getModelDescription } from "~/lib/modelDescription";
-import { toast } from "~/lib/toast";
 import type { createWhisper } from "~/primitives/createWhisper";
 
 export interface WhisperModelListLabels {
@@ -33,8 +33,12 @@ const WhisperModelList: Component<WhisperModelListProps> = (props) => {
   async function handleDeleteModel(modelId: string) {
     setDeletingModelId(modelId);
     try {
-      await props.whisper.deleteModel(modelId);
-      toast.success(t(props.labels.deletedToast));
+      await runWithToast({
+        action: () => props.whisper.deleteModel(modelId),
+        successKey: props.labels.deletedToast,
+        error: props.whisper.error,
+        t,
+      });
     } finally {
       setDeletingModelId(null);
     }

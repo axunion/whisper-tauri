@@ -1,6 +1,6 @@
 import { FiLoader, FiX } from "solid-icons/fi";
 import type { Component } from "solid-js";
-import { createEffect, createMemo, Match, Show, Switch } from "solid-js";
+import { createEffect, createMemo, Show } from "solid-js";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -21,10 +21,6 @@ const NotionShareDialog: Component<NotionShareDialogProps> = (props) => {
   const { t } = useI18n();
   const kind = createMemo(() => props.state().kind);
   const open = createMemo(() => kind() !== "idle");
-  const errorState = createMemo(() => {
-    const s = props.state();
-    return s.kind === "error" ? s : null;
-  });
 
   const titleText = createMemo(() => {
     switch (kind()) {
@@ -92,24 +88,22 @@ const NotionShareDialog: Component<NotionShareDialogProps> = (props) => {
           </div>
         </Show>
 
-        <Switch>
-          <Match when={errorState()}>
-            <div class="flex justify-end gap-2">
-              <Button
-                ref={errorCloseRef}
-                variant="outline"
-                class="w-32"
-                onClick={props.onClose}
-              >
-                <FiX class="size-4" />
-                {t("common.close")}
-              </Button>
-              <Button class="w-32" onClick={props.onRetry}>
-                {t("common.retry")}
-              </Button>
-            </div>
-          </Match>
-        </Switch>
+        <Show when={kind() === "error"}>
+          <div class="flex justify-end gap-2">
+            <Button
+              ref={errorCloseRef}
+              variant="outline"
+              class="w-32"
+              onClick={props.onClose}
+            >
+              <FiX class="size-4" />
+              {t("common.close")}
+            </Button>
+            <Button class="w-32" onClick={props.onRetry}>
+              {t("common.retry")}
+            </Button>
+          </div>
+        </Show>
       </AlertDialogContent>
     </AlertDialog>
   );

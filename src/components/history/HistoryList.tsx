@@ -25,14 +25,9 @@ interface HistoryListProps {
 
 const VIDEO_EXTS = [".mp4", ".mov", ".avi", ".mkv", ".webm", ".flv"];
 
-function hasFileExtension(fileName: string): boolean {
-  return /\.\w+$/.test(fileName);
-}
-
-function getSourceIcon(fileName: string): JSX.Element {
-  // Recording entries have no file extension (e.g. "Recording", "録音")
-  if (!hasFileExtension(fileName)) return <FiMic class="size-4" />;
-  const lower = fileName.toLowerCase();
+function getSourceIcon(entry: HistoryMeta): JSX.Element {
+  if (entry.source === "recording") return <FiMic class="size-4" />;
+  const lower = entry.fileName.toLowerCase();
   if (VIDEO_EXTS.some((ext) => lower.endsWith(ext)))
     return <FiVideo class="size-4" />;
   return <FiMusic class="size-4" />;
@@ -77,7 +72,7 @@ const HistoryList: Component<HistoryListProps> = (props) => {
                 {/* Row 1: Icon + FileName + Check */}
                 <div class="flex items-center gap-2.5">
                   <span class="shrink-0 text-muted-foreground">
-                    {getSourceIcon(entry.fileName)}
+                    {getSourceIcon(entry)}
                   </span>
                   <span class="flex-1 truncate text-sm font-medium">
                     {entry.fileName}

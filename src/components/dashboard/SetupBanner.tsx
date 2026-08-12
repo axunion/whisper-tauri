@@ -1,62 +1,62 @@
 import { useNavigate } from "@solidjs/router";
-import { invoke } from "@tauri-apps/api/core";
 import { FiArrowRight, FiMic, FiTool } from "solid-icons/fi";
 import { TbOutlineSparkles } from "solid-icons/tb";
 import type { JSX } from "solid-js";
 import { createSignal, onMount, Show } from "solid-js";
 import { CardButton, CardContent } from "~/components/ui/Card";
 import { useI18n } from "~/i18n";
-import type { TextModelInfo } from "~/types/text-processing";
-import type { ModelInfo } from "~/types/whisper";
+import { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
+import { createTextProcessing } from "~/primitives/createTextProcessing";
+import { createWhisper } from "~/primitives/createWhisper";
 
 export function SetupBanner() {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const [whisperReady, setWhisperReady] = createSignal(false);
-  const [ffmpegReady, setFfmpegReady] = createSignal(false);
-  const [aiReady, setAiReady] = createSignal(false);
-  const [loading, setLoading] = createSignal(true);
+  const whisper = createWhisper();
+  const ffmpeg = createFfmpegDownloader();
+  const textProcessing = createTextProcessing();
+  // The banner nags about missing setup, so it stays hidden until the probes
+  // have run at least once — otherwise it flashes on every cold start. The
+  // readiness values themselves come from the shared primitives, so a download
+  // finishing on another page updates the banner without a remount.
+  const [probed, setProbed] = createSignal(false);
 
   onMount(async () => {
-    try {
-      const [models, ffmpegAvailable, serverExists, textModels] =
-        await Promise.all([
-          invoke<ModelInfo[]>("get_available_models"),
-          invoke<boolean>("check_ffmpeg_bundled"),
-          invoke<boolean>("text_processing_check_server"),
-          invoke<TextModelInfo[]>("text_processing_list_models"),
-        ]);
-      setWhisperReady(models.some((m) => m.downloaded));
-      setFfmpegReady(ffmpegAvailable);
-      setAiReady(serverExists && textModels.some((m) => m.downloaded));
-    } catch {
-      // Leave as false
-    } finally {
-      setLoading(false);
-    }
+    // Each loader records its own failure in the primitive's error signal, so
+    // these never reject; a failed probe simply leaves readiness false.
+    await Promise.all([
+      whisper.loadModels(),
+      ffmpeg.checkStatus(),
+      textProcessing.checkServer(),
+      textProcessing.loadModels(),
+    ]);
+    setProbed(true);
   });
 
-  const allReady = () => whisperReady() && ffmpegReady() && aiReady();
-  const visible = () => !loading() && !allReady();
+  const allReady = () =>
+    whisper.hasDownloadedModel() &&
+    ffmpeg.isBundled() &&
+    textProcessing.isReady();
+  const visible = () => probed() && !allReady();
 
   return (
     <Show when={visible()}>
       <CardButton class="text-left" onClick={() => navigate("/settings")}>
         <CardContent class="flex items-center gap-4 p-4">
           <div class="flex flex-1 items-center gap-3">
-            <Show when={!whisperReady()}>
+            <Show when={!whisper.hasDownloadedModel()}>
               <SetupIndicator
                 icon={<FiMic class="size-3.5" />}
                 label={t("dashboard.setupModelHint")}
               />
             </Show>
-            <Show when={!ffmpegReady()}>
+            <Show when={!ffmpeg.isBundled()}>
               <SetupIndicator
                 icon={<FiTool class="size-3.5" />}
                 label={t("dashboard.setupFfmpegHint")}
               />
             </Show>
-            <Show when={!aiReady()}>
+            <Show when={!textProcessing.isReady()}>
               <SetupIndicator
                 icon={<TbOutlineSparkles class="size-3.5" />}
                 label={t("dashboard.setupAiHint")}

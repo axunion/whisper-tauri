@@ -9,12 +9,7 @@ import {
 } from "solid-icons/fi";
 import { SiNotion } from "solid-icons/si";
 import { createSignal, onMount, Show } from "solid-js";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogTitle,
-} from "~/components/ui/AlertDialog";
+import { ErrorDisplay } from "~/components/ErrorDisplay";
 import { Button } from "~/components/ui/Button";
 import {
   Card,
@@ -22,6 +17,7 @@ import {
   CardHeader,
   CardTitleWithIcon,
 } from "~/components/ui/Card";
+import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { HelpHint } from "~/components/ui/HelpHint";
 import { SectionRow } from "~/components/ui/SectionRow";
 import { useI18n } from "~/i18n";
@@ -39,7 +35,6 @@ export default function NotionIntegration() {
   const [showToken, setShowToken] = createSignal(false);
   const [testing, setTesting] = createSignal(false);
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
-  const [disconnectOpen, setDisconnectOpen] = createSignal(false);
 
   onMount(() => {
     notion.load();
@@ -72,12 +67,15 @@ export default function NotionIntegration() {
     const trimmedDbId = databaseIdInput().trim();
     try {
       const info = await notion.testConnection(trimmedToken, trimmedDbId);
-      await notion.update({
+      const saved = await notion.update({
         enabled: true,
         token: trimmedToken,
         databaseId: trimmedDbId,
         titleProperty: info.titleProperty,
       });
+      // A failed save is reported by the ErrorDisplay above; keep the form open
+      // so the entered credentials are not lost.
+      if (!saved) return;
       setEditMode(false);
       setShowToken(false);
     } catch (e) {
@@ -93,14 +91,13 @@ export default function NotionIntegration() {
   }
 
   async function handleDisconnect() {
-    setDisconnectOpen(false);
-    await notion.update({
+    const saved = await notion.update({
       enabled: false,
       token: null,
       databaseId: null,
       titleProperty: null,
     });
-    cancelEdit();
+    if (saved) cancelEdit();
   }
 
   const inputClass =
@@ -114,6 +111,11 @@ export default function NotionIntegration() {
         </CardTitleWithIcon>
       </CardHeader>
       <CardContent class="space-y-4">
+        <ErrorDisplay
+          error={notion.error()}
+          onDismiss={() => notion.clearError()}
+        />
+
         <Show when={!editMode()}>
           <Show
             when={notion.isConfigured()}
@@ -151,15 +153,31 @@ export default function NotionIntegration() {
                     <FiEdit2 class="size-4" />
                     {t("settings.notionEditConnection")}
                   </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    class="w-28"
-                    onClick={() => setDisconnectOpen(true)}
+                  <ConfirmDialog
+                    title={t("settings.notionDisconnectConfirmTitle")}
+                    description={t(
+                      "settings.notionDisconnectConfirmDescription",
+                    )}
+                    confirmLabel={
+                      <>
+                        <FiTrash2 class="size-4" />
+                        {t("settings.notionDisconnect")}
+                      </>
+                    }
+                    onConfirm={handleDisconnect}
                   >
-                    <FiTrash2 class="size-4" />
-                    {t("settings.notionDisconnect")}
-                  </Button>
+                    {(openDialog) => (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        class="w-28"
+                        onClick={openDialog}
+                      >
+                        <FiTrash2 class="size-4" />
+                        {t("settings.notionDisconnect")}
+                      </Button>
+                    )}
+                  </ConfirmDialog>
                 </div>
               }
             />
@@ -256,37 +274,6 @@ export default function NotionIntegration() {
           </div>
         </Show>
       </CardContent>
-
-      <AlertDialog open={disconnectOpen()} onOpenChange={setDisconnectOpen}>
-        <AlertDialogContent>
-          <AlertDialogTitle>
-            {t("settings.notionDisconnectConfirmTitle")}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {t("settings.notionDisconnectConfirmDescription")}
-          </AlertDialogDescription>
-          <div class="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              class="w-32"
-              onClick={() => setDisconnectOpen(false)}
-            >
-              <FiX class="size-4" />
-              {t("common.cancel")}
-            </Button>
-            <Button
-              variant="destructive"
-              class="w-32"
-              onClick={() => {
-                void handleDisconnect();
-              }}
-            >
-              <FiTrash2 class="size-4" />
-              {t("settings.notionDisconnect")}
-            </Button>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
     </Card>
   );
 }

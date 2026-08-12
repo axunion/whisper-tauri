@@ -68,9 +68,14 @@ function makeModel(downloaded: boolean): TextModelInfo {
 function makeTp(
   opts: { serverAvailable?: boolean; models?: TextModelInfo[] } = {},
 ): ReturnType<typeof createTextProcessing> {
+  const serverAvailable = () => opts.serverAvailable ?? true;
+  const models = () => opts.models ?? [makeModel(true)];
+  const hasDownloadedModel = () => models().some((m) => m.downloaded);
   const fake = {
-    serverAvailable: () => opts.serverAvailable ?? true,
-    models: () => opts.models ?? [makeModel(true)],
+    serverAvailable,
+    models,
+    hasDownloadedModel,
+    isReady: () => serverAvailable() && hasDownloadedModel(),
   };
   return fake as unknown as ReturnType<typeof createTextProcessing>;
 }
@@ -79,10 +84,8 @@ function makeSession(overrides: Partial<AiSession> = {}): AiSession {
   return {
     summaryResult: () => null,
     cleanTextResult: () => null,
-    titleResult: () => null,
     isProcessing: () => false,
     isGeneratingTitle: () => false,
-    isLoaded: () => true,
     currentOperation: () => null,
     inferenceProgress: () => null,
     error: () => null,

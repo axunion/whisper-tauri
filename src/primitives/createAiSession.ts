@@ -17,10 +17,8 @@ export interface AiSession {
   // State
   summaryResult: Accessor<StructuredSummary | null>;
   cleanTextResult: Accessor<string | null>;
-  titleResult: Accessor<string | null>;
   isProcessing: Accessor<boolean>;
   isGeneratingTitle: Accessor<boolean>;
-  isLoaded: Accessor<boolean>;
   currentOperation: Accessor<AiOperation>;
   inferenceProgress: Accessor<InferenceProgress | null>;
   error: Accessor<AppError | null>;
@@ -95,23 +93,23 @@ export function createAiSession(
   const [cleanTextResult, setCleanTextResult] = createSignal<string | null>(
     null,
   );
-  const [titleResult, setTitleResult] = createSignal<string | null>(null);
   const [isProcessing, setIsProcessing] = createSignal(false);
   const [isGeneratingTitle, setIsGeneratingTitle] = createSignal(false);
   const [currentOperation, setCurrentOperation] =
     createSignal<AiOperation>(null);
   const [error, setError] = createSignal<AppError | null>(null);
-  const [isLoaded, setIsLoaded] = createSignal(false);
 
   const inferenceProgress = (): InferenceProgress | null =>
     isProcessing() ? tp.inferenceProgress() : null;
 
   onCleanup(() => {
     if (isProcessing()) {
-      cancelSession().catch(console.error);
+      tp.cancel().catch(console.error);
     }
   });
 
+  // Persisted titles are not restored: a generated title is applied by renaming
+  // the history entry, so `fileName` already carries it.
   function loadFromAiContent(content: AiContent[]): void {
     for (const c of content) {
       switch (c.contentType) {
@@ -121,19 +119,13 @@ export function createAiSession(
         case "cleanText":
           setCleanTextResult(c.text);
           break;
-        case "title":
-          setTitleResult(c.text);
-          break;
       }
     }
   }
 
   async function loadFromDb(): Promise<void> {
     const hid = historyIdGetter();
-    if (!hid) {
-      setIsLoaded(true);
-      return;
-    }
+    if (!hid) return;
     try {
       const content = await invoke<AiContent[]>("history_get_all_ai_content", {
         historyId: hid,
@@ -141,8 +133,6 @@ export function createAiSession(
       loadFromAiContent(content);
     } catch {
       // Best-effort: silently ignore load failures
-    } finally {
-      setIsLoaded(true);
     }
   }
 
@@ -224,7 +214,6 @@ export function createAiSession(
     try {
       const result = await tp.generateTitle(text);
       if (result) {
-        setTitleResult(result);
         saveToHistory("title", result, tp.effectiveModelId() ?? "unknown");
       }
       return result;
@@ -236,13 +225,6 @@ export function createAiSession(
     }
   }
 
-  async function cancelSession(): Promise<void> {
-    const progress = tp.inferenceProgress();
-    if (progress) {
-      await invoke("text_processing_cancel", { taskId: progress.taskId });
-    }
-  }
-
   function clearError(): void {
     setError(null);
   }
@@ -250,17 +232,15 @@ export function createAiSession(
   return {
     summaryResult,
     cleanTextResult,
-    titleResult,
     isProcessing,
     isGeneratingTitle,
-    isLoaded,
     currentOperation,
     inferenceProgress,
     error,
     summarize,
     cleanText,
     generateTitle,
-    cancel: cancelSession,
+    cancel: tp.cancel,
     clearError,
   };
 }

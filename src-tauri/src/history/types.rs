@@ -19,6 +19,41 @@ pub enum SortOrder {
     Desc,
 }
 
+/// How the audio behind an entry entered the app.
+///
+/// Persisted per entry so the UI never has to infer it from the (user-editable)
+/// file name.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum HistorySource {
+    /// Captured with the in-app recorder.
+    Recording,
+    /// Imported from a file the user picked.
+    File,
+}
+
+impl HistorySource {
+    /// The value stored in the `source` column.
+    #[must_use]
+    pub(crate) fn as_str(self) -> &'static str {
+        match self {
+            Self::Recording => "recording",
+            Self::File => "file",
+        }
+    }
+
+    /// Reads a stored value, treating anything unrecognized as `File` so a
+    /// hand-edited database cannot break history listing.
+    #[must_use]
+    pub(crate) fn from_db(value: &str) -> Self {
+        if value == "recording" {
+            Self::Recording
+        } else {
+            Self::File
+        }
+    }
+}
+
 /// A segment of transcribed text with timing information (for history storage).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -50,6 +85,8 @@ pub struct HistoryMeta {
     /// Preview of the transcribed text
     pub text_preview: String,
     pub vad_enabled: Option<bool>,
+    /// Where the audio came from
+    pub source: HistorySource,
 }
 
 /// Full history entry including text and segments.
@@ -93,6 +130,8 @@ pub struct HistorySaveParams {
     pub segments: Vec<HistorySegment>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub vad_enabled: Option<bool>,
+    /// Where the audio came from
+    pub source: HistorySource,
 }
 
 /// Filter for listing history entries.
@@ -193,6 +232,7 @@ mod tests {
             duration: 60000,
             text_preview: "Hello world...".to_string(),
             vad_enabled: Some(true),
+            source: HistorySource::File,
         };
         let json = serde_json::to_string(&meta).expect("Failed to serialize");
         assert!(json.contains("\"createdAt\":\"2026-01-15T10:30:00Z\""));
@@ -200,6 +240,7 @@ mod tests {
         assert!(json.contains("\"modelId\":\"large-v3-turbo\""));
         assert!(json.contains("\"textPreview\":\"Hello world...\""));
         assert!(json.contains("\"vadEnabled\":true"));
+        assert!(json.contains("\"source\":\"file\""));
     }
 
     #[test]
@@ -235,11 +276,13 @@ mod tests {
             text: "Test text".to_string(),
             segments: vec![],
             vad_enabled: Some(true),
+            source: HistorySource::Recording,
         };
         let json = serde_json::to_string(&params).expect("Failed to serialize");
         assert!(json.contains("\"fileName\":\"test.wav\""));
         assert!(json.contains("\"modelId\":\"small\""));
         assert!(json.contains("\"vadEnabled\":true"));
+        assert!(json.contains("\"source\":\"recording\""));
     }
 
     #[test]
@@ -252,6 +295,7 @@ mod tests {
             text: "Test text".to_string(),
             segments: vec![],
             vad_enabled: None,
+            source: HistorySource::File,
         };
         let json = serde_json::to_string(&params).expect("Failed to serialize");
         assert!(!json.contains("vadEnabled"));
@@ -259,9 +303,22 @@ mod tests {
 
     #[test]
     fn history_save_params_deserializes_without_vad_enabled() {
-        let json = r#"{"fileName":"test.wav","language":"en","modelId":"small","duration":30000,"text":"Test text","segments":[]}"#;
+        let json = r#"{"fileName":"test.wav","language":"en","modelId":"small","duration":30000,"text":"Test text","segments":[],"source":"file"}"#;
         let params: HistorySaveParams = serde_json::from_str(json).expect("Failed to deserialize");
         assert_eq!(params.vad_enabled, None);
+    }
+
+    #[test]
+    fn history_source_round_trips_through_the_db_representation() {
+        assert_eq!(HistorySource::Recording.as_str(), "recording");
+        assert_eq!(HistorySource::File.as_str(), "file");
+        assert_eq!(
+            HistorySource::from_db("recording"),
+            HistorySource::Recording
+        );
+        assert_eq!(HistorySource::from_db("file"), HistorySource::File);
+        // Anything unrecognized must not break listing.
+        assert_eq!(HistorySource::from_db("garbage"), HistorySource::File);
     }
 
     #[test]

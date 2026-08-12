@@ -47,18 +47,6 @@ export interface InferenceProgress {
 }
 
 /**
- * Server status information.
- */
-export interface ServerStatus {
-  /** Whether the server is running */
-  running: boolean;
-  /** The port the server is listening on */
-  port?: number;
-  /** The model ID loaded on the server */
-  modelId?: string;
-}
-
-/**
  * A single action item extracted from a transcription.
  *
  * Assignee inference is intentionally not supported — speaker identification

@@ -57,8 +57,8 @@ pub(crate) fn save_entry(
     let tx = conn.unchecked_transaction()?;
 
     tx.execute(
-        "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed, vad_enabled)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed, vad_enabled, source)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         rusqlite::params![
             id,
             created_at,
@@ -69,6 +69,7 @@ pub(crate) fn save_entry(
             text_compressed,
             segments_compressed,
             params.vad_enabled,
+            params.source.as_str(),
         ],
     )?;
 
@@ -91,7 +92,7 @@ pub(crate) fn list_entries(
     let conn = super::open_connection(db_path)?;
 
     let mut sql =
-        String::from("SELECT id, created_at, file_name, language, model_id, duration, text_compressed, vad_enabled FROM history");
+        String::from("SELECT id, created_at, file_name, language, model_id, duration, text_compressed, vad_enabled, source FROM history");
     let mut conditions = Vec::new();
     let mut params_vec: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
 

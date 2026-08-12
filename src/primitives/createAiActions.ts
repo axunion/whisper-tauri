@@ -41,8 +41,7 @@ export function createAiActions(options: CreateAiActionsOptions): AiActions {
     null,
   );
 
-  const isReady = () =>
-    tp.serverAvailable() && tp.models().some((m) => m.downloaded);
+  const isReady = tp.isReady;
 
   function runWithGuards(hasResult: boolean, action: () => void): void {
     if (!isReady()) {
@@ -108,11 +107,7 @@ export function createAiActions(options: CreateAiActionsOptions): AiActions {
   }
 
   function onGenerateTitle(): void {
-    if (!isReady()) {
-      setShowPrereqDialog(true);
-      return;
-    }
-    executeGenerateTitle();
+    runWithGuards(false, executeGenerateTitle);
   }
 
   function cancelPending(): void {

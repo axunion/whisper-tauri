@@ -3,7 +3,7 @@ import { For, Show } from "solid-js";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
 import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
-import { Progress } from "~/components/ui/Progress";
+import { DownloadProgress } from "~/components/ui/DownloadProgress";
 import { useI18n } from "~/i18n";
 import { getModelDescription } from "~/lib/modelDescription";
 import type { createWhisper } from "~/primitives/createWhisper";
@@ -14,9 +14,6 @@ interface ModelStepProps {
 
 export function ModelStep(props: ModelStepProps) {
   const { t } = useI18n();
-
-  const hasDownloadedModel = () =>
-    props.whisper.models().some((m) => m.downloaded);
 
   return (
     <div class="animate-fade-in mx-auto flex w-full max-w-lg flex-col gap-3">
@@ -67,21 +64,11 @@ export function ModelStep(props: ModelStepProps) {
                           </Button>
                         }
                       >
-                        <div class="w-28 space-y-1">
-                          <Progress
-                            value={
-                              props.whisper.downloadProgress()?.progress ?? 0
-                            }
-                            minValue={0}
-                            maxValue={100}
-                          />
-                          <p class="text-center text-xs text-muted-foreground">
-                            {Math.round(
-                              props.whisper.downloadProgress()?.progress ?? 0,
-                            )}
-                            %
-                          </p>
-                        </div>
+                        <DownloadProgress
+                          progress={
+                            props.whisper.downloadProgress()?.progress ?? 0
+                          }
+                        />
                       </Show>
                     }
                   >
@@ -98,7 +85,7 @@ export function ModelStep(props: ModelStepProps) {
       </div>
 
       <Show
-        when={hasDownloadedModel()}
+        when={props.whisper.hasDownloadedModel()}
         fallback={
           <p class="text-center text-xs text-muted-foreground">
             {t("onboarding.modelRequired")}

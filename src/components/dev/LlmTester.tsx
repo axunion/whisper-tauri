@@ -1,5 +1,6 @@
 import { FiSend, FiX } from "solid-icons/fi";
 import { createSignal, Show } from "solid-js";
+import { ErrorDisplay } from "~/components/ErrorDisplay";
 import { Button } from "~/components/ui/Button";
 import { useI18n } from "~/i18n";
 import type { createTextProcessing } from "~/primitives/createTextProcessing";
@@ -12,11 +13,8 @@ export function LlmTester(props: LlmTesterProps) {
   const { t } = useI18n();
   const [inputText, setInputText] = createSignal(t("dev.defaultInput"));
 
-  const hasDownloadedModel = () =>
-    props.textProcessing.models().some((m) => m.downloaded);
-
-  const isReady = () =>
-    props.textProcessing.serverAvailable() && hasDownloadedModel();
+  const hasDownloadedModel = () => props.textProcessing.hasDownloadedModel();
+  const isReady = () => props.textProcessing.isReady();
 
   const canSend = () =>
     isReady() &&
@@ -101,21 +99,10 @@ export function LlmTester(props: LlmTesterProps) {
         </div>
       </div>
 
-      <Show when={props.textProcessing.error()}>
-        {(err) => (
-          <div class="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            <span>{t(err().messageKey)}</span>
-            <button
-              type="button"
-              class="ml-2 text-destructive/60 hover:text-destructive"
-              aria-label={t("common.close")}
-              onClick={() => props.textProcessing.clearError()}
-            >
-              <FiX class="size-3.5" aria-hidden="true" />
-            </button>
-          </div>
-        )}
-      </Show>
+      <ErrorDisplay
+        error={props.textProcessing.error()}
+        onDismiss={() => props.textProcessing.clearError()}
+      />
 
       <Show when={resultText()}>
         <pre class="max-h-[300px] overflow-auto whitespace-pre-wrap rounded-md border bg-muted/50 p-3 text-sm">

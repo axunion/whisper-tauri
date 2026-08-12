@@ -12,9 +12,8 @@ import { ModelListItem } from "~/components/ui/ModelListItem";
 import { SectionRow } from "~/components/ui/SectionRow";
 import { TotalSizeFooter } from "~/components/ui/TotalSizeFooter";
 import { useI18n } from "~/i18n";
-import type { DictionaryKey } from "~/i18n/types";
+import { runWithToast } from "~/lib/actionToast";
 import { getModelDescription } from "~/lib/modelDescription";
-import { toast } from "~/lib/toast";
 import { createTextProcessing } from "~/primitives/createTextProcessing";
 
 interface TextModelManagerProps {
@@ -34,45 +33,45 @@ export default function TextModelManager(props: TextModelManagerProps) {
     tp.checkServer();
   });
 
-  async function runWithToast(
-    action: () => Promise<boolean>,
-    successKey: DictionaryKey,
-  ): Promise<void> {
-    const ok = await action();
-    if (ok) {
-      toast.success(t(successKey));
-    } else {
-      const err = tp.error();
-      if (err) toast.error(t(err.messageKey));
+  async function handleDeleteModel(modelId: string) {
+    setDeletingModelId(modelId);
+    try {
+      await runWithToast({
+        action: () => tp.deleteModel(modelId),
+        successKey: "textProcessing.modelDeletedToast",
+        error: tp.error,
+        t,
+      });
+    } finally {
+      setDeletingModelId(null);
     }
   }
 
-  async function handleDeleteModel(modelId: string) {
-    setDeletingModelId(modelId);
-    await tp.deleteModel(modelId);
-    setDeletingModelId(null);
-    toast.success(t("textProcessing.modelDeletedToast"));
-  }
-
   async function handleDownloadModel(modelId: string) {
-    await runWithToast(
-      () => tp.downloadModel(modelId),
-      "textProcessing.modelDownloadedToast",
-    );
+    await runWithToast({
+      action: () => tp.downloadModel(modelId),
+      successKey: "textProcessing.modelDownloadedToast",
+      error: tp.error,
+      t,
+    });
   }
 
   async function handleDownloadServer() {
-    await runWithToast(
-      () => tp.downloadServer(),
-      "textProcessing.serverDownloadedToast",
-    );
+    await runWithToast({
+      action: () => tp.downloadServer(),
+      successKey: "textProcessing.serverDownloadedToast",
+      error: tp.error,
+      t,
+    });
   }
 
   async function handleDeleteServer() {
-    await runWithToast(
-      () => tp.deleteServer(),
-      "textProcessing.serverDeletedToast",
-    );
+    await runWithToast({
+      action: () => tp.deleteServer(),
+      successKey: "textProcessing.serverDeletedToast",
+      error: tp.error,
+      t,
+    });
   }
 
   const isSelected = (modelId: string) => tp.selectedModelId() === modelId;

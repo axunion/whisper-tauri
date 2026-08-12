@@ -3,7 +3,6 @@ import { listen } from "@tauri-apps/api/event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   InferenceProgress,
-  ServerStatus,
   TextDownloadProgress,
   TextModelInfo,
 } from "~/types";
@@ -90,7 +89,6 @@ describe("createTextProcessing", () => {
       expect(tp.totalSizeBytes()).toBe(0);
       expect(tp.selectedModelId()).toBeNull();
       expect(tp.downloadProgress()).toBeNull();
-      expect(tp.serverStatus()).toEqual({ running: false });
       expect(tp.inferenceProgress()).toBeNull();
       expect(tp.chatResult()).toBeNull();
       expect(tp.isDownloading()).toBe(false);
@@ -434,22 +432,6 @@ describe("createTextProcessing", () => {
       await tp.checkServer();
 
       expect(tp.serverAvailable()).toBe(true);
-    });
-  });
-
-  describe("checkServerStatus", () => {
-    it("reflects the backend server status", async () => {
-      const status: ServerStatus = {
-        running: true,
-        port: 8080,
-        modelId: "gemma-4-e2b",
-      };
-      mockInvoke({ text_processing_server_status: () => status });
-      const { tp } = await setup();
-
-      await tp.checkServerStatus();
-
-      expect(tp.serverStatus()).toEqual(status);
     });
   });
 

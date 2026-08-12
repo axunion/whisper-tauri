@@ -11,6 +11,12 @@ export interface HistorySegment {
 }
 
 /**
+ * How the audio behind an entry entered the app. Persisted per entry so the UI
+ * never has to infer it from the (user-editable) file name.
+ */
+export type HistorySource = "recording" | "file";
+
+/**
  * Metadata for a history entry (used in list views, without full text/segments).
  */
 export interface HistoryMeta {
@@ -29,6 +35,8 @@ export interface HistoryMeta {
   /** Preview of the transcribed text */
   textPreview: string;
   vadEnabled: boolean | null;
+  /** Where the audio came from */
+  source: HistorySource;
 }
 
 /**
@@ -71,6 +79,8 @@ export interface HistorySaveParams {
   /** Segments with timing information */
   segments: HistorySegment[];
   vadEnabled?: boolean;
+  /** Where the audio came from */
+  source: HistorySource;
 }
 
 /** Sort order for history listing. */
