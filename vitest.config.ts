@@ -12,9 +12,6 @@ export default defineConfig({
     // the regression would pass unnoticed.
     env: { TZ: "Asia/Tokyo" },
     setupFiles: ["./src/test/setup.ts"],
-    transformMode: {
-      web: [/\.[jt]sx?$/],
-    },
     deps: {
       optimizer: {
         web: {
