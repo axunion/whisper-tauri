@@ -421,7 +421,7 @@ pub(crate) async fn run_inference(
     messages: &[ChatMessage],
     sampling: Option<SamplingParams>,
     max_tokens: u32,
-    task_id: &str,
+    task_id: Option<&str>,
     token: &Arc<CancellationToken>,
     app: &AppHandle,
 ) -> Result<String, TextProcessingError> {
@@ -485,7 +485,7 @@ pub(crate) async fn run_inference_blocking(
     sampling: Option<SamplingParams>,
     max_tokens: u32,
     response_format: Option<Value>,
-    task_id: &str,
+    task_id: Option<&str>,
     token: &Arc<CancellationToken>,
     app: &AppHandle,
 ) -> Result<String, TextProcessingError> {
@@ -523,7 +523,17 @@ pub(crate) async fn run_inference_blocking(
 
 /// Emits an `InferenceProgress` event. Borrowing-friendly wrapper so callers
 /// don't repeat the event-name string or build the payload by hand.
-fn emit_progress(app: &AppHandle, task_id: &str, token: &str, accumulated: &str, done: bool) {
+///
+/// `task_id` is `None` for tasks that run silently, which makes this a no-op —
+/// see `commands::ProgressReporting`.
+fn emit_progress(
+    app: &AppHandle,
+    task_id: Option<&str>,
+    token: &str,
+    accumulated: &str,
+    done: bool,
+) {
+    let Some(task_id) = task_id else { return };
     let _ = app.emit(
         "text-processing:inference-progress",
         InferenceProgress {
@@ -539,7 +549,7 @@ fn emit_progress(app: &AppHandle, task_id: &str, token: &str, accumulated: &str,
 /// the taskId immediately and can wire up cancellation before any streamed
 /// tokens arrive. Domain-named to keep the generic `emit_progress` private.
 pub(super) fn emit_initial_progress(app: &AppHandle, task_id: &str) {
-    emit_progress(app, task_id, "", "", false);
+    emit_progress(app, Some(task_id), "", "", false);
 }
 
 /// Default chunk size for text processing.

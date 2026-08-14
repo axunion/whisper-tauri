@@ -229,7 +229,13 @@ pub async fn text_processing_chat(
     text: String,
     model_id: Option<String>,
 ) -> Result<String, String> {
-    let task = begin_task(&app, &manager, model_id.as_deref()).await?;
+    let task = begin_task(
+        &app,
+        &manager,
+        model_id.as_deref(),
+        ProgressReporting::Enabled,
+    )
+    .await?;
 
     let messages = inference::build_chat_messages(&text);
     let result = inference::run_inference(
@@ -237,7 +243,7 @@ pub async fn text_processing_chat(
         &messages,
         task.sampling,
         2048,
-        &task.task_id,
+        task.progress_id(),
         &task.token,
         &app,
     )
@@ -263,7 +269,13 @@ pub async fn text_processing_summarize(
     text: String,
     model_id: Option<String>,
 ) -> Result<StructuredSummary, String> {
-    let task = begin_task(&app, &manager, model_id.as_deref()).await?;
+    let task = begin_task(
+        &app,
+        &manager,
+        model_id.as_deref(),
+        ProgressReporting::Enabled,
+    )
+    .await?;
 
     // Scale the keyPoints target and max_tokens to the original transcript
     // length — chunked condensation shortens the final structured-pass input,
@@ -287,7 +299,7 @@ pub async fn text_processing_summarize(
                 &messages,
                 task.sampling,
                 1024,
-                &task.task_id,
+                task.progress_id(),
                 &task.token,
                 &app,
             )
@@ -309,7 +321,7 @@ pub async fn text_processing_summarize(
         task.sampling,
         params.max_tokens,
         Some(inference::summary_response_format()),
-        &task.task_id,
+        task.progress_id(),
         &task.token,
         &app,
     )
@@ -343,7 +355,16 @@ pub async fn text_processing_generate_title(
     text: String,
     model_id: Option<String>,
 ) -> Result<String, String> {
-    let task = begin_task(&app, &manager, model_id.as_deref()).await?;
+    // Silent: no UI shows the title stream, and reporting would let it override
+    // the progress signal (and therefore the cancel target) of a summarize or
+    // clean-text run happening at the same time.
+    let task = begin_task(
+        &app,
+        &manager,
+        model_id.as_deref(),
+        ProgressReporting::Silent,
+    )
+    .await?;
 
     // Use only the first 1000 chars for title generation
     let truncated: String = text.chars().take(1000).collect();
@@ -353,7 +374,7 @@ pub async fn text_processing_generate_title(
         &messages,
         task.sampling,
         64,
-        &task.task_id,
+        task.progress_id(),
         &task.token,
         &app,
     )
@@ -382,7 +403,13 @@ pub async fn text_processing_clean_text(
     text: String,
     model_id: Option<String>,
 ) -> Result<String, String> {
-    let task = begin_task(&app, &manager, model_id.as_deref()).await?;
+    let task = begin_task(
+        &app,
+        &manager,
+        model_id.as_deref(),
+        ProgressReporting::Enabled,
+    )
+    .await?;
 
     let chunks = inference::chunk_text(&text, inference::default_max_chunk_chars());
 
@@ -394,7 +421,7 @@ pub async fn text_processing_clean_text(
             &messages,
             task.sampling,
             max_tokens,
-            &task.task_id,
+            task.progress_id(),
             &task.token,
             &app,
         )
@@ -413,7 +440,7 @@ pub async fn text_processing_clean_text(
                 &messages,
                 task.sampling,
                 max_tokens,
-                &task.task_id,
+                task.progress_id(),
                 &task.token,
                 &app,
             )
@@ -425,6 +452,19 @@ pub async fn text_processing_clean_text(
     };
 
     Ok(result)
+}
+
+/// Whether a task streams `text-processing:inference-progress` to the frontend.
+///
+/// The frontend keeps a single module-level progress signal and derives the
+/// cancel target from it, so two reporting tasks running at once are
+/// indistinguishable: the later one wins and `cancel()` stops the wrong task
+/// while the visible stream shows the wrong tokens. Only the operations a user
+/// can watch and cancel report; the rest run silently.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ProgressReporting {
+    Enabled,
+    Silent,
 }
 
 /// RAII guard that removes a task from the inference task manager on drop.
@@ -446,6 +486,7 @@ impl Drop for TaskGuard {
 /// guard early and silently disable cancellation.
 struct InferenceTask {
     task_id: String,
+    reporting: ProgressReporting,
     token: Arc<CancellationToken>,
     port: u16,
     /// Official recommended sampling for the effective model (`None` falls
@@ -456,28 +497,44 @@ struct InferenceTask {
     _guard: TaskGuard,
 }
 
+impl InferenceTask {
+    /// The id to report progress under, or `None` when the task runs silently.
+    /// The task stays registered for cancellation either way.
+    fn progress_id(&self) -> Option<&str> {
+        match self.reporting {
+            ProgressReporting::Enabled => Some(&self.task_id),
+            ProgressReporting::Silent => None,
+        }
+    }
+}
+
 /// Standard preamble shared by every inference command: allocate a task id,
-/// register it with the inference task manager, emit the initial progress
-/// event so the frontend sees the taskId immediately, ensure the llama-server
-/// is running with the requested model, and bail out early if the task was
-/// cancelled while the server was starting.
+/// register it with the inference task manager, emit the initial progress event
+/// so the frontend sees the taskId immediately (when `reporting` is
+/// [`ProgressReporting::Enabled`]), ensure the llama-server is running with the
+/// requested model, and bail out early if the task was cancelled while the
+/// server was starting.
 async fn begin_task(
     app: &AppHandle,
     manager: &State<'_, tokio::sync::Mutex<LlamaServerManager>>,
     model_id: Option<&str>,
+    reporting: ProgressReporting,
 ) -> Result<InferenceTask, String> {
     let task_id = uuid::Uuid::new_v4().to_string();
     let token = inference::INFERENCE_TASK_MANAGER.create_task(&task_id);
     let guard = TaskGuard {
         task_id: task_id.clone(),
     };
-    inference::emit_initial_progress(app, &task_id);
+    if reporting == ProgressReporting::Enabled {
+        inference::emit_initial_progress(app, &task_id);
+    }
     let (port, effective_model_id) = ensure_server_running(app, manager, model_id).await?;
     if token.is_cancelled() {
         return Err(TextProcessingError::Cancelled.into());
     }
     Ok(InferenceTask {
         task_id,
+        reporting,
         token,
         port,
         sampling: models::sampling_params(&effective_model_id),
