@@ -311,7 +311,9 @@ impl TimestampMap {
 /// Runs standalone Silero VAD and extracts speech-only audio.
 ///
 /// Returns the concatenated speech samples and a timestamp mapping, or `None`
-/// if the audio should be processed without VAD (e.g. fallback on error).
+/// if VAD detected no speech at all. Errors are propagated to the caller
+/// rather than falling back to VAD-less processing, so a broken VAD model
+/// surfaces instead of silently changing the transcription path.
 fn preprocess_with_vad(
     samples: &[f32],
     vad_model_path: &str,
@@ -391,6 +393,13 @@ pub(crate) fn transcribe(
             (Cow::Borrowed(samples), None)
         };
 
+    // VAD preprocessing and model loading both run before whisper's abort
+    // callback is installed, so cancellation has to be polled explicitly here
+    // or a cancel issued during them is not observed until they finish.
+    if token.is_cancelled() {
+        return Err(WhisperError::Cancelled);
+    }
+
     // Load model
     let ctx = WhisperContext::new_with_params(model_path, WhisperContextParameters::default())
         .map_err(|e| WhisperError::ModelLoadError(e.to_string()))?;
@@ -398,6 +407,10 @@ pub(crate) fn transcribe(
     let mut state = ctx
         .create_state()
         .map_err(|e| WhisperError::ModelLoadError(e.to_string()))?;
+
+    if token.is_cancelled() {
+        return Err(WhisperError::Cancelled);
+    }
 
     // Configure parameters
     let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 5 });

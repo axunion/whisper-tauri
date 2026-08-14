@@ -6,6 +6,9 @@ use super::db::time::{day_end, day_start};
 use super::error::HistoryError;
 use super::types::{HistoryMeta, HistorySearchParams};
 
+/// Minimum keyword length (in characters) the trigram tokenizer can index.
+const TRIGRAM_MIN_CHARS: usize = 3;
+
 /// Initializes the FTS5 virtual table for full-text search.
 ///
 /// Uses the trigram tokenizer for language-agnostic substring matching
@@ -65,10 +68,16 @@ pub(crate) fn delete_all_indices(conn: &Connection) -> Result<(), HistoryError> 
 ///
 /// Splits the query by whitespace and joins with AND.
 /// Each keyword is wrapped in double quotes for exact substring matching.
+///
+/// Keywords shorter than [`TRIGRAM_MIN_CHARS`] are dropped: the trigram
+/// tokenizer produces no tokens for them, and an untokenizable phrase inside
+/// an `AND` makes the whole match fail, so keeping them would hide entries
+/// that do contain the remaining keywords. Returns an empty string when no
+/// keyword qualifies, which callers treat as "no results".
 fn build_fts_query(query: &str) -> String {
     let keywords: Vec<String> = query
         .split_whitespace()
-        .filter(|s| !s.is_empty())
+        .filter(|s| s.chars().count() >= TRIGRAM_MIN_CHARS)
         .map(|s| {
             let escaped = s.replace('"', "\"\"");
             format!("\"{escaped}\"")
@@ -312,6 +321,52 @@ mod tests {
     }
 
     #[test]
+    fn search_ignores_keywords_shorter_than_a_trigram() {
+        let (_dir, conn) = setup();
+        insert_history(
+            &conn,
+            "entry-1",
+            "今日の会議の議事録です",
+            "2026-02-20T10:00:00",
+        );
+        index_entry(&conn, "entry-1", "今日の会議の議事録です").expect("index");
+
+        // "会議" is only 2 characters, so the trigram tokenizer yields no tokens
+        // for it. It must not veto the match for the indexable "議事録".
+        let params = HistorySearchParams {
+            query: "会議 議事録".to_string(),
+            date_from: None,
+            date_to: None,
+            limit: None,
+            sort_by: None,
+            sort_order: None,
+        };
+        let results = search_entries(&conn, &params).expect("search");
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].id, "entry-1");
+    }
+
+    #[test]
+    fn search_with_only_short_keywords_returns_empty() {
+        let (_dir, conn) = setup();
+        insert_history(&conn, "entry-1", "会議の議事録", "2026-02-20T10:00:00");
+        index_entry(&conn, "entry-1", "会議の議事録").expect("index");
+
+        // Every keyword is untokenizable, so no FTS query is issued at all
+        // (an empty MATCH expression is an FTS5 syntax error).
+        let params = HistorySearchParams {
+            query: "会議 議事".to_string(),
+            date_from: None,
+            date_to: None,
+            limit: None,
+            sort_by: None,
+            sort_order: None,
+        };
+        let results = search_entries(&conn, &params).expect("search must not error");
+        assert!(results.is_empty());
+    }
+
+    #[test]
     fn search_no_match_returns_empty() {
         let (_dir, conn) = setup();
         insert_history(
@@ -522,20 +577,45 @@ mod tests {
 
     #[test]
     fn build_fts_query_single_keyword() {
-        assert_eq!(build_fts_query("会議"), "\"会議\"");
+        assert_eq!(build_fts_query("議事録"), "\"議事録\"");
     }
 
     #[test]
     fn build_fts_query_multiple_keywords() {
-        assert_eq!(build_fts_query("会議 議事録"), "\"会議\" AND \"議事録\"");
+        assert_eq!(
+            build_fts_query("議事録 作成した"),
+            "\"議事録\" AND \"作成した\""
+        );
     }
 
     #[test]
     fn build_fts_query_extra_whitespace() {
         assert_eq!(
-            build_fts_query("  会議   議事録  "),
-            "\"会議\" AND \"議事録\""
+            build_fts_query("  議事録   作成した  "),
+            "\"議事録\" AND \"作成した\""
         );
+    }
+
+    #[test]
+    fn build_fts_query_drops_keywords_shorter_than_a_trigram() {
+        // The trigram tokenizer yields no tokens for a 1-2 character keyword,
+        // and an untokenizable phrase in an AND makes the whole match fail.
+        assert_eq!(build_fts_query("会議 議事録"), "\"議事録\"");
+        assert_eq!(build_fts_query("brown fox a"), "\"brown\" AND \"fox\"");
+    }
+
+    #[test]
+    fn build_fts_query_all_keywords_too_short_is_empty() {
+        assert_eq!(build_fts_query("会議 議事"), "");
+        assert_eq!(build_fts_query("a bc"), "");
+    }
+
+    #[test]
+    fn build_fts_query_counts_characters_not_bytes() {
+        // Three multibyte characters are 9 bytes; a byte-length check would
+        // have wrongly kept two-character keywords like "会議" (6 bytes).
+        assert_eq!(build_fts_query("あいう"), "\"あいう\"");
+        assert_eq!(build_fts_query("あい"), "");
     }
 
     #[test]

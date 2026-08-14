@@ -18,6 +18,11 @@ const WHISPER_SAMPLE_RATE: u32 = 16_000;
 /// Interval in milliseconds between level event emissions.
 const LEVEL_EMIT_INTERVAL_MS: u128 = 50;
 
+/// Returns the directory recordings are written to.
+fn recordings_dir(app_data_dir: &Path) -> std::path::PathBuf {
+    app_data_dir.join("recordings")
+}
+
 /// Manages audio recording from input devices.
 ///
 /// Uses a dedicated thread for cpal stream operation since `cpal::Stream`
@@ -80,8 +85,9 @@ impl RecordingManager {
     /// Starts recording audio from the specified device (or the default device).
     ///
     /// Spawns a dedicated thread to run the cpal stream since `cpal::Stream` is
-    /// not `Send`. Audio level events (`recording:level`) are emitted approximately
-    /// every 50ms.
+    /// not `Send`, and waits for that thread to confirm the stream is playing
+    /// before returning. Audio level events (`recording:level`) are emitted
+    /// approximately every 50ms.
     ///
     /// # Errors
     ///
@@ -100,15 +106,16 @@ impl RecordingManager {
             samples.clear();
         }
 
-        // Acquire sleep guard
-        if let Ok(mut guard) = self.sleep_guard.lock() {
-            *guard = Some(SleepGuard::acquire());
-        }
-
         let samples = Arc::clone(&self.samples);
         let sample_rate = Arc::clone(&self.sample_rate);
         let stop_flag = Arc::clone(&self.stop_flag);
         let is_recording = Arc::clone(&self.is_recording);
+
+        // Device resolution and stream creation happen on the capture thread
+        // (cpal::Stream is not Send), so their errors have to be handed back
+        // here. Without this the command reported success for a device that
+        // never opened, and the user got a silent, empty recording.
+        let (ready_tx, ready_rx) = std::sync::mpsc::channel::<Result<(), RecordingError>>();
 
         let handle = std::thread::spawn(move || {
             if let Err(e) = run_capture_thread(
@@ -117,11 +124,34 @@ impl RecordingManager {
                 &sample_rate,
                 &stop_flag,
                 &app,
+                &ready_tx,
             ) {
                 eprintln!("Recording capture thread error: {e}");
+                // No-op if startup already succeeded and the failure came later.
+                let _ = ready_tx.send(Err(e));
             }
             is_recording.store(false, Ordering::Release);
         });
+
+        match ready_rx.recv() {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => {
+                let _ = handle.join();
+                return Err(e);
+            }
+            Err(_) => {
+                let _ = handle.join();
+                return Err(RecordingError::DeviceError(
+                    "capture thread stopped before recording started".to_string(),
+                ));
+            }
+        }
+
+        // Acquired only once capture is confirmed running, so a failed start
+        // does not leave a `caffeinate` child holding the display awake.
+        if let Ok(mut guard) = self.sleep_guard.lock() {
+            *guard = Some(SleepGuard::acquire());
+        }
 
         self.is_recording.store(true, Ordering::Release);
 
@@ -194,7 +224,7 @@ impl RecordingManager {
         };
 
         // Write WAV file
-        let recordings_dir = app_data_dir.join("recordings");
+        let recordings_dir = recordings_dir(app_data_dir);
         std::fs::create_dir_all(&recordings_dir)?;
 
         let filename = format!("{}.wav", uuid::Uuid::new_v4());
@@ -218,13 +248,31 @@ impl RecordingManager {
 
     /// Deletes a temporary recording file.
     ///
+    /// `path` must resolve to a file directly inside `{app_data_dir}/recordings`
+    /// — the only directory `stop` ever writes to. The path is canonicalized
+    /// before the check because `Path::starts_with` compares components
+    /// literally and would accept a `..` escape.
+    ///
     /// # Errors
     ///
-    /// Returns `RecordingError::Io` if the file cannot be deleted.
-    pub fn cleanup(path: &Path) -> Result<(), RecordingError> {
-        if path.exists() {
-            std::fs::remove_file(path)?;
+    /// Returns `RecordingError::Io` if the path is outside the recordings
+    /// directory or the file cannot be deleted.
+    pub fn cleanup(app_data_dir: &Path, path: &Path) -> Result<(), RecordingError> {
+        if !path.exists() {
+            return Ok(());
         }
+
+        let real_path = std::fs::canonicalize(path)?;
+        let real_recordings_dir = std::fs::canonicalize(recordings_dir(app_data_dir))?;
+
+        if real_path.parent() != Some(real_recordings_dir.as_path()) {
+            return Err(RecordingError::Io(std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                "path is outside the recordings directory",
+            )));
+        }
+
+        std::fs::remove_file(&real_path)?;
         Ok(())
     }
 }
@@ -240,12 +288,17 @@ impl Default for RecordingManager {
 /// This function is intended to be called from a dedicated thread.
 /// It creates a cpal stream, plays it, and parks the thread until
 /// `stop_flag` is set.
+///
+/// Sends `Ok(())` on `ready_tx` once the stream is playing so the caller can
+/// distinguish a started recording from a failed device open. Errors before
+/// that point are returned and reported by the caller.
 fn run_capture_thread(
     device_id: Option<&str>,
     samples: &Arc<Mutex<Vec<f32>>>,
     sample_rate: &Arc<AtomicU32>,
     stop_flag: &Arc<AtomicBool>,
     app: &AppHandle,
+    ready_tx: &std::sync::mpsc::Sender<Result<(), RecordingError>>,
 ) -> Result<(), RecordingError> {
     let host = cpal::default_host();
 
@@ -341,6 +394,9 @@ fn run_capture_thread(
     stream
         .play()
         .map_err(|e| RecordingError::DeviceError(e.to_string()))?;
+
+    // Capture is live from here on; unblock `start`.
+    let _ = ready_tx.send(Ok(()));
 
     // Park the thread until stop is signalled, polling periodically
     while !stop_flag.load(Ordering::Acquire) {
@@ -595,19 +651,50 @@ mod tests {
 
     #[test]
     fn cleanup_nonexistent_file_succeeds() {
-        let result = RecordingManager::cleanup(Path::new("/nonexistent/file.wav"));
+        let dir = tempfile::TempDir::new().unwrap();
+        let result = RecordingManager::cleanup(dir.path(), Path::new("/nonexistent/file.wav"));
         assert!(result.is_ok());
     }
 
     #[test]
     fn cleanup_existing_file_deletes_it() {
         let dir = tempfile::TempDir::new().unwrap();
-        let path = dir.path().join("test.wav");
+        let recordings = recordings_dir(dir.path());
+        std::fs::create_dir_all(&recordings).unwrap();
+        let path = recordings.join("test.wav");
         std::fs::write(&path, b"test data").unwrap();
 
-        let result = RecordingManager::cleanup(&path);
+        let result = RecordingManager::cleanup(dir.path(), &path);
         assert!(result.is_ok());
         assert!(!path.exists());
+    }
+
+    #[test]
+    fn cleanup_rejects_file_outside_recordings_dir() {
+        let dir = tempfile::TempDir::new().unwrap();
+        std::fs::create_dir_all(recordings_dir(dir.path())).unwrap();
+        // Sibling of the recordings directory, not inside it.
+        let outside = dir.path().join("keep-me.wav");
+        std::fs::write(&outside, b"important").unwrap();
+
+        let result = RecordingManager::cleanup(dir.path(), &outside);
+        assert!(result.is_err());
+        assert!(outside.exists(), "file outside recordings must survive");
+    }
+
+    #[test]
+    fn cleanup_rejects_parent_dir_escape() {
+        let dir = tempfile::TempDir::new().unwrap();
+        std::fs::create_dir_all(recordings_dir(dir.path())).unwrap();
+        let outside = dir.path().join("keep-me.wav");
+        std::fs::write(&outside, b"important").unwrap();
+
+        // Lexically inside `recordings/`, but `..` resolves outside it.
+        let escaping = recordings_dir(dir.path()).join("..").join("keep-me.wav");
+
+        let result = RecordingManager::cleanup(dir.path(), &escaping);
+        assert!(result.is_err());
+        assert!(outside.exists(), "escaping path must not delete the target");
     }
 
     // --- compute_levels ---

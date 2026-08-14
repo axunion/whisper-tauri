@@ -21,6 +21,13 @@ const MAX_CHUNK_CHARS: usize = 4000;
 /// the clean-text cap).
 pub(crate) const MAX_OUTPUT_TOKENS: u32 = 4096;
 
+/// Timeout for establishing the connection to the local llama-server.
+const CONNECT_TIMEOUT_SECS: u64 = 10;
+
+/// Timeout for a single read from the llama-server response. Resets after each
+/// successful read, so it bounds stalls rather than total generation time.
+const READ_TIMEOUT_SECS: u64 = 120;
+
 // A full chunk (worst case ~1 token/char for kanji-dense Japanese) plus the
 // output budget must fit in the server context, or long requests fail with
 // HTTP 400 exceed_context_size_error.
@@ -376,8 +383,14 @@ async fn send_chat_request(
     body: &Value,
 ) -> Result<reqwest::Response, TextProcessingError> {
     let url = format!("http://127.0.0.1:{port}/v1/chat/completions");
+    // A read timeout, not a total one: `timeout()` is a deadline covering the
+    // whole request including the streamed body, which would abort a long but
+    // healthy generation (a 4096-token answer on CPU easily exceeds it) and
+    // discard everything produced so far. `read_timeout` resets on every
+    // successful read, so it still catches a genuinely stalled server.
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
+        .connect_timeout(std::time::Duration::from_secs(CONNECT_TIMEOUT_SECS))
+        .read_timeout(std::time::Duration::from_secs(READ_TIMEOUT_SECS))
         .build()
         .map_err(TextProcessingError::from)?;
 
@@ -419,7 +432,11 @@ pub(crate) async fn run_inference(
     let mut accumulated = String::new();
     let mut stream = response.bytes_stream();
 
-    let mut buffer = String::new();
+    // Buffered as raw bytes, not as a String: chunk boundaries fall at
+    // arbitrary byte offsets, so decoding each chunk on its own would replace
+    // the halves of any multibyte character split across two chunks with U+FFFD
+    // (silently corrupting Japanese output). Only complete lines are decoded.
+    let mut buffer: Vec<u8> = Vec::new();
 
     while let Some(chunk) = stream.next().await {
         if token.is_cancelled() {
@@ -427,13 +444,14 @@ pub(crate) async fn run_inference(
         }
 
         let chunk = chunk.map_err(TextProcessingError::from)?;
-        let text = String::from_utf8_lossy(&chunk);
-        buffer.push_str(&text);
+        buffer.extend_from_slice(&chunk);
 
         // Process complete lines
-        while let Some(newline_pos) = buffer.find('\n') {
-            let line = buffer[..newline_pos].trim().to_string();
-            buffer = buffer[newline_pos + 1..].to_string();
+        while let Some(newline_pos) = buffer.iter().position(|&b| b == b'\n') {
+            let line = String::from_utf8_lossy(&buffer[..newline_pos])
+                .trim()
+                .to_string();
+            buffer.drain(..=newline_pos);
 
             if let Some(content) = parse_sse_line(&line) {
                 accumulated.push_str(&content);

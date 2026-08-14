@@ -60,8 +60,10 @@ pub async fn stop_recording(
 ///
 /// # Errors
 ///
-/// Returns an error string if the file cannot be deleted.
+/// Returns an error string if the path is outside the recordings directory
+/// or the file cannot be deleted.
 #[tauri::command]
-pub async fn cleanup_recording(path: String) -> Result<(), String> {
-    RecordingManager::cleanup(std::path::Path::new(&path)).map_err(Into::into)
+pub async fn cleanup_recording(app: AppHandle, path: String) -> Result<(), String> {
+    let app_data_dir = paths::app_data_dir(&app)?;
+    RecordingManager::cleanup(&app_data_dir, std::path::Path::new(&path)).map_err(Into::into)
 }

@@ -128,6 +128,12 @@ export default function Transcription() {
     const currentFile = whisper.file();
     if (!currentFile || !canStartFile()) return;
 
+    // Drop the previous run's id up front: the result view mounts as soon as
+    // the result arrives, before the new entry is saved, so a stale id would
+    // load the previous transcription's AI content and persist this run's
+    // summary onto the previous history entry.
+    setHistoryId(null);
+
     const prevConverted = convertedPath();
     if (prevConverted) {
       await converter.cleanup(prevConverted);
@@ -151,12 +157,19 @@ export default function Transcription() {
     const tempPath = recording.tempFilePath();
     if (!tempPath || !canStartRecording()) return;
 
+    setHistoryId(null);
+
     whisper.setFile({ path: tempPath, name: t("recording.title"), size: 0 });
     await whisper.startTranscription(tempPath);
 
     await saveToHistory(t("recording.title"), "recording");
 
-    await recording.cleanup();
+    // Only discard the recording once it has actually been transcribed. On
+    // cancel or failure the WAV is the user's only copy — deleting it here
+    // would make "Save as WAV" unreachable and lose the audio for good.
+    if (whisper.result()) {
+      await recording.cleanup();
+    }
   }
 
   async function saveToHistory(fileName: string, source: HistorySource) {
@@ -180,6 +193,7 @@ export default function Transcription() {
 
   async function handleDiscardRecording() {
     await recording.cleanup();
+    setHistoryId(null);
     whisper.reset();
   }
 
@@ -189,6 +203,7 @@ export default function Transcription() {
       await converter.cleanup(prev);
       setConvertedPath(null);
     }
+    setHistoryId(null);
     whisper.reset();
   }
 

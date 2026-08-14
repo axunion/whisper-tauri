@@ -21,6 +21,10 @@ pub enum DownloadError {
     /// An I/O error occurred while writing the file.
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+
+    /// The stream ended before the advertised number of bytes arrived.
+    #[error("Incomplete transfer: got {0} of {1} bytes")]
+    Incomplete(u64, u64),
 }
 
 /// Downloads a file from a URL to a local path, reporting progress via a callback.
@@ -34,7 +38,8 @@ pub enum DownloadError {
 /// # Errors
 ///
 /// Returns `DownloadError` if the HTTP request fails, the server returns a
-/// non-success status, or an I/O error occurs while writing the file.
+/// non-success status, an I/O error occurs while writing the file, or the
+/// stream ends before the advertised `Content-Length` was received.
 pub async fn download_file<F>(
     url: &str,
     output_path: &Path,
@@ -76,6 +81,14 @@ where
     }
 
     file.flush().await?;
+
+    // A stream can end cleanly before the advertised length (proxy or
+    // connection cut mid-transfer). Without this check the caller renames a
+    // truncated file into place and reports the download as successful.
+    if total_bytes > 0 && downloaded_bytes != total_bytes {
+        return Err(DownloadError::Incomplete(downloaded_bytes, total_bytes));
+    }
+
     Ok(())
 }
 
@@ -94,5 +107,14 @@ mod tests {
         let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
         let err = DownloadError::Io(io_err);
         assert_eq!(err.to_string(), "IO error: file not found");
+    }
+
+    #[test]
+    fn download_error_incomplete_display() {
+        let err = DownloadError::Incomplete(1024, 2048);
+        assert_eq!(
+            err.to_string(),
+            "Incomplete transfer: got 1024 of 2048 bytes"
+        );
     }
 }

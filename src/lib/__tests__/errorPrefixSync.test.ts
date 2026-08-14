@@ -12,9 +12,12 @@ const rustSources = import.meta.glob("/src-tauri/src/**/*.rs", {
 }) as Record<string, string>;
 
 // DownloadError variants are always wrapped into module errors
-// ("Download failed: {0}") before crossing the IPC boundary, so this raw
-// message never reaches the frontend.
-const NEVER_REACHES_FRONTEND = new Set(["HTTP {0} for {1}"]);
+// ("Download failed: {0}") before crossing the IPC boundary, so these raw
+// messages never reach the frontend.
+const NEVER_REACHES_FRONTEND = new Set([
+  "HTTP {0} for {1}",
+  "Incomplete transfer: got {0} of {1} bytes",
+]);
 
 function collectRustErrorMessages(): string[] {
   const messages: string[] = [];

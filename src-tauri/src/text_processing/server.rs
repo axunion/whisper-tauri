@@ -146,12 +146,18 @@ impl LlamaServerManager {
             });
         }
 
+        // Wait for health check before publishing the server as usable. On
+        // failure the child is killed here — leaving it in `self.child` would
+        // keep a multi-GB process alive that `is_running` reports as healthy.
+        if let Err(e) = wait_for_health(port, &mut child).await {
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            return Err(e);
+        }
+
         self.child = Some(child);
         self.port = Some(port);
         self.model_id = Some(model_id.to_string());
-
-        // Wait for health check
-        wait_for_health(port).await?;
 
         Ok(port)
     }
@@ -198,27 +204,41 @@ fn num_threads() -> usize {
 ///
 /// The llama-server `/health` endpoint returns `{"status":"ok"}` when ready
 /// and may return `{"status":"loading model"}` while still loading.
-async fn wait_for_health(port: u16) -> Result<(), TextProcessingError> {
+async fn wait_for_health(
+    port: u16,
+    child: &mut tokio::process::Child,
+) -> Result<(), TextProcessingError> {
     let url = format!("http://127.0.0.1:{port}/health");
     let client = reqwest::Client::new();
     let max_attempts = (HEALTH_CHECK_MAX_WAIT_SECS * 1000) / HEALTH_CHECK_INTERVAL_MS;
 
     for _ in 0..max_attempts {
         tokio::time::sleep(Duration::from_millis(HEALTH_CHECK_INTERVAL_MS)).await;
+
+        // A crashed server (missing shared library, corrupt model, port already
+        // taken) would otherwise just fail every probe, making the user wait out
+        // the full timeout for a misleading "timed out" message.
+        if let Ok(Some(status)) = child.try_wait() {
+            return Err(TextProcessingError::ServerStartFailed(format!(
+                "Server exited during startup ({status})"
+            )));
+        }
+
         if let Ok(resp) = client.get(&url).send().await {
             if resp.status().is_success() {
-                // Verify response body confirms model is loaded
+                // Verify response body confirms model is loaded. A success
+                // status alone is not enough: the port may belong to an
+                // unrelated local service, and answering inference requests to
+                // it would fail far more confusingly than a startup error.
                 if let Ok(body) = resp.text().await {
                     if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body) {
                         if json.get("status").and_then(|s| s.as_str()) == Some("ok") {
                             return Ok(());
                         }
-                        // "loading model" or other status — keep polling
-                        continue;
                     }
                 }
-                // Non-JSON success response — treat as ready
-                return Ok(());
+                // "loading model", a non-JSON body, or a foreign service —
+                // keep polling until the timeout.
             }
         }
     }

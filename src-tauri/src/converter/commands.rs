@@ -70,7 +70,8 @@ pub async fn delete_ffmpeg(app: AppHandle) -> Result<(), String> {
     let bundled_path = downloader::get_ffmpeg_path(&app_data_dir);
 
     if bundled_path.exists() {
-        std::fs::remove_file(&bundled_path).map_err(|e| format!("Failed to delete ffmpeg: {e}"))?;
+        std::fs::remove_file(&bundled_path)
+            .map_err(|e| format!("IO error: failed to delete ffmpeg: {e}"))?;
     }
 
     // Also remove version marker
@@ -182,7 +183,10 @@ pub async fn convert_audio_file(
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("audio");
-    let output_name = format!("{stem}_converted.wav");
+    // A uuid keeps two inputs that share a stem (`~/a/audio.m4a` and
+    // `~/b/audio.mp4`) from resolving to the same temp file, which ffmpeg's
+    // `-y` would silently overwrite while the first job is still reading it.
+    let output_name = format!("{stem}_{}_converted.wav", uuid::Uuid::new_v4());
     let output_path = std::env::temp_dir().join(output_name);
 
     // Run conversion on a blocking thread (ffmpeg is CPU-bound)
@@ -214,16 +218,30 @@ pub async fn convert_audio_file(
 #[tauri::command]
 pub async fn cleanup_converted_file(file_path: String) -> Result<(), String> {
     let path = std::path::Path::new(&file_path);
-
-    // Safety check: only delete files in temp directory
     let temp_dir = std::env::temp_dir();
+
+    // Safety check: only delete files in the temp directory.
     if !path.starts_with(&temp_dir) {
         return Err("Cannot delete files outside of temp directory".to_string());
     }
 
-    if path.exists() {
-        std::fs::remove_file(path).map_err(|e| format!("Failed to cleanup: {e}"))?;
+    if !path.exists() {
+        return Ok(());
     }
+
+    // The lexical check above compares components literally and does not
+    // resolve `..`, so it would also accept `<temp>/../../etc/hosts`. Re-check
+    // containment against the canonicalized paths before deleting anything.
+    let real_path = std::fs::canonicalize(path)
+        .map_err(|e| format!("IO error: failed to resolve cleanup path: {e}"))?;
+    let real_temp_dir = std::fs::canonicalize(&temp_dir)
+        .map_err(|e| format!("IO error: failed to resolve temp directory: {e}"))?;
+    if !real_path.starts_with(&real_temp_dir) {
+        return Err("Cannot delete files outside of temp directory".to_string());
+    }
+
+    std::fs::remove_file(&real_path)
+        .map_err(|e| format!("IO error: failed to clean up converted file: {e}"))?;
 
     Ok(())
 }
@@ -252,6 +270,29 @@ mod tests {
         assert!(result
             .unwrap_err()
             .contains("Cannot delete files outside of temp directory"));
+    }
+
+    #[tokio::test]
+    async fn cleanup_converted_file_rejects_parent_dir_escape() {
+        // Lexically under the temp dir, but `..` resolves it to a real file
+        // outside. `Path::starts_with` compares components literally and would
+        // accept this, so the guard must canonicalize before comparing.
+        let mut escaping = std::env::temp_dir();
+        for _ in 0..12 {
+            escaping.push("..");
+        }
+        escaping.push("etc/hosts");
+
+        assert!(
+            std::fs::canonicalize(&escaping).is_ok_and(|p| p.exists()),
+            "test precondition: the escaping path must resolve to a real file"
+        );
+
+        let result = cleanup_converted_file(escaping.to_string_lossy().to_string()).await;
+        assert!(
+            result.is_err_and(|e| e.contains("outside of temp directory")),
+            "escaping path must be rejected by the containment check"
+        );
     }
 
     #[tokio::test]

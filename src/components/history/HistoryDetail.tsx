@@ -127,6 +127,10 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
               aria-label={
                 title.isEditing() ? t("common.confirm") : t("common.editTitle")
               }
+              // Keep focus on the input: mousedown would otherwise blur it and
+              // run cancelEditing() before this click lands, so confirming an
+              // edit by clicking would silently discard it.
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() =>
                 title.isEditing() ? title.confirm() : startEditing()
               }
