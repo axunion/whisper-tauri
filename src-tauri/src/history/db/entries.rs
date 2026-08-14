@@ -9,7 +9,7 @@ use super::super::types::{
 };
 use super::compression::{compress_text, decompress_text};
 use super::rows::{meta_from_row, meta_row_mapper};
-use super::time::{chrono_now, day_end, day_start};
+use super::time::chrono_now;
 
 /// Builds an ORDER BY clause based on the sort option and direction.
 #[must_use]
@@ -98,11 +98,11 @@ pub(crate) fn list_entries(
 
     if let Some(ref from) = filter.date_from {
         conditions.push(format!("created_at >= ?{}", params_vec.len() + 1));
-        params_vec.push(Box::new(day_start(from)));
+        params_vec.push(Box::new(from.clone()));
     }
     if let Some(ref to) = filter.date_to {
-        conditions.push(format!("created_at <= ?{}", params_vec.len() + 1));
-        params_vec.push(Box::new(day_end(to)));
+        conditions.push(format!("created_at < ?{}", params_vec.len() + 1));
+        params_vec.push(Box::new(to.clone()));
     }
 
     if !conditions.is_empty() {
@@ -501,12 +501,53 @@ mod tests {
         .expect("insert new");
 
         let filter = HistoryFilter {
-            date_from: Some("2026-01-01".to_string()),
+            date_from: Some("2026-01-01T00:00:00".to_string()),
             ..Default::default()
         };
         let entries = list_entries(&path, &filter).expect("list filtered");
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].id, "new-entry");
+    }
+
+    /// `date_to` is exclusive, so a caller can pass the next local midnight
+    /// without a `23:59:59` fudge that would drop the final second of the range.
+    #[test]
+    fn list_entries_date_range_is_half_open() {
+        let (_dir, path) = setup_db();
+
+        let conn = Connection::open(&path).expect("open db");
+        for (id, created_at) in [
+            ("at-from", "2026-06-15T00:00:00"),
+            ("inside", "2026-06-15T23:59:59"),
+            ("at-to", "2026-06-16T00:00:00"),
+        ] {
+            conn.execute(
+                "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                rusqlite::params![
+                    id,
+                    created_at,
+                    "a.wav",
+                    "ja",
+                    "small",
+                    1000_i64,
+                    compress_text("text").expect("compress"),
+                    compress_text("[]").expect("compress segments"),
+                ],
+            )
+            .expect("insert");
+        }
+
+        let filter = HistoryFilter {
+            date_from: Some("2026-06-15T00:00:00".to_string()),
+            date_to: Some("2026-06-16T00:00:00".to_string()),
+            ..Default::default()
+        };
+        let entries = list_entries(&path, &filter).expect("list filtered");
+        let ids: Vec<&str> = entries.iter().map(|e| e.id.as_str()).collect();
+        assert!(ids.contains(&"at-from"), "lower bound is inclusive");
+        assert!(ids.contains(&"inside"), "last second of the day is kept");
+        assert!(!ids.contains(&"at-to"), "upper bound is exclusive");
     }
 
     #[test]

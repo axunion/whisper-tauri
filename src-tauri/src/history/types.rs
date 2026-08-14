@@ -138,10 +138,11 @@ pub struct HistorySaveParams {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct HistoryFilter {
-    /// Start date (ISO 8601 date string, e.g. "2026-01-01")
+    /// Inclusive lower bound, as a suffix-less UTC timestamp matching
+    /// `created_at` (e.g. "2026-01-01T15:00:00")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date_from: Option<String>,
-    /// End date (ISO 8601 date string, e.g. "2026-12-31")
+    /// Exclusive upper bound, same format as `date_from`
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date_to: Option<String>,
     /// Maximum number of entries to return
@@ -161,10 +162,11 @@ pub struct HistoryFilter {
 pub struct HistorySearchParams {
     /// Search query (space-separated keywords for AND search)
     pub query: String,
-    /// Optional start date filter (ISO 8601 date string)
+    /// Optional inclusive lower bound, as a suffix-less UTC timestamp matching
+    /// `created_at` (e.g. "2026-01-01T15:00:00")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date_from: Option<String>,
-    /// Optional end date filter (ISO 8601 date string)
+    /// Optional exclusive upper bound, same format as `date_from`
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date_to: Option<String>,
     /// Maximum number of entries to return

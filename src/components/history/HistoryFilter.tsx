@@ -11,7 +11,15 @@ interface HistoryFilterProps {
   onFilterChange: (filter: HistoryFilterType) => void;
 }
 
-/** Computes dateFrom/dateTo for a quick filter range. */
+/**
+ * Computes the half-open `[dateFrom, dateTo)` bounds for a quick filter range.
+ *
+ * `history.created_at` holds UTC wall-clock, so the local midnights the user
+ * means by "last 7 days" have to be converted to UTC before they can be
+ * compared. The bounds are truncated to 19 characters to match the stored
+ * format exactly — the comparison is lexicographic, so a trailing `.000Z`
+ * would sort after a stored value at the very same instant and drop it.
+ */
 function computeDateRange(range: QuickFilterRange): {
   dateFrom: string | undefined;
   dateTo: string | undefined;
@@ -21,19 +29,19 @@ function computeDateRange(range: QuickFilterRange): {
   }
 
   const now = new Date();
-  const dateTo = formatDateISO(now);
-
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const d = now.getDate();
   const daysBack = range === "last7days" ? 6 : 29;
-  const from = new Date(now);
-  from.setDate(now.getDate() - daysBack);
-  return { dateFrom: formatDateISO(from), dateTo };
+
+  return {
+    dateFrom: toUtcStamp(new Date(y, m, d - daysBack)),
+    dateTo: toUtcStamp(new Date(y, m, d + 1)),
+  };
 }
 
-function formatDateISO(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${String(y)}-${m}-${day}`;
+function toUtcStamp(d: Date): string {
+  return d.toISOString().slice(0, 19);
 }
 
 const RANGES: readonly QuickFilterRange[] = [

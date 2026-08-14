@@ -1,16 +1,11 @@
-/// Returns the inclusive start-of-day timestamp for a `YYYY-MM-DD` date.
-#[must_use]
-pub(crate) fn day_start(date: &str) -> String {
-    format!("{date}T00:00:00")
-}
-
-/// Returns the inclusive end-of-day timestamp for a `YYYY-MM-DD` date.
-#[must_use]
-pub(crate) fn day_end(date: &str) -> String {
-    format!("{date}T23:59:59")
-}
-
-/// Returns the current time as an ISO 8601 string (local time, no timezone suffix).
+/// Returns the current time as an ISO 8601 string in **UTC**, without a `Z` or
+/// offset suffix (e.g. `2026-08-13T23:00:00`).
+///
+/// Every value in `history.created_at` has this shape, so readers must supply
+/// the UTC interpretation themselves — the frontend does that in
+/// `src/lib/format.ts::parseUtc`. Do not start emitting a suffix here: the
+/// column is compared lexicographically against the filter bounds, and a mix of
+/// 19- and 20-character values would break those comparisons at the boundary.
 #[must_use]
 pub(crate) fn chrono_now() -> String {
     use std::time::SystemTime;
@@ -50,12 +45,6 @@ fn days_to_date(days: u64) -> (u64, u64, u64) {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn day_start_and_day_end_wrap_date() {
-        assert_eq!(day_start("2026-02-20"), "2026-02-20T00:00:00");
-        assert_eq!(day_end("2026-02-20"), "2026-02-20T23:59:59");
-    }
 
     #[test]
     fn chrono_now_returns_iso8601_like_format() {

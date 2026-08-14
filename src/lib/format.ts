@@ -54,17 +54,28 @@ function dateFormatter(
   return formatter;
 }
 
+/**
+ * History timestamps are stored as UTC wall-clock without a suffix
+ * (`2026-08-13T23:00:00`), which `new Date()` would otherwise read as local
+ * time. Tag those so they parse as UTC; values that already carry an offset
+ * (Notion's `transcribedAt`, built from `toISOString()`) pass through untouched.
+ */
+function parseUtc(isoString: string): Date {
+  const hasZone = /(?:Z|[+-]\d{2}:?\d{2})$/.test(isoString);
+  return new Date(hasZone ? isoString : `${isoString}Z`);
+}
+
 /** Format ISO date string as localized date+time (e.g. "2024/01/15 14:30"). */
 export function formatDate(isoString: string, locale: string): string {
   return dateFormatter(locale, DATE_TIME_OPTIONS, "dateTime").format(
-    new Date(isoString),
+    parseUtc(isoString),
   );
 }
 
 /** Format ISO date string as localized date only (e.g. "2024/01/15"). */
 export function formatDateShort(isoString: string, locale: string): string {
   return dateFormatter(locale, DATE_ONLY_OPTIONS, "date").format(
-    new Date(isoString),
+    parseUtc(isoString),
   );
 }
 

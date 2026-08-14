@@ -93,9 +93,13 @@ export type SortOrder = "asc" | "desc";
  * Filter for listing history entries.
  */
 export interface HistoryFilter {
-  /** Start date (ISO 8601 date string, e.g. "2026-01-01") */
+  /**
+   * Inclusive lower bound, as a suffix-less UTC timestamp matching `createdAt`
+   * (e.g. "2026-01-01T15:00:00"). Compared lexicographically in SQLite, so the
+   * format has to match `createdAt` exactly — see `computeDateRange`.
+   */
   dateFrom?: string;
-  /** End date (ISO 8601 date string, e.g. "2026-12-31") */
+  /** Exclusive upper bound, same format as `dateFrom` */
   dateTo?: string;
   /** Maximum number of entries to return */
   limit?: number;
@@ -152,9 +156,9 @@ export interface AiContentSaveParams {
 export interface HistorySearchParams {
   /** Search query (space-separated keywords for AND search) */
   query: string;
-  /** Optional start date filter (ISO 8601 date string) */
+  /** Optional inclusive lower bound, same format as `HistoryFilter.dateFrom` */
   dateFrom?: string;
-  /** Optional end date filter (ISO 8601 date string) */
+  /** Optional exclusive upper bound, same format as `dateFrom` */
   dateTo?: string;
   /** Maximum number of entries to return */
   limit?: number;

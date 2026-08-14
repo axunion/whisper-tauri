@@ -2,7 +2,6 @@ use std::fmt::Write;
 
 use rusqlite::Connection;
 
-use super::db::time::{day_end, day_start};
 use super::error::HistoryError;
 use super::types::{HistoryMeta, HistorySearchParams};
 
@@ -112,11 +111,11 @@ pub(crate) fn search_entries(
 
     if let Some(ref from) = params.date_from {
         write!(sql, " AND h.created_at >= ?{}", param_values.len() + 1).ok();
-        param_values.push(Box::new(day_start(from)));
+        param_values.push(Box::new(from.clone()));
     }
     if let Some(ref to) = params.date_to {
-        write!(sql, " AND h.created_at <= ?{}", param_values.len() + 1).ok();
-        param_values.push(Box::new(day_end(to)));
+        write!(sql, " AND h.created_at < ?{}", param_values.len() + 1).ok();
+        param_values.push(Box::new(to.clone()));
     }
 
     write!(

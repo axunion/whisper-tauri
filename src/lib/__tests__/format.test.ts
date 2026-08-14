@@ -1,6 +1,46 @@
 import { describe, expect, it } from "vitest";
 import type { StructuredSummary, TranscriptionSegment } from "~/types";
-import { formatBytes, formatSummaryAsText, formatTimeline } from "../format";
+import {
+  formatBytes,
+  formatDate,
+  formatDateShort,
+  formatSummaryAsText,
+  formatTimeline,
+} from "../format";
+
+/**
+ * Enforcement of the storage rule: `history.created_at` is UTC without a
+ * suffix, so a suffix-less timestamp must never be read as local time. The
+ * runner timezone is pinned to `Asia/Tokyo` in `vitest.config.ts` — under UTC
+ * the misreading is a no-op and these assertions would pass either way.
+ */
+describe("formatDate timezone handling", () => {
+  it("shifts a suffix-less UTC timestamp into local time", () => {
+    expect(formatDate("2026-08-13T23:00:00", "ja")).toBe("2026/08/14 08:00");
+    expect(formatDateShort("2026-08-13T23:00:00", "ja")).toBe("2026/08/14");
+  });
+
+  it("reads a suffix-less timestamp as UTC, not local time", () => {
+    expect(formatDate("2026-08-13T23:00:00", "ja")).toBe(
+      formatDate("2026-08-13T23:00:00Z", "ja"),
+    );
+    expect(formatDateShort("2026-08-13T23:00:00", "ja")).toBe(
+      formatDateShort("2026-08-13T23:00:00Z", "ja"),
+    );
+  });
+
+  it("leaves an explicit offset untouched", () => {
+    expect(formatDate("2026-08-13T23:00:00+09:00", "ja")).toBe(
+      formatDate("2026-08-13T14:00:00Z", "ja"),
+    );
+  });
+
+  it("does not shift a value that already ends in Z", () => {
+    expect(formatDate("2026-05-21T10:00:00Z", "en")).toBe(
+      formatDate("2026-05-21T10:00:00.000Z", "en"),
+    );
+  });
+});
 
 describe("formatBytes", () => {
   it("returns 0 B for zero", () => {
