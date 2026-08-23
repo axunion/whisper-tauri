@@ -27,7 +27,6 @@ Run all checks; abort on any failure.
 | Up to date with origin | `git fetch origin main && git status -sb` → no `behind` |
 | Clean working tree | `git status --porcelain` → empty |
 | Tag does not exist | `git rev-parse "v$VERSION"` → must fail |
-| `gh` authenticated | `gh auth status` |
 
 If any check fails, report and stop. Do not attempt to "fix" by stashing or resetting.
 
@@ -99,17 +98,11 @@ If anything fails between commit and push, do not auto-revert. Report the state 
 
 ## Phase 6 — CI Monitoring
 
-After the tag push:
+The `gh` CLI is not authenticated in this environment — do not use it. After the tag push, hand monitoring to the user in the browser:
 
-```bash
-gh run watch --exit-status
-```
-
-If unavailable or the user prefers async: `gh run list --workflow release.yml --limit 1`.
-
-On CI success, point the user to the draft release: `gh release list --limit 5` and remind them to paste the Phase 4 notes into the draft body and publish.
-
-On CI failure, fetch logs (`gh run view <id> --log-failed`) and report. Do not retry automatically.
+1. Point them to the workflow run: `https://github.com/<owner>/<repo>/actions/workflows/release.yml`
+2. On CI success, remind them to open the Releases page, paste the Phase 4 notes into the draft body, and publish.
+3. On CI failure, ask them to share the failing step's log from the Actions UI, then diagnose. Do not retry automatically.
 
 ## Output Format
 
@@ -121,7 +114,6 @@ Use a phase header per phase, e.g.:
 - Synced with remote: ✅
 - Clean working tree: ✅
 - Tag does not exist: ✅
-- gh authenticated:  ✅
 ```
 
 End-of-skill summary:

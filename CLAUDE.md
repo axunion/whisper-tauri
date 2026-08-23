@@ -11,8 +11,8 @@ Project-specific rules that are auto-injected as system reminders when a matchin
 | File | Purpose |
 |---|---|
 | `error-handling.md` | Rust `error.rs` prefix naming and sync with `errors.ts::PREFIX_MAP` on the FE side |
+| `frontend-conventions.md` | Error-handling consolidation (`parseError` / `ErrorDisplay` / `toast`), `cn()` class composition, SolidJS patterns |
 | `i18n.md` | `types.ts` / all locales / `t("…")` sync when UI strings are added or changed |
-| `ipc-events.md` | Reference of Rust → TS event names (`whisper:progress`, etc.) |
 | `tauri-permissions.md` | `capabilities/default.json` permission checks when using `@tauri-apps/plugin-*` |
 | `tuning.md` | Tuning policy — prefer standard settings; do not mask model weaknesses with bespoke processing |
 | `ui-design.md` | Glassmorphism / `SectionRow` / `Separator` and other shared UI conventions |

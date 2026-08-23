@@ -38,7 +38,7 @@ Source: `src-tauri/src/lib.rs` / `src-tauri/tauri.conf.json` / `src-tauri/capabi
 
 ## IPC イベント (Rust → TS)
 
-一次ソースは `.claude/rules/ipc-events.md`。
+一次ソースはコード (`src-tauri/src/` 内の `emit` 呼び出し)。以下は参照用スナップショット。
 
 | イベント | 用途 |
 |---|---|

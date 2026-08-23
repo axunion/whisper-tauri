@@ -42,6 +42,8 @@ ship).
   existing files unless asked.
 - Extract a helper only when used in 3+ places; otherwise inline it.
 - Delete dead code you create; never comment it out.
+- Rust: keep visibility minimal — no `pub` on items unused outside their module; prefer
+  `pub(crate)` when an item crosses module boundaries but not the crate boundary.
 
 ## Testing
 
