@@ -15,6 +15,7 @@ use tauri::Manager;
 pub mod converter;
 pub mod download;
 pub mod history;
+pub mod mirrors;
 pub mod notion;
 pub mod paths;
 pub mod recording;
@@ -48,8 +49,6 @@ pub fn run() {
             whisper::commands::check_model_exists,
             whisper::commands::download_model,
             whisper::commands::delete_model,
-            whisper::commands::get_model_download_url,
-            whisper::commands::set_model_download_url,
             whisper::commands::transcribe_audio,
             whisper::commands::cancel_transcription,
             whisper::commands::ensure_vad_model,
@@ -85,10 +84,6 @@ pub fn run() {
             text_processing::commands::text_processing_cancel,
             text_processing::commands::text_processing_generate_title,
             text_processing::commands::text_processing_clean_text,
-            text_processing::commands::get_text_processing_model_url,
-            text_processing::commands::set_text_processing_model_url,
-            text_processing::commands::get_text_processing_server_url,
-            text_processing::commands::set_text_processing_server_url,
             notion::commands::notion_get_settings,
             notion::commands::notion_set_settings,
             notion::commands::notion_test_connection,

@@ -7,6 +7,13 @@ pub mod types;
 
 pub use types::*;
 
+/// Protocols ffmpeg may resolve for an input path.
+///
+/// ffmpeg treats `-i` as a URL, so without this it would happily fetch
+/// `http://…` or stitch `concat:…` inputs. `crypto` and `data` stay in the list
+/// because local demuxers legitimately use them for embedded streams.
+pub(crate) const LOCAL_PROTOCOLS: &str = "file,crypto,data";
+
 /// Audio formats that are natively supported (no conversion needed).
 const NATIVE_FORMATS: &[&str] = &["wav"];
 
@@ -44,6 +51,19 @@ pub(crate) fn needs_conversion(extension: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // --- LOCAL_PROTOCOLS ---
+
+    #[test]
+    fn local_protocols_excludes_network_and_stitching_protocols() {
+        for protocol in ["http", "https", "tcp", "concat", "subfile", "rtmp", "hls"] {
+            assert!(
+                !LOCAL_PROTOCOLS.split(',').any(|p| p == protocol),
+                "{protocol} must not be whitelisted"
+            );
+        }
+        assert!(LOCAL_PROTOCOLS.split(',').any(|p| p == "file"));
+    }
 
     // --- is_supported_format ---
 

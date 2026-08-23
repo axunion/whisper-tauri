@@ -31,6 +31,12 @@ pub(crate) fn check_available(ffmpeg_path: &Path) -> Result<(), ConverterError> 
 #[must_use]
 fn build_convert_args(input_path: &Path, output_path: &Path) -> Vec<String> {
     vec![
+        // Defense in depth behind `validate_input_file`: ffmpeg reads `-i` as a
+        // URL, so restrict it to local protocols, and never let it block on
+        // stdin.
+        "-nostdin".to_string(),
+        "-protocol_whitelist".to_string(),
+        super::LOCAL_PROTOCOLS.to_string(),
         "-i".to_string(),
         input_path.to_string_lossy().to_string(),
         "-ar".to_string(),
@@ -85,16 +91,31 @@ mod tests {
         let output = Path::new("/tmp/output.wav");
         let args = build_convert_args(input, output);
 
-        assert_eq!(args[0], "-i");
-        assert_eq!(args[1], "/path/to/input.mp3");
-        assert_eq!(args[2], "-ar");
-        assert_eq!(args[3], "16000");
-        assert_eq!(args[4], "-ac");
-        assert_eq!(args[5], "1");
-        assert_eq!(args[6], "-sample_fmt");
-        assert_eq!(args[7], "s16");
-        assert_eq!(args[8], "-y");
-        assert_eq!(args[9], "/tmp/output.wav");
+        assert_eq!(args[0], "-nostdin");
+        assert_eq!(args[1], "-protocol_whitelist");
+        assert_eq!(args[2], super::super::LOCAL_PROTOCOLS);
+        assert_eq!(args[3], "-i");
+        assert_eq!(args[4], "/path/to/input.mp3");
+        assert_eq!(args[5], "-ar");
+        assert_eq!(args[6], "16000");
+        assert_eq!(args[7], "-ac");
+        assert_eq!(args[8], "1");
+        assert_eq!(args[9], "-sample_fmt");
+        assert_eq!(args[10], "s16");
+        assert_eq!(args[11], "-y");
+        assert_eq!(args[12], "/tmp/output.wav");
+    }
+
+    #[test]
+    fn build_convert_args_restricts_protocols_to_local() {
+        let args = build_convert_args(Path::new("/i.mp3"), Path::new("/o.wav"));
+        let whitelist = args
+            .iter()
+            .position(|a| a == "-protocol_whitelist")
+            .and_then(|i| args.get(i + 1))
+            .expect("protocol whitelist must be present");
+        assert!(!whitelist.contains("http"));
+        assert!(!whitelist.contains("concat"));
     }
 
     #[test]
@@ -102,7 +123,7 @@ mod tests {
         let input = Path::new("/input.mp3");
         let output = Path::new("/output.wav");
         let args = build_convert_args(input, output);
-        assert_eq!(args.len(), 10);
+        assert_eq!(args.len(), 13);
     }
 
     #[test]

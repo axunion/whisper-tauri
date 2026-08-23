@@ -27,7 +27,7 @@ Source: `src-tauri/src/text_processing/` (`models.rs` / `server.rs` / `inference
 
 ## llama-server ライフサイクル (`server.rs::LlamaServerManager`)
 
-- バイナリ: `{app_data}/bin/llama-server[.exe]`、`LLAMA_SERVER_VERSION` (= `b9950`, 2026-07-11 更新) を `llama-server.version` マーカーで管理。取得元は `github.com/ggml-org/llama.cpp` Releases (設定キー `textServerDownloadUrl` で差し替え可)
+- バイナリ: `{app_data}/bin/llama-server[.exe]`、`LLAMA_SERVER_VERSION` (= `b9950`, 2026-07-11 更新) を `llama-server.version` マーカーで管理。取得元は `github.com/ggml-org/llama.cpp` Releases (`mirrors.json` の `textServerDownloadUrl` で差し替え可。実行バイナリなので `download.rs::validate_executable_url` のホスト許可リスト内に限る)
 - 起動: 空きポートで `--ctx-size 8192 --jinja --chat-template-kwargs {"enable_thinking":false}` を付けて spawn。`--jinja` + kwargs は Qwen3.5 の thinking モード無効化 (対応しないモデルでは無視される)。ctx は 4096 → 8192 に拡大済み (2026-07-11: 漢字密度の高い 4,000 字チャンクで `exceed_context_size_error` になる余地があったため)
 - ヘルスチェック: `GET /health` が `{"status":"ok"}` を返すまで 1 秒間隔でポーリング (最大 120 秒)
 - 停止契機は次の 3 つのみ: **アプリ終了** (`lib.rs` の `RunEvent::Exit` → `shutdown()`)、**モデル切替**、**生存しているが無応答のときの再起動** (`begin_task` 内の quick health check 失敗時)。アイドル自動停止は無い (未配線だった `idle_timeout` 機構は削除済み、2026-07 確認)
@@ -49,7 +49,7 @@ Source: `src-tauri/src/text_processing/` (`models.rs` / `server.rs` / `inference
 
 ## コマンド一覧
 
-`text_processing_list_models` / `_download_model` / `_delete_model` / `_download_server` / `_delete_server` / `_check_server` / `_server_status` / `_summarize` / `_generate_title` / `_clean_text` / `_cancel` / `get/set_text_processing_model_url` / `get/set_text_processing_server_url`
+`text_processing_list_models` / `_download_model` / `_delete_model` / `_download_server` / `_delete_server` / `_check_server` / `_server_status` / `_summarize` / `_generate_title` / `_clean_text` / `_cancel`
 
 `text_processing_chat` は開発用 (`/dev` の LLM Tester 専用)。ユーザー向け機能ではない。
 

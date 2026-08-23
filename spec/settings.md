@@ -28,13 +28,29 @@ Source: `src-tauri/src/settings.rs` / `src-tauri/src/update.rs` / `src/primitive
 
 | キー | 用途 |
 |---|---|
-| `modelDownloadBaseUrl` | Whisper モデルの取得元差し替え |
-| `ffmpegDownloadUrl` | ffmpeg の取得元差し替え (手編集のみ) |
-| `textModelDownloadBaseUrl` | LLM GGUF の取得元差し替え |
-| `textServerDownloadUrl` | llama-server の取得元差し替え |
 | `notionEnabled` / `notionToken` / `notionDatabaseId` / `notionTitleProperty` | Notion 連携 ([notion.md](notion.md)) |
 
-カスタム URL キーは未設定ならコード内のデフォルト URL を使う。社内ミラーなどへの差し替え用。`ffmpegDownloadUrl` だけは get / set コマンドを持たず読み取り専用で、`settings.json` の手編集で与える。
+## ダウンロード元の差し替え (`mirrors.json`)
+
+社内ミラーへの差し替えキーは `settings.json` ではなく `{app_data}/mirrors.json` に置く。`mirrors.rs` が `serde_json` で直読みするだけのフラットなオブジェクトで、tauri-plugin-store を経由しない。
+
+| キー | 用途 |
+|---|---|
+| `modelDownloadBaseUrl` | Whisper モデルの取得元差し替え |
+| `textModelDownloadBaseUrl` | LLM GGUF の取得元差し替え |
+| `textServerDownloadUrl` | llama-server の取得元差し替え |
+| `ffmpegDownloadUrl` | ffmpeg の取得元差し替え |
+
+```json
+{
+  "modelDownloadBaseUrl": "https://mirror.example.com/whisper"
+}
+```
+
+- 未設定ならコード内のデフォルト URL を使う。get / set コマンドは持たず、手編集専用
+- **`settings.json` に置かない理由**: webview には `store:default` (= `allow-set` / `allow-save`) が付与されているため、`settings.json` のキーはフロントエンドから書き換え可能。これらのキーはどのアーカイブを取得するかを決め、`llama-server` / `ffmpeg` に至っては chmod 755 して実行するため、プラグイン権限が届かない場所に置く
+- ファイルが壊れている場合はデフォルト URL にフォールバックし、警告を stderr に出す (無音では落とさない)
+- ダウンロードは全経路で `https` 必須 (`download.rs::download_file`)。さらに実行バイナリ (`llama-server` / `ffmpeg`) は `download.rs::validate_executable_url` のホスト許可リスト (`github.com` / `objects.githubusercontent.com` / `release-assets.githubusercontent.com` / `evermeet.cx`) に限定されるため、任意ホストのミラーは使えない。モデル (データのみ) は許可リストの対象外
 
 ## 更新確認 (`update.rs`)
 

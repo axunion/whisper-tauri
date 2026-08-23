@@ -3,16 +3,13 @@ use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Emitter};
 
 use crate::download;
+use crate::mirrors;
 use crate::paths;
-use crate::settings;
 
 use super::error::WhisperError;
 use super::models;
 use super::process;
 use super::types::{DownloadProgress, ModelInfo, TranscriptionProgress, TranscriptionResult};
-
-/// Store key for custom model download base URL.
-const MODEL_DOWNLOAD_URL_KEY: &str = "modelDownloadBaseUrl";
 
 /// Returns the models directory under the app data directory.
 fn models_dir(app_data_dir: &Path) -> PathBuf {
@@ -86,11 +83,7 @@ pub async fn check_model_exists(app: AppHandle, model_id: String) -> Result<bool
 /// Returns an error if the model ID is invalid, the download fails, or
 /// the file cannot be written.
 #[tauri::command]
-pub async fn download_model(
-    app: AppHandle,
-    model_id: String,
-    base_url: Option<String>,
-) -> Result<String, String> {
+pub async fn download_model(app: AppHandle, model_id: String) -> Result<String, String> {
     if !models::is_valid_model_id(&model_id) {
         return Err(WhisperError::ModelNotFound(model_id).into());
     }
@@ -101,6 +94,7 @@ pub async fn download_model(
     // Create models directory if it doesn't exist
     std::fs::create_dir_all(&dir).map_err(WhisperError::from)?;
 
+    let base_url = mirrors::get(&app_data_dir, mirrors::WHISPER_MODEL_BASE_URL);
     let base = base_url
         .as_deref()
         .unwrap_or_else(|| models::get_default_base_url());
@@ -163,26 +157,6 @@ pub async fn delete_model(app: AppHandle, model_id: String) -> Result<(), String
     }
 
     Ok(())
-}
-
-/// Gets the custom model download base URL from settings.
-///
-/// # Errors
-///
-/// Returns an error if the settings store cannot be accessed.
-#[tauri::command]
-pub async fn get_model_download_url(app: AppHandle) -> Result<Option<String>, String> {
-    settings::get_string(&app, MODEL_DOWNLOAD_URL_KEY).map_err(Into::into)
-}
-
-/// Sets or clears the custom model download base URL in settings.
-///
-/// # Errors
-///
-/// Returns an error if the settings store cannot be accessed.
-#[tauri::command]
-pub async fn set_model_download_url(app: AppHandle, url: Option<String>) -> Result<(), String> {
-    settings::set_or_delete_string(&app, MODEL_DOWNLOAD_URL_KEY, url).map_err(Into::into)
 }
 
 /// Returns the path to the VAD model file.

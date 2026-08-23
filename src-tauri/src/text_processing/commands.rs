@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use tauri::{AppHandle, Emitter, State};
 
+use crate::mirrors;
 use crate::paths;
-use crate::settings;
 use crate::whisper::process::CancellationToken;
 
 use super::error::TextProcessingError;
@@ -13,12 +13,6 @@ use super::inference;
 use super::models;
 use super::server::LlamaServerManager;
 use super::types::{StructuredSummary, TextDownloadProgress, TextModelInfo};
-
-/// Store key for custom text model download URL.
-const TEXT_MODEL_URL_KEY: &str = "textModelDownloadBaseUrl";
-
-/// Store key for custom llama-server download URL.
-const TEXT_SERVER_URL_KEY: &str = "textServerDownloadUrl";
 
 /// Returns available text models with download status.
 ///
@@ -51,7 +45,6 @@ pub async fn text_processing_list_models(app: AppHandle) -> Result<Vec<TextModel
 pub async fn text_processing_download_model(
     app: AppHandle,
     model_id: String,
-    base_url: Option<String>,
 ) -> Result<String, String> {
     if !models::is_valid_model_id(&model_id) {
         return Err(TextProcessingError::ModelNotFound(model_id).into());
@@ -61,6 +54,7 @@ pub async fn text_processing_download_model(
     let dir = models::text_models_dir(&app_data_dir);
     std::fs::create_dir_all(&dir).map_err(TextProcessingError::from)?;
 
+    let base_url = mirrors::get(&app_data_dir, mirrors::TEXT_MODEL_BASE_URL);
     let url = models::get_model_url(&model_id, base_url.as_deref())
         .ok_or_else(|| TextProcessingError::ModelNotFound(model_id.clone()).to_string())?;
 
@@ -132,10 +126,14 @@ pub async fn text_processing_delete_model(app: AppHandle, model_id: String) -> R
 pub async fn text_processing_download_server(app: AppHandle) -> Result<String, String> {
     let app_data_dir = paths::app_data_dir(&app)?;
 
-    let custom_url = settings::get_string(&app, TEXT_SERVER_URL_KEY)?;
+    let custom_url = mirrors::get(&app_data_dir, mirrors::TEXT_SERVER_URL);
     let url = custom_url
         .as_deref()
         .unwrap_or_else(|| models::get_default_server_url());
+
+    // The archive is chmod'd 0o755 and spawned below, so the source has to be
+    // trusted before a single byte is fetched.
+    crate::download::validate_executable_url(url).map_err(TextProcessingError::from)?;
 
     let bin_dir = app_data_dir.join("bin");
     std::fs::create_dir_all(&bin_dir).map_err(TextProcessingError::from)?;
@@ -540,52 +538,6 @@ async fn begin_task(
         sampling: models::sampling_params(&effective_model_id),
         _guard: guard,
     })
-}
-
-/// Gets the custom text model download URL from settings.
-///
-/// # Errors
-///
-/// Returns an error string if the operation fails.
-#[tauri::command]
-pub async fn get_text_processing_model_url(app: AppHandle) -> Result<Option<String>, String> {
-    settings::get_string(&app, TEXT_MODEL_URL_KEY).map_err(Into::into)
-}
-
-/// Sets or clears the custom text model download URL.
-///
-/// # Errors
-///
-/// Returns an error string if the operation fails.
-#[tauri::command]
-pub async fn set_text_processing_model_url(
-    app: AppHandle,
-    url: Option<String>,
-) -> Result<(), String> {
-    settings::set_or_delete_string(&app, TEXT_MODEL_URL_KEY, url).map_err(Into::into)
-}
-
-/// Gets the custom llama-server download URL from settings.
-///
-/// # Errors
-///
-/// Returns an error string if the operation fails.
-#[tauri::command]
-pub async fn get_text_processing_server_url(app: AppHandle) -> Result<Option<String>, String> {
-    settings::get_string(&app, TEXT_SERVER_URL_KEY).map_err(Into::into)
-}
-
-/// Sets or clears the custom llama-server download URL.
-///
-/// # Errors
-///
-/// Returns an error string if the operation fails.
-#[tauri::command]
-pub async fn set_text_processing_server_url(
-    app: AppHandle,
-    url: Option<String>,
-) -> Result<(), String> {
-    settings::set_or_delete_string(&app, TEXT_SERVER_URL_KEY, url).map_err(Into::into)
 }
 
 // --- Helper functions ---

@@ -115,6 +115,11 @@ impl LlamaServerManager {
         // (ignored by models that don't use enable_thinking in their template)
         let mut child = Command::new(&server_path)
             .args([
+                // Passed explicitly rather than relying on llama.cpp's default:
+                // it also honours `LLAMA_ARG_HOST`, so an inherited environment
+                // could otherwise publish the server on every interface.
+                "--host",
+                "127.0.0.1",
                 "--port",
                 &port.to_string(),
                 "--model",

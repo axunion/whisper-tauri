@@ -13,6 +13,10 @@ pub enum ConverterError {
     #[error("Unsupported format: {0}")]
     UnsupportedFormat(String),
 
+    /// The input path does not point at an existing regular file.
+    #[error("File not found: {0}")]
+    FileNotFound(String),
+
     /// The `FFmpeg` download failed.
     #[error("Download failed: {0}")]
     DownloadFailed(String),
@@ -58,6 +62,12 @@ mod tests {
     fn error_display_unsupported_format() {
         let err = ConverterError::UnsupportedFormat("pdf".to_string());
         assert_eq!(err.to_string(), "Unsupported format: pdf");
+    }
+
+    #[test]
+    fn error_display_file_not_found() {
+        let err = ConverterError::FileNotFound("/nope/a.mp3".to_string());
+        assert_eq!(err.to_string(), "File not found: /nope/a.mp3");
     }
 
     #[test]

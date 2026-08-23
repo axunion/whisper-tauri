@@ -8,13 +8,10 @@
     "opener:default",
     "dialog:default",
     "fs:default",
-    {
-      "identifier": "fs:allow-write-text-file",
-      "allow": [{ "path": "$HOME/**" }]
-    },
+    "fs:allow-write-text-file",
     {
       "identifier": "fs:allow-copy-file",
-      "allow": [{ "path": "$HOME/**" }]
+      "allow": [{ "path": "$APPDATA/recordings/*" }]
     },
     "store:default",
     "clipboard-manager:default",

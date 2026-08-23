@@ -26,7 +26,7 @@ The complete list. Each connection is either a one-time download you trigger, or
 
 After the initial downloads, transcription, recording, AI text processing, and history all work fully offline.
 
-For advanced setups, download sources can be overridden (for example, to point at an internal mirror) by editing the app's local settings file, so even the download traffic can be kept inside your own network.
+For advanced setups, model download sources can be overridden (for example, to point at an internal mirror) by hand-editing `mirrors.json` in the app's data directory, so even the model download traffic can be kept inside your own network. The two downloads the app makes executable and runs — FFmpeg and `llama-server` — are restricted to their pinned release hosts over HTTPS and cannot be redirected to an arbitrary mirror.
 
 ## The Notion integration
 

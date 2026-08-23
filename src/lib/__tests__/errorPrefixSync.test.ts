@@ -17,6 +17,9 @@ const rustSources = import.meta.glob("/src-tauri/src/**/*.rs", {
 const NEVER_REACHES_FRONTEND = new Set([
   "HTTP {0} for {1}",
   "Incomplete transfer: got {0} of {1} bytes",
+  "Invalid download URL: {0}",
+  "Insecure download URL: {0}",
+  "Untrusted download host: {0}",
 ]);
 
 function collectRustErrorMessages(): string[] {

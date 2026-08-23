@@ -2,21 +2,14 @@ use std::path::{Path, PathBuf};
 
 use tauri::{AppHandle, Emitter};
 
+use crate::mirrors;
 use crate::paths;
-use crate::settings;
 
 use super::downloader;
 use super::duration;
 use super::error::ConverterError;
 use super::ffmpeg;
 use super::types::{ConversionResult, FfmpegDownloadProgress};
-
-/// Store key for custom ffmpeg download URL.
-///
-/// Read-only from the app's side by design: unlike the sibling model/server URL
-/// keys, this one has no get/set command, so it is populated by hand-editing
-/// `settings.json` — an escape hatch for internal mirrors, not a UI setting.
-const FFMPEG_DOWNLOAD_URL_KEY: &str = "ffmpegDownloadUrl";
 
 /// Resolves the bundled ffmpeg binary path.
 ///
@@ -30,6 +23,25 @@ fn resolve_ffmpeg_path(app_data_dir: &Path) -> Result<PathBuf, ConverterError> {
     Err(ConverterError::FfmpegNotFound(
         "ffmpeg is not available. Please download it from settings.".to_string(),
     ))
+}
+
+/// Rejects an input path that is not an existing regular file.
+///
+/// ffmpeg resolves its `-i` argument as a URL rather than a path, so a string
+/// like `http://host/a.mp3` or `concat:/etc/hosts|/tmp/a.mp3` passes the
+/// extension check and would still be fetched or demuxed. Requiring a real file
+/// on disk keeps every ffmpeg invocation local.
+fn validate_input_file(path: &Path) -> Result<(), ConverterError> {
+    let metadata = std::fs::metadata(path)
+        .map_err(|e| ConverterError::FileNotFound(format!("{}: {e}", path.display())))?;
+    if metadata.is_file() {
+        Ok(())
+    } else {
+        Err(ConverterError::FileNotFound(format!(
+            "{} is not a regular file",
+            path.display()
+        )))
+    }
 }
 
 /// Checks whether the bundled ffmpeg binary exists and is executable.
@@ -90,7 +102,7 @@ pub async fn delete_ffmpeg(app: AppHandle) -> Result<(), String> {
 pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
     let app_data_dir = paths::app_data_dir(&app)?;
 
-    let custom_url = settings::get_string(&app, FFMPEG_DOWNLOAD_URL_KEY)?;
+    let custom_url = mirrors::get(&app_data_dir, mirrors::FFMPEG_URL);
 
     let app_clone = app.clone();
     let path = downloader::download_ffmpeg(
@@ -124,6 +136,7 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
 #[tauri::command]
 pub async fn get_audio_duration(app: AppHandle, file_path: String) -> Result<u64, String> {
     let input_path = PathBuf::from(&file_path);
+    validate_input_file(&input_path)?;
     let app_data_dir = paths::app_data_dir(&app)?;
 
     tokio::task::spawn_blocking(move || {
@@ -162,6 +175,7 @@ pub async fn convert_audio_file(
     let ffmpeg_path = resolve_ffmpeg_path(&app_data_dir)?;
 
     let input = std::path::Path::new(&input_path);
+    validate_input_file(input)?;
 
     // Validate format
     let extension = input.extension().and_then(|e| e.to_str()).unwrap_or("");
@@ -249,6 +263,47 @@ pub async fn cleanup_converted_file(file_path: String) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // --- validate_input_file ---
+
+    #[test]
+    fn validate_input_file_accepts_regular_file() {
+        let dir = tempfile::TempDir::new().expect("create temp dir");
+        let file = dir.path().join("a.mp3");
+        std::fs::write(&file, b"data").expect("write file");
+
+        assert!(validate_input_file(&file).is_ok());
+    }
+
+    #[test]
+    fn validate_input_file_rejects_missing_path() {
+        let err = validate_input_file(Path::new("/nonexistent/whisper-test.mp3"))
+            .expect_err("missing file must be rejected");
+        assert!(err.to_string().starts_with("File not found:"));
+    }
+
+    #[test]
+    fn validate_input_file_rejects_directory() {
+        let dir = tempfile::TempDir::new().expect("create temp dir");
+        let err = validate_input_file(dir.path()).expect_err("directory must be rejected");
+        assert!(err.to_string().contains("is not a regular file"));
+    }
+
+    #[test]
+    fn validate_input_file_rejects_ffmpeg_protocol_strings() {
+        // These pass `is_supported_format` on their trailing extension, so the
+        // file check is what stops ffmpeg from resolving them as URLs.
+        for candidate in [
+            "http://169.254.169.254/latest/meta-data/x.mp3",
+            "concat:/etc/hosts|/tmp/a.mp3",
+            "tcp://127.0.0.1:8080/a.mp3",
+        ] {
+            assert!(
+                validate_input_file(Path::new(candidate)).is_err(),
+                "{candidate} must be rejected"
+            );
+        }
+    }
 
     #[tokio::test]
     async fn cleanup_converted_file_deletes_temp_file() {

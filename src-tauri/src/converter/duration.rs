@@ -102,7 +102,16 @@ pub(crate) fn get_duration_via_ffmpeg(
     input_path: &Path,
 ) -> Result<u64, ConverterError> {
     let output = std::process::Command::new(ffmpeg_path)
-        .args(["-i", &input_path.to_string_lossy()])
+        .args([
+            // Defense in depth behind `validate_input_file`: ffmpeg reads `-i`
+            // as a URL, so restrict it to local protocols, and never let it
+            // block on stdin.
+            "-nostdin",
+            "-protocol_whitelist",
+            super::LOCAL_PROTOCOLS,
+            "-i",
+            &input_path.to_string_lossy(),
+        ])
         .output()
         .map_err(|e| ConverterError::ConversionFailed(format!("Failed to run ffmpeg: {e}")))?;
 
