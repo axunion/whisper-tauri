@@ -20,7 +20,7 @@ Whisper Tauri is designed around an **offline-first** principle: there is no tel
 
 After initial setup, the app runs fully offline. The optional **Notion export** is the only feature that contacts an external service — and it only does so when the user explicitly clicks "Send to Notion", using the user's own integration token stored locally on the device.
 
-See **[docs/privacy.md](docs/privacy.md)** for the complete list of network endpoints and the data-handling policy.
+See **[the Privacy page](https://axunion.github.io/whisper-tauri/privacy/)** for the complete list of network endpoints and the data-handling policy.
 
 ## Tech Stack
 
@@ -76,9 +76,9 @@ Both are distributed in `Q4_K_M` GGUF quantization. `llama-server` is started on
 
 ## Installation
 
-End-user installation guide: **[docs/install.md](docs/install.md)**.
+End-user installation guide: **[Installation Guide](https://axunion.github.io/whisper-tauri/install/)**.
 
-Releases are published to the [GitHub Releases page](../../releases). Builds are unsigned across all platforms — see [docs/install.md](docs/install.md) for the SmartScreen / Gatekeeper handling steps per OS.
+Releases are published to the [GitHub Releases page](../../releases). Builds are unsigned across all platforms — see the [Installation Guide](https://axunion.github.io/whisper-tauri/install/) for the SmartScreen / Gatekeeper handling steps per OS.
 
 ## Development
 
@@ -122,7 +122,7 @@ src-tauri/                 # Rust backend
     ├── paths.rs           # App data path helpers
     └── settings.rs        # Shared settings-store helpers
 
-docs/                      # Public documentation (English, GitHub Pages source)
+docs/                      # Public documentation site (Astro Starlight, English, GitHub Pages source)
 spec/                      # Internal development & specification docs (Japanese)
 ```
 

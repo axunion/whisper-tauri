@@ -22,9 +22,9 @@ coverage
 # Vite cache
 .vite
 
-# VitePress
-docs/.vitepress/dist
-docs/.vitepress/cache
+# Astro (docs site)
+docs/dist
+docs/.astro
 
 # macOS
 .DS_Store

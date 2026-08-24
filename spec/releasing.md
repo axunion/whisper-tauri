@@ -14,7 +14,7 @@
 5. **CI 監視**: 3 プラットフォーム (macOS / Windows / Linux) のマトリクスビルドを見届ける。成果物は draft release にアップロードされる (`releaseDraft: true`)
 6. **公開**: draft の内容 (リリースノート・artifact 一式) を確認して手動で publish する
 
-アプリ側の更新導線は手動運用 (詳細は `docs/install.md` の Updating 節): ユーザーは Settings の「Check for Updates」か GitHub Watch / `releases.atom` で新版を知り、上書きインストールする。
+アプリ側の更新導線は手動運用 (詳細は `docs/src/content/docs/install.md` の Updating 節): ユーザーは Settings の「Check for Updates」か GitHub Watch / `releases.atom` で新版を知り、上書きインストールする。
 
 ## CI 運用 (旧 #13)
 
@@ -39,6 +39,6 @@
 
 ## ドキュメントサイトのデプロイ (F9, 2026-07-10)
 
-- `docs/` は VitePress でビルドし GitHub Pages に公開する。`.github/workflows/docs.yml` が main への `docs/**` 変更 push で自動デプロイ (公開 URL: `https://axunion.github.io/whisper-tauri/`)
+- `docs/` は Astro Starlight (pnpm workspace の独立パッケージ) でビルドし GitHub Pages に公開する。`.github/workflows/docs.yml` が main への `docs/**` 変更 push で自動デプロイ (公開 URL: `https://axunion.github.io/whisper-tauri/`)
 - ローカル確認: `pnpm docs:dev` / `pnpm docs:build` (dead-link 検査込み) / `pnpm docs:preview`
 - 初回のみ手動設定が必要: リポジトリ Settings → Pages → Source を **GitHub Actions** にする

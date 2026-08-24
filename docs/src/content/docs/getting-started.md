@@ -1,10 +1,12 @@
-# Getting Started
+---
+title: Getting Started
+---
 
 This guide walks you through everything from first launch to your first transcription, AI post-processing, and the optional Notion integration.
 
 ## 1. Install the app
 
-Follow the [Installation Guide](install.md) for your OS. Builds are currently unsigned, so macOS and Windows show a one-time security warning — the guide covers the approval steps.
+Follow the [Installation Guide](/whisper-tauri/install/) for your OS. Builds are currently unsigned, so macOS and Windows show a one-time security warning — the guide covers the approval steps.
 
 ## 2. First launch: setup wizard
 
@@ -81,7 +83,7 @@ The Notion integration is opt-in and disabled until you configure it:
 3. In the app, open **Settings → Notion Integration → Connect**, paste the **API Token** and **Database ID**, and click **Save & Connect**. The app verifies the connection immediately.
 4. From any result, use **Share → Send to Notion**. The content of the currently active tab (Text, Timeline, Summary, or Rewrite) is sent as a new page, along with basic metadata.
 
-The token is stored only on your device. See [Privacy](privacy.md#the-notion-integration) for details.
+The token is stored only on your device. See [Privacy](/whisper-tauri/privacy/#the-notion-integration) for details.
 
 ## 9. Settings and updates
 
@@ -93,4 +95,4 @@ The **Settings** page covers everything else:
 - **Tool Management** — manage the FFmpeg binary.
 - **Notion Integration** — as described above.
 
-Updating the app itself is a manual download — see [Updating](install.md#updating).
+Updating the app itself is a manual download — see [Updating](/whisper-tauri/install/#updating).

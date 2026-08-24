@@ -1,0 +1,55 @@
+---
+title: Local audio transcription, private by design
+description: A privacy-first desktop app for local audio transcription. All inference runs on-device.
+template: splash
+hero:
+  tagline: A privacy-first desktop app. All inference runs on-device — your audio never leaves your machine.
+  actions:
+    - text: Get Started
+      link: /whisper-tauri/getting-started/
+      icon: right-arrow
+    - text: Install
+      link: /whisper-tauri/install/
+      variant: minimal
+    - text: GitHub
+      link: https://github.com/axunion/whisper-tauri
+      variant: minimal
+      icon: github
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+<CardGrid>
+  <Card title="🎙️ Transcribe files and recordings">
+    Transcribe audio and video files (MP3, M4A, FLAC, OGG, AAC, MP4, MKV, WAV)
+    or record directly from your microphone.
+  </Card>
+  <Card title="💻 On-device Whisper inference">
+    Choose between the small and large-v3-turbo models, with Metal acceleration
+    on Apple Silicon. No cloud, no API keys.
+  </Card>
+  <Card title="⏩ Silence skipping (VAD)">
+    Silero voice activity detection skips silent sections, significantly
+    reducing transcription time.
+  </Card>
+  <Card title="✨ AI text post-processing">
+    Summarize, rewrite, and generate titles for transcripts — powered by a
+    local LLM that also runs entirely on your device.
+  </Card>
+  <Card title="🗂️ History with full-text search">
+    Every transcription is saved locally in a searchable history. Reopen past
+    results to export or post-process them later.
+  </Card>
+  <Card title="📤 Notion export">
+    Optionally send transcripts or AI-generated text to a Notion database as
+    new pages, using your own integration token.
+  </Card>
+</CardGrid>
+
+## Private by default
+
+Whisper Tauri is built around an **offline-first** principle: no telemetry, no analytics, no cloud transcription, no external LLM API. After the initial model downloads, everything works fully offline. The only feature that contacts an external service is the opt-in Notion export — and only when you explicitly send a page.
+
+See [Privacy](/whisper-tauri/privacy/) for the complete list of network connections, and [Licenses](/whisper-tauri/licenses/) for third-party components.
+
+The interface is available in **Japanese and English**, following your system locale.

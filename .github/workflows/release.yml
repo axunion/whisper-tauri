@@ -105,7 +105,7 @@ jobs:
             - **Debian/Ubuntu**: install the `.deb` package
             - **Other distros**: download the `.AppImage`, `chmod +x`, and run it
 
-            See [docs/install.md](https://github.com/${{ github.repository }}/blob/main/docs/install.md) for SmartScreen / Gatekeeper warnings and uninstall instructions.
+            See the [Installation Guide](https://axunion.github.io/whisper-tauri/install/) for SmartScreen / Gatekeeper warnings and uninstall instructions.
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

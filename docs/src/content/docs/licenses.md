@@ -1,4 +1,6 @@
-# Licenses and credits
+---
+title: Licenses and credits
+---
 
 Whisper Tauri bundles no third-party binaries or model weights inside the app itself. Instead, the components below are downloaded on demand — during onboarding or the first time you use a feature — and stored in the app's local data directory. This page lists each redistributed component, its license, and where it comes from.
 

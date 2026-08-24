@@ -30,9 +30,9 @@
     "test": "vitest",
     "test:run": "vitest run",
     "dev:reset": "bash scripts/dev-reset.sh",
-    "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:dev": "pnpm --filter docs dev",
+    "docs:build": "pnpm --filter docs build",
+    "docs:preview": "pnpm --filter docs preview"
   },
   "dependencies": {
     "@kobalte/core": "^0.13.11",
@@ -66,7 +66,6 @@
     "typescript": "~5.6.2",
     "vite": "^6.0.3",
     "vite-plugin-solid": "^2.11.0",
-    "vitepress": "^1.6.4",
     "vitest": "^4.0.15"
   }
 }

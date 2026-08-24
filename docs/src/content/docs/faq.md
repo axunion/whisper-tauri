@@ -1,18 +1,20 @@
-# FAQ
+---
+title: FAQ
+---
 
 ## Installation
 
 ### macOS says the app "could not be verified" — is it safe?
 
-Yes, this is expected. Pre-release builds are not signed with an Apple Developer certificate, so macOS blocks the first launch of anything downloaded from the internet. The [Installation Guide](install.md#macos-apple-silicon) walks through the one-time approval (**System Settings → Privacy & Security → Open Anyway**).
+Yes, this is expected. Pre-release builds are not signed with an Apple Developer certificate, so macOS blocks the first launch of anything downloaded from the internet. The [Installation Guide](/whisper-tauri/install/#macos-apple-silicon) walks through the one-time approval (**System Settings → Privacy & Security → Open Anyway**).
 
 ### Windows SmartScreen blocks the installer
 
-Also expected for unsigned builds. Click **More info → Run anyway**. See the [Installation Guide](install.md#windows).
+Also expected for unsigned builds. Click **More info → Run anyway**. See the [Installation Guide](/whisper-tauri/install/#windows).
 
 ### How do I update the app?
 
-Install the new version over the old one — your settings, history, and models are kept. See [Updating](install.md#updating). You can check for new versions from within the app: **Settings → App Updates → Check Now**.
+Install the new version over the old one — your settings, history, and models are kept. See [Updating](/whisper-tauri/install/#updating). You can check for new versions from within the app: **Settings → App Updates → Check Now**.
 
 ## Models and disk space
 
@@ -42,11 +44,11 @@ Voice activity detection (Silero VAD). It detects silent sections and skips them
 
 ### Does the app work offline?
 
-Yes. After the initial downloads (models and binaries), transcription, recording, AI processing, and history all work fully offline. See [Privacy](privacy.md) for the complete list of network connections the app can make — each one is user-initiated.
+Yes. After the initial downloads (models and binaries), transcription, recording, AI processing, and history all work fully offline. See [Privacy](/whisper-tauri/privacy/) for the complete list of network connections the app can make — each one is user-initiated.
 
 ### Is my audio or text uploaded anywhere?
 
-No. All transcription and AI inference runs on your device. The only feature that sends content to an external service is the opt-in [Notion export](getting-started.md#_8-notion-export-optional), and only when you explicitly click "Send to Notion".
+No. All transcription and AI inference runs on your device. The only feature that sends content to an external service is the opt-in [Notion export](/whisper-tauri/getting-started/#8-notion-export-optional), and only when you explicitly click "Send to Notion".
 
 ## Usage
 
@@ -65,7 +67,7 @@ macOS (and other OSes) show a system permission prompt the first time you start 
 
 ### Where is my data stored?
 
-Everything lives in a per-user application data directory (settings, history database, models, binaries). The exact paths per OS are listed in the [Uninstall section](install.md#uninstall) of the Installation Guide. Updates never touch this directory.
+Everything lives in a per-user application data directory (settings, history database, models, binaries). The exact paths per OS are listed in the [Uninstall section](/whisper-tauri/install/#uninstall) of the Installation Guide. Updates never touch this directory.
 
 ### AI features say "AI Setup Required"
 

@@ -1,4 +1,6 @@
-# Privacy
+---
+title: Privacy
+---
 
 Whisper Tauri is built around an **offline-first** principle: your audio and text stay on your machine.
 
@@ -38,4 +40,4 @@ The Notion export is **opt-in** and disabled until you configure it:
 
 ## Updates
 
-The app does not update itself and does not phone home. Checking for a new version is a manual, user-initiated action, and installing an update is a manual download — see [install.md](install.md).
+The app does not update itself and does not phone home. Checking for a new version is a manual, user-initiated action, and installing an update is a manual download — see the [Installation Guide](/whisper-tauri/install/).

@@ -1,4 +1,6 @@
-# Installation Guide
+---
+title: Installation Guide
+---
 
 ## macOS (Apple Silicon)
 
