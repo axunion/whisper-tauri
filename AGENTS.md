@@ -52,6 +52,21 @@ ship).
 - Test observable outcomes and edge cases, not implementation details.
 - Each test is fully self-contained; no shared mutable state between tests.
 
+Two kinds of checking stay separate here, and only one of them is automatable:
+
+- **Structural correctness** — state transitions, IPC responses, stored rows, formatted
+  output: anything with a right answer. Belongs in Vitest or `cargo test` and runs as
+  part of verification.
+- **Subjective judgment** — "does this look right", spacing, color, UX feel. No
+  assertion reliably checks this, and the UI only renders in a WKWebView under
+  `pnpm tauri dev`, not in a headless browser. It stays a human-in-the-loop check
+  against the running app; don't try to automate it away.
+
+Persist a regression test only for a durable flow worth protecting — ideally one with
+evidence it can break. A one-off "let me verify this specific change" check did its job
+once and doesn't need to become a permanent file. When unsure whether something is worth
+making permanent, ask rather than deciding unilaterally.
+
 ## Commits
 
 Format — plain prose, no prefixes or labels (`feat:`, `fix:`, and the like):
