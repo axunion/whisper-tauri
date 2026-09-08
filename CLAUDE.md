@@ -46,6 +46,12 @@ API knowledge.
   because `/goal`'s evaluator only matches the condition text against the transcript and
   has no built-in knowledge that these agents exist. Always propose rather than assume:
   the reason is cost and duration, not risk.
+  Once the user sets the goal, the first turn starts immediately with the condition as
+  the directive; carry the same shape across the turns that follow — research
+  (`Explore` and `researcher` in parallel, since they answer different questions and
+  neither depends on the other's result), implement here, then `reviewer` and `tester`
+  in parallel — repeating on later turns until the evaluator confirms the condition
+  holds.
 
 **Risk areas** (what makes a change tier 3, and what `reviewer` and `tester` scrutinize
 hardest). Each has a recorded incident behind it:

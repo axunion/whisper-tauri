@@ -51,15 +51,6 @@ Rust tests live in `#[cfg(test)]` modules in the file under test; frontend tests
 a sibling `__tests__/` directory. Follow whichever applies rather than introducing a new
 layout.
 
-## Adding a test vs. not
-
-Add one only when the change introduces or alters a **flow worth protecting against
-future regressions** — ideally one with evidence it can actually break. Don't add a test
-just because you happened to check something while verifying this change; a one-off
-check that did its job doesn't need to become a file. If in doubt, don't add it: you
-can't ask the user directly, so describe the flow and your reasoning in your output and
-let the calling conversation make the call.
-
 ## Output
 
 State clearly, per command: pass/fail with the failure output if any. If anything
