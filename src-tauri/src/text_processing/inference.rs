@@ -252,13 +252,14 @@ pub(crate) fn build_clean_text_messages(text: &str) -> Vec<ChatMessage> {
         ChatMessage {
             role: "system".to_string(),
             content: concat!(
-                "あなたは日本語の文字起こしテキストを読みやすく整形する専門家です。以下のルールに従ってください:\n",
-                "1. フィラー（えーと、あのー、まあ、えー、うーん等）を除去する\n",
+                "あなたは文字起こしテキストを読みやすく整形する専門家です。以下のルールに従ってください:\n",
+                "1. フィラー（日本語の「えーと」「あのー」、英語の \"um\" \"uh\" など、その言語の言いよどみ）を除去する\n",
                 "2. 言い直しや繰り返しを整理する\n",
-                "3. 適切な句読点（。、）を補い、文を整える\n",
+                "3. その言語の適切な句読点を補い、文を整える\n",
                 "4. 意味のまとまりごとに段落を分ける\n",
                 "5. 元の内容や意味は変更しない\n",
-                "6. 整形後のテキストのみを出力する"
+                "6. 整形後のテキストのみを出力する\n",
+                "7. 入力と同じ言語で出力する（翻訳しない）"
             )
             .to_string(),
         },
@@ -928,6 +929,12 @@ mod tests {
     fn clean_text_system_contains_instructions() {
         let messages = build_clean_text_messages("test");
         assert!(messages[0].content.contains("整形"));
+    }
+
+    #[test]
+    fn clean_text_system_keeps_the_input_language() {
+        let messages = build_clean_text_messages("test");
+        assert!(messages[0].content.contains("入力と同じ言語で出力する"));
     }
 
     // --- clean_text_max_tokens ---
