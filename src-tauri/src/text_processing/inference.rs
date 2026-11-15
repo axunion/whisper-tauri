@@ -28,6 +28,11 @@ const CONNECT_TIMEOUT_SECS: u64 = 10;
 /// successful read, so it bounds stalls rather than total generation time.
 const READ_TIMEOUT_SECS: u64 = 120;
 
+/// How often a pending llama-server read re-checks the cancellation token.
+/// Dropping the request on cancel closes the connection, which also stops
+/// generation on the server.
+const CANCEL_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(100);
+
 // A full chunk (worst case ~1 token/char for kanji-dense Japanese) plus the
 // output budget must fit in the server context, or long requests fail with
 // HTTP 400 exceed_context_size_error.
@@ -438,7 +443,20 @@ pub(crate) async fn run_inference(
     // (silently corrupting Japanese output). Only complete lines are decoded.
     let mut buffer: Vec<u8> = Vec::new();
 
-    while let Some(chunk) = stream.next().await {
+    loop {
+        // Prompt evaluation can take a long time before the first token
+        // arrives, so cancellation is polled while the read is pending.
+        let next = loop {
+            tokio::select! {
+                next = stream.next() => break next,
+                () = tokio::time::sleep(CANCEL_POLL_INTERVAL) => {
+                    if token.is_cancelled() {
+                        return Err(TextProcessingError::Cancelled);
+                    }
+                }
+            }
+        };
+        let Some(chunk) = next else { break };
         if token.is_cancelled() {
             return Err(TextProcessingError::Cancelled);
         }
@@ -498,13 +516,30 @@ pub(crate) async fn run_inference_blocking(
         body["response_format"] = format;
     }
 
-    let response = send_chat_request(port, &body).await?;
-
+    // The response only arrives once generation has finished, so cancellation
+    // is polled while the request is pending.
+    let request = async {
+        let response = send_chat_request(port, &body).await?;
+        response
+            .json::<Value>()
+            .await
+            .map_err(TextProcessingError::from)
+    };
+    tokio::pin!(request);
+    let payload = loop {
+        tokio::select! {
+            result = &mut request => break result?,
+            () = tokio::time::sleep(CANCEL_POLL_INTERVAL) => {
+                if token.is_cancelled() {
+                    return Err(TextProcessingError::Cancelled);
+                }
+            }
+        }
+    };
     if token.is_cancelled() {
         return Err(TextProcessingError::Cancelled);
     }
 
-    let payload: Value = response.json().await.map_err(TextProcessingError::from)?;
     let content = payload
         .get("choices")
         .and_then(|c| c.get(0))

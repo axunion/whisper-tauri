@@ -16,7 +16,13 @@ impl SleepGuard {
     pub fn acquire() -> Self {
         #[cfg(target_os = "macos")]
         {
-            match std::process::Command::new("caffeinate").arg("-d").spawn() {
+            // `-w` ties caffeinate to this process: the guard is not dropped
+            // when the app quits or crashes mid-recording, and without it the
+            // child would keep the display awake indefinitely.
+            match std::process::Command::new("caffeinate")
+                .args(["-d", "-w", &std::process::id().to_string()])
+                .spawn()
+            {
                 Ok(child) => Self {
                     process: Some(child),
                 },

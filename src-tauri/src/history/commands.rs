@@ -11,12 +11,20 @@ use super::types::{
     HistorySearchParams,
 };
 
-/// Returns the database path, initializing the database if needed.
+/// Returns the database path, initializing the database on first use.
+///
+/// Schema setup and the migration checks run once per process rather than on
+/// every history command.
 fn get_db_path(app: &AppHandle) -> Result<PathBuf, String> {
+    static INITIALIZED: std::sync::OnceLock<()> = std::sync::OnceLock::new();
+
     let app_data_dir = paths::app_data_dir(app)?;
-    std::fs::create_dir_all(&app_data_dir).map_err(HistoryError::from)?;
     let path = db::db_path(&app_data_dir);
-    db::init_db(&path)?;
+    if INITIALIZED.get().is_none() {
+        std::fs::create_dir_all(&app_data_dir).map_err(HistoryError::from)?;
+        db::init_db(&path)?;
+        let _ = INITIALIZED.set(());
+    }
     Ok(path)
 }
 

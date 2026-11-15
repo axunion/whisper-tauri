@@ -47,6 +47,10 @@ fn io_err(e: std::io::Error) -> String {
 }
 
 fn write_file(reader: &mut impl Read, out_path: &Path) -> Result<(), String> {
+    // Unlink first so an update gets a new inode: macOS caches the code
+    // signature per inode and kills a binary rewritten in place, and a running
+    // server keeps its old file instead of having it truncated under it.
+    let _ = std::fs::remove_file(out_path);
     let mut out_file = std::fs::File::create(out_path).map_err(io_err)?;
     std::io::copy(reader, &mut out_file).map_err(io_err)?;
     Ok(())
@@ -153,24 +157,37 @@ pub(crate) fn extract_from_zip(archive_path: &Path, bin_dir: &Path) -> Result<()
 }
 
 fn create_symlinks(symlinks: &[(String, PathBuf)], bin_dir: &Path) -> Result<(), String> {
-    for (target_name, link_path) in symlinks {
-        let target_path = bin_dir.join(target_name);
-        if !target_path.exists() {
-            continue;
+    // A link's target can itself be a link listed later in the archive
+    // (`libx.dylib` -> `libx.0.dylib` -> `libx.0.0.1.dylib`), so keep passing
+    // over the pending links until a pass resolves none of them.
+    let mut pending: Vec<&(String, PathBuf)> = symlinks.iter().collect();
+    loop {
+        let pending_before = pending.len();
+        let mut unresolved = Vec::new();
+        for link in pending {
+            let (target_name, link_path) = link;
+            let target_path = bin_dir.join(target_name);
+            if !target_path.exists() {
+                unresolved.push(link);
+                continue;
+            }
+            // A symlink entry may have been written earlier as a 0-byte placeholder
+            // (before its target was seen); drop it so we can replace with a real symlink.
+            let _ = std::fs::remove_file(link_path);
+            #[cfg(unix)]
+            {
+                std::os::unix::fs::symlink(&target_path, link_path).map_err(io_err)?;
+            }
+            #[cfg(not(unix))]
+            {
+                std::fs::copy(&target_path, link_path).map_err(io_err)?;
+            }
         }
-        // A symlink entry may have been written earlier as a 0-byte placeholder
-        // (before its target was seen); drop it so we can replace with a real symlink.
-        let _ = std::fs::remove_file(link_path);
-        #[cfg(unix)]
-        {
-            std::os::unix::fs::symlink(&target_path, link_path).map_err(io_err)?;
+        if unresolved.is_empty() || unresolved.len() == pending_before {
+            return Ok(());
         }
-        #[cfg(not(unix))]
-        {
-            std::fs::copy(&target_path, link_path).map_err(io_err)?;
-        }
+        pending = unresolved;
     }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -205,6 +222,39 @@ mod tests {
         assert!(is_extracted_artifact("libfoo.so"));
         assert!(is_extracted_artifact("libggml.so.1"));
         assert!(is_extracted_artifact("libllama.dylib"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn create_symlinks_resolves_chain_listed_before_its_target() {
+        let dir = tempfile::TempDir::new().unwrap();
+        std::fs::write(dir.path().join("libx.0.0.1.dylib"), b"lib").unwrap();
+
+        // `libx.dylib` points at a link that has not been created yet.
+        let symlinks = vec![
+            ("libx.0.dylib".to_string(), dir.path().join("libx.dylib")),
+            (
+                "libx.0.0.1.dylib".to_string(),
+                dir.path().join("libx.0.dylib"),
+            ),
+        ];
+        create_symlinks(&symlinks, dir.path()).unwrap();
+
+        assert_eq!(
+            std::fs::read(dir.path().join("libx.dylib")).unwrap(),
+            b"lib"
+        );
+    }
+
+    #[test]
+    fn write_file_replaces_existing_file() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = dir.path().join("llama-server");
+        std::fs::write(&path, b"old binary, longer").unwrap();
+
+        write_file(&mut &b"new"[..], &path).unwrap();
+
+        assert_eq!(std::fs::read(&path).unwrap(), b"new");
     }
 
     #[test]

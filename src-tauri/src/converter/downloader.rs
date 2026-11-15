@@ -177,6 +177,9 @@ fn extract_ffmpeg_from_zip(archive_path: &Path, output_path: &Path) -> Result<()
 
         if let Some(name) = entry_name {
             if name == target_name && entry.is_file() {
+                // Unlink first so an update gets a new inode: macOS caches the
+                // code signature per inode and kills a binary rewritten in place.
+                let _ = std::fs::remove_file(output_path);
                 let mut out_file = std::fs::File::create(output_path)
                     .map_err(|e| ConverterError::ConversionFailed(e.to_string()))?;
                 std::io::copy(&mut entry, &mut out_file)
@@ -284,8 +287,12 @@ fn extract_ffmpeg_from_tar_xz(
             ConverterError::ConversionFailed(format!("Failed to move ffmpeg binary: {e}"))
         })?;
 
-    // Clean up extracted directory structure
-    if let Some(top_dir) = ffmpeg_entry.split('/').next() {
+    // Clean up extracted directory structure. A leading `./` is skipped: it
+    // would resolve to `temp_dir` itself, which is the bin directory.
+    let top_dir = Path::new(&ffmpeg_entry)
+        .components()
+        .find(|c| matches!(c, std::path::Component::Normal(_)));
+    if let Some(top_dir) = top_dir {
         let top_path = temp_dir.join(top_dir);
         if top_path.is_dir() {
             let _ = std::fs::remove_dir_all(&top_path);

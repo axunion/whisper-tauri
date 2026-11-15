@@ -110,7 +110,9 @@ where
 {
     require_https(url)?;
 
-    let response = reqwest::get(url).await?;
+    // `https_only` extends the scheme check above to every redirect hop.
+    let client = reqwest::Client::builder().https_only(true).build()?;
+    let response = client.get(url).send().await?;
 
     let status = response.status();
     if !status.is_success() {
