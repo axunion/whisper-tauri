@@ -75,6 +75,7 @@ export const ja: Dictionary = {
   history: {
     detail: "詳細",
     noEntries: "履歴が見つかりません。",
+    loadMore: "さらに読み込む",
     deleteSelected: "選択した履歴を削除",
     deleteConfirmation:
       "{count} 件の履歴が完全に削除されます。この操作は取り消せません。",

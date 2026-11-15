@@ -148,6 +148,9 @@ pub struct HistoryFilter {
     /// Maximum number of entries to return
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
+    /// Number of leading entries to skip, for paging
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offset: Option<u32>,
     /// Sort by field
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sort_by: Option<HistorySortBy>,
@@ -157,7 +160,7 @@ pub struct HistoryFilter {
 }
 
 /// Parameters for full-text search of history entries.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct HistorySearchParams {
     /// Search query (space-separated keywords for AND search)
@@ -172,6 +175,9 @@ pub struct HistorySearchParams {
     /// Maximum number of entries to return
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
+    /// Number of leading entries to skip, for paging
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offset: Option<u32>,
     /// Sort by field
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sort_by: Option<HistorySortBy>,
@@ -361,5 +367,44 @@ mod tests {
         };
         let json = serde_json::to_string(&filter).expect("serialize");
         assert!(json.contains("\"sortBy\":\"duration\""));
+    }
+
+    #[test]
+    fn history_filter_offset_round_trips() {
+        let filter = HistoryFilter {
+            limit: Some(50),
+            offset: Some(100),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&filter).expect("serialize");
+        assert!(json.contains("\"offset\":100"));
+
+        let back: HistoryFilter = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back.offset, Some(100));
+        assert_eq!(back.limit, Some(50));
+    }
+
+    #[test]
+    fn history_filter_omits_unset_offset() {
+        let json = serde_json::to_string(&HistoryFilter::default()).expect("serialize");
+        assert!(!json.contains("offset"));
+    }
+
+    #[test]
+    fn history_search_params_accept_offset_from_ipc() {
+        let json = r#"{"query":"会議","limit":50,"offset":50}"#;
+        let params: HistorySearchParams = serde_json::from_str(json).expect("deserialize");
+        assert_eq!(params.offset, Some(50));
+        assert_eq!(params.limit, Some(50));
+    }
+
+    #[test]
+    fn history_search_params_omit_unset_offset() {
+        let params = HistorySearchParams {
+            query: "会議".to_string(),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&params).expect("serialize");
+        assert!(!json.contains("offset"));
     }
 }

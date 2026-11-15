@@ -10,7 +10,8 @@ import type {
 } from "~/types";
 import type { AppError } from "~/types/errors";
 
-const DEFAULT_LIMIT = 200;
+/** Entries fetched per page; "load more" appends the next page. */
+const PAGE_SIZE = 50;
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -26,6 +27,10 @@ export function createHistory() {
   const [searchQuery, setSearchQuery] = createSignal("");
   const [isLoading, setIsLoading] = createSignal(false);
   const [isSearching, setIsSearching] = createSignal(false);
+  // False until the first fetch settles, so a view can tell "nothing yet" from
+  // "no entries".
+  const [hasLoaded, setHasLoaded] = createSignal(false);
+  const [hasMore, setHasMore] = createSignal(false);
   const [error, setError] = createSignal<AppError | null>(null);
 
   // Raw text as typed, plus the debounce bookkeeping that turns it into
@@ -35,6 +40,11 @@ export function createHistory() {
   const [queryPending, setQueryPending] = createSignal(false);
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
+  // Bumped by every fetch of a first page. A response belongs on screen only
+  // if no newer first-page fetch (a new query, filter or reload) started while
+  // it was in flight.
+  let generation = 0;
+
   function cancelDebounce(): void {
     clearTimeout(debounceTimer);
     debounceTimer = undefined;
@@ -43,59 +53,88 @@ export function createHistory() {
 
   onCleanup(cancelDebounce);
 
-  async function loadEntries(): Promise<void> {
+  function pageSize(): number {
+    return filter().limit ?? PAGE_SIZE;
+  }
+
+  /** Fetches one page of the current view: the search if one is active, the list otherwise. */
+  function fetchPage(offset: number): Promise<HistoryMeta[]> {
+    const { dateFrom, dateTo, sortBy, sortOrder } = filter();
+    const common = {
+      ...(dateFrom ? { dateFrom } : {}),
+      ...(dateTo ? { dateTo } : {}),
+      limit: pageSize(),
+      ...(offset > 0 ? { offset } : {}),
+      ...(sortBy ? { sortBy } : {}),
+      ...(sortOrder ? { sortOrder } : {}),
+    };
+    if (isSearching()) {
+      const params: HistorySearchParams = { query: searchQuery(), ...common };
+      return invoke<HistoryMeta[]>("history_search", { params });
+    }
+    const listFilter: HistoryFilter = common;
+    return invoke<HistoryMeta[]>("history_list", { filter: listFilter });
+  }
+
+  async function fetchFirstPage(): Promise<void> {
+    const current = ++generation;
     setIsLoading(true);
     try {
-      const result = await invoke<HistoryMeta[]>("history_list", {
-        filter: { ...filter(), limit: filter().limit ?? DEFAULT_LIMIT },
-      });
+      const result = await fetchPage(0);
+      if (current !== generation) return;
       setEntries(result);
+      setHasMore(result.length === pageSize());
     } catch (e) {
-      setError(parseError(e));
+      if (current === generation) {
+        setError(parseError(e));
+        // The list on screen still belongs to the previous view; paging it
+        // would append rows of the view that just failed to load.
+        setHasMore(false);
+      }
     } finally {
-      setIsLoading(false);
+      if (current === generation) {
+        setIsLoading(false);
+        setHasLoaded(true);
+      }
+    }
+  }
+
+  async function loadEntries(): Promise<void> {
+    await fetchFirstPage();
+  }
+
+  async function loadMore(): Promise<void> {
+    if (isLoading() || !hasMore()) return;
+    const current = generation;
+    setIsLoading(true);
+    try {
+      const result = await fetchPage(entries().length);
+      if (current !== generation) return;
+      // Skip ids already on screen: a save that landed since the first page
+      // shifts every offset, which would otherwise repeat a row.
+      setEntries((prev) => {
+        const seen = new Set(prev.map((e) => e.id));
+        return [...prev, ...result.filter((e) => !seen.has(e.id))];
+      });
+      setHasMore(result.length === pageSize());
+    } catch (e) {
+      if (current === generation) setError(parseError(e));
+    } finally {
+      if (current === generation) setIsLoading(false);
     }
   }
 
   async function searchEntries(query: string): Promise<void> {
     const trimmed = query.trim();
     if (!trimmed) {
-      setSearchQuery("");
-      setIsSearching(false);
+      clearSearch();
       await loadEntries();
       return;
     }
 
     setSearchQuery(trimmed);
     setIsSearching(true);
-    setIsLoading(true);
-    const isStale = () => searchQuery() !== trimmed;
-    try {
-      const currentFilter = filter();
-      const params: HistorySearchParams = {
-        query: trimmed,
-        ...(currentFilter.dateFrom ? { dateFrom: currentFilter.dateFrom } : {}),
-        ...(currentFilter.dateTo ? { dateTo: currentFilter.dateTo } : {}),
-        limit: currentFilter.limit ?? DEFAULT_LIMIT,
-        ...(currentFilter.sortBy ? { sortBy: currentFilter.sortBy } : {}),
-        ...(currentFilter.sortOrder
-          ? { sortOrder: currentFilter.sortOrder }
-          : {}),
-      };
-      const result = await invoke<HistoryMeta[]>("history_search", { params });
-      // Discard stale results if query changed while awaiting
-      if (!isStale()) {
-        setEntries(result);
-      }
-    } catch (e) {
-      if (!isStale()) {
-        setError(parseError(e));
-      }
-    } finally {
-      if (!isStale()) {
-        setIsLoading(false);
-      }
-    }
+    await fetchFirstPage();
   }
 
   function clearSearch(): void {
@@ -126,11 +165,11 @@ export function createHistory() {
     try {
       await invoke("history_delete", { ids });
       setSelectedIds(new Set<string>());
-      if (isSearching()) {
-        await searchEntries(searchQuery());
-      } else {
-        await loadEntries();
-      }
+      // Dropped locally instead of reloading, so deleting from a later page
+      // keeps the user's place. The database shrinks by the same rows, so the
+      // list length stays a valid offset for the next page.
+      const deleted = new Set(ids);
+      setEntries((prev) => prev.filter((e) => !deleted.has(e.id)));
       return true;
     } catch (e) {
       setError(parseError(e));
@@ -162,6 +201,11 @@ export function createHistory() {
       setEntries((prev) =>
         prev.map((e) => (e.id === id ? { ...e, fileName } : e)),
       );
+      // A new name can move the entry within a name-sorted list, or in or out
+      // of a search (which matches file names), invalidating the page offsets.
+      if (filter().sortBy === "fileName" || isSearching()) {
+        await fetchFirstPage();
+      }
     } catch (e) {
       setError(parseError(e));
     }
@@ -248,11 +292,14 @@ export function createHistory() {
     searchQuery,
     isLoading,
     isSearching,
+    hasLoaded,
+    hasMore,
     queryPending,
     error,
 
     // Actions
     loadEntries,
+    loadMore,
     searchEntries,
     clearSearch,
     updateQuery,

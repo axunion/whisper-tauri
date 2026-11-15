@@ -52,6 +52,10 @@ CREATE INDEX idx_ai_content_history ON ai_content(history_id);
 - 検索結果の `textPreview` は最初のヒットの 20 文字前から始まる 100 文字の抜粋 (`rows.rs::match_preview`)。ファイル名だけでヒットした場合は通常の冒頭プレビュー
 - FE (`HistoryList`) は検索語を `src/lib/highlight.ts::splitHighlights` でハイライトする
 
+## ページング
+
+`history_list` / `history_search` は `limit` + `offset` を受け取る (`entries.rs::push_paging`)。FE (`createHistory.ts`) は 50 件ずつ取得し、満杯のページが返ったときだけ「さらに読み込む」を出す。ページ間で行が重複・欠落しないよう、`sort_clause` は常に `id` を最終ソートキーに付ける (`created_at` は秒精度で同値があり得る)。
+
 ## コマンド一覧
 
 `history_save` / `history_list` (フィルタ + ソート) / `history_get` / `history_delete` / `history_delete_all` / `history_search` / `history_rename` / `history_save_ai_content` / `history_get_ai_content` / `history_get_all_ai_content`

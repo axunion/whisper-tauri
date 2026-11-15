@@ -72,6 +72,7 @@ export interface Dictionary {
   history: {
     detail: string;
     noEntries: string;
+    loadMore: string;
     deleteSelected: string;
     deleteConfirmation: string;
     deletedToast: string;

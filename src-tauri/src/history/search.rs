@@ -136,9 +136,7 @@ pub(crate) fn search_entries(
         super::db::sort_clause(params.sort_by.as_ref(), params.sort_order.as_ref(), "h.")
     )
     .ok();
-    if let Some(limit) = params.limit {
-        write!(sql, " LIMIT {limit}").ok();
-    }
+    super::db::push_paging(&mut sql, &mut param_values, params.limit, params.offset);
 
     let param_refs: Vec<&dyn rusqlite::types::ToSql> =
         param_values.iter().map(AsRef::as_ref).collect();
@@ -267,6 +265,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            offset: None,
             sort_by: None,
             sort_order: None,
         };
@@ -291,6 +290,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            offset: None,
             sort_by: None,
             sort_order: None,
         };
@@ -321,6 +321,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            offset: None,
             sort_by: None,
             sort_order: None,
         };
@@ -335,6 +336,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            offset: None,
             sort_by: None,
             sort_order: None,
         }
@@ -457,6 +459,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            offset: None,
             sort_by: None,
             sort_order: None,
         };
@@ -475,6 +478,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            offset: None,
             sort_by: None,
             sort_order: None,
         };
@@ -494,6 +498,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            offset: None,
             sort_by: None,
             sort_order: None,
         };
@@ -519,6 +524,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            offset: None,
             sort_by: None,
             sort_order: None,
         };
@@ -539,6 +545,7 @@ mod tests {
             date_from: Some("2026-01-01".to_string()),
             date_to: None,
             limit: None,
+            offset: None,
             sort_by: None,
             sort_order: None,
         };
@@ -552,6 +559,7 @@ mod tests {
             date_from: None,
             date_to: Some("2025-12-31".to_string()),
             limit: None,
+            offset: None,
             sort_by: None,
             sort_order: None,
         };
@@ -565,6 +573,7 @@ mod tests {
             date_from: Some("2026-01-01".to_string()),
             date_to: Some("2026-12-31".to_string()),
             limit: None,
+            offset: None,
             sort_by: None,
             sort_order: None,
         };
@@ -593,6 +602,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            offset: None,
             sort_by: None,
             sort_order: None,
         };
@@ -643,6 +653,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            offset: None,
             sort_by: None,
             sort_order: None,
         };
@@ -668,6 +679,37 @@ mod tests {
     }
 
     #[test]
+    fn search_entries_pages_with_limit_and_offset() {
+        let (_dir, conn) = setup();
+        for i in 0..5 {
+            let id = format!("entry-{i}");
+            let text = format!("検索対象テキスト{i}");
+            let created_at = format!("2026-02-20T1{i}:00:00");
+            insert_history(&conn, &id, &text, &created_at);
+            index_entry(&conn, &id, &text).expect("index");
+        }
+
+        // Newest first: entry-4, entry-3 | entry-2, entry-1 | entry-0
+        let page = |offset: u32| {
+            let params = HistorySearchParams {
+                query: "検索対象".to_string(),
+                limit: Some(2),
+                offset: Some(offset),
+                ..Default::default()
+            };
+            search_entries(&conn, &params)
+                .expect("search")
+                .into_iter()
+                .map(|e| e.id)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(page(0), ["entry-4", "entry-3"]);
+        assert_eq!(page(2), ["entry-2", "entry-1"]);
+        assert_eq!(page(4), ["entry-0"]);
+        assert_eq!(page(6).len(), 0);
+    }
+
+    #[test]
     fn search_entries_with_limit() {
         let (_dir, conn) = setup();
         for i in 0..5 {
@@ -683,6 +725,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: Some(3),
+            offset: None,
             sort_by: None,
             sort_order: None,
         };
@@ -706,6 +749,7 @@ mod tests {
             date_from: None,
             date_to: None,
             limit: None,
+            offset: None,
             sort_by: None,
             sort_order: None,
         };
@@ -778,6 +822,7 @@ mod tests {
             date_from: Some("2026-01-01".to_string()),
             date_to: None,
             limit: None,
+            offset: None,
             sort_by: None,
             sort_order: None,
         };

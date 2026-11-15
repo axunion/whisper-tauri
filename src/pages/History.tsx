@@ -142,7 +142,7 @@ export default function History() {
         </div>
 
         {/* List */}
-        <Show when={!history.queryPending()}>
+        <Show when={history.hasLoaded() && !history.queryPending()}>
           <Show
             when={!history.isSearching() || history.entries().length > 0}
             fallback={
@@ -160,6 +160,18 @@ export default function History() {
               onViewEntry={(id) => history.getEntry(id)}
               onEnterSelectionMode={enterSelectionMode}
             />
+            <Show when={history.hasMore()}>
+              <div class="flex justify-center pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={history.isLoading()}
+                  onClick={() => void history.loadMore()}
+                >
+                  {t("history.loadMore")}
+                </Button>
+              </div>
+            </Show>
           </Show>
         </Show>
 

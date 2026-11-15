@@ -12,6 +12,10 @@ use super::rows::{meta_from_row, meta_row_mapper};
 use super::time::chrono_now;
 
 /// Builds an ORDER BY clause based on the sort option and direction.
+///
+/// `id` is always the final key: entries can share a `created_at` second (or a
+/// duration or name), and paging needs a total order to neither repeat nor skip
+/// rows between pages.
 #[must_use]
 pub(crate) fn sort_clause(
     sort_by: Option<&HistorySortBy>,
@@ -23,16 +27,39 @@ pub(crate) fn sort_clause(
         Some(SortOrder::Desc) | None => "DESC",
     };
     match sort_by {
-        Some(HistorySortBy::Duration) => format!("ORDER BY {prefix}duration {dir}"),
+        Some(HistorySortBy::Duration) => {
+            format!("ORDER BY {prefix}duration {dir}, {prefix}id")
+        }
         Some(HistorySortBy::FileName) => {
             let file_dir = match sort_order {
                 Some(SortOrder::Desc) => "DESC",
                 Some(SortOrder::Asc) | None => "ASC",
             };
-            format!("ORDER BY {prefix}file_name COLLATE NOCASE {file_dir}")
+            format!("ORDER BY {prefix}file_name COLLATE NOCASE {file_dir}, {prefix}id")
         }
-        Some(HistorySortBy::Date) | None => format!("ORDER BY {prefix}created_at {dir}"),
+        Some(HistorySortBy::Date) | None => {
+            format!("ORDER BY {prefix}created_at {dir}, {prefix}id")
+        }
     }
+}
+
+/// Appends a bound `LIMIT … OFFSET …` to a listing query.
+///
+/// `SQLite` only accepts `OFFSET` after a `LIMIT`, so an offset without a
+/// limit binds `-1` (unbounded) as the limit.
+pub(crate) fn push_paging(
+    sql: &mut String,
+    params: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
+    limit: Option<u32>,
+    offset: Option<u32>,
+) {
+    if limit.is_none() && offset.is_none() {
+        return;
+    }
+    let n = params.len();
+    write!(sql, " LIMIT ?{} OFFSET ?{}", n + 1, n + 2).ok();
+    params.push(Box::new(limit.map_or(-1, i64::from)));
+    params.push(Box::new(i64::from(offset.unwrap_or(0))));
 }
 
 /// Saves a new history entry and returns its ID.
@@ -115,9 +142,7 @@ pub(crate) fn list_entries(
         sort_clause(filter.sort_by.as_ref(), filter.sort_order.as_ref(), "")
     )
     .ok();
-    if let Some(limit) = filter.limit {
-        write!(sql, " LIMIT {limit}").ok();
-    }
+    push_paging(&mut sql, &mut params_vec, filter.limit, filter.offset);
 
     let params_refs: Vec<&dyn rusqlite::types::ToSql> =
         params_vec.iter().map(AsRef::as_ref).collect();
@@ -565,6 +590,7 @@ mod tests {
                 date_from: None,
                 date_to: None,
                 limit: None,
+                offset: None,
                 sort_by: None,
                 sort_order: None,
             },
@@ -590,6 +616,7 @@ mod tests {
                 date_from: None,
                 date_to: None,
                 limit: None,
+                offset: None,
                 sort_by: None,
                 sort_order: None,
             },
@@ -615,12 +642,69 @@ mod tests {
                 date_from: None,
                 date_to: None,
                 limit: None,
+                offset: None,
                 sort_by: None,
                 sort_order: None,
             },
         )
         .expect("search");
         assert_eq!(results.len(), 0);
+    }
+
+    #[test]
+    fn sort_clause_ends_with_id_for_every_sort_mode() {
+        assert_eq!(sort_clause(None, None, ""), "ORDER BY created_at DESC, id");
+        assert_eq!(
+            sort_clause(Some(&HistorySortBy::Date), Some(&SortOrder::Asc), ""),
+            "ORDER BY created_at ASC, id"
+        );
+        assert_eq!(
+            sort_clause(Some(&HistorySortBy::Duration), None, ""),
+            "ORDER BY duration DESC, id"
+        );
+        assert_eq!(
+            sort_clause(Some(&HistorySortBy::Duration), Some(&SortOrder::Asc), ""),
+            "ORDER BY duration ASC, id"
+        );
+        assert_eq!(
+            sort_clause(Some(&HistorySortBy::FileName), None, ""),
+            "ORDER BY file_name COLLATE NOCASE ASC, id"
+        );
+        assert_eq!(
+            sort_clause(Some(&HistorySortBy::FileName), Some(&SortOrder::Desc), ""),
+            "ORDER BY file_name COLLATE NOCASE DESC, id"
+        );
+        assert_eq!(
+            sort_clause(Some(&HistorySortBy::Date), Some(&SortOrder::Asc), "h."),
+            "ORDER BY h.created_at ASC, h.id"
+        );
+    }
+
+    #[test]
+    fn list_entries_pages_without_overlap_or_gaps() {
+        let (_dir, path) = setup_db();
+        for _ in 0..5 {
+            save_entry(&path, &sample_params()).expect("save");
+        }
+
+        let page = |limit: Option<u32>, offset: u32| {
+            let filter = HistoryFilter {
+                limit,
+                offset: Some(offset),
+                ..Default::default()
+            };
+            list_entries(&path, &filter).expect("list")
+        };
+        let mut seen: Vec<String> = Vec::new();
+        for offset in [0, 2, 4] {
+            seen.extend(page(Some(2), offset).into_iter().map(|e| e.id));
+        }
+        seen.sort();
+        seen.dedup();
+        assert_eq!(seen.len(), 5);
+        assert_eq!(page(Some(2), 6).len(), 0);
+        // An offset with no limit still skips rows.
+        assert_eq!(page(None, 3).len(), 2);
     }
 
     #[test]

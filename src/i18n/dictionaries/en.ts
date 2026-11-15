@@ -75,6 +75,7 @@ export const en: Dictionary = {
   history: {
     detail: "Detail",
     noEntries: "No history entries found.",
+    loadMore: "Load more",
     deleteSelected: "Delete Selected",
     deleteConfirmation:
       "{count} entries will be permanently deleted. This action cannot be undone.",

@@ -103,6 +103,8 @@ export interface HistoryFilter {
   dateTo?: string;
   /** Maximum number of entries to return */
   limit?: number;
+  /** Number of leading entries to skip, for paging */
+  offset?: number;
   /** Sort by field */
   sortBy?: HistorySortBy;
   /** Sort direction */
@@ -162,6 +164,8 @@ export interface HistorySearchParams {
   dateTo?: string;
   /** Maximum number of entries to return */
   limit?: number;
+  /** Number of leading entries to skip, for paging */
+  offset?: number;
   /** Sort by field */
   sortBy?: HistorySortBy;
   /** Sort direction */
