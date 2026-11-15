@@ -32,6 +32,12 @@ import { createSettings } from "~/primitives/createSettings";
 import { createWhisper } from "~/primitives/createWhisper";
 import type { HistorySource } from "~/types";
 
+// Module-level, like the whisper state they describe: a run keeps going when
+// the user leaves the page, and the page that mounts on return must still learn
+// which history entry and converted file belong to the result it shows.
+const [convertedPath, setConvertedPath] = createSignal<string | null>(null);
+const [historyId, setHistoryId] = createSignal<string | null>(null);
+
 export default function Transcription() {
   const { t } = useI18n();
 
@@ -43,9 +49,7 @@ export default function Transcription() {
 
   const location = useLocation<{ filePath?: string; tab?: string }>();
 
-  const [convertedPath, setConvertedPath] = createSignal<string | null>(null);
   const [activeTab, setActiveTab] = createSignal("file");
-  const [historyId, setHistoryId] = createSignal<string | null>(null);
 
   // Device enumeration walks CoreAudio inputs, and the list genuinely changes
   // when a mic is plugged in, so it runs on entry to the record tab instead of
@@ -123,6 +127,13 @@ export default function Transcription() {
     !whisper.isProcessing();
 
   const errors = combineErrorProviders([whisper, converter, recording]);
+
+  const retryHandler = () => {
+    if (activeTab() === "file") {
+      return canStartFile() ? handleStartFile : undefined;
+    }
+    return canStartRecording() ? handleStartRecording : undefined;
+  };
 
   async function handleStartFile() {
     const currentFile = whisper.file();
@@ -228,7 +239,7 @@ export default function Transcription() {
       <ErrorDisplay
         error={errors.error()}
         onDismiss={errors.clearAll}
-        onRetry={canStartFile() ? handleStartFile : undefined}
+        onRetry={retryHandler()}
       />
 
       <Card

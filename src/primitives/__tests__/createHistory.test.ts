@@ -273,6 +273,23 @@ describe("createHistory", () => {
     });
   });
 
+  describe("deleteEntries failure", () => {
+    it("should report failure and keep the selection", async () => {
+      vi.mocked(invoke).mockRejectedValueOnce("Database error: locked");
+
+      await createRoot(async (dispose) => {
+        const history = createHistory();
+        history.toggleSelect("entry-1");
+
+        await expect(history.deleteEntries(["entry-1"])).resolves.toBe(false);
+
+        expect(history.selectedIds().size).toBe(1);
+        expect(history.error()).not.toBeNull();
+        dispose();
+      });
+    });
+  });
+
   describe("deleteAllEntries", () => {
     it("should invoke history_delete_all and reload", async () => {
       vi.mocked(invoke)

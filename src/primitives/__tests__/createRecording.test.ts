@@ -334,6 +334,28 @@ describe("createRecording", () => {
       });
     });
 
+    it("should stop only once when stop is requested again before it settles", async () => {
+      vi.mocked(invoke)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(mockStopResult)
+        .mockRejectedValueOnce("Not recording");
+
+      await createRoot(async (dispose) => {
+        const recording = createRecording();
+        await recording.startRecording();
+
+        const [first, second] = await Promise.all([
+          recording.stopRecording(),
+          recording.stopRecording(),
+        ]);
+
+        expect(first).toEqual(mockStopResult);
+        expect(second).toBeNull();
+        expect(recording.error()).toBeNull();
+        dispose();
+      });
+    });
+
     it("should return null if not recording", async () => {
       await createRoot(async (dispose) => {
         const recording = createRecording();

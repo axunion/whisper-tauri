@@ -13,7 +13,6 @@ export function RecentActivity() {
 
   onMount(() => {
     history.updateFilter({ limit: 7 });
-    history.loadEntries();
   });
 
   return (

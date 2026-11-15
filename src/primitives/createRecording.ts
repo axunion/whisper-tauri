@@ -54,6 +54,9 @@ listen<RecordingLevel>("recording:level", (event) => {
 }).catch(console.error);
 
 let durationTimer: ReturnType<typeof setInterval> | undefined;
+// Guards the window between a stop request and the backend finishing the WAV,
+// during which `isRecording` is still true.
+let isStopping = false;
 
 async function loadDevices(): Promise<void> {
   try {
@@ -93,7 +96,8 @@ async function startRecording(): Promise<void> {
 }
 
 async function stopRecording(): Promise<RecordingStopResult | null> {
-  if (!isRecording()) return null;
+  if (!isRecording() || isStopping) return null;
+  isStopping = true;
 
   if (durationTimer) {
     clearInterval(durationTimer);
@@ -111,6 +115,8 @@ async function stopRecording(): Promise<RecordingStopResult | null> {
     setIsRecording(false);
     setError(parseError(e));
     return null;
+  } finally {
+    isStopping = false;
   }
 }
 
@@ -158,6 +164,7 @@ export function _resetRecordingForTesting(): void {
   setTempFilePath(null);
   setDuration(0);
   setError(null);
+  isStopping = false;
   if (durationTimer) {
     clearInterval(durationTimer);
     durationTimer = undefined;

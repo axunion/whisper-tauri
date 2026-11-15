@@ -109,9 +109,19 @@ const {
 });
 
 // Event listeners at module level — persist for the app lifetime.
+// A cancel requested before the backend has announced the run's task id. It is
+// honoured by the first progress event, which is what carries the id.
+let cancelRequested = false;
+
 listen<TranscriptionProgress>("whisper:progress", (event) => {
   setProgress(event.payload);
   setCurrentTaskId(event.payload.taskId);
+  if (cancelRequested) {
+    cancelRequested = false;
+    invoke("cancel_transcription", { taskId: event.payload.taskId }).catch(
+      console.error,
+    );
+  }
 }).catch(console.error);
 
 listen<DownloadProgress>("model:download-progress", (event) => {
@@ -245,9 +255,12 @@ async function startTranscription(overrideAudioPath?: string): Promise<void> {
   if (!currentFile || !currentModel) return;
   if (isProcessing()) return;
 
+  cancelRequested = false;
   batch(() => {
     setProgress(null);
     setResult(null);
+    setError(null);
+    setCurrentTaskId(null);
     setIsProcessing(true);
     setProcessingMs(null);
     setTranscribedAt(null);
@@ -276,13 +289,17 @@ async function startTranscription(overrideAudioPath?: string): Promise<void> {
   } catch (e) {
     setError(parseError(e));
   } finally {
+    cancelRequested = false;
     setIsProcessing(false);
   }
 }
 
 async function cancelTranscription(): Promise<void> {
   const taskId = currentTaskId();
-  if (!taskId) return;
+  if (!taskId) {
+    cancelRequested = isProcessing();
+    return;
+  }
   await invoke("cancel_transcription", { taskId });
 }
 
@@ -337,6 +354,7 @@ export function createWhisper() {
 export function _resetWhisperForTesting(): void {
   modelsLoaded = false;
   loadModelsPromise = null;
+  cancelRequested = false;
   setModels([]);
   setSelectedModel(null);
   setFile(null);

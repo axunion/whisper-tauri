@@ -13,6 +13,7 @@ import {
 import { Button } from "~/components/ui/Button";
 import { Sheet, SheetContent, SheetTitle } from "~/components/ui/Sheet";
 import { useI18n } from "~/i18n";
+import { runWithToast } from "~/lib/actionToast";
 import { toast } from "~/lib/toast";
 import type { AiOperation } from "~/primitives/createAiSession";
 import { createHistory } from "~/primitives/createHistory";
@@ -83,8 +84,12 @@ export default function History() {
   async function handleDeleteSelected(): Promise<void> {
     const ids = [...history.selectedIds()];
     if (ids.length > 0) {
-      await history.deleteEntries(ids);
-      toast.success(t("history.deletedToast"));
+      await runWithToast({
+        action: () => history.deleteEntries(ids),
+        successKey: "history.deletedToast",
+        error: history.error,
+        t,
+      });
       if (history.selectedIds().size === 0) {
         setSelectionMode(false);
       }
@@ -174,16 +179,23 @@ export default function History() {
             >
               <FiX class="size-4" aria-hidden="true" />
             </Button>
-            <Show when={history.selectedEntry()} keyed>
-              {(entry) => (
-                <HistoryDetail
-                  entry={entry}
-                  onRename={history.renameEntry}
-                  onProcessingChange={(op, cancel) => {
-                    setCurrentOp(op);
-                    setCancelFn(() => cancel);
-                  }}
-                />
+            {/* Keyed on the id, not the entry object: a rename replaces the
+                object, and remounting the detail then would cancel a running
+                AI action and reset the open tab. */}
+            <Show when={history.selectedEntry()?.id} keyed>
+              {(_id) => (
+                <Show when={history.selectedEntry()}>
+                  {(entry) => (
+                    <HistoryDetail
+                      entry={entry()}
+                      onRename={history.renameEntry}
+                      onProcessingChange={(op, cancel) => {
+                        setCurrentOp(op);
+                        setCancelFn(() => cancel);
+                      }}
+                    />
+                  )}
+                </Show>
               )}
             </Show>
           </SheetContent>

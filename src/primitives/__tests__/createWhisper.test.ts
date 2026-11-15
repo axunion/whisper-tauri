@@ -612,6 +612,71 @@ describe("createWhisper", () => {
     });
   });
 
+  describe("a new run after an earlier one", () => {
+    const progressCallback = () =>
+      vi
+        .mocked(listen)
+        .mock.calls.find(
+          ([event]) => event === "whisper:progress",
+        )?.[1] as (event: { payload: TranscriptionProgress }) => void;
+
+    it("should clear the previous run's error when a run starts", async () => {
+      vi.mocked(invoke)
+        .mockResolvedValueOnce("/models/vad.bin") // ensure_vad_model
+        .mockRejectedValueOnce("Transcription error: boom")
+        .mockResolvedValueOnce("/models/vad.bin")
+        .mockResolvedValueOnce(mockResult);
+
+      const whisper = createWhisper();
+      whisper.selectModel(mockModel());
+      whisper.setFile(mockFile);
+
+      await whisper.startTranscription();
+      expect(whisper.error()).not.toBeNull();
+
+      await whisper.startTranscription();
+      expect(whisper.result()).toEqual(mockResult);
+      expect(whisper.error()).toBeNull();
+    });
+
+    it("should cancel the new run, not the finished one, when cancel precedes its first progress event", async () => {
+      let finishRun: (value: TranscriptionResult) => void = () => {};
+      vi.mocked(invoke).mockImplementation((command) => {
+        if (command === "transcribe_audio") {
+          return new Promise((resolve) => {
+            finishRun = resolve;
+          });
+        }
+        return Promise.resolve(undefined);
+      });
+
+      const whisper = createWhisper();
+      whisper.selectModel(mockModel());
+      whisper.setFile(mockFile);
+      // Task id left over from a run that has already finished.
+      progressCallback()({
+        payload: { taskId: "old-task", progress: 100, elapsedMs: 9000 },
+      });
+
+      const run = whisper.startTranscription();
+      await whisper.cancelTranscription();
+      expect(invoke).not.toHaveBeenCalledWith(
+        "cancel_transcription",
+        expect.anything(),
+      );
+
+      progressCallback()({
+        payload: { taskId: "new-task", progress: 0, elapsedMs: 0 },
+      });
+      expect(invoke).toHaveBeenCalledWith("cancel_transcription", {
+        taskId: "new-task",
+      });
+
+      finishRun(mockResult);
+      await run;
+    });
+  });
+
   describe("reset", () => {
     it("should clear file, result, and error", () => {
       createRoot((dispose) => {

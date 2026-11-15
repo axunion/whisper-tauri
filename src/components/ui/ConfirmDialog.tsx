@@ -21,6 +21,7 @@ interface ConfirmDialogProps {
 export function ConfirmDialog(props: ConfirmDialogProps) {
   const { t } = useI18n();
   const [open, setOpen] = createSignal(false);
+  const [confirming, setConfirming] = createSignal(false);
 
   return (
     <>
@@ -41,9 +42,15 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
             <Button
               variant="destructive"
               class="w-32"
+              disabled={confirming()}
               onClick={async () => {
-                await props.onConfirm();
-                setOpen(false);
+                setConfirming(true);
+                try {
+                  await props.onConfirm();
+                  setOpen(false);
+                } finally {
+                  setConfirming(false);
+                }
               }}
             >
               {props.confirmLabel}

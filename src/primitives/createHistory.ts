@@ -124,7 +124,7 @@ export function createHistory() {
     }
   }
 
-  async function deleteEntries(ids: string[]): Promise<void> {
+  async function deleteEntries(ids: string[]): Promise<boolean> {
     try {
       await invoke("history_delete", { ids });
       setSelectedIds(new Set<string>());
@@ -133,8 +133,10 @@ export function createHistory() {
       } else {
         await loadEntries();
       }
+      return true;
     } catch (e) {
       setError(parseError(e));
+      return false;
     }
   }
 
