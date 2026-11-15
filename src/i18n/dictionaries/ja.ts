@@ -19,6 +19,15 @@ export const ja: Dictionary = {
     editTitle: "タイトルを編集",
     notifications: "通知",
   },
+  closeGuard: {
+    title: "終了の確認",
+    recording: "録音中です。終了すると録音は失われます。終了しますか？",
+    processing:
+      "文字起こし中です。終了すると処理は中断されます。終了しますか？",
+    unsavedRecording:
+      "まだ文字起こししていない録音があります。終了すると録音は失われます。終了しますか？",
+    quit: "終了する",
+  },
   nav: {
     dashboard: "ダッシュボード",
     transcription: "文字起こし",

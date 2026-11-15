@@ -60,6 +60,7 @@ bin/               # ffmpeg (+ .ffmpeg-version) / llama-server (+ llama-server.v
 recordings/        # 録音 WAV ({uuid}.wav)
 history.db         # 履歴 SQLite
 settings.json      # tauri-plugin-store (設定)
+mirrors.json       # ダウンロード元の差し替え (任意・手編集)
 ```
 
 ## ネットワークエンドポイント
@@ -75,13 +76,19 @@ settings.json      # tauri-plugin-store (設定)
 | `api.notion.com` | Notion ページ作成 / 接続テスト | ユーザーが連携を設定・送信したときのみ |
 | `127.0.0.1:{port}` | llama-server (ローカル loopback) | AI テキスト処理の実行中 |
 
-モデル / バイナリの取得元 URL は `settings.json` のカスタム URL キーで差し替え可能 (社内ミラー等。get/set コマンドは実装済みだが設定 UI は未提供 — [settings.md](settings.md))。テレメトリ・自動通信は存在しない。
+モデル / バイナリの取得元 URL は `{app_data}/mirrors.json` で差し替え可能 (社内ミラー等。手編集専用で設定 UI は無い — [settings.md](settings.md))。テレメトリ・自動通信は存在しない。
 
 ## セキュリティ設定
 
-- `capabilities/default.json`: 各プラグインの `*:default` に加え、`fs:allow-write-text-file` / `fs:allow-copy-file` を `$HOME/**` スコープで明示許可 (詳細は `.claude/rules/tauri-permissions.md`)、`clipboard-manager:allow-write-text`、window の set-size / set-min-size / center / show
+- `capabilities/default.json`: 各プラグインの `*:default` に加え、`fs:allow-write-text-file` (スコープなし — 書き込み先は保存ダイアログが実行時に許可する) と `fs:allow-copy-file` (`$APPDATA/recordings/*` のみ) を明示許可 (詳細は `.claude/rules/tauri-permissions.md`)、`clipboard-manager:allow-write-text`、window の set-size / set-min-size / center / show / destroy (destroy は終了ガード用 — 下記)
 - CSP (`tauri.conf.json`): `default-src 'self'` ベース。`connect-src 'self' ipc: http://ipc.localhost` — WebView からの外部通信を遮断し、ネットワークアクセスはすべて Rust 側 (reqwest) に集約
 - Rust は `unsafe_code = "forbid"`、clippy `pedantic` + `unwrap_used` / `expect_used` 警告
+
+## 終了ガード
+
+`src/components/layout/CloseGuard.tsx` が `onCloseRequested` を購読し、録音中 / 文字起こし中 / 未処理の録音があるときはウィンドウを閉じる前に確認する。JS 側の `onCloseRequested` ラッパーは、中止されなければ自分で `destroy()` を呼ぶため `core:window:allow-destroy` が必須 (欠けるとウィンドウが閉じられなくなる)。
+
+macOS の標準 Quit メニュー (Cmd+Q) は close-requested を経由せずプロセスを終了させるため、`lib.rs::build_menu` がアプリメニューの Quit をカスタム項目に差し替え、ウィンドウの `close()` 経由でガードを通す。**Dock の「終了」とシステムのシャットダウンはガードを通らない** (tao が `applicationShouldTerminate` を扱わないため。既知の制約)。
 
 ## エラー変換システム
 

@@ -19,6 +19,16 @@ export const en: Dictionary = {
     editTitle: "Edit Title",
     notifications: "Notifications",
   },
+  closeGuard: {
+    title: "Quit?",
+    recording:
+      "A recording is in progress. Quitting will discard it. Quit anyway?",
+    processing:
+      "A transcription is running. Quitting will stop it. Quit anyway?",
+    unsavedRecording:
+      "A recording has not been transcribed yet. Quitting will discard it. Quit anyway?",
+    quit: "Quit",
+  },
   nav: {
     dashboard: "Dashboard",
     transcription: "Transcription",

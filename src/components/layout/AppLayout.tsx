@@ -9,6 +9,7 @@ import { I18nProvider } from "~/i18n";
 import { createSettings } from "~/primitives/createSettings";
 import { applyTheme } from "~/primitives/createTheme";
 import { AppSidebar } from "./AppSidebar";
+import { CloseGuard } from "./CloseGuard";
 
 async function showWindow(): Promise<void> {
   try {
@@ -74,6 +75,7 @@ export function AppLayout(props: RouteSectionProps) {
           <Onboarding settings={settings} />
         </Show>
       </Show>
+      <CloseGuard />
       <Toaster />
     </I18nProvider>
   );

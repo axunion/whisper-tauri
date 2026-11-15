@@ -19,6 +19,13 @@ export interface Dictionary {
     editTitle: string;
     notifications: string;
   };
+  closeGuard: {
+    title: string;
+    recording: string;
+    processing: string;
+    unsavedRecording: string;
+    quit: string;
+  };
   nav: {
     dashboard: string;
     transcription: string;

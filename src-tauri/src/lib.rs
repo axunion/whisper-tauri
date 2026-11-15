@@ -24,6 +24,36 @@ pub mod text_processing;
 pub mod update;
 pub mod whisper;
 
+/// Id of the Quit item that replaces the predefined one in the macOS app menu.
+#[cfg(target_os = "macos")]
+const QUIT_MENU_ID: &str = "quit";
+
+/// Builds the default menu with the app menu's Quit swapped for a custom item.
+///
+/// The predefined Quit terminates the process directly, without a
+/// close-requested event, so Cmd+Q would skip the frontend's close guard and
+/// silently drop a recording in progress. The custom item closes the window
+/// instead, which runs the guard and then exits as the last window goes away.
+#[cfg(target_os = "macos")]
+fn build_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+    use tauri::menu::{Menu, MenuItem, MenuItemKind};
+
+    let menu = Menu::default(app)?;
+    // `Menu::default` puts the app submenu first and Quit last within it.
+    if let Some(MenuItemKind::Submenu(app_menu)) = menu.items()?.into_iter().next() {
+        let quit_position = app_menu.items()?.len().saturating_sub(1);
+        app_menu.remove_at(quit_position)?;
+        app_menu.append(&MenuItem::with_id(
+            app,
+            QUIT_MENU_ID,
+            format!("Quit {}", app.package_info().name),
+            true,
+            Some("CmdOrCtrl+Q"),
+        )?)?;
+    }
+    Ok(menu)
+}
+
 /// Run the Tauri application.
 ///
 /// # Panics
@@ -32,7 +62,21 @@ pub mod whisper;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 #[allow(clippy::expect_used)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+
+    #[cfg(target_os = "macos")]
+    let builder = builder.menu(build_menu).on_menu_event(|app, event| {
+        if event.id() == QUIT_MENU_ID {
+            match app.get_webview_window("main") {
+                Some(window) => {
+                    let _ = window.close();
+                }
+                None => app.exit(0),
+            }
+        }
+    });
+
+    builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
