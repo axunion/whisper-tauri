@@ -24,26 +24,18 @@ import { useI18n } from "~/i18n";
 import { extractFilename } from "~/lib/constants";
 import { combineErrorProviders } from "~/lib/errors";
 import { formatLocalDateTime } from "~/lib/format";
-import { toast } from "~/lib/toast";
 import { cn } from "~/lib/utils";
-import { createFileConverter } from "~/primitives/createFileConverter";
 import { createHistory } from "~/primitives/createHistory";
 import { createRecording } from "~/primitives/createRecording";
 import { createSettings } from "~/primitives/createSettings";
+import { createTranscriptionJob } from "~/primitives/createTranscriptionJob";
 import { createWhisper } from "~/primitives/createWhisper";
-import type { HistorySource } from "~/types";
-
-// Module-level, like the whisper state they describe: a run keeps going when
-// the user leaves the page, and the page that mounts on return must still learn
-// which history entry and converted file belong to the result it shows.
-const [convertedPath, setConvertedPath] = createSignal<string | null>(null);
-const [historyId, setHistoryId] = createSignal<string | null>(null);
 
 export default function Transcription() {
   const { t } = useI18n();
 
   const whisper = createWhisper();
-  const converter = createFileConverter();
+  const job = createTranscriptionJob();
   const history = createHistory();
   const recording = createRecording();
   const settings = createSettings();
@@ -86,12 +78,6 @@ export default function Transcription() {
     ),
   );
 
-  const needsConversion = () => {
-    const f = whisper.file();
-    if (!f) return false;
-    return !f.name.toLowerCase().endsWith(".wav");
-  };
-
   const downloadedModels = createMemo(() =>
     whisper.models().filter((m) => m.downloaded),
   );
@@ -116,137 +102,39 @@ export default function Transcription() {
     });
   });
 
-  const canStartFile = () =>
-    whisper.file() !== null &&
-    whisper.selectedModel() !== null &&
-    !whisper.isProcessing() &&
-    !converter.isConverting();
+  // `history` is here for a failed rename of the result's entry.
+  const errors = combineErrorProviders([whisper, job, recording, history]);
 
-  const canStartRecording = () =>
-    recording.tempFilePath() !== null &&
-    whisper.selectedModel() !== null &&
-    !whisper.isProcessing();
+  const completedMessage = () => t("transcription.completedToast");
 
-  const errors = combineErrorProviders([
-    whisper,
-    converter,
-    recording,
-    history,
-  ]);
+  function handleStartFile() {
+    history.clearError();
+    return job.startFile({ completedMessage: completedMessage() });
+  }
+
+  function handleStartRecording() {
+    history.clearError();
+    return job.startRecording({
+      // Dated so recordings stay distinguishable in the history list.
+      name: `${t("recording.title")} ${formatLocalDateTime(new Date())}`,
+      completedMessage: completedMessage(),
+    });
+  }
 
   const retryHandler = () => {
-    // Retry re-runs the transcription, which is the wrong remedy for a failed
-    // history save: it would discard the result on screen to redo minutes of
-    // work for one database write.
-    if (history.error()) return undefined;
+    // Retry re-runs the transcription, which fixes neither a failed history
+    // save nor a failed rename.
+    if (job.saveFailed() || history.error()) return undefined;
     if (activeTab() === "file") {
-      return canStartFile() ? handleStartFile : undefined;
+      return job.canStartFile() ? handleStartFile : undefined;
     }
-    return canStartRecording() ? handleStartRecording : undefined;
+    return job.canStartRecording() ? handleStartRecording : undefined;
   };
 
-  async function handleStartFile() {
-    const currentFile = whisper.file();
-    if (!currentFile || !canStartFile()) return;
-    history.clearError();
-
-    // Drop the previous run's id up front: the result view mounts as soon as
-    // the result arrives, before the new entry is saved, so a stale id would
-    // load the previous transcription's AI content and persist this run's
-    // summary onto the previous history entry.
-    setHistoryId(null);
-
-    const prevConverted = convertedPath();
-    if (prevConverted) {
-      await converter.cleanup(prevConverted);
-      setConvertedPath(null);
-    }
-
-    if (needsConversion()) {
-      const result = await converter.convert(currentFile.path);
-      if (!result) return;
-
-      setConvertedPath(result.outputPath);
-      await whisper.startTranscription(result.outputPath);
-    } else {
-      await whisper.startTranscription();
-    }
-
-    await saveToHistory(currentFile.name, "file");
-  }
-
-  async function handleStartRecording() {
-    const tempPath = recording.tempFilePath();
-    if (!tempPath || !canStartRecording()) return;
-    history.clearError();
-
-    setHistoryId(null);
-
-    // Dated so recordings stay distinguishable in the history list.
-    const name = `${t("recording.title")} ${formatLocalDateTime(new Date())}`;
-    whisper.setFile({ path: tempPath, name, size: 0 });
-    await whisper.startTranscription(tempPath);
-
-    const saved = await saveToHistory(name, "recording");
-
-    // Only discard the recording once its transcription is safely in history.
-    // On cancel or failure the WAV is the user's only copy — deleting it here
-    // would make "Save as WAV" unreachable and lose the audio for good.
-    if (saved) {
-      await recording.cleanup();
-    }
-  }
-
-  /** Returns whether the result was written to history. */
-  async function saveToHistory(
-    fileName: string,
-    source: HistorySource,
-  ): Promise<boolean> {
-    const transcriptionResult = whisper.result();
-    const currentModel = whisper.selectedModel();
-    if (!transcriptionResult || !currentModel) return false;
-    const id = await history.saveEntry({
-      fileName,
-      language: transcriptionResult.language,
-      modelId: currentModel.id,
-      duration: transcriptionResult.duration,
-      text: transcriptionResult.text,
-      segments: transcriptionResult.segments,
-      vadEnabled: whisper.vadEnabled(),
-      source,
-    });
-    // A failed save surfaces through `history.error`; announcing success
-    // here would tell the user the result is safe when it is not in history.
-    if (!id) return false;
-    setHistoryId(id);
-    toast.success(t("transcription.completedToast"));
-    return true;
-  }
-
-  async function handleDiscardRecording() {
-    await recording.cleanup();
-    setHistoryId(null);
-    whisper.reset();
-  }
-
-  async function handleReset() {
-    const prev = convertedPath();
-    if (prev) {
-      await converter.cleanup(prev);
-      setConvertedPath(null);
-    }
-    setHistoryId(null);
-    whisper.reset();
-  }
-
-  const viewState = createMemo(
-    (): "input" | "converting" | "processing" | "result" => {
-      if (whisper.result()) return "result";
-      if (whisper.isProcessing()) return "processing";
-      if (converter.isConverting()) return "converting";
-      return "input";
-    },
-  );
+  const viewState = createMemo(() => {
+    const phase = job.phase();
+    return phase === "done" ? "result" : phase === "idle" ? "input" : phase;
+  });
 
   return (
     <div
@@ -302,9 +190,7 @@ export default function Transcription() {
                         estimateLabel={estimateLabel()}
                         onFileSelect={(file) => whisper.selectFile(file)}
                         onFileClear={() => whisper.setFile(null)}
-                        disabled={
-                          whisper.isProcessing() || converter.isConverting()
-                        }
+                        disabled={job.phase() !== "idle"}
                       />
                     </div>
                   </TabsContent>
@@ -321,7 +207,7 @@ export default function Transcription() {
                         onSelectDevice={(d) => recording.selectDevice(d)}
                         onStartRecording={() => recording.startRecording()}
                         onStopRecording={() => recording.stopRecording()}
-                        onDiscard={handleDiscardRecording}
+                        onDiscard={job.discardRecording}
                       />
                     </div>
                   </TabsContent>
@@ -341,8 +227,8 @@ export default function Transcription() {
                       vadEnabled={whisper.vadEnabled()}
                       canStart={
                         activeTab() === "file"
-                          ? canStartFile()
-                          : canStartRecording()
+                          ? job.canStartFile()
+                          : job.canStartRecording()
                       }
                       onSelectModel={(model) => whisper.selectModel(model)}
                       onLanguageChange={(lang) => {
@@ -400,8 +286,8 @@ export default function Transcription() {
                   <TranscriptionResult
                     result={result()}
                     fileName={whisper.file()?.name ?? ""}
-                    historyId={historyId()}
-                    onClose={handleReset}
+                    historyId={job.historyId()}
+                    onClose={job.reset}
                     onRename={(id, name) => history.renameEntry(id, name)}
                     notionMeta={{
                       createdAt: whisper.transcribedAt() ?? undefined,

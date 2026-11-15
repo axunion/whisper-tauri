@@ -5,7 +5,6 @@ import type {
   HistoryEntry,
   HistoryFilter,
   HistoryMeta,
-  HistorySaveParams,
   HistorySearchParams,
 } from "~/types";
 import type { AppError } from "~/types/errors";
@@ -140,16 +139,6 @@ export function createHistory() {
   function clearSearch(): void {
     setSearchQuery("");
     setIsSearching(false);
-  }
-
-  async function saveEntry(params: HistorySaveParams): Promise<string | null> {
-    try {
-      const id = await invoke<string>("history_save", { params });
-      return id;
-    } catch (e) {
-      setError(parseError(e));
-      return null;
-    }
   }
 
   async function getEntry(id: string): Promise<void> {
@@ -304,7 +293,6 @@ export function createHistory() {
     clearSearch,
     updateQuery,
     clearQuery,
-    saveEntry,
     getEntry,
     deleteEntries,
     deleteAllEntries,

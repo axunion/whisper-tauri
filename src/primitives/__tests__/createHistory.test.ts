@@ -1,12 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { createRoot } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type {
-  HistoryEntry,
-  HistoryFilter,
-  HistoryMeta,
-  HistorySaveParams,
-} from "../../types";
+import type { HistoryEntry, HistoryFilter, HistoryMeta } from "../../types";
 import { createHistory } from "../createHistory";
 
 const mockMeta = (overrides?: Partial<HistoryMeta>): HistoryMeta => ({
@@ -35,19 +30,6 @@ const mockEntry: HistoryEntry = {
     { start: 3000, end: 5000, text: "transcription." },
   ],
   vadEnabled: true,
-};
-
-const mockSaveParams: HistorySaveParams = {
-  fileName: "audio.wav",
-  language: "ja",
-  modelId: "large-v3-turbo",
-  duration: 60000,
-  text: "This is a test transcription.",
-  segments: [
-    { start: 0, end: 3000, text: "This is a test" },
-    { start: 3000, end: 5000, text: "transcription." },
-  ],
-  source: "file",
 };
 
 describe("createHistory", () => {
@@ -167,42 +149,6 @@ describe("createHistory", () => {
         expect(history.error()).toEqual(
           expect.objectContaining({
             details: "Database error: table locked",
-          }),
-        );
-        dispose();
-      });
-    });
-  });
-
-  describe("saveEntry", () => {
-    it("should invoke history_save and return id", async () => {
-      vi.mocked(invoke).mockResolvedValueOnce("new-entry-id");
-
-      await createRoot(async (dispose) => {
-        const history = createHistory();
-        const id = await history.saveEntry(mockSaveParams);
-
-        expect(invoke).toHaveBeenCalledWith("history_save", {
-          params: mockSaveParams,
-        });
-        expect(id).toBe("new-entry-id");
-        dispose();
-      });
-    });
-
-    it("should set error on failure", async () => {
-      vi.mocked(invoke).mockRejectedValueOnce(
-        new Error("Database error: disk full"),
-      );
-
-      await createRoot(async (dispose) => {
-        const history = createHistory();
-        const id = await history.saveEntry(mockSaveParams);
-
-        expect(id).toBeNull();
-        expect(history.error()).toEqual(
-          expect.objectContaining({
-            details: "Database error: disk full",
           }),
         );
         dispose();
