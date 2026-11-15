@@ -10,7 +10,7 @@ pub(crate) struct MetaRow {
     pub(super) language: String,
     pub(super) model_id: String,
     pub(super) duration: u64,
-    pub(super) text_compressed: Vec<u8>,
+    pub(super) text_preview: String,
     pub(super) vad_enabled: Option<bool>,
     pub(super) source: HistorySource,
 }
@@ -29,7 +29,7 @@ pub(crate) struct AiContentRow {
 /// Extracts a [`MetaRow`] from a rusqlite row.
 ///
 /// Expects columns: `id(0)`, `created_at(1)`, `file_name(2)`, `language(3)`,
-/// `model_id(4)`, `duration(5)`, `text_compressed(6)`, `vad_enabled(7)`,
+/// `model_id(4)`, `duration(5)`, `text_preview(6)`, `vad_enabled(7)`,
 /// `source(8)`.
 ///
 /// # Errors
@@ -43,36 +43,26 @@ pub(crate) fn meta_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<MetaRow> 
         language: row.get(3)?,
         model_id: row.get(4)?,
         duration: row.get(5)?,
-        text_compressed: row.get(6)?,
+        text_preview: row.get(6)?,
         vad_enabled: row.get(7)?,
         source: HistorySource::from_db(row.get_ref(8)?.as_str()?),
     })
 }
 
-/// Converts a [`MetaRow`] into a [`HistoryMeta`], decompressing text for preview.
-///
-/// # Errors
-///
-/// Returns an error if text decompression fails.
-pub(crate) fn meta_from_row(row: MetaRow) -> Result<HistoryMeta, HistoryError> {
-    let text = decompress_text(&row.text_compressed)?;
-    let preview = text_preview(&text, PREVIEW_CHARS);
-    Ok(meta_with_preview(row, preview))
+/// Converts a [`MetaRow`] into a [`HistoryMeta`] with its stored preview.
+#[must_use]
+pub(crate) fn meta_from_row(mut row: MetaRow) -> HistoryMeta {
+    let preview = std::mem::take(&mut row.text_preview);
+    meta_with_preview(row, preview)
 }
 
-/// Like [`meta_from_row`], but the preview is an excerpt around the first
-/// occurrence of any of `keywords`, so a search result shows why it matched.
-///
-/// # Errors
-///
-/// Returns an error if text decompression fails.
-pub(crate) fn meta_from_row_matching(
-    row: MetaRow,
-    keywords: &[String],
-) -> Result<HistoryMeta, HistoryError> {
-    let text = decompress_text(&row.text_compressed)?;
-    let preview = match_preview(&text, keywords, PREVIEW_CHARS);
-    Ok(meta_with_preview(row, preview))
+/// Like [`meta_from_row`], but the preview is an excerpt of `text` around the
+/// first occurrence of any of `keywords`, so a search result shows why it
+/// matched.
+#[must_use]
+pub(crate) fn meta_from_row_matching(row: MetaRow, text: &str, keywords: &[String]) -> HistoryMeta {
+    let preview = match_preview(text, keywords, PREVIEW_CHARS);
+    meta_with_preview(row, preview)
 }
 
 fn meta_with_preview(row: MetaRow, text_preview: String) -> HistoryMeta {
@@ -173,6 +163,12 @@ fn match_preview(text: &str, keywords: &[String], max_len: usize) -> String {
         excerpt.push_str("...");
     }
     excerpt
+}
+
+/// Returns the preview stored with an entry and shown in list views.
+#[must_use]
+pub(crate) fn stored_preview(text: &str) -> String {
+    text_preview(text, PREVIEW_CHARS)
 }
 
 /// Returns a preview of text, truncated to `max_len` characters.

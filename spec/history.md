@@ -16,7 +16,9 @@ CREATE TABLE history (
     duration INTEGER NOT NULL,
     text_compressed BLOB NOT NULL,
     segments_compressed BLOB NOT NULL,
-    vad_enabled INTEGER
+    vad_enabled INTEGER,
+    source TEXT NOT NULL DEFAULT 'file',      -- "recording" | "file"
+    text_preview TEXT NOT NULL DEFAULT ''     -- 一覧用の冒頭 100 文字
 );
 CREATE INDEX idx_history_created_at ON history(created_at);
 
@@ -44,6 +46,7 @@ CREATE INDEX idx_ai_content_history ON ai_content(history_id);
 | バージョン | 内容 |
 |---|---|
 | 1 (`migrate_v1_baseline`) | バージョン管理導入時点のスキーマ。導入前の DB は `user_version` 0 のまま複数の形 (`vad_enabled` / `source` / FTS の有無) があり得るため、このステップだけは全文が条件付き (`add_column_if_missing`、`needs_fts_migration` → `rebuild_fts_index`) |
+| 2 (`migrate_v2_text_preview`) | `history.text_preview` 列を追加し、既存行を本文から埋める。一覧 (`list_entries`) は本文 BLOB を読まずこの列だけを返す。検索結果の抜粋は `history_fts.text` (非圧縮) から作る |
 
 ## 検索 (`search.rs`)
 

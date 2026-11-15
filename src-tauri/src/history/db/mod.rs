@@ -73,7 +73,7 @@ type Migration = fn(&Connection) -> Result<(), HistoryError>;
 ///
 /// Append new steps — never edit or reorder a released one, since databases
 /// that already ran it will not run it again.
-const MIGRATIONS: &[Migration] = &[migrate_v1_baseline];
+const MIGRATIONS: &[Migration] = &[migrate_v1_baseline, migrate_v2_text_preview];
 
 /// Initializes the history database, bringing its schema up to date.
 ///
@@ -149,6 +149,26 @@ fn migrate_v1_baseline(conn: &Connection) -> Result<(), HistoryError> {
         );
         CREATE INDEX IF NOT EXISTS idx_ai_content_history ON ai_content(history_id);",
     )?;
+
+    Ok(())
+}
+
+/// Version 2: stores each entry's list preview in `history.text_preview`, so
+/// listing no longer decompresses every transcript to show its first line.
+fn migrate_v2_text_preview(conn: &Connection) -> Result<(), HistoryError> {
+    conn.execute_batch("ALTER TABLE history ADD COLUMN text_preview TEXT NOT NULL DEFAULT ''")?;
+
+    let entries: Vec<(String, Vec<u8>)> = conn
+        .prepare("SELECT id, text_compressed FROM history")?
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<Result<_, _>>()?;
+    for (id, text_compressed) in entries {
+        let text = decompress_text(&text_compressed)?;
+        conn.execute(
+            "UPDATE history SET text_preview = ?1 WHERE id = ?2",
+            rusqlite::params![rows::stored_preview(&text), id],
+        )?;
+    }
 
     Ok(())
 }
@@ -308,6 +328,142 @@ mod tests {
         init_db(&path).expect("second init");
 
         assert_eq!(read_source("rec-1"), "file");
+    }
+
+    #[test]
+    fn init_db_backfills_text_preview_for_entries_saved_before_it_existed() {
+        let dir = tempfile::TempDir::new().expect("create temp dir");
+        let path = dir.path().join("history.db");
+
+        // Bring a database to version 1 only, then add a row the way v1 wrote it.
+        let conn = open_connection(&path).expect("open");
+        migrate_v1_baseline(&conn).expect("baseline");
+        conn.pragma_update(None, "user_version", 1)
+            .expect("mark v1");
+        let long_text = "あ".repeat(250);
+        for (id, text) in [("short", "短い本文"), ("long", long_text.as_str())] {
+            conn.execute(
+                "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed)
+                 VALUES (?1, '2026-01-01T00:00:00', 'a.wav', 'ja', 'small', 1000, ?2, ?3)",
+                rusqlite::params![
+                    id,
+                    compression::compress_text(text).expect("compress"),
+                    compression::compress_text("[]").expect("compress"),
+                ],
+            )
+            .expect("insert v1 row");
+        }
+        drop(conn);
+
+        init_db(&path).expect("migrate to current");
+
+        let entries =
+            list_entries(&path, &crate::history::types::HistoryFilter::default()).expect("list");
+        let preview = |id: &str| {
+            entries
+                .iter()
+                .find(|e| e.id == id)
+                .map(|e| e.text_preview.clone())
+                .expect("entry listed")
+        };
+        assert_eq!(preview("short"), "短い本文");
+        assert_eq!(preview("long"), format!("{}...", "あ".repeat(100)));
+    }
+
+    #[test]
+    fn init_db_migrates_pre_versioning_database_with_rows_and_fts() {
+        let dir = tempfile::TempDir::new().expect("create temp dir");
+        let path = dir.path().join("history.db");
+
+        // Pre-versioning shape: v1 tables and a populated FTS index, but
+        // user_version left at 0.
+        let conn = open_connection(&path).expect("open");
+        migrate_v1_baseline(&conn).expect("baseline");
+        let long_text = format!("{}予算の話{}", "あ".repeat(200), "い".repeat(200));
+        for (id, text) in [("short", "短い本文"), ("long", long_text.as_str())] {
+            conn.execute(
+                "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed)
+                 VALUES (?1, '2026-01-01T00:00:00', 'a.wav', 'ja', 'small', 1000, ?2, ?3)",
+                rusqlite::params![
+                    id,
+                    compression::compress_text(text).expect("compress"),
+                    compression::compress_text("[]").expect("compress"),
+                ],
+            )
+            .expect("insert row");
+            search::index_entry(&conn, id, text).expect("index");
+        }
+        drop(conn);
+        assert_eq!(user_version(&path), 0);
+
+        init_db(&path).expect("migrate to current");
+
+        assert_eq!(user_version(&path), MIGRATIONS.len());
+        let entries =
+            list_entries(&path, &crate::history::types::HistoryFilter::default()).expect("list");
+        let preview = |id: &str| {
+            entries
+                .iter()
+                .find(|e| e.id == id)
+                .map(|e| e.text_preview.clone())
+                .expect("entry listed")
+        };
+        assert_eq!(preview("short"), "短い本文");
+        assert_eq!(preview("long"), format!("{}...", "あ".repeat(100)));
+
+        let conn = open_connection(&path).expect("open");
+        let results = search::search_entries(
+            &conn,
+            &HistorySearchParams {
+                query: "予算".to_string(),
+                date_from: None,
+                date_to: None,
+                limit: None,
+                offset: None,
+                sort_by: None,
+                sort_order: None,
+            },
+        )
+        .expect("search");
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].id, "long");
+        assert!(results[0].text_preview.contains("予算"));
+    }
+
+    #[test]
+    fn failed_migration_leaves_version_and_schema_unchanged() {
+        let dir = tempfile::TempDir::new().expect("create temp dir");
+        let path = dir.path().join("history.db");
+
+        let conn = open_connection(&path).expect("open");
+        migrate_v1_baseline(&conn).expect("baseline");
+        conn.pragma_update(None, "user_version", 1)
+            .expect("mark v1");
+        // Not gzip, so the v2 backfill cannot decompress it.
+        conn.execute(
+            "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed)
+             VALUES ('corrupt', '2026-01-01T00:00:00', 'a.wav', 'ja', 'small', 1000, ?1, ?2)",
+            rusqlite::params![
+                b"not gzip".to_vec(),
+                compression::compress_text("[]").expect("compress"),
+            ],
+        )
+        .expect("insert corrupt row");
+        drop(conn);
+
+        assert!(init_db(&path).is_err());
+
+        assert_eq!(user_version(&path), 1);
+        let conn = Connection::open(&path).expect("open");
+        let mut stmt = conn
+            .prepare("PRAGMA table_info(history)")
+            .expect("prepare pragma");
+        let names: Vec<String> = stmt
+            .query_map([], |row| row.get::<_, String>(1))
+            .expect("query")
+            .filter_map(Result::ok)
+            .collect();
+        assert!(!names.contains(&"text_preview".to_string()));
     }
 
     #[test]

@@ -8,7 +8,7 @@ use super::super::types::{
     SortOrder,
 };
 use super::compression::{compress_text, decompress_text};
-use super::rows::{meta_from_row, meta_row_mapper};
+use super::rows::{meta_from_row, meta_row_mapper, stored_preview};
 use super::time::chrono_now;
 
 /// Builds an ORDER BY clause based on the sort option and direction.
@@ -84,8 +84,8 @@ pub(crate) fn save_entry(
     let tx = conn.unchecked_transaction()?;
 
     tx.execute(
-        "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed, vad_enabled, source)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+        "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed, vad_enabled, source, text_preview)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
         rusqlite::params![
             id,
             created_at,
@@ -97,6 +97,7 @@ pub(crate) fn save_entry(
             segments_compressed,
             params.vad_enabled,
             params.source.as_str(),
+            stored_preview(&params.text),
         ],
     )?;
 
@@ -119,7 +120,7 @@ pub(crate) fn list_entries(
     let conn = super::open_connection(db_path)?;
 
     let mut sql =
-        String::from("SELECT id, created_at, file_name, language, model_id, duration, text_compressed, vad_enabled, source FROM history");
+        String::from("SELECT id, created_at, file_name, language, model_id, duration, text_preview, vad_enabled, source FROM history");
     let mut conditions = Vec::new();
     let mut params_vec: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
 
@@ -153,7 +154,7 @@ pub(crate) fn list_entries(
 
     let mut entries = Vec::new();
     for row in rows {
-        entries.push(meta_from_row(row?)?);
+        entries.push(meta_from_row(row?));
     }
 
     Ok(entries)
@@ -322,6 +323,18 @@ mod tests {
         assert_eq!(entries[0].language, "ja");
         assert_eq!(entries[0].model_id, "large-v3-turbo");
         assert_eq!(entries[0].duration, 60000);
+    }
+
+    #[test]
+    fn save_entry_stores_the_preview_that_list_returns() {
+        let (_dir, path) = setup_db();
+        let mut params = sample_params();
+        params.text = "あ".repeat(250);
+
+        save_entry(&path, &params).expect("Failed to save");
+
+        let entries = list_entries(&path, &HistoryFilter::default()).expect("Failed to list");
+        assert_eq!(entries[0].text_preview, format!("{}...", "あ".repeat(100)));
     }
 
     #[test]

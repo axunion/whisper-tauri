@@ -103,7 +103,7 @@ pub(crate) fn search_entries(
     }
 
     let mut sql = String::from(
-        "SELECT h.id, h.created_at, h.file_name, h.language, h.model_id, h.duration, h.text_compressed, h.vad_enabled, h.source
+        "SELECT h.id, h.created_at, h.file_name, h.language, h.model_id, h.duration, h.text_preview, h.vad_enabled, h.source, f.text
          FROM history_fts f
          JOIN history h ON h.id = f.history_id
          WHERE 1 = 1",
@@ -143,11 +143,14 @@ pub(crate) fn search_entries(
 
     let mut stmt = conn.prepare(&sql)?;
 
-    let rows = stmt.query_map(param_refs.as_slice(), super::db::meta_row_mapper)?;
+    let rows = stmt.query_map(param_refs.as_slice(), |row| {
+        Ok((super::db::meta_row_mapper(row)?, row.get::<_, String>(9)?))
+    })?;
 
     let mut entries = Vec::new();
     for row in rows {
-        entries.push(super::db::meta_from_row_matching(row?, &keywords)?);
+        let (meta, text) = row?;
+        entries.push(super::db::meta_from_row_matching(meta, &text, &keywords));
     }
 
     Ok(entries)

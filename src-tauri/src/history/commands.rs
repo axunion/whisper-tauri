@@ -13,17 +13,25 @@ use super::types::{
 
 /// Returns the database path, initializing the database on first use.
 ///
-/// Schema setup and the migration checks run once per process rather than on
-/// every history command.
+/// Schema setup and migrations run once per process rather than on every
+/// history command. The lock is held across `init_db` so that two commands
+/// arriving together cannot both run a migration: a step such as `ALTER TABLE
+/// … ADD COLUMN` fails if it runs twice.
 fn get_db_path(app: &AppHandle) -> Result<PathBuf, String> {
-    static INITIALIZED: std::sync::OnceLock<()> = std::sync::OnceLock::new();
+    static INITIALIZED: std::sync::Mutex<bool> = std::sync::Mutex::new(false);
 
     let app_data_dir = paths::app_data_dir(app)?;
     let path = db::db_path(&app_data_dir);
-    if INITIALIZED.get().is_none() {
+
+    // The flag is only set after a successful init, so a poisoned lock still
+    // guards a consistent value.
+    let mut initialized = INITIALIZED
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    if !*initialized {
         std::fs::create_dir_all(&app_data_dir).map_err(HistoryError::from)?;
         db::init_db(&path)?;
-        let _ = INITIALIZED.set(());
+        *initialized = true;
     }
     Ok(path)
 }
