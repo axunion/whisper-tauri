@@ -288,7 +288,7 @@ mod tests {
         let params = sample_params();
 
         let id = save_entry(&path, &params).expect("Failed to save");
-        assert!(!id.is_empty());
+        assert_ne!(id, "");
 
         let entries = list_entries(&path, &HistoryFilter::default()).expect("Failed to list");
         assert_eq!(entries.len(), 1);
@@ -437,7 +437,7 @@ mod tests {
         assert_eq!(deleted, 2);
 
         let remaining = list_entries(&path, &HistoryFilter::default()).expect("Failed to list");
-        assert!(remaining.is_empty());
+        assert_eq!(remaining.len(), 0);
     }
 
     #[test]
@@ -595,7 +595,7 @@ mod tests {
             },
         )
         .expect("search");
-        assert!(results.is_empty());
+        assert_eq!(results.len(), 0);
     }
 
     #[test]
@@ -620,7 +620,7 @@ mod tests {
             },
         )
         .expect("search");
-        assert!(results.is_empty());
+        assert_eq!(results.len(), 0);
     }
 
     #[test]

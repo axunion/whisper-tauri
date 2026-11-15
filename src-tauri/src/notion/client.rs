@@ -472,7 +472,7 @@ mod tests {
 
     #[test]
     fn chunk_string_returns_empty_for_empty_input() {
-        assert!(chunk_string("", 10).is_empty());
+        assert_eq!(chunk_string("", 10).len(), 0);
     }
 
     #[test]
@@ -668,7 +668,7 @@ mod tests {
     #[test]
     fn build_summary_blocks_returns_empty_when_all_sections_empty() {
         let summary = NotionSummary::default();
-        assert!(build_summary_blocks(&summary).is_empty());
+        assert_eq!(build_summary_blocks(&summary).len(), 0);
     }
 
     #[test]
@@ -936,7 +936,7 @@ mod tests {
         let children: Vec<Value> = (0..50).map(|_| paragraph_block("x")).collect();
         let (initial, rest) = split_children_for_create(children);
         assert_eq!(initial.len(), 50);
-        assert!(rest.is_empty());
+        assert_eq!(rest.len(), 0);
     }
 
     #[test]

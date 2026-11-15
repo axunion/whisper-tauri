@@ -113,7 +113,7 @@ mod tests {
         };
 
         let ai_id = save_ai_content(&path, &params).expect("save ai content");
-        assert!(!ai_id.is_empty());
+        assert_ne!(ai_id, "");
 
         let content = get_ai_content(&path, &entry_id, "summary").expect("get ai content");
         assert!(content.is_some());

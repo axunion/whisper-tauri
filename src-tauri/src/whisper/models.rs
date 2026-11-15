@@ -178,7 +178,7 @@ mod tests {
     #[test]
     fn get_model_list_returns_non_empty() {
         let models = get_model_list();
-        assert!(!models.is_empty());
+        assert_ne!(models.len(), 0);
     }
 
     #[test]

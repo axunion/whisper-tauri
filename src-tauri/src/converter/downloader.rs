@@ -574,7 +574,7 @@ mod tests {
     #[test]
     fn ffmpeg_version_constants_are_not_empty() {
         #[cfg(target_os = "macos")]
-        assert!(!FFMPEG_MACOS_VERSION.is_empty());
+        assert_ne!(FFMPEG_MACOS_VERSION, "");
         #[cfg(not(target_os = "macos"))]
         {
             assert!(!FFMPEG_BTBN_TAG.is_empty());
@@ -594,7 +594,7 @@ mod tests {
     #[test]
     fn current_ffmpeg_version_is_not_empty() {
         let version = current_ffmpeg_version();
-        assert!(!version.is_empty());
+        assert_ne!(version, "");
     }
 
     #[cfg(target_os = "macos")]

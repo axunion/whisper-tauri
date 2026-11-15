@@ -590,7 +590,7 @@ mod tests {
     fn resample_empty_returns_empty() {
         let input: Vec<f32> = vec![];
         let output = resample(&input, 44100, 16000);
-        assert!(output.is_empty());
+        assert_eq!(output.len(), 0);
     }
 
     #[test]

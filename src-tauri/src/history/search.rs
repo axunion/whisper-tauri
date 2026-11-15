@@ -362,7 +362,7 @@ mod tests {
             sort_order: None,
         };
         let results = search_entries(&conn, &params).expect("search must not error");
-        assert!(results.is_empty());
+        assert_eq!(results.len(), 0);
     }
 
     #[test]
@@ -385,7 +385,7 @@ mod tests {
             sort_order: None,
         };
         let results = search_entries(&conn, &params).expect("search");
-        assert!(results.is_empty());
+        assert_eq!(results.len(), 0);
     }
 
     #[test]
@@ -403,7 +403,7 @@ mod tests {
             sort_order: None,
         };
         let results = search_entries(&conn, &params).expect("search");
-        assert!(results.is_empty());
+        assert_eq!(results.len(), 0);
     }
 
     #[test]
@@ -425,7 +425,7 @@ mod tests {
 
         // Delete and verify it's gone
         delete_entry_index(&conn, "entry-1").expect("delete index");
-        assert!(search_entries(&conn, &params).expect("search").is_empty());
+        assert_eq!(search_entries(&conn, &params).expect("search").len(), 0);
     }
 
     #[test]
@@ -446,7 +446,7 @@ mod tests {
             sort_by: None,
             sort_order: None,
         };
-        assert!(search_entries(&conn, &params).expect("search").is_empty());
+        assert_eq!(search_entries(&conn, &params).expect("search").len(), 0);
     }
 
     #[test]
