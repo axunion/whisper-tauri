@@ -39,7 +39,7 @@ hound で読み込み、Int (ビット深度対応) / Float 両対応 → ステ
 ## VAD 前処理 (`preprocess_with_vad`)
 
 - **スタンドアロン API (`WhisperVadContext`) を使う。** whisper.cpp 内蔵の VAD 統合は `FullParams` の `vad_params` を無視するため使えない (詳細と除去条件は `.claude/rules/workarounds.md`)
-- パラメータ値とその根拠は `.claude/rules/tuning.md` の Current Tuning Examples を一次ソースとする (デフォルト値からの意図的な調整)
+- パラメータ値とその根拠は `.claude/rules/tuning.md` を一次ソースとする (デフォルト値からの意図的な調整)
 - モデル: `ggml-silero-v5.1.2.bin` (`https://huggingface.co/ggml-org/whisper-vad` から `ensure_vad_model` が初回文字起こし時に自動 DL)
 - 流れ: VAD セグメント (センチ秒単位) → サンプル範囲に変換 → 音声区間のみ連結して whisper へ。`TimestampMap` が「連結バッファ上の位置 → 元音声のタイムライン」を復元する
 - 音声区間ゼロなら空の結果を返す (whisper を起動しない)

@@ -4,20 +4,6 @@
 
 The import above pulls in `AGENTS.md`, which holds the project context shared with other AI coding tools. The sections below are Claude Code specific.
 
-### Rules (`.claude/rules/`)
-
-Project-specific rules that are auto-injected as system reminders when a matching path is edited.
-
-| File | Purpose |
-|---|---|
-| `error-handling.md` | Rust `error.rs` prefix naming and sync with `errors.ts::PREFIX_MAP` on the FE side |
-| `frontend-conventions.md` | Error-handling consolidation (`parseError` / `ErrorDisplay` / `toast`), `cn()` class composition, SolidJS patterns |
-| `i18n.md` | `types.ts` / all locales / `t("…")` sync when UI strings are added or changed |
-| `tauri-permissions.md` | `capabilities/default.json` permission checks when using `@tauri-apps/plugin-*` |
-| `tuning.md` | Tuning policy — prefer standard settings; do not mask model weaknesses with bespoke processing |
-| `ui-design.md` | Glassmorphism / `SectionRow` / `Separator` and other shared UI conventions |
-| `workarounds.md` | Workarounds for known bugs (whisper-rs FFI UB / `SOURCE_DATE_EPOCH`, etc.) |
-
 ### Subagents (`.claude/agents/`)
 
 Three read-only/test-only agents, scaled by how risky the change is. **The main
@@ -58,7 +44,7 @@ hardest). Each has a recorded incident behind it:
 
 | Area | Failure mode |
 |---|---|
-| `src-tauri/src/whisper/` | whisper-rs 0.16 FFI UB and the standalone VAD path — see `workarounds.md`; "simplifying" either one regresses it |
+| `src-tauri/src/whisper/` | whisper-rs 0.16 FFI UB and the standalone VAD path — see `.claude/rules/workarounds.md`; "simplifying" either one regresses it |
 | `src-tauri/src/history/db/` | stored UTC timestamps read back as local time |
 | `src-tauri/src/notion/` | token leaking into logs, error strings, or IPC payloads |
 | IPC sync points | `src/types/` ↔ `src-tauri/src/*/types.rs`, `errors.ts::PREFIX_MAP` ↔ `*/error.rs`, `capabilities/default.json` ↔ every `@tauri-apps/plugin-*` call — every one of these fails **silently at runtime**, not at build time |

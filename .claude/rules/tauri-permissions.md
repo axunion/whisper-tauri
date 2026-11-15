@@ -61,13 +61,13 @@ case for `save`) is matched literally rather than canonicalized, so new files wo
 
 - **Silent fail**: insufficient permission causes a Promise rejection such as `<command> not allowed`. If the frontend swallows errors in a `try/catch`, the failure is invisible. Always log with `catch (err) { console.error(err); ... }` during debugging.
 - **Scope mismatch**: the identifier is registered but the `allow` scope does not cover the target path — produces the same rejection as a missing identifier.
-- **HMR does not apply**: capabilities files are unrelated to hot module replacement. A dev-server restart is mandatory.
 
 ## Past Incidents
 
 - **2026-08-21** — Security review follow-up: the `$HOME/**` write scope on
   `fs:allow-write-text-file` / `fs:allow-copy-file` was removed in favour of the
-  dialog plugin's runtime scope. **Requires device verification** of the three
-  save paths (text/timeline tab save, summary & clean-text tab save, recording
-  WAV save) — the failure mode is exactly the 2026-05-20 silent failure below.
+  dialog plugin's runtime scope. Any further scope change needs device
+  verification of the three save paths (text/timeline tab save, summary &
+  clean-text tab save, recording WAV save) — the failure mode is exactly the
+  2026-05-20 silent failure below.
 - **2026-05-20** — While implementing #16 (enable save button in summary/clean-text tabs), silent failures were discovered in the text and timeline tab saves (`writeTextFile`) and the recording WAV save (`copyFile`) as well. Root cause: `fs:default` does not include write operations, a requirement that had been overlooked. Earlier device testing at the completion of #2 (file-dialog locale consistency, 2026-05-13) would have caught this sooner.

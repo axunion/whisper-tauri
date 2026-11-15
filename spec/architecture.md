@@ -33,7 +33,7 @@ Source: `src-tauri/src/lib.rs` / `src-tauri/tauri.conf.json` / `src-tauri/capabi
 
 - ルーティング: `@solidjs/router` + `AppLayout` (サイドバーレイアウト)。ルートは `/` (Dashboard) / `/transcription` / `/history` / `/settings` (lazy)。`/dev` は `import.meta.env.DEV` のときのみマウントされる開発専用画面
 - 状態管理: `src/primitives/` の `create*` ファクトリ (createWhisper / createRecording / createSettings / createAiSession など)。`createSettings` はモジュールレベル・シングルトンで `LazyStore("settings.json")` を包む
-- i18n: `src/i18n/` の独自 context ベース。ロケールは `ja` (デフォルト) / `en` の 2 つ。UI 文字列のハードコード禁止 (`.claude/rules/i18n.md`)
+- i18n: `src/i18n/` の独自 context ベース。ロケールは `ja` (デフォルト) / `en` の 2 つ。UI 文字列のハードコード禁止 (`.claude/rules/frontend-conventions.md`)
 - 型: `src/types/` が Rust の serde 型 (`src-tauri/src/*/types.rs`) をミラーする。`#[serde(rename_all = "camelCase")]` で IPC 境界を camelCase に統一
 
 ## IPC イベント (Rust → TS)

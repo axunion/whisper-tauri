@@ -68,7 +68,7 @@ LAST_TAG=$(git describe --tags --abbrev=0)
 git log "$LAST_TAG"..HEAD --pretty=format:"- %s" --no-merges
 ```
 
-Commit titles follow the project convention (one-line imperative English, **no** Conventional Commits prefixes — see `AGENTS.md` → Commits), so infer each commit's change type from its content and group the notes under headings such as Features / Fixes / Improvements / Internal. Present the draft to the user for review.
+Commit titles are one-line imperative English with **no** Conventional Commits prefixes, so infer each commit's change type from its content and group the notes under headings such as Features / Fixes / Improvements / Internal. Present the draft to the user for review.
 
 The CI workflow (`release.yml`) writes a fixed installation guide as the release body, so these notes are for the user to paste into the GitHub draft release manually after CI completes. Save them where the user can find them — print to terminal is sufficient.
 
@@ -81,7 +81,7 @@ After explicit user confirmation of the bump diff and release notes:
    git add package.json src-tauri/Cargo.toml src-tauri/tauri.conf.json
    git commit -m "Release v$VERSION"
    ```
-   Follow project commit convention (English, imperative). Confirm the message before running per the project's commit-confirmation rule.
+   Confirm the message with the user before running.
 
 2. Create an annotated tag:
    ```bash
@@ -98,11 +98,10 @@ If anything fails between commit and push, do not auto-revert. Report the state 
 
 ## Phase 6 — CI Monitoring
 
-The `gh` CLI is not authenticated in this environment — do not use it. After the tag push, hand monitoring to the user in the browser:
+After the tag push, watch the `release.yml` run with the `gh` CLI (`gh run list --workflow release.yml`, then `gh run watch <id>`).
 
-1. Point them to the workflow run: `https://github.com/<owner>/<repo>/actions/workflows/release.yml`
-2. On CI success, remind them to open the Releases page, paste the Phase 4 notes into the draft body, and publish.
-3. On CI failure, ask them to share the failing step's log from the Actions UI, then diagnose. Do not retry automatically.
+1. On CI success, remind the user to open the Releases page, paste the Phase 4 notes into the draft body, and publish.
+2. On CI failure, read the failing step's log (`gh run view <id> --log-failed`) and diagnose. Do not retry automatically.
 
 ## Output Format
 

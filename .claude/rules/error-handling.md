@@ -31,10 +31,10 @@ When a new error message prefix is introduced on the Rust side, update all of th
 3. Add `[<rust-prefix>, ErrorCode]` to `PREFIX_MAP` in `src/lib/errors.ts`
    - **The key string must match the Rust `#[error("...")]` prefix exactly** (including the colon)
    - Matching uses `startsWith`, so place longer prefixes earlier
-4. When a new `ErrorCode` is added, add corresponding entries to `CATEGORY_MAP` and `MESSAGE_MAP` (these are `Record<ErrorCodeType, ...>` and require exhaustive coverage)
+4. When a new `ErrorCode` is added, add corresponding entries to `CATEGORY_MAP` and `MESSAGE_KEY_MAP` (these are `Record<ErrorCodeType, ...>` and require exhaustive coverage). `MESSAGE_KEY_MAP` points at an `errors.*` dictionary key, so the new message also needs an entry in every locale
 5. If the error is non-recoverable, add it to the `NON_RECOVERABLE` set
 
 ## Symptoms of Forgetting to Sync
 
-- Rust raises an error but the frontend shows `UNKNOWN_ERROR` (displays: "Unexpected error occurred") → the prefix is missing from `PREFIX_MAP`
-- A new `ErrorCode` is added and `CATEGORY_MAP` / `MESSAGE_MAP` produce type errors → the `Record` exhaustiveness check is enforcing coverage; fill in both maps
+- Rust raises an error but the frontend shows `UNKNOWN_ERROR` (displays: "An unexpected error occurred") → the prefix is missing from `PREFIX_MAP`
+- A new `ErrorCode` is added and `CATEGORY_MAP` / `MESSAGE_KEY_MAP` produce type errors → the `Record` exhaustiveness check is enforcing coverage; fill in both maps

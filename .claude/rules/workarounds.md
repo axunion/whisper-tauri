@@ -28,7 +28,7 @@ params.set_abort_callback_safe(abort_fn);
 
 The built-in VAD integration (`enable_vad(true)` + `set_vad_params` on `FullParams`) silently ignores the configured `vad_params` — setting threshold to 0.01 produced results identical to the default (verified experimentally, 2026-05).
 
-**Workaround** (`src-tauri/src/whisper/process.rs`): run Silero VAD standalone via `WhisperVadContext` in `preprocess_with_vad()` — extract speech segments, concatenate, feed the result to whisper, and map timestamps back to the original timeline via `TimestampMap`. Do not "simplify" this back to the built-in integration: it looks cleaner but regresses to having no effective VAD control. Parameter values and their rationale live in `tuning.md` (Current Tuning Examples).
+**Workaround** (`src-tauri/src/whisper/process.rs`): run Silero VAD standalone via `WhisperVadContext` in `preprocess_with_vad()` — extract speech segments, concatenate, feed the result to whisper, and map timestamps back to the original timeline via `TimestampMap`. Do not "simplify" this back to the built-in integration: it looks cleaner but regresses to having no effective VAD control. Parameter values and their rationale live in `tuning.md`.
 
 **Removal condition**: whisper.cpp / whisper-rs honors `vad_params` in the built-in integration path.
 
@@ -36,7 +36,7 @@ The built-in VAD integration (`enable_vad(true)` + `set_vad_params` on `FullPara
 
 On CI runners, `GGML_NATIVE=ON` (the default) enables newer instruction sets and produces compile errors.
 
-**Workaround** (`.github/workflows/release.yml`): set the `SOURCE_DATE_EPOCH` environment variable — ggml then forces `GGML_NATIVE=OFF` internally.
+**Workaround** (`.github/workflows/ci.yml` and `release.yml`): set the `SOURCE_DATE_EPOCH` environment variable — ggml then forces `GGML_NATIVE=OFF` internally.
 
 **Note**: setting `GGML_NATIVE=OFF` directly via environment variable or `CFLAGS` does not work due to cmake-rs limitations. Local builds can stay on the defaults.
 

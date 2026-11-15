@@ -71,14 +71,6 @@ Do **not** auto-fix — report and stop:
 - Tests whose expectation itself may be wrong
 - Errors with multiple ambiguous fix paths
 
-## Procedure
-
-1. Parse target + flag from `$ARGUMENTS`
-2. Run Phase 1 in parallel; apply the retry rule on any failure
-3. Run Phase 2 in parallel; apply the retry rule on any failure
-4. If `--with-build`, run Phase 3
-5. Report result
-
 ## Report Format
 
 ```

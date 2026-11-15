@@ -1,7 +1,5 @@
 # AGENTS.md
 
-Bias toward caution over speed; on trivial tasks, use judgment.
-
 ## Project Overview
 
 Whisper Tauri — a local audio transcription desktop app. Whisper models run entirely on-device; no audio data is sent to external services.
@@ -26,16 +24,9 @@ making permanent, ask rather than deciding unilaterally.
 ## Hard Constraints
 
 - **Type sync**: TypeScript types (`src/types/`) and Rust types (`src-tauri/src/*/types.rs`) must stay in sync. `#[serde(rename_all = "camelCase")]` converts Rust `snake_case` fields to `camelCase` at the IPC boundary.
-- **TypeScript Strict**: `noUncheckedIndexedAccess` / `noImplicitOverride` / `exactOptionalPropertyTypes` are enabled.
 - **Rust visibility**: no `pub` on items unused outside their module; prefer `pub(crate)` when an item crosses module boundaries but not the crate boundary.
 - **Doc trees**: `docs/` is the public tree (English); `spec/` is internal dev documentation (Japanese).
 
 ## UI
 
 solid-ui (Kobalte-based, copy-paste model) — https://www.solid-ui.com/docs
-
-## Architecture
-
-`AppLayout` + `@solidjs/router` with a sidebar layout.
-
-Backend domain modules under `src-tauri/src/` follow a shared structure: `commands.rs` / `types.rs` / `error.rs` / `mod.rs`. Larger modules such as `text_processing` extend this with `extract.rs` / `inference.rs` / `models.rs` / `server.rs`.

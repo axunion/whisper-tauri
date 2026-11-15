@@ -4,6 +4,8 @@ paths:
   - "src/pages/**"
   - "src/primitives/**"
   - "src/lib/**"
+  - "src/i18n/**"
+  - "src/styles/**"
 ---
 
 # Frontend Conventions
@@ -21,4 +23,24 @@ paths:
 ## SolidJS Patterns
 
 - Forward props with `splitProps`, not spread
-- No React patterns (`useState`, virtual DOM assumptions)
+
+## i18n Sync
+
+When UI strings are added, modified, or removed, sync all of the following:
+
+1. Add/remove the key in the `Dictionary` interface in `src/i18n/types.ts`
+2. Add/remove the translation in **every locale file** under `src/i18n/dictionaries/`
+3. Use `t("key")` in components — never leave a hardcoded string
+4. Placeholders (`{count}`, etc.) must match across all locales
+
+## Glassmorphism
+
+- Purple/violet accents + translucency + `backdrop-blur`
+- Layer structure: background (mesh gradient) → sidebar (`blur-xl`) → card (`blur-lg`) → content (opaque)
+
+## Component Conventions
+
+- **Default to div-based structure**: do not introduce `<h1>`–`<h6>` for routine UI labels. `CardTitle` renders as a `<div>` and provides semantic grouping for cards. Reason: this is a Tauri desktop app (no SEO benefit) and Kobalte / `CardTitle` already conveys label semantics for assistive tech. Use heading tags only when document-style hierarchy is genuinely required (e.g., long-form content within a page).
+- **Uniform card height**: assign a fixed height to `Card` and let an inner flex layout (`flex-1`) drive sizing. Do not switch pixel heights based on conditional branches.
+- **Settings/dev rows**: route every "label + trailing control" row through `<SectionRow title description right />` (from `~/components/ui/SectionRow`). `title` accepts JSX so badges or accent icons can sit alongside text. Do not re-introduce inner `rounded-lg border p-4` panels inside a `Card` — the `Card` is the only border.
+- **Cards with multiple logical items**: split items with `<Separator />` (from `~/components/ui/Separator`) and use `CardContent class="space-y-6"`. Reserve this pattern for Cards where two or more independently configurable settings live side by side (e.g. General settings, Data Reset). Cards that hold a list (model lists) or a single state-switched panel keep `space-y-4` (or no explicit class).
