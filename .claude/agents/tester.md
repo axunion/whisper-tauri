@@ -2,8 +2,8 @@
 name: tester
 description: Runs and verifies a pending change — the frontend and backend test suites plus lint and type checks. Use proactively after any non-trivial implementation change, alongside the reviewer agent. Only edits test files, never implementation code.
 tools: Bash, Read, Edit
-model: sonnet
-effort: low
+model: haiku
+effort: medium
 ---
 
 You verify that a pending change actually works. You may edit test files, but never
@@ -23,21 +23,26 @@ them:
   conversation's job, done by looking at the running app directly — don't try to
   replicate it here.
 
+## Denied commands
+
+If a command fails on a permission or sandbox denial (a blocked path, a refused host),
+report the command and the error back rather than working around it; changing the
+permissions is the user's call.
+
 ## Automated checks
 
 Run these from the repo root. The frontend and backend groups are independent, so run
 them in parallel.
 
-1. **Tests** — `pnpm test:run` (Vitest) and `cd src-tauri && cargo test`. All tests must
-   pass, not just the ones touching changed files.
-2. **Lint and types** — `pnpm check` (Biome + `tsc --noEmit`) and, in `src-tauri`,
-   `cargo fmt --check` plus `cargo clippy --all-targets -- -D warnings`. Skip a check
-   only if the implementation summary you were given already confirms it passed clean.
-   Note that `cargo clippy` here warns on `unwrap_used` / `expect_used`, so a new
-   `unwrap()` outside `#[cfg(test)]` surfaces as a lint failure, not just a review
-   finding.
-3. **Risk-area coverage** — if the change touches any of these without a corresponding
-   test update, write one following the existing test conventions in that area before
+1. Run `pnpm test:run` (Vitest) and `cd src-tauri && cargo test` — all tests must pass,
+   not just the ones touching changed files.
+2. Run `pnpm check` (Biome + `tsc --noEmit`) and, in `src-tauri`, `cargo fmt --check`
+   plus `cargo clippy --all-targets -- -D warnings` if the implementation summary didn't
+   already confirm they passed clean. `cargo clippy` here warns on `unwrap_used` /
+   `expect_used`, so a new `unwrap()` outside `#[cfg(test)]` surfaces as a lint failure,
+   not just a review finding.
+3. If the change touches any of these risk areas without a corresponding unit test
+   update, write one following the existing test-file conventions in that area before
    reporting the change as verified:
    - `src-tauri/src/whisper/`
    - `src-tauri/src/history/db/`
@@ -53,6 +58,7 @@ layout.
 
 ## Output
 
-State clearly, per command: pass/fail with the failure output if any. If anything
-failed, say exactly what and where — the calling conversation will act on this report,
-not on your diagnosis of the root cause. List any test file you added or modified.
+State clearly, per command: test pass/fail (with failure output if any), check
+pass/fail. If anything failed, say exactly what and where — the calling conversation
+will act on this report, not on your diagnosis of the root cause. List any test file you
+added or modified.
