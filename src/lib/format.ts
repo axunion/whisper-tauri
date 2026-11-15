@@ -6,6 +6,12 @@ export function formatDuration(ms: number): string {
   return `${String(minutes)}m ${String(seconds)}s`;
 }
 
+/** Format a date as local `YYYY-MM-DD HH:mm`, locale-independent. */
+export function formatLocalDateTime(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 /** Format milliseconds as colon-separated time (e.g. "3:24" or "1:03:24"). */
 export function formatDurationColon(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);

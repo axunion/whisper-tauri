@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/Tabs";
 import { useI18n } from "~/i18n";
 import { extractFilename } from "~/lib/constants";
 import { combineErrorProviders } from "~/lib/errors";
+import { formatLocalDateTime } from "~/lib/format";
 import { toast } from "~/lib/toast";
 import { cn } from "~/lib/utils";
 import { createFileConverter } from "~/primitives/createFileConverter";
@@ -126,9 +127,18 @@ export default function Transcription() {
     whisper.selectedModel() !== null &&
     !whisper.isProcessing();
 
-  const errors = combineErrorProviders([whisper, converter, recording]);
+  const errors = combineErrorProviders([
+    whisper,
+    converter,
+    recording,
+    history,
+  ]);
 
   const retryHandler = () => {
+    // Retry re-runs the transcription, which is the wrong remedy for a failed
+    // history save: it would discard the result on screen to redo minutes of
+    // work for one database write.
+    if (history.error()) return undefined;
     if (activeTab() === "file") {
       return canStartFile() ? handleStartFile : undefined;
     }
@@ -138,6 +148,7 @@ export default function Transcription() {
   async function handleStartFile() {
     const currentFile = whisper.file();
     if (!currentFile || !canStartFile()) return;
+    history.clearError();
 
     // Drop the previous run's id up front: the result view mounts as soon as
     // the result arrives, before the new entry is saved, so a stale id would
@@ -167,39 +178,49 @@ export default function Transcription() {
   async function handleStartRecording() {
     const tempPath = recording.tempFilePath();
     if (!tempPath || !canStartRecording()) return;
+    history.clearError();
 
     setHistoryId(null);
 
-    whisper.setFile({ path: tempPath, name: t("recording.title"), size: 0 });
+    // Dated so recordings stay distinguishable in the history list.
+    const name = `${t("recording.title")} ${formatLocalDateTime(new Date())}`;
+    whisper.setFile({ path: tempPath, name, size: 0 });
     await whisper.startTranscription(tempPath);
 
-    await saveToHistory(t("recording.title"), "recording");
+    const saved = await saveToHistory(name, "recording");
 
-    // Only discard the recording once it has actually been transcribed. On
-    // cancel or failure the WAV is the user's only copy — deleting it here
+    // Only discard the recording once its transcription is safely in history.
+    // On cancel or failure the WAV is the user's only copy — deleting it here
     // would make "Save as WAV" unreachable and lose the audio for good.
-    if (whisper.result()) {
+    if (saved) {
       await recording.cleanup();
     }
   }
 
-  async function saveToHistory(fileName: string, source: HistorySource) {
+  /** Returns whether the result was written to history. */
+  async function saveToHistory(
+    fileName: string,
+    source: HistorySource,
+  ): Promise<boolean> {
     const transcriptionResult = whisper.result();
     const currentModel = whisper.selectedModel();
-    if (transcriptionResult && currentModel) {
-      toast.success(t("transcription.completedToast"));
-      const id = await history.saveEntry({
-        fileName,
-        language: transcriptionResult.language,
-        modelId: currentModel.id,
-        duration: transcriptionResult.duration,
-        text: transcriptionResult.text,
-        segments: transcriptionResult.segments,
-        vadEnabled: whisper.vadEnabled(),
-        source,
-      });
-      if (id) setHistoryId(id);
-    }
+    if (!transcriptionResult || !currentModel) return false;
+    const id = await history.saveEntry({
+      fileName,
+      language: transcriptionResult.language,
+      modelId: currentModel.id,
+      duration: transcriptionResult.duration,
+      text: transcriptionResult.text,
+      segments: transcriptionResult.segments,
+      vadEnabled: whisper.vadEnabled(),
+      source,
+    });
+    // A failed save surfaces through `history.error`; announcing success
+    // here would tell the user the result is safe when it is not in history.
+    if (!id) return false;
+    setHistoryId(id);
+    toast.success(t("transcription.completedToast"));
+    return true;
   }
 
   async function handleDiscardRecording() {
