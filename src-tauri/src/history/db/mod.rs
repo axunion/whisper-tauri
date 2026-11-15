@@ -16,7 +16,7 @@ pub(crate) use entries::{
     delete_all_entries, delete_entries, get_entry, list_entries, rename_entry, save_entry,
     sort_clause,
 };
-pub(crate) use rows::{meta_from_row, meta_row_mapper};
+pub(crate) use rows::{meta_from_row_matching, meta_row_mapper};
 
 /// Returns the path to the history database file.
 #[must_use]

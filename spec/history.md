@@ -44,10 +44,13 @@ CREATE INDEX idx_ai_content_history ON ai_content(history_id);
 - `add_column_if_missing`: `PRAGMA table_info` を見て `vad_enabled` 列がなければ `ALTER TABLE` で追加
 - FTS インデックス: `needs_fts_migration` が真なら `rebuild_fts_index` で全再構築
 
-## 全文検索 (`search.rs`)
+## 検索 (`search.rs`)
 
-- FTS5 仮想テーブル `history_fts (history_id, text)`、**tokenizer は `trigram`** — 形態素解析なしで日本語を含む言語非依存の部分一致検索を実現する (この選定が日本語対応の要)
-- 保存/削除時に FTS 行を同期。検索は `history_fts MATCH ?` を history と JOIN
+- FTS5 仮想テーブル `history_fts (history_id, text)` (tokenizer は `trigram`) に非圧縮の本文を持ち、保存/削除時に同期する。trigram インデックス自体は現在クエリに使っていない
+- マッチングは `MATCH` ではなく **`LIKE` による部分一致** (`f.text LIKE ? OR h.file_name LIKE ?`)。trigram は 3 文字未満の語にマッチできず、「会議」「予算」のような 2 文字の日本語が検索できなかったため。個人の履歴規模ではスキャンで十分速い
+- クエリは空白区切りの AND。各語は本文またはファイル名のどちらかに含まれればよい。`%` `_` `\` はエスケープしてリテラル扱い。大文字小文字は ASCII のみ同一視 (SQLite `LIKE` の仕様)
+- 検索結果の `textPreview` は最初のヒットの 20 文字前から始まる 100 文字の抜粋 (`rows.rs::match_preview`)。ファイル名だけでヒットした場合は通常の冒頭プレビュー
+- FE (`HistoryList`) は検索語を `src/lib/highlight.ts::splitHighlights` でハイライトする
 
 ## コマンド一覧
 

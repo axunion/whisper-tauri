@@ -56,18 +56,37 @@ pub(crate) fn meta_row_mapper(row: &rusqlite::Row) -> rusqlite::Result<MetaRow> 
 /// Returns an error if text decompression fails.
 pub(crate) fn meta_from_row(row: MetaRow) -> Result<HistoryMeta, HistoryError> {
     let text = decompress_text(&row.text_compressed)?;
-    let preview = text_preview(&text, 100);
-    Ok(HistoryMeta {
+    let preview = text_preview(&text, PREVIEW_CHARS);
+    Ok(meta_with_preview(row, preview))
+}
+
+/// Like [`meta_from_row`], but the preview is an excerpt around the first
+/// occurrence of any of `keywords`, so a search result shows why it matched.
+///
+/// # Errors
+///
+/// Returns an error if text decompression fails.
+pub(crate) fn meta_from_row_matching(
+    row: MetaRow,
+    keywords: &[String],
+) -> Result<HistoryMeta, HistoryError> {
+    let text = decompress_text(&row.text_compressed)?;
+    let preview = match_preview(&text, keywords, PREVIEW_CHARS);
+    Ok(meta_with_preview(row, preview))
+}
+
+fn meta_with_preview(row: MetaRow, text_preview: String) -> HistoryMeta {
+    HistoryMeta {
         id: row.id,
         created_at: row.created_at,
         file_name: row.file_name,
         language: row.language,
         model_id: row.model_id,
         duration: row.duration,
-        text_preview: preview,
+        text_preview,
         vad_enabled: row.vad_enabled,
         source: row.source,
-    })
+    }
 }
 
 /// Extracts an [`AiContentRow`] from a rusqlite row.
@@ -108,6 +127,54 @@ pub(crate) fn ai_content_from_row(row: AiContentRow) -> Result<AiContent, Histor
     })
 }
 
+/// Length of a list preview, in characters.
+const PREVIEW_CHARS: usize = 100;
+
+/// Characters of context kept before the hit in a search excerpt.
+const MATCH_LEAD_CHARS: usize = 20;
+
+/// Returns a `max_len`-character excerpt of `text` positioned around the
+/// earliest occurrence of any keyword. Falls back to the leading preview when
+/// no keyword occurs in the text (the entry matched on its file name).
+///
+/// Matching folds ASCII case only, mirroring `SQLite`'s `LIKE`.
+#[must_use]
+fn match_preview(text: &str, keywords: &[String], max_len: usize) -> String {
+    let chars: Vec<char> = text.trim().chars().collect();
+    let folded: Vec<char> = chars.iter().map(char::to_ascii_lowercase).collect();
+
+    let hit = keywords
+        .iter()
+        .filter_map(|keyword| {
+            let needle: Vec<char> = keyword.chars().map(|c| c.to_ascii_lowercase()).collect();
+            if needle.is_empty() {
+                return None;
+            }
+            folded
+                .windows(needle.len())
+                .position(|window| window == needle.as_slice())
+        })
+        .min();
+
+    let Some(hit) = hit else {
+        return text_preview(text, max_len);
+    };
+
+    let end = (hit.saturating_sub(MATCH_LEAD_CHARS) + max_len).min(chars.len());
+    // Anchored on `end` so a hit near the end of the text still yields a full
+    // excerpt instead of a few trailing characters.
+    let start = end.saturating_sub(max_len);
+    let mut excerpt = String::new();
+    if start > 0 {
+        excerpt.push_str("...");
+    }
+    excerpt.extend(&chars[start..end]);
+    if end < chars.len() {
+        excerpt.push_str("...");
+    }
+    excerpt
+}
+
 /// Returns a preview of text, truncated to `max_len` characters.
 #[must_use]
 fn text_preview(text: &str, max_len: usize) -> String {
@@ -140,5 +207,48 @@ mod tests {
     #[test]
     fn text_preview_trims_whitespace() {
         assert_eq!(text_preview("  hello  ", 100), "hello");
+    }
+
+    #[test]
+    fn match_preview_starts_shortly_before_the_earliest_hit() {
+        let text = format!("{}予算と会議{}", "a".repeat(50), "b".repeat(200));
+        let keywords = ["会議".to_string(), "予算".to_string()];
+        let preview = match_preview(&text, &keywords, 100);
+        assert!(preview.starts_with("...aaaaaaaaaaaaaaaaaaaa予算と会議"));
+        assert!(preview.ends_with("..."));
+        assert_eq!(preview.chars().count(), 106); // 100 + both ellipses
+    }
+
+    #[test]
+    fn match_preview_has_no_leading_ellipsis_for_an_early_hit() {
+        assert_eq!(
+            match_preview("会議を始めます", &["会議".to_string()], 100),
+            "会議を始めます"
+        );
+    }
+
+    #[test]
+    fn match_preview_folds_ascii_case() {
+        let text = format!("{}Budget review", "x".repeat(200));
+        let preview = match_preview(&text, &["budget".to_string()], 100);
+        assert!(preview.contains("Budget review"));
+        assert!(preview.starts_with("..."));
+    }
+
+    #[test]
+    fn match_preview_falls_back_when_text_has_no_hit() {
+        assert_eq!(
+            match_preview("本文です", &["test".to_string()], 100),
+            "本文です"
+        );
+    }
+
+    #[test]
+    fn match_preview_near_the_end_has_leading_but_no_trailing_ellipsis() {
+        let text = format!("{}予算の話", "あ".repeat(300));
+        let preview = match_preview(&text, &["予算".to_string()], 100);
+        assert!(preview.starts_with("..."));
+        assert!(!preview.ends_with("..."));
+        assert!(preview.ends_with("予算の話"));
     }
 }

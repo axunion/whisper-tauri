@@ -12,12 +12,15 @@ import { CheckIndicator } from "~/components/history/CheckIndicator";
 import { VadBadge } from "~/components/history/VadBadge";
 import { useI18n } from "~/i18n";
 import { formatDate, formatDuration } from "~/lib/format";
+import { splitHighlights } from "~/lib/highlight";
 import type { HistoryMeta } from "~/types";
 
 interface HistoryListProps {
   entries: HistoryMeta[];
   selectedIds: Set<string>;
   selectionMode: boolean;
+  /** Search keywords to mark in the file name and preview. */
+  highlightKeywords: string[];
   onToggleSelect: (id: string) => void;
   onViewEntry: (id: string) => void;
   onEnterSelectionMode: (id: string) => void;
@@ -31,6 +34,20 @@ function getSourceIcon(entry: HistoryMeta): JSX.Element {
   if (VIDEO_EXTS.some((ext) => lower.endsWith(ext)))
     return <FiVideo class="size-4" />;
   return <FiMusic class="size-4" />;
+}
+
+function Highlighted(props: { text: string; keywords: string[] }): JSX.Element {
+  return (
+    <For each={splitHighlights(props.text, props.keywords)}>
+      {(part) => (
+        <Show when={part.match} fallback={part.text}>
+          <mark class="rounded-sm bg-primary/20 text-foreground">
+            {part.text}
+          </mark>
+        </Show>
+      )}
+    </For>
+  );
 }
 
 const HistoryList: Component<HistoryListProps> = (props) => {
@@ -75,7 +92,10 @@ const HistoryList: Component<HistoryListProps> = (props) => {
                     {getSourceIcon(entry)}
                   </span>
                   <span class="flex-1 truncate text-sm font-medium">
-                    {entry.fileName}
+                    <Highlighted
+                      text={entry.fileName}
+                      keywords={props.highlightKeywords}
+                    />
                   </span>
                   <span
                     class="shrink-0 transition-opacity duration-200"
@@ -89,7 +109,10 @@ const HistoryList: Component<HistoryListProps> = (props) => {
                 </div>
                 {/* Row 2: Text preview */}
                 <p class="mt-2.5 line-clamp-2 text-xs text-muted-foreground">
-                  {entry.textPreview}
+                  <Highlighted
+                    text={entry.textPreview}
+                    keywords={props.highlightKeywords}
+                  />
                 </p>
                 <div class="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
                   <span class="inline-flex items-center gap-1">

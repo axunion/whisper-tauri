@@ -523,17 +523,26 @@ describe("createHistory", () => {
   });
 
   describe("updateQuery", () => {
-    it("should hold the list back without searching while the query is too short", async () => {
+    it("should search for a two-character query", async () => {
+      vi.useFakeTimers();
       vi.mocked(invoke).mockClear();
+      vi.mocked(invoke).mockResolvedValue([mockMeta({ id: "hit" })]);
 
-      await createRoot(async (dispose) => {
-        const history = createHistory();
-        history.updateQuery("会");
+      try {
+        await createRoot(async (dispose) => {
+          const history = createHistory();
+          history.updateQuery("会議");
+          await vi.advanceTimersByTimeAsync(400);
 
-        expect(history.isQueryTooShort()).toBe(true);
-        expect(invoke).not.toHaveBeenCalled();
-        dispose();
-      });
+          expect(invoke).toHaveBeenCalledWith("history_search", {
+            params: { query: "会議", limit: 200 },
+          });
+          expect(history.entries().map((e) => e.id)).toEqual(["hit"]);
+          dispose();
+        });
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("should debounce into a single search and clear the pending flag", async () => {
@@ -557,7 +566,6 @@ describe("createHistory", () => {
             params: { query: "会議録", limit: 200 },
           });
           expect(history.queryPending()).toBe(false);
-          expect(history.isQueryTooShort()).toBe(false);
           dispose();
         });
       } finally {

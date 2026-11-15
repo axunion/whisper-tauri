@@ -12,8 +12,6 @@ import type { AppError } from "~/types/errors";
 
 const DEFAULT_LIMIT = 200;
 
-/** Shortest query worth sending to FTS — below this the list is held back. */
-const SEARCH_MIN_LENGTH = 3;
 const SEARCH_DEBOUNCE_MS = 300;
 
 export function createHistory() {
@@ -189,14 +187,13 @@ export function createHistory() {
     setSelectedIds(new Set<string>());
   }
 
-  // Empty → back to all entries. >= MIN → search. In between → hold the list
-  // without fetching, so a half-typed word doesn't churn the DB.
+  // Empty → back to all entries, anything else → search.
   async function runQuery(): Promise<void> {
     const trimmed = query().trim();
     if (!trimmed) {
       clearSearch();
       await loadEntries();
-    } else if (trimmed.length >= SEARCH_MIN_LENGTH) {
+    } else {
       await searchEntries(trimmed);
     }
   }
@@ -205,13 +202,8 @@ export function createHistory() {
     setQuery(value);
     cancelDebounce();
 
-    const trimmed = value.trim();
-    if (!trimmed) {
+    if (!value.trim()) {
       void runQuery();
-      return;
-    }
-    if (trimmed.length < SEARCH_MIN_LENGTH) {
-      if (isSearching()) clearSearch();
       return;
     }
     // Keep showing the previous results while a search is already on screen.
@@ -231,20 +223,12 @@ export function createHistory() {
   async function updateFilter(newFilter: HistoryFilter): Promise<void> {
     cancelDebounce();
     setFilter(newFilter);
-    const trimmed = query().trim();
-    if (trimmed && trimmed.length < SEARCH_MIN_LENGTH) return;
-    if (trimmed) setQueryPending(true);
+    if (query().trim()) setQueryPending(true);
     try {
       await runQuery();
     } finally {
       setQueryPending(false);
     }
-  }
-
-  /** True while the typed query is too short for the list to mean anything. */
-  function isQueryTooShort(): boolean {
-    const len = query().trim().length;
-    return len > 0 && len < SEARCH_MIN_LENGTH;
   }
 
   function clearError(): void {
@@ -265,7 +249,6 @@ export function createHistory() {
     isLoading,
     isSearching,
     queryPending,
-    isQueryTooShort,
     error,
 
     // Actions

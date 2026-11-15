@@ -96,8 +96,8 @@ export default function History() {
     }
   }
 
-  const shouldHideList = () =>
-    history.isQueryTooShort() || history.queryPending();
+  const highlightKeywords = () =>
+    history.isSearching() ? history.searchQuery().split(/\s+/) : [];
 
   return (
     <>
@@ -142,7 +142,7 @@ export default function History() {
         </div>
 
         {/* List */}
-        <Show when={!shouldHideList()}>
+        <Show when={!history.queryPending()}>
           <Show
             when={!history.isSearching() || history.entries().length > 0}
             fallback={
@@ -155,6 +155,7 @@ export default function History() {
               entries={history.entries()}
               selectedIds={history.selectedIds()}
               selectionMode={selectionMode()}
+              highlightKeywords={highlightKeywords()}
               onToggleSelect={(id) => history.toggleSelect(id)}
               onViewEntry={(id) => history.getEntry(id)}
               onEnterSelectionMode={enterSelectionMode}
