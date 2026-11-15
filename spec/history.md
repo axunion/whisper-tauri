@@ -39,10 +39,11 @@ CREATE INDEX idx_ai_content_history ON ai_content(history_id);
 
 ## マイグレーション
 
-スキーマバージョン管理は持たず、起動時にランタイムで補正する:
+`PRAGMA user_version` で適用済みステップ数を管理する連番マイグレーション (`db/mod.rs::MIGRATIONS`)。`init_db` が未適用分を順に、ステップごとに 1 トランザクション (スキーマ変更 + バージョン更新) で実行する。**リリース済みのステップは編集・並べ替えしない** — 新しい変更は末尾に追加する。
 
-- `add_column_if_missing`: `PRAGMA table_info` を見て `vad_enabled` 列がなければ `ALTER TABLE` で追加
-- FTS インデックス: `needs_fts_migration` が真なら `rebuild_fts_index` で全再構築
+| バージョン | 内容 |
+|---|---|
+| 1 (`migrate_v1_baseline`) | バージョン管理導入時点のスキーマ。導入前の DB は `user_version` 0 のまま複数の形 (`vad_enabled` / `source` / FTS の有無) があり得るため、このステップだけは全文が条件付き (`add_column_if_missing`、`needs_fts_migration` → `rebuild_fts_index`) |
 
 ## 検索 (`search.rs`)
 

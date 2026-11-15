@@ -65,14 +65,42 @@ fn add_column_if_missing(
     Ok(true)
 }
 
-/// Initializes the history database, creating tables and indices if they don't exist.
-/// Also initializes the FTS5 index and migrates existing data if needed.
+/// A schema migration step. Runs inside a transaction that also records the
+/// new version, so a failed step leaves the database at the previous version.
+type Migration = fn(&Connection) -> Result<(), HistoryError>;
+
+/// Schema migrations in order; `PRAGMA user_version` counts how many have run.
+///
+/// Append new steps — never edit or reorder a released one, since databases
+/// that already ran it will not run it again.
+const MIGRATIONS: &[Migration] = &[migrate_v1_baseline];
+
+/// Initializes the history database, bringing its schema up to date.
 ///
 /// # Errors
 ///
-/// Returns `HistoryError::Database` if the database cannot be opened or initialized.
+/// Returns `HistoryError::Database` if the database cannot be opened or migrated.
 pub(crate) fn init_db(db_path: &Path) -> Result<(), HistoryError> {
     let conn = open_connection(db_path)?;
+    let applied: i64 = conn.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    let applied = usize::try_from(applied).unwrap_or(0);
+
+    for (index, migrate) in MIGRATIONS.iter().enumerate().skip(applied) {
+        let tx = conn.unchecked_transaction()?;
+        migrate(&tx)?;
+        tx.pragma_update(None, "user_version", index + 1)?;
+        tx.commit()?;
+    }
+
+    Ok(())
+}
+
+/// Version 1: the schema as it stood when versioning was introduced.
+///
+/// Databases created before that carry `user_version` 0 in any of several
+/// shapes (with or without `vad_enabled`, `source`, the FTS table), so every
+/// statement here is conditional and the step is safe to run over all of them.
+fn migrate_v1_baseline(conn: &Connection) -> Result<(), HistoryError> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS history (
             id TEXT PRIMARY KEY,
@@ -89,22 +117,22 @@ pub(crate) fn init_db(db_path: &Path) -> Result<(), HistoryError> {
         CREATE INDEX IF NOT EXISTS idx_history_created_at ON history(created_at);",
     )?;
 
-    add_column_if_missing(&conn, "history", "vad_enabled", "INTEGER")?;
+    add_column_if_missing(conn, "history", "vad_enabled", "INTEGER")?;
 
     // Rows written before `source` existed carry the old convention that
     // recordings were saved without a file extension. Backfill once from that,
     // then the column — not the file name — is the source of truth.
-    if add_column_if_missing(&conn, "history", "source", "TEXT NOT NULL DEFAULT 'file'")? {
+    if add_column_if_missing(conn, "history", "source", "TEXT NOT NULL DEFAULT 'file'")? {
         conn.execute(
             "UPDATE history SET source = ?1 WHERE instr(file_name, '.') = 0",
             [super::types::HistorySource::Recording.as_str()],
         )?;
     }
 
-    super::search::init_fts(&conn)?;
+    super::search::init_fts(conn)?;
 
-    if super::search::needs_fts_migration(&conn)? {
-        super::search::rebuild_fts_index(&conn)?;
+    if super::search::needs_fts_migration(conn)? {
+        super::search::rebuild_fts_index(conn)?;
     }
 
     conn.execute_batch(
@@ -199,6 +227,33 @@ mod tests {
     fn init_db_is_idempotent() {
         let (_dir, path) = setup_db();
         init_db(&path).expect("Second init should succeed");
+    }
+
+    fn user_version(path: &Path) -> usize {
+        Connection::open(path)
+            .expect("open")
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .expect("read user_version")
+    }
+
+    #[test]
+    fn init_db_records_every_migration_as_applied() {
+        let (_dir, path) = setup_db();
+        assert_eq!(user_version(&path), MIGRATIONS.len());
+    }
+
+    #[test]
+    fn init_db_leaves_a_newer_schema_version_alone() {
+        let (_dir, path) = setup_db();
+        let newer = MIGRATIONS.len() + 5;
+        Connection::open(&path)
+            .expect("open")
+            .pragma_update(None, "user_version", newer)
+            .expect("bump version");
+
+        init_db(&path).expect("init over a newer database");
+
+        assert_eq!(user_version(&path), newer);
     }
 
     #[test]
