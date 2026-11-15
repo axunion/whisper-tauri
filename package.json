@@ -8,13 +8,13 @@
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": "^24",
-      "onFail": "warn"
+      "version": "^26",
+      "onFail": "download"
     },
     "packageManager": {
       "name": "pnpm",
-      "version": "^11",
-      "onFail": "warn"
+      "version": "^12",
+      "onFail": "download"
     }
   },
   "scripts": {
@@ -35,37 +35,37 @@
     "docs:preview": "pnpm --filter docs preview"
   },
   "dependencies": {
-    "@kobalte/core": "^0.13.11",
-    "@solidjs/router": "^0.15.4",
-    "@tauri-apps/api": "~2.9.0",
-    "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
-    "@tauri-apps/plugin-dialog": "~2.6.0",
-    "@tauri-apps/plugin-fs": "~2.4.0",
-    "@tauri-apps/plugin-opener": "^2",
-    "@tauri-apps/plugin-store": "^2.4.1",
+    "@kobalte/core": "^0.13.14",
+    "@solidjs/router": "^1.0.3",
+    "@tauri-apps/api": "~2.12.4",
+    "@tauri-apps/plugin-clipboard-manager": "^2.5.0",
+    "@tauri-apps/plugin-dialog": "~2.8.4",
+    "@tauri-apps/plugin-fs": "~2.7.1",
+    "@tauri-apps/plugin-opener": "^2.7.3",
+    "@tauri-apps/plugin-store": "^2.5.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "solid-icons": "^1.1.0",
-    "solid-js": "^1.9.3",
-    "tailwind-merge": "^3.4.0"
+    "solid-icons": "^1.2.0",
+    "solid-js": "^1.9.19",
+    "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.16",
+    "@biomejs/biome": "2.6.7",
     "@kobalte/tailwindcss": "^0.9.0",
     "@solidjs/testing-library": "^0.8.10",
-    "@tailwindcss/postcss": "^4.1.18",
-    "@tauri-apps/cli": "^2",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@types/node": "^26.2.0",
-    "autoprefixer": "^10.4.22",
-    "jsdom": "^27.3.0",
-    "lefthook": "^2.1.9",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.18",
+    "@tailwindcss/postcss": "^4.3.5",
+    "@tauri-apps/cli": "^2.12.4",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@types/node": "^26.6.6",
+    "autoprefixer": "^10.6.2",
+    "jsdom": "^31.0.1",
+    "lefthook": "^2.2.2",
+    "postcss": "^8.5.33",
+    "tailwindcss": "^4.3.5",
     "tw-animate-css": "^1.4.0",
-    "typescript": "~5.6.2",
-    "vite": "^6.0.3",
-    "vite-plugin-solid": "^2.11.0",
-    "vitest": "^4.0.15"
+    "typescript": "~7.0.2",
+    "vite": "^8.3.8",
+    "vite-plugin-solid": "^2.11.16",
+    "vitest": "^5.1.0"
   }
 }

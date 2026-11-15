@@ -7,6 +7,9 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    // Vitest 5 clears mock call history before each test by default; tests here
+    // assert on calls made at module load (e.g. `listen` registrations).
+    clearMocks: false,
     // Pinned so the timezone assertions in `format.test.ts` stay meaningful:
     // under UTC, misreading a stored UTC timestamp as local time is a no-op and
     // the regression would pass unnoticed.
