@@ -5,7 +5,8 @@ use std::thread::JoinHandle;
 use std::time::Instant;
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
+use tauri_specta::Event;
 
 use super::error::RecordingError;
 use super::sleep_guard::SleepGuard;
@@ -554,13 +555,11 @@ fn emit_level_if_needed(samples: &[f32], last_emit: &Arc<Mutex<Instant>>, app: &
 
     if should_emit {
         let (rms, peak) = compute_levels(samples);
-        let _ = app.emit(
-            "recording:level",
-            RecordingLevel {
-                level: rms,
-                peak_level: peak,
-            },
-        );
+        let _ = RecordingLevel {
+            level: rms,
+            peak_level: peak,
+        }
+        .emit(app);
     }
 }
 

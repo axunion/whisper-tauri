@@ -11,8 +11,9 @@ pub struct ConversionResult {
 }
 
 /// `FFmpeg` download progress event payload.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type, tauri_specta::Event)]
 #[serde(rename_all = "camelCase")]
+#[tauri_specta(event_name = "ffmpeg:download-progress")]
 pub struct FfmpegDownloadProgress {
     /// Downloaded bytes
     pub downloaded_bytes: u64,

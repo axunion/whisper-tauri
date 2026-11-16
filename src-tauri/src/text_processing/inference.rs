@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use once_cell::sync::Lazy;
 use serde_json::{json, Value};
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
+use tauri_specta::Event;
 
 use super::error::TextProcessingError;
 use super::models::SamplingParams;
@@ -570,15 +571,13 @@ fn emit_progress(
     done: bool,
 ) {
     let Some(task_id) = task_id else { return };
-    let _ = app.emit(
-        "text-processing:inference-progress",
-        InferenceProgress {
-            task_id: task_id.to_string(),
-            token: token.to_string(),
-            accumulated_text: accumulated.to_string(),
-            done,
-        },
-    );
+    let _ = InferenceProgress {
+        task_id: task_id.to_string(),
+        token: token.to_string(),
+        accumulated_text: accumulated.to_string(),
+        done,
+    }
+    .emit(app);
 }
 
 /// Emits the initial empty-payload progress event so the frontend receives

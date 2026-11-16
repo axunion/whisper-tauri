@@ -22,8 +22,9 @@ pub struct TextModelInfo {
 }
 
 /// Text model download progress.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type, tauri_specta::Event)]
 #[serde(rename_all = "camelCase")]
+#[tauri_specta(event_name = "text-processing:download-progress")]
 pub(crate) struct TextDownloadProgress {
     /// Model identifier being downloaded
     pub model_id: String,
@@ -37,8 +38,9 @@ pub(crate) struct TextDownloadProgress {
 }
 
 /// Inference progress update (streaming tokens).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type, tauri_specta::Event)]
 #[serde(rename_all = "camelCase")]
+#[tauri_specta(event_name = "text-processing:inference-progress")]
 pub(crate) struct InferenceProgress {
     /// Task identifier
     pub task_id: String,

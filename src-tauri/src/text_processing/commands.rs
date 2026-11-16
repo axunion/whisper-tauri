@@ -1,7 +1,8 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, State};
+use tauri_specta::Event;
 
 use crate::mirrors;
 use crate::paths;
@@ -70,15 +71,13 @@ pub async fn text_processing_download_model(
         &url,
         &part_path,
         move |downloaded_bytes, total_bytes, progress| {
-            let _ = app_cb.emit(
-                "text-processing:download-progress",
-                TextDownloadProgress {
-                    model_id: model_id_cb.clone(),
-                    downloaded_bytes,
-                    total_bytes,
-                    progress,
-                },
-            );
+            let _ = TextDownloadProgress {
+                model_id: model_id_cb.clone(),
+                downloaded_bytes,
+                total_bytes,
+                progress,
+            }
+            .emit(&app_cb);
         },
     )
     .await
@@ -88,15 +87,13 @@ pub async fn text_processing_download_model(
         .await
         .map_err(TextProcessingError::from)?;
 
-    let _ = app.emit(
-        "text-processing:download-progress",
-        TextDownloadProgress {
-            model_id,
-            downloaded_bytes: 0,
-            total_bytes: 0,
-            progress: 100.0,
-        },
-    );
+    let _ = TextDownloadProgress {
+        model_id,
+        downloaded_bytes: 0,
+        total_bytes: 0,
+        progress: 100.0,
+    }
+    .emit(&app);
 
     paths::path_to_owned_string(&final_path).map_err(Into::into)
 }
@@ -622,15 +619,13 @@ async fn download_file(url: &str, output_path: &Path, app: &AppHandle) -> Result
         url,
         output_path,
         move |downloaded_bytes, total_bytes, progress| {
-            let _ = app_cb.emit(
-                "text-processing:download-progress",
-                TextDownloadProgress {
-                    model_id: "llama-server".to_string(),
-                    downloaded_bytes,
-                    total_bytes,
-                    progress,
-                },
-            );
+            let _ = TextDownloadProgress {
+                model_id: "llama-server".to_string(),
+                downloaded_bytes,
+                total_bytes,
+                progress,
+            }
+            .emit(&app_cb);
         },
     )
     .await

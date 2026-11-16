@@ -1,6 +1,5 @@
-import { listen } from "@tauri-apps/api/event";
 import { batch, createRoot, createSignal } from "solid-js";
-import { commands } from "~/bindings";
+import { commands, events } from "~/bindings";
 import { parseError } from "~/lib/errors";
 import { sumDownloadedBytes } from "~/lib/format";
 import { createSettings } from "~/primitives/createSettings";
@@ -106,18 +105,22 @@ const {
 // honoured by the first progress event, which is what carries the id.
 let cancelRequested = false;
 
-listen<TranscriptionProgress>("whisper:progress", (event) => {
-  setProgress(event.payload);
-  setCurrentTaskId(event.payload.taskId);
-  if (cancelRequested) {
-    cancelRequested = false;
-    commands.cancelTranscription(event.payload.taskId).catch(console.error);
-  }
-}).catch(console.error);
+events.whisperProgress
+  .listen((event) => {
+    setProgress(event.payload);
+    setCurrentTaskId(event.payload.taskId);
+    if (cancelRequested) {
+      cancelRequested = false;
+      commands.cancelTranscription(event.payload.taskId).catch(console.error);
+    }
+  })
+  .catch(console.error);
 
-listen<DownloadProgress>("model:download-progress", (event) => {
-  setDownloadProgress(event.payload);
-}).catch(console.error);
+events.modelDownloadProgress
+  .listen((event) => {
+    setDownloadProgress(event.payload);
+  })
+  .catch(console.error);
 
 function vadEnabled(): boolean {
   return createSettings().vadEnabled();

@@ -58,8 +58,9 @@ pub struct TranscriptionResult {
 }
 
 /// Transcription progress update.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type, tauri_specta::Event)]
 #[serde(rename_all = "camelCase")]
+#[tauri_specta(event_name = "whisper:progress")]
 pub struct TranscriptionProgress {
     /// Task identifier
     pub task_id: String,
@@ -71,8 +72,9 @@ pub struct TranscriptionProgress {
 }
 
 /// Model download progress.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type, tauri_specta::Event)]
 #[serde(rename_all = "camelCase")]
+#[tauri_specta(event_name = "model:download-progress")]
 pub struct DownloadProgress {
     /// Model identifier being downloaded
     pub model_id: String,

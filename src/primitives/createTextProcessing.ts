@@ -1,6 +1,5 @@
-import { listen } from "@tauri-apps/api/event";
 import { batch, createRoot, createSignal } from "solid-js";
-import { commands } from "~/bindings";
+import { commands, events } from "~/bindings";
 import { parseError } from "~/lib/errors";
 import { sumDownloadedBytes } from "~/lib/format";
 import { createSettings } from "~/primitives/createSettings";
@@ -83,13 +82,17 @@ const {
 });
 
 // Event listeners at module level — persist for the app lifetime.
-listen<TextDownloadProgress>("text-processing:download-progress", (event) => {
-  setDownloadProgress(event.payload);
-}).catch(console.error);
+events.textProcessingDownloadProgress
+  .listen((event) => {
+    setDownloadProgress(event.payload);
+  })
+  .catch(console.error);
 
-listen<InferenceProgress>("text-processing:inference-progress", (event) => {
-  setInferenceProgress(event.payload);
-}).catch(console.error);
+events.textProcessingInferenceProgress
+  .listen((event) => {
+    setInferenceProgress(event.payload);
+  })
+  .catch(console.error);
 
 // Load-once guards for the model list and the server probe. Each flag flips
 // only on success and the in-flight promise is released either way, so a

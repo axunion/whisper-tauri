@@ -54,7 +54,8 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::
     Ok(menu)
 }
 
-/// The IPC surface: every command the frontend can call.
+/// The IPC surface: every command the frontend can call and every event it
+/// can receive.
 ///
 /// `src/bindings.ts` is generated from this by the `bindings_are_up_to_date`
 /// test, so the frontend's types cannot drift from the Rust signatures.
@@ -62,6 +63,14 @@ fn ipc_builder() -> tauri_specta::Builder<tauri::Wry> {
     tauri_specta::Builder::<tauri::Wry>::new()
         // Durations, sizes and counts stay far below 2^53.
         .dangerously_cast_bigints_to_number()
+        .events(tauri_specta::collect_events![
+            whisper::types::TranscriptionProgress,
+            whisper::types::DownloadProgress,
+            converter::types::FfmpegDownloadProgress,
+            recording::types::RecordingLevel,
+            text_processing::types::TextDownloadProgress,
+            text_processing::types::InferenceProgress,
+        ])
         .commands(tauri_specta::collect_commands![
             whisper::commands::get_available_models,
             whisper::commands::check_model_exists,
@@ -127,6 +136,7 @@ fn ipc_builder() -> tauri_specta::Builder<tauri::Wry> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 #[allow(clippy::expect_used)]
 pub fn run() {
+    let ipc = ipc_builder();
     let builder = tauri::Builder::default();
 
     #[cfg(target_os = "macos")]
@@ -154,7 +164,11 @@ pub fn run() {
         .manage(tokio::sync::Mutex::new(
             text_processing::server::LlamaServerManager::new(),
         ))
-        .invoke_handler(ipc_builder().invoke_handler())
+        .invoke_handler(ipc.invoke_handler())
+        .setup(move |app| {
+            ipc.mount_events(app);
+            Ok(())
+        })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app_handle, event| {

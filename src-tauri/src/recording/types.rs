@@ -13,8 +13,9 @@ pub struct AudioDevice {
 }
 
 /// Real-time audio level information emitted during recording.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type, tauri_specta::Event)]
 #[serde(rename_all = "camelCase")]
+#[tauri_specta(event_name = "recording:level")]
 pub struct RecordingLevel {
     /// RMS level (0.0 - 1.0).
     #[specta(type = specta_typescript::Number)]

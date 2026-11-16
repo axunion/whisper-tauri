@@ -1,6 +1,5 @@
-import { listen } from "@tauri-apps/api/event";
 import { createRoot, createSignal } from "solid-js";
-import { commands } from "~/bindings";
+import { commands, events } from "~/bindings";
 import { parseError } from "~/lib/errors";
 import type { FfmpegDownloadProgress } from "~/types";
 import type { AppError } from "~/types/errors";
@@ -40,9 +39,11 @@ const {
 });
 
 // Event listener at module level — persists for the app lifetime.
-listen<FfmpegDownloadProgress>("ffmpeg:download-progress", (event) => {
-  setDownloadProgress(event.payload);
-}).catch(console.error);
+events.ffmpegDownloadProgress
+  .listen((event) => {
+    setDownloadProgress(event.payload);
+  })
+  .catch(console.error);
 
 // Load-once guard for the on-disk status probe. `statusChecked` flips only on
 // success and the in-flight promise is released either way, so a transient IPC

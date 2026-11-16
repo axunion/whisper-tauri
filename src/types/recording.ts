@@ -1,6 +1,5 @@
-export type { AudioDevice, RecordingStopResult } from "~/bindings";
-
-export interface RecordingLevel {
-  level: number;
-  peakLevel: number;
-}
+export type {
+  AudioDevice,
+  RecordingLevel,
+  RecordingStopResult,
+} from "~/bindings";

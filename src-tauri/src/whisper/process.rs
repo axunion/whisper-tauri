@@ -6,7 +6,8 @@ use std::sync::{Arc, RwLock};
 use std::time::Instant;
 
 use once_cell::sync::Lazy;
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
+use tauri_specta::Event;
 use whisper_rs::{
     FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters, WhisperVadContext,
     WhisperVadContextParams, WhisperVadParams,
@@ -429,14 +430,12 @@ pub(crate) fn transcribe(
     let app_cb = app.clone();
     params.set_progress_callback_safe(move |progress| {
         let elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
-        let _ = app_cb.emit(
-            "whisper:progress",
-            TranscriptionProgress {
-                task_id: task_id_cb.clone(),
-                progress: f64::from(progress),
-                elapsed_ms,
-            },
-        );
+        let _ = TranscriptionProgress {
+            task_id: task_id_cb.clone(),
+            progress: f64::from(progress),
+            elapsed_ms,
+        }
+        .emit(&app_cb);
     });
 
     // Abort callback for cancellation.

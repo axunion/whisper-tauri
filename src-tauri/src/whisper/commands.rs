@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
+use tauri_specta::Event;
 
 use crate::download;
 use crate::mirrors;
@@ -112,15 +113,13 @@ pub async fn download_model(app: AppHandle, model_id: String) -> Result<String, 
         &url,
         &part_path,
         move |downloaded_bytes, total_bytes, progress| {
-            let _ = app_cb.emit(
-                "model:download-progress",
-                DownloadProgress {
-                    model_id: model_id_cb.clone(),
-                    downloaded_bytes,
-                    total_bytes,
-                    progress,
-                },
-            );
+            let _ = DownloadProgress {
+                model_id: model_id_cb.clone(),
+                downloaded_bytes,
+                total_bytes,
+                progress,
+            }
+            .emit(&app_cb);
         },
     )
     .await
@@ -132,15 +131,13 @@ pub async fn download_model(app: AppHandle, model_id: String) -> Result<String, 
         .map_err(WhisperError::from)?;
 
     // Emit final 100% progress
-    let _ = app.emit(
-        "model:download-progress",
-        DownloadProgress {
-            model_id,
-            downloaded_bytes: 0,
-            total_bytes: 0,
-            progress: 100.0,
-        },
-    );
+    let _ = DownloadProgress {
+        model_id,
+        downloaded_bytes: 0,
+        total_bytes: 0,
+        progress: 100.0,
+    }
+    .emit(&app);
 
     paths::path_to_owned_string(&final_path).map_err(Into::into)
 }
@@ -229,14 +226,12 @@ pub async fn transcribe_audio(
 
     // Emit an initial progress event so the frontend receives the task_id
     // and can enable the cancel button before heavy work begins.
-    let _ = app.emit(
-        "whisper:progress",
-        TranscriptionProgress {
-            task_id: task_id.clone(),
-            progress: 0.0,
-            elapsed_ms: 0,
-        },
-    );
+    let _ = TranscriptionProgress {
+        task_id: task_id.clone(),
+        progress: 0.0,
+        elapsed_ms: 0,
+    }
+    .emit(&app);
 
     if token.is_cancelled() {
         return Err(WhisperError::Cancelled.into());

@@ -1,6 +1,5 @@
-import { listen } from "@tauri-apps/api/event";
 import { createRoot, createSignal } from "solid-js";
-import { commands } from "~/bindings";
+import { commands, events } from "~/bindings";
 import { parseError } from "~/lib/errors";
 import type { AudioDevice, RecordingLevel, RecordingStopResult } from "~/types";
 import type { AppError } from "~/types/errors";
@@ -54,12 +53,14 @@ const {
   };
 });
 
-listen<RecordingLevel>("recording:level", (event) => {
-  // An event already in flight when the recording was paused would leave the
-  // meter frozen on its last level.
-  if (isPaused()) return;
-  setLevel(event.payload);
-}).catch(console.error);
+events.recordingLevel
+  .listen((event) => {
+    // An event already in flight when the recording was paused would leave the
+    // meter frozen on its last level.
+    if (isPaused()) return;
+    setLevel(event.payload);
+  })
+  .catch(console.error);
 
 let durationTimer: ReturnType<typeof setInterval> | undefined;
 // Guards the window between a stop request and the backend finishing the WAV,

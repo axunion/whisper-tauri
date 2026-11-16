@@ -2,6 +2,7 @@
 
 import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 import type { InvokeOptions } from "@tauri-apps/api/core";
+import * as __TAURI_EVENT from "@tauri-apps/api/event";
 
 /** Commands */
 export const commands = {
@@ -485,6 +486,16 @@ export const commands = {
 	checkLatestVersion: (options?: InvokeOptions) => __TAURI_INVOKE<string>("check_latest_version", undefined, options),
 };
 
+/** Events */
+export const events = {
+	ffmpegDownloadProgress: makeEvent<FfmpegDownloadProgress, FfmpegDownloadProgress>("ffmpeg:download-progress"),
+	modelDownloadProgress: makeEvent<DownloadProgress, DownloadProgress>("model:download-progress"),
+	recordingLevel: makeEvent<RecordingLevel, RecordingLevel>("recording:level"),
+	textProcessingDownloadProgress: makeEvent<TextDownloadProgress, TextDownloadProgress>("text-processing:download-progress"),
+	textProcessingInferenceProgress: makeEvent<InferenceProgress, InferenceProgress>("text-processing:inference-progress"),
+	whisperProgress: makeEvent<TranscriptionProgress, TranscriptionProgress>("whisper:progress"),
+};
+
 /* Types */
 /**
  *  A single action item extracted from a transcription.
@@ -585,6 +596,28 @@ export type ConversionResult = {
 	outputPath: string,
 	/**  Original file path */
 	originalPath: string,
+};
+
+/**  Model download progress. */
+export type DownloadProgress = {
+	/**  Model identifier being downloaded */
+	modelId: string,
+	/**  Downloaded bytes */
+	downloadedBytes: number,
+	/**  Total bytes */
+	totalBytes: number,
+	/**  Progress percentage (0-100) */
+	progress: number,
+};
+
+/**  `FFmpeg` download progress event payload. */
+export type FfmpegDownloadProgress = {
+	/**  Downloaded bytes */
+	downloadedBytes: number,
+	/**  Total bytes */
+	totalBytes: number,
+	/**  Progress percentage (0-100) */
+	progress: number,
 };
 
 /**  Full history entry including text and segments. */
@@ -835,6 +868,18 @@ export type HistorySource =
 /**  Imported from a file the user picked. */
 "file";
 
+/**  Inference progress update (streaming tokens). */
+export type InferenceProgress = {
+	/**  Task identifier */
+	taskId: string,
+	/**  Latest token */
+	token: string,
+	/**  Full accumulated text so far */
+	accumulatedText: string,
+	/**  Whether inference is complete */
+	done: boolean,
+};
+
 /**  Whisper model information. */
 export type ModelInfo = ModelInfo_Serialize | ModelInfo_Deserialize;
 
@@ -1033,6 +1078,14 @@ export type NotionSummary_Serialize = {
 	labels: NotionSummaryLabels,
 };
 
+/**  Real-time audio level information emitted during recording. */
+export type RecordingLevel = {
+	/**  RMS level (0.0 - 1.0). */
+	level: number,
+	/**  Peak level (0.0 - 1.0). */
+	peakLevel: number,
+};
+
 /**  Result returned when recording is stopped. */
 export type RecordingStopResult = {
 	/**  Path to the temporary WAV file. */
@@ -1123,6 +1176,18 @@ export type StructuredSummary_Serialize = {
 	keyPoints: string[],
 };
 
+/**  Text model download progress. */
+export type TextDownloadProgress = {
+	/**  Model identifier being downloaded */
+	modelId: string,
+	/**  Downloaded bytes */
+	downloadedBytes: number,
+	/**  Total bytes */
+	totalBytes: number,
+	/**  Progress percentage (0-100) */
+	progress: number,
+};
+
 /**  Text processing model information. */
 export type TextModelInfo = TextModelInfo_Serialize | TextModelInfo_Deserialize;
 
@@ -1162,6 +1227,16 @@ export type TextModelInfo_Serialize = {
 	path?: string,
 };
 
+/**  Transcription progress update. */
+export type TranscriptionProgress = {
+	/**  Task identifier */
+	taskId: string,
+	/**  Progress percentage (0-100) */
+	progress: number,
+	/**  Elapsed time in milliseconds */
+	elapsedMs: number,
+};
+
 /**  Transcription result with full text and segments. */
 export type TranscriptionResult = {
 	/**  Task identifier */
@@ -1185,3 +1260,29 @@ export type TranscriptionSegment = {
 	/**  Transcribed text */
 	text: string,
 };
+
+/* Tauri Specta runtime */
+type EventEmit<T> = [T] extends [null] ? () => Promise<void> : (payload: T) => Promise<void>;
+
+type EventEmitTo<T> = [T] extends [null] ? (target: __TAURI_EVENT.EventTarget | string) => Promise<void> : (target: __TAURI_EVENT.EventTarget | string, payload: T) => Promise<void>;
+
+function makeEvent<TListen, TEmit = TListen>(name: string, serialize?: (payload: TEmit) => unknown, deserialize?: (payload: any) => TListen) {
+    const mapEvent = (cb: __TAURI_EVENT.EventCallback<TListen>) => (event: __TAURI_EVENT.Event<any>) => cb({ ...event, payload: deserialize ? deserialize(event.payload) : event.payload });
+    const mapPayload = (payload: TEmit) => serialize ? serialize(payload) : payload;
+
+    const base = {
+        listen: (cb: __TAURI_EVENT.EventCallback<TListen>) => __TAURI_EVENT.listen(name, mapEvent(cb)),
+        once: (cb: __TAURI_EVENT.EventCallback<TListen>) => __TAURI_EVENT.once(name, mapEvent(cb)),
+        emit: ((payload: TEmit) => __TAURI_EVENT.emit(name, mapPayload(payload)) as unknown) as EventEmit<TEmit>,
+        emitTo: ((to: __TAURI_EVENT.EventTarget | string, payload: TEmit) => __TAURI_EVENT.emitTo(to, name, mapPayload(payload)) as unknown) as EventEmitTo<TEmit>
+    };
+
+    const fn = (target: import("@tauri-apps/api/webview").Webview | import("@tauri-apps/api/window").Window) => ({
+        listen: (cb: __TAURI_EVENT.EventCallback<TListen>) => target.listen(name, mapEvent(cb)),
+        once: (cb: __TAURI_EVENT.EventCallback<TListen>) => target.once(name, mapEvent(cb)),
+        emit: ((payload: TEmit) => target.emit(name, mapPayload(payload)) as unknown) as EventEmit<TEmit>,
+        emitTo: ((to: __TAURI_EVENT.EventTarget | string, payload: TEmit) => target.emitTo(to, name, mapPayload(payload)) as unknown) as EventEmitTo<TEmit>
+    });
+
+    return Object.assign(fn, base);
+}

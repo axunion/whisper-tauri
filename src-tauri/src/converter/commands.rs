@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
+use tauri_specta::Event;
 
 use crate::mirrors;
 use crate::paths;
@@ -113,14 +114,12 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
         &app_data_dir,
         custom_url.as_deref(),
         move |downloaded, total, progress| {
-            let _ = app_clone.emit(
-                "ffmpeg:download-progress",
-                FfmpegDownloadProgress {
-                    downloaded_bytes: downloaded,
-                    total_bytes: total,
-                    progress,
-                },
-            );
+            let _ = FfmpegDownloadProgress {
+                downloaded_bytes: downloaded,
+                total_bytes: total,
+                progress,
+            }
+            .emit(&app_clone);
         },
     )
     .await
