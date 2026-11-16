@@ -25,7 +25,10 @@ interface HistoryDetailProps {
   entry: HistoryEntry;
   onRename?: (id: string, newFileName: string) => void;
   onDelete: (id: string) => void | Promise<void>;
-  /** False while deleting the entry would interrupt running work. */
+  /**
+   * False while deleting the entry or its audio would break running work: an
+   * AI operation on it, or a re-transcription reading its audio.
+   */
   canDelete: boolean;
   onDeleteAudio: (id: string) => void | Promise<void>;
   onEditSegment: (id: string, index: number, text: string) => Promise<boolean>;
@@ -110,6 +113,7 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
             class="size-8 hover:text-destructive"
             aria-label={t("history.deleteAudio")}
             title={t("history.deleteAudio")}
+            disabled={!props.canDelete}
             onClick={openDialog}
           >
             <FiTrash2 class="size-4" aria-hidden="true" />
@@ -227,7 +231,7 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
         <Show when={!title.isEditing()}>
           <ConfirmDialog
             title={t("history.deleteEntry")}
-            description={t("history.deleteConfirmation", { count: 1 })}
+            description={t("history.deleteEntryConfirmation")}
             confirmLabel={
               <>
                 <FiTrash2 />
@@ -239,8 +243,9 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
             {(openDialog) => (
               <button
                 type="button"
-                class="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 disabled:pointer-events-none group-hover/title:opacity-100"
+                class="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 disabled:pointer-events-none group-hover/title:opacity-100 group-hover/title:disabled:opacity-40"
                 aria-label={t("history.deleteEntry")}
+                title={t("history.deleteEntry")}
                 disabled={!props.canDelete}
                 onClick={openDialog}
               >

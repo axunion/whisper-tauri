@@ -99,6 +99,11 @@ export default function History() {
 
   async function handleDeleteSelected(): Promise<void> {
     const ids = [...history.selectedIds()];
+    const inUse = job.audioSourceId();
+    if (inUse !== null && ids.includes(inUse)) {
+      toast.info(t("history.inUseByTranscription"));
+      return;
+    }
     if (ids.length > 0) {
       await runWithToast({
         action: () => history.deleteEntries(ids),
@@ -218,7 +223,10 @@ export default function History() {
                     <HistoryDetail
                       entry={entry()}
                       onRename={history.renameEntry}
-                      canDelete={currentOp() === null}
+                      canDelete={
+                        currentOp() === null &&
+                        job.audioSourceId() !== entry().id
+                      }
                       onDelete={async (id) => {
                         if (await history.deleteEntries([id])) {
                           toast.success(t("history.deletedToast"));

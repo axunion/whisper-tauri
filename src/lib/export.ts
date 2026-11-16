@@ -46,7 +46,9 @@ export function toMarkdown(result: TranscriptionResult, title: string): string {
   const lines = result.segments.map(
     (seg) => `**[${formatDurationColon(seg.start)}]** ${seg.text.trim()}`,
   );
-  return `# ${title}\n\n${lines.join("\n\n")}\n`;
+  // On one line: a title can carry a line break, which would end the heading.
+  const heading = title.replace(/\s+/g, " ").trim();
+  return `# ${heading}\n\n${lines.join("\n\n")}\n`;
 }
 
 /** The transcription as data, for other tools to read. */
@@ -92,16 +94,21 @@ export function getExtension(format: ExportFormat): string {
 }
 
 /**
- * Turns an entry title into a file name stem for the save dialog: characters
- * a file system rejects become `_`, and a trailing audio extension is dropped
- * so "meeting.mp3" is offered as "meeting.txt", not "meeting.mp3.txt".
+ * Turns an entry title into a file name stem for the save dialog: `:` (as in
+ * the time of a dated recording name) becomes `-`, other characters a file
+ * system rejects become `_`, and a trailing audio extension is dropped so
+ * "meeting.mp3" is offered as "meeting.txt", not "meeting.mp3.txt". A stem
+ * that would start with a dot — a hidden file — falls back to a fixed name.
  */
 export function toFileStem(title: string): string {
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are exactly what must be removed from a file name
-  let stem = title.replace(/[\u0000-\u001f/\\:*?"<>|]/g, "_").trim();
+  let stem = title
+    .replace(/:/g, "-")
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are exactly what must be removed from a file name
+    .replace(/[\u0000-\u001f/\\*?"<>|]/g, "_")
+    .trim();
   const dot = stem.lastIndexOf(".");
   if (dot > 0 && AUDIO_EXTENSIONS.includes(stem.slice(dot + 1).toLowerCase())) {
-    stem = stem.slice(0, dot);
+    stem = stem.slice(0, dot).trim();
   }
-  return stem || "transcription";
+  return stem && !stem.startsWith(".") ? stem : "transcription";
 }

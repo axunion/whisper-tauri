@@ -146,6 +146,14 @@ function attachFailed(): boolean {
   return attachError() !== null;
 }
 
+/**
+ * The history entry whose audio a prepared or running re-transcription reads.
+ * Deleting that entry or its audio meanwhile would break the run.
+ */
+function audioSourceId(): string | null {
+  return audioSource()?.id ?? null;
+}
+
 function clearError(): void {
   converter.clearError();
   setSaveError(null);
@@ -286,6 +294,8 @@ async function startFile(options: StartFileOptions): Promise<void> {
     }
   } finally {
     setBatchIndex(null);
+    // Consumed: its entry no longer has to be kept from deletion.
+    setAudioSource(null);
   }
 
   // Announced once per run, and only for what reached history.
@@ -434,6 +444,7 @@ const jobInstance = {
   error,
   saveFailed,
   attachFailed,
+  audioSourceId,
   canStartFile,
   canStartRecording,
   queue,

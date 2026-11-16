@@ -62,7 +62,7 @@ CREATE INDEX idx_ai_content_history ON ai_content(history_id);
 
 ## セグメントの編集 (`entries.rs::update_segment`)
 
-誤認識の修正はセグメント単位 (履歴詳細のタイムライン → `history_update_segment`)。全文テキストはセグメントの連結で作り直す (whisper が全文を作るのと同じ方法) ので、全文・タイムライン・SRT/VTT・一覧プレビュー・検索インデックスが常に同じ内容を指す。更新は 1 トランザクション。
+誤認識の修正はセグメント単位 (履歴詳細のタイムライン → `history_update_segment`)。全文テキストはセグメントの連結で作り直す (whisper が全文を作るのと同じ方法) ので、全文・タイムライン・書き出し (SRT / VTT / Markdown / JSON)・一覧プレビュー・検索インデックスが常に同じ内容を指す。更新は 1 トランザクション。
 
 - セグメント先頭の空白は保持する (連結したときに前のセグメントとの区切りになるため)
 - `history_update_segment` は変更後の全文・セグメント本文・一覧プレビューを返し (`SegmentUpdate`)、FE は再読み込みなしで詳細と一覧に反映する
@@ -79,7 +79,7 @@ CREATE INDEX idx_ai_content_history ON ai_content(history_id);
 - `history_attach_recording` は移動元が `recordings/` 直下であることを canonicalize して検証する (`RecordingManager::cleanup` と同じ理由)
 - 移動に失敗しても文字起こしは保存済み。WAV は未処理の録音として残り、FE (`createTranscriptionJob`) がエラーを表示する
 - **再生**: 履歴詳細 (`HistoryDetail` → `ResultViewer` の `audio` prop) が `convertFileSrc(audioPath)` を `<audio>` に渡す。タイムラインの行をクリックするとその開始位置から再生し、再生位置を含むセグメントをハイライトする (`ResultTimelineTab` の `onSeek` / `positionMs`)。音声は 32-bit float WAV のままなので、WebView で再生できるかは実機確認が必要
-- **再文字起こし**: 履歴詳細から保存済み音声を文字起こし画面に渡す (`createTranscriptionJob.prepareRetranscription`)。結果は新しい履歴として保存され、`history_copy_audio` で音声のコピーを持つ (元の履歴と独立に削除できる)。変換の要否は表示名ではなくパスの拡張子で決める (保存済み音声の表示名は履歴タイトルで拡張子がない)
+- **再文字起こし**: 履歴詳細から保存済み音声を文字起こし画面に渡す (`createTranscriptionJob.prepareRetranscription`)。結果は新しい履歴として保存され、`history_copy_audio` で音声のコピーを持つ (元の履歴と独立に削除できる)。コピーが済むまでは元の履歴とその音声を削除できない (`job.audioSourceId()` で UI が抑止する)。変換の要否は表示名ではなくパスの拡張子で決める (保存済み音声の表示名は履歴タイトルで拡張子がない)
 - 設定画面の「データ管理」(`DataManagement.tsx` / `createStorage.ts`): 音声の件数と容量 (`history_storage_stats`)、全音声の削除、未処理の録音の件数と削除 (セッションが保持中の 1 件は件数にも削除にも含めない)、全履歴の削除
 
 ## コマンド一覧

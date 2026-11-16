@@ -80,6 +80,8 @@ export interface Dictionary {
     deleteConfirmation: string;
     deletedToast: string;
     deleteEntry: string;
+    deleteEntryConfirmation: string;
+    inUseByTranscription: string;
     searchPlaceholder: string;
     searchNoResults: string;
     clearSearch: string;

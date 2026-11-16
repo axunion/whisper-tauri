@@ -930,6 +930,26 @@ describe("createTranscriptionJob", () => {
       });
     });
 
+    it("names the source entry until its audio has been copied", async () => {
+      const transcription = deferred<TranscriptionResult>();
+      mockBackend({ transcribe_audio: () => transcription.promise });
+      await createWhisper().loadModels();
+      const job = createTranscriptionJob();
+      expect(job.audioSourceId()).toBeNull();
+
+      await job.prepareRetranscription(source);
+      expect(job.audioSourceId()).toBe("history-0");
+
+      const run = job.startFile(options);
+      await vi.waitFor(() => expect(job.phase()).toBe("processing"));
+      expect(job.audioSourceId()).toBe("history-0");
+
+      mockBackend();
+      transcription.resolve(result);
+      await run;
+      expect(job.audioSourceId()).toBeNull();
+    });
+
     it("treats a different file picked afterwards as an ordinary file", async () => {
       mockBackend();
       const job = createTranscriptionJob();

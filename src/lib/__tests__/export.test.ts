@@ -113,6 +113,14 @@ describe("toMarkdown", () => {
   });
 });
 
+describe("toMarkdown heading", () => {
+  it("should keep a title with a line break on one line", () => {
+    expect(toMarkdown(sampleResult, "Weekly\nsync").split("\n")[0]).toBe(
+      "# Weekly sync",
+    );
+  });
+});
+
 describe("toJSON", () => {
   it("should serialize the transcription with trimmed segment text", () => {
     expect(JSON.parse(toJSON(sampleResult, "Weekly sync"))).toEqual({
@@ -139,12 +147,20 @@ describe("toFileStem", () => {
   });
 
   it("should replace characters a file system rejects", () => {
-    expect(toFileStem("録音 2026-11-15 14:30")).toBe("録音 2026-11-15 14_30");
+    expect(toFileStem("録音 2026-11-15 14:30")).toBe("録音 2026-11-15 14-30");
     expect(toFileStem("a/b\\c?")).toBe("a_b_c_");
+  });
+
+  it("should not leave a space before the extension it dropped", () => {
+    expect(toFileStem("notes about .wav")).toBe("notes about");
   });
 
   it("should fall back when nothing usable is left", () => {
     expect(toFileStem("   ")).toBe("transcription");
-    expect(toFileStem(".mp3")).toBe(".mp3");
+  });
+
+  it("should fall back rather than offer a hidden file", () => {
+    expect(toFileStem(".mp3")).toBe("transcription");
+    expect(toFileStem(" .hidden")).toBe("transcription");
   });
 });

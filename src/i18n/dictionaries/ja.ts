@@ -86,6 +86,10 @@ export const ja: Dictionary = {
       "{count} 件の履歴が完全に削除されます。この操作は取り消せません。",
     deletedToast: "履歴を削除しました",
     deleteEntry: "この履歴を削除",
+    deleteEntryConfirmation:
+      "この履歴が完全に削除されます。この操作は取り消せません。",
+    inUseByTranscription:
+      "再文字起こしに使用中の履歴が含まれているため、削除できません",
     searchPlaceholder: "キーワードで検索",
     searchNoResults: "検索結果が見つかりません。",
     clearSearch: "検索をクリア",

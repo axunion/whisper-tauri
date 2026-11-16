@@ -52,7 +52,7 @@ The toolbar in the top-right corner offers:
 
 - **AI Processing** — see the next section.
 - **Share** — send to Notion (once configured).
-- **Save** — export the current tab: Plain Text (`.txt`), Subtitles (`.srt`), or Web Subtitles (`.vtt`).
+- **Save** — export the current tab: Plain Text (`.txt`), Markdown with timestamps (`.md`), Subtitles (`.srt`), Web Subtitles (`.vtt`), or JSON data (`.json`).
 - **Copy** — copy the current tab's content to the clipboard.
 
 Click the file name to edit the entry's title.
@@ -71,10 +71,10 @@ Everything runs on a local `llama-server` process — no text is sent to any ext
 
 Every transcription is stored locally in the **History** page:
 
-- **Search** the full text of all transcripts (3+ characters).
+- **Search** the full text and file names of all transcripts.
 - Filter by period (7 days / 30 days / all) and sort by date, length, or name.
 - Click an entry to reopen it in the same result viewer — you can run AI processing, export, or send to Notion on past entries at any time.
-- Use **Select** to delete multiple entries at once. Deletion is permanent.
+- Delete an entry from its detail view, or use **Select** to delete several at once. Deletion is permanent.
 
 ## 8. Notion export (optional)
 
