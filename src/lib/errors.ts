@@ -85,7 +85,7 @@ function isIpcError(error: unknown): error is IpcError {
     error !== null &&
     "code" in error &&
     typeof error.code === "string" &&
-    error.code in CATEGORY_MAP &&
+    Object.keys(CATEGORY_MAP).includes(error.code) &&
     "message" in error &&
     typeof error.message === "string"
   );

@@ -20,7 +20,7 @@ use super::types::{StructuredSummary, TextDownloadProgress, TextModelInfo};
 ///
 /// # Errors
 ///
-/// Returns an error string if the operation fails.
+/// Returns an error if the operation fails.
 #[tauri::command]
 #[specta::specta]
 pub async fn text_processing_list_models(app: AppHandle) -> Result<Vec<TextModelInfo>, IpcError> {
@@ -43,7 +43,7 @@ pub async fn text_processing_list_models(app: AppHandle) -> Result<Vec<TextModel
 ///
 /// # Errors
 ///
-/// Returns an error string if the operation fails.
+/// Returns an error if the operation fails.
 #[tauri::command]
 #[specta::specta]
 pub async fn text_processing_download_model(
@@ -125,7 +125,7 @@ pub async fn text_processing_delete_model(
 ///
 /// # Errors
 ///
-/// Returns an error string if the operation fails.
+/// Returns an error if the operation fails.
 #[tauri::command]
 #[specta::specta]
 pub async fn text_processing_download_server(app: AppHandle) -> Result<String, IpcError> {
@@ -180,7 +180,7 @@ pub async fn text_processing_download_server(app: AppHandle) -> Result<String, I
 ///
 /// # Errors
 ///
-/// Returns an error string if the operation fails.
+/// Returns an error if the operation fails.
 #[tauri::command]
 #[specta::specta]
 pub async fn text_processing_delete_server(app: AppHandle) -> Result<(), IpcError> {
@@ -212,7 +212,7 @@ pub async fn text_processing_delete_server(app: AppHandle) -> Result<(), IpcErro
 ///
 /// # Errors
 ///
-/// Returns an error string if the operation fails.
+/// Returns an error if the operation fails.
 #[tauri::command]
 #[specta::specta]
 pub async fn text_processing_check_server(app: AppHandle) -> Result<bool, IpcError> {
@@ -226,7 +226,7 @@ pub async fn text_processing_check_server(app: AppHandle) -> Result<bool, IpcErr
 ///
 /// # Errors
 ///
-/// Returns an error string if the operation fails.
+/// Returns an error if the operation fails.
 #[tauri::command]
 #[specta::specta]
 pub async fn text_processing_chat(
@@ -266,7 +266,7 @@ pub async fn text_processing_chat(
 ///
 /// # Errors
 ///
-/// Returns an error string if the operation fails or the model returns JSON
+/// Returns an error if the operation fails or the model returns JSON
 /// that does not match the schema.
 #[tauri::command]
 #[specta::specta]
@@ -344,7 +344,7 @@ pub async fn text_processing_summarize(
 ///
 /// # Errors
 ///
-/// Returns an error string if the operation fails.
+/// Returns an error if the operation fails.
 #[tauri::command]
 #[specta::specta]
 pub async fn text_processing_cancel(task_id: String) -> Result<bool, IpcError> {
@@ -355,7 +355,7 @@ pub async fn text_processing_cancel(task_id: String) -> Result<bool, IpcError> {
 ///
 /// # Errors
 ///
-/// Returns an error string if the operation fails.
+/// Returns an error if the operation fails.
 #[tauri::command]
 #[specta::specta]
 pub async fn text_processing_generate_title(
@@ -404,7 +404,7 @@ pub async fn text_processing_generate_title(
 ///
 /// # Errors
 ///
-/// Returns an error string if the operation fails.
+/// Returns an error if the operation fails.
 #[tauri::command]
 #[specta::specta]
 pub async fn text_processing_clean_text(

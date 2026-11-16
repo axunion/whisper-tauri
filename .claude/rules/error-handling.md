@@ -12,7 +12,7 @@ paths:
 
 Every command returns `Result<T, IpcError>`. `IpcError` (`src-tauri/src/ipc_error.rs`) carries an `ErrorCode` the frontend branches on and a `message` it shows as detail. `ErrorCode` is generated into `src/bindings.ts`, so the two sides cannot drift; what still needs judgment is which code each failure gets.
 
-Top-level single-file modules (`download.rs`, `update.rs`, `settings.rs`, `paths.rs`) define their error enums inline rather than in a dedicated `error.rs` — the same rules apply there.
+Top-level single-file modules (`update.rs`, `settings.rs`, `paths.rs`) define their error enums inline rather than in a dedicated `error.rs` — the same rules apply there. `download.rs`'s `DownloadError` never reaches a command: each caller absorbs it into its own error enum.
 
 ## Rust side (`src-tauri/src/*/error.rs`)
 
@@ -21,7 +21,7 @@ Top-level single-file modules (`download.rs`, `update.rs`, `settings.rs`, `paths
 - Always implement `From<XxxError> for IpcError` with a `match` that names every variant — no `_` arm, so adding a variant fails to compile until it is given a code
 - Pick the code by what the user should be told and whether a retry makes sense, not by where the error came from
 - Absorb upstream errors via `#[from]` or hand-written `From` (e.g., `From<std::io::Error>`, `From<reqwest::Error>`, `From<crate::download::DownloadError>`)
-- Keep a typed error typed until it reaches the command's return: `err.to_string()` followed by `?` goes through `From<String> for IpcError` and silently becomes `UnknownError`. That fallback exists only for failures with no error type (a poisoned lock, a task join)
+- Keep a typed error typed until it reaches the command's return: `err.to_string()` followed by `?` goes through `From<String> for IpcError` and silently becomes `UnknownError`. That fallback exists only for failures with no error type (a poisoned lock, a task join, a one-off message such as "Could not determine audio duration")
 - Add a unit test that exercises each variant's `Display` output, and one that checks the `IpcError` conversion (mirror the existing `#[cfg(test)] mod tests` block in any current `error.rs`)
 
 ## Adding an `ErrorCode`

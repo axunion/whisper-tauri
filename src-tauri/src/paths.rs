@@ -17,7 +17,10 @@ pub enum PathError {
 
 impl From<PathError> for IpcError {
     fn from(err: PathError) -> Self {
-        Self::new(ErrorCode::FileReadError, err.to_string())
+        let code = match &err {
+            PathError::Resolve(_) | PathError::InvalidEncoding => ErrorCode::FileReadError,
+        };
+        Self::new(code, err.to_string())
     }
 }
 

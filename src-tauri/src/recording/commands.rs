@@ -12,7 +12,7 @@ use super::types::{AudioDevice, RecordingStopResult};
 ///
 /// # Errors
 ///
-/// Returns an error string if device enumeration fails.
+/// Returns an error if device enumeration fails.
 #[tauri::command]
 #[specta::specta]
 pub async fn list_audio_devices(
@@ -27,7 +27,7 @@ pub async fn list_audio_devices(
 ///
 /// # Errors
 ///
-/// Returns an error string if a recording is already in progress,
+/// Returns an error if a recording is already in progress,
 /// the device cannot be found, or the stream cannot be created.
 #[tauri::command]
 #[specta::specta]
@@ -44,7 +44,7 @@ pub async fn start_recording(
 ///
 /// # Errors
 ///
-/// Returns an error string if no recording is in progress.
+/// Returns an error if no recording is in progress.
 #[tauri::command]
 #[specta::specta]
 pub async fn pause_recording(state: State<'_, Mutex<RecordingManager>>) -> Result<(), IpcError> {
@@ -56,7 +56,7 @@ pub async fn pause_recording(state: State<'_, Mutex<RecordingManager>>) -> Resul
 ///
 /// # Errors
 ///
-/// Returns an error string if no recording is in progress.
+/// Returns an error if no recording is in progress.
 #[tauri::command]
 #[specta::specta]
 pub async fn resume_recording(state: State<'_, Mutex<RecordingManager>>) -> Result<(), IpcError> {
@@ -71,7 +71,7 @@ pub async fn resume_recording(state: State<'_, Mutex<RecordingManager>>) -> Resu
 ///
 /// # Errors
 ///
-/// Returns an error string if no recording is in progress or the
+/// Returns an error if no recording is in progress or the
 /// WAV file cannot be written.
 #[tauri::command]
 #[specta::specta]
@@ -88,7 +88,7 @@ pub async fn stop_recording(
 ///
 /// # Errors
 ///
-/// Returns an error string if the path is outside the recordings directory
+/// Returns an error if the path is outside the recordings directory
 /// or the file cannot be deleted.
 #[tauri::command]
 #[specta::specta]

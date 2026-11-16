@@ -35,11 +35,11 @@ Source: `src-tauri/src/lib.rs` / `src-tauri/tauri.conf.json` / `src-tauri/capabi
 - 状態管理: `src/primitives/` の `create*` ファクトリ (createWhisper / createRecording / createSettings / createAiSession など)。`createSettings` はモジュールレベル・シングルトンで `LazyStore("settings.json")` を包む
 - 文字起こしの一連 (変換 → 推論 → 履歴保存 → 後始末) は `createTranscriptionJob` (モジュールレベル・シングルトン) が担う。実行は画面遷移をまたいで続くため、手順をページコンポーネントに置かない。履歴保存に成功するまで完了トーストを出さず、録音 WAV も消さない
 - i18n: `src/i18n/` の独自 context ベース。ロケールは `ja` (デフォルト) / `en` の 2 つ。UI 文字列のハードコード禁止 (`.claude/rules/frontend-conventions.md`)
-- 型: IPC を越える型は生成された `src/bindings.ts` が実体で、`src/types/` はそれを既存の名前で再エクスポートする (手書きで残るのはフロント専用の型のみ)。serde の入出力で形が違う型は `_Serialize` / `_Deserialize` に分かれて生成され、`src/types/` は厳しい側の `_Serialize` を指す。`#[serde(rename_all = "camelCase")]` で IPC 境界を camelCase に統一。バックエンドの呼び出しは `invoke()` / `listen()` を直接使わず `commands.*` / `events.*` を通す
+- 型: IPC を越える型は生成された `src/bindings.ts` が実体で、`src/types/` はそれを既存の名前で再エクスポートする (手書きで残るのはフロント専用の型と、`AiContent.contentType` を 3 種類に絞り込む型のみ)。serde の入出力で形が違う型は `_Serialize` / `_Deserialize` に分かれて生成され、`src/types/` は厳しい側の `_Serialize` を指す。`#[serde(rename_all = "camelCase")]` で IPC 境界を camelCase に統一。バックエンドの呼び出しは `invoke()` / `listen()` を直接使わず `commands.*` / `events.*` を通す
 
 ## IPC イベント (Rust → TS)
 
-一次ソースはコード (`src-tauri/src/` 内の `emit` 呼び出し)。以下は参照用スナップショット。
+一次ソースはコード (各 payload 型の `#[tauri_specta(event_name = ...)]` と `lib.rs::ipc_builder` の `collect_events!`)。以下は参照用スナップショット。
 
 | イベント | 用途 |
 |---|---|

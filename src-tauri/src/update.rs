@@ -44,7 +44,7 @@ fn parse_tag_name(body: &Value) -> Result<String, UpdateError> {
 ///
 /// # Errors
 ///
-/// Returns an error string when the request fails (offline, timeout,
+/// Returns an error when the request fails (offline, timeout,
 /// non-2xx status) or the response has no usable `tag_name`.
 #[tauri::command]
 #[specta::specta]

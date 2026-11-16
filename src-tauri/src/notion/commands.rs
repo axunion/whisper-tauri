@@ -29,7 +29,7 @@ fn read_settings(app: &AppHandle) -> Result<NotionSettings, NotionError> {
 ///
 /// # Errors
 ///
-/// Returns an error string if the settings store cannot be read.
+/// Returns an error if the settings store cannot be read.
 #[tauri::command]
 #[specta::specta]
 pub async fn notion_get_settings(app: AppHandle) -> Result<NotionSettings, IpcError> {
@@ -40,7 +40,7 @@ pub async fn notion_get_settings(app: AppHandle) -> Result<NotionSettings, IpcEr
 ///
 /// # Errors
 ///
-/// Returns an error string if the settings store cannot be written.
+/// Returns an error if the settings store cannot be written.
 #[tauri::command]
 #[specta::specta]
 pub async fn notion_set_settings(app: AppHandle, settings: NotionSettings) -> Result<(), IpcError> {
@@ -66,7 +66,7 @@ pub async fn notion_set_settings(app: AppHandle, settings: NotionSettings) -> Re
 ///
 /// # Errors
 ///
-/// Returns an error string if the HTTP request fails, the database lacks a
+/// Returns an error if the HTTP request fails, the database lacks a
 /// title property, or the response cannot be parsed.
 #[tauri::command]
 #[specta::specta]
@@ -84,7 +84,7 @@ pub async fn notion_test_connection(
 ///
 /// # Errors
 ///
-/// Returns an error string when Notion is not configured, the HTTP request
+/// Returns an error when Notion is not configured, the HTTP request
 /// fails, the API returns a non-2xx status, or the response cannot be parsed.
 #[tauri::command]
 #[specta::specta]
@@ -92,16 +92,10 @@ pub async fn notion_create_page(
     app: AppHandle,
     payload: NotionPagePayload,
 ) -> Result<NotionPageRef, IpcError> {
-    let settings = read_settings(&app).map_err(IpcError::from)?;
-    let token = settings
-        .token
-        .ok_or_else(|| NotionError::NotConfigured.to_string())?;
-    let database_id = settings
-        .database_id
-        .ok_or_else(|| NotionError::NotConfigured.to_string())?;
-    let title_property = settings
-        .title_property
-        .ok_or_else(|| NotionError::NotConfigured.to_string())?;
+    let settings = read_settings(&app)?;
+    let token = settings.token.ok_or(NotionError::NotConfigured)?;
+    let database_id = settings.database_id.ok_or(NotionError::NotConfigured)?;
+    let title_property = settings.title_property.ok_or(NotionError::NotConfigured)?;
     let page_ref = client::create_page(&token, &database_id, &title_property, &payload).await?;
     Ok(page_ref)
 }

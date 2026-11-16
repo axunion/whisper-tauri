@@ -289,7 +289,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if device enumeration fails.
+	 *  Returns an error if device enumeration fails.
 	 */
 	listAudioDevices: (options?: InvokeOptions) => __TAURI_INVOKE<AudioDevice[]>("list_audio_devices", undefined, options),
 	/**
@@ -299,7 +299,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if a recording is already in progress,
+	 *  Returns an error if a recording is already in progress,
 	 *  the device cannot be found, or the stream cannot be created.
 	 */
 	startRecording: (deviceId: string | null, options?: InvokeOptions) => __TAURI_INVOKE<null>("start_recording", { deviceId }, options),
@@ -308,7 +308,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if no recording is in progress.
+	 *  Returns an error if no recording is in progress.
 	 */
 	pauseRecording: (options?: InvokeOptions) => __TAURI_INVOKE<null>("pause_recording", undefined, options),
 	/**
@@ -316,7 +316,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if no recording is in progress.
+	 *  Returns an error if no recording is in progress.
 	 */
 	resumeRecording: (options?: InvokeOptions) => __TAURI_INVOKE<null>("resume_recording", undefined, options),
 	/**
@@ -327,7 +327,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if no recording is in progress or the
+	 *  Returns an error if no recording is in progress or the
 	 *  WAV file cannot be written.
 	 */
 	stopRecording: (options?: InvokeOptions) => __TAURI_INVOKE<RecordingStopResult>("stop_recording", undefined, options),
@@ -336,7 +336,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if the path is outside the recordings directory
+	 *  Returns an error if the path is outside the recordings directory
 	 *  or the file cannot be deleted.
 	 */
 	cleanupRecording: (path: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("cleanup_recording", { path }, options),
@@ -345,7 +345,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if the operation fails.
+	 *  Returns an error if the operation fails.
 	 */
 	textProcessingListModels: (options?: InvokeOptions) => __TAURI_INVOKE<TextModelInfo_Serialize[]>("text_processing_list_models", undefined, options),
 	/**
@@ -353,7 +353,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if the operation fails.
+	 *  Returns an error if the operation fails.
 	 */
 	textProcessingDownloadModel: (modelId: string, options?: InvokeOptions) => __TAURI_INVOKE<string>("text_processing_download_model", { modelId }, options),
 	/**
@@ -370,7 +370,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if the operation fails.
+	 *  Returns an error if the operation fails.
 	 */
 	textProcessingDownloadServer: (options?: InvokeOptions) => __TAURI_INVOKE<string>("text_processing_download_server", undefined, options),
 	/**
@@ -378,7 +378,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if the operation fails.
+	 *  Returns an error if the operation fails.
 	 */
 	textProcessingDeleteServer: (options?: InvokeOptions) => __TAURI_INVOKE<null>("text_processing_delete_server", undefined, options),
 	/**
@@ -386,7 +386,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if the operation fails.
+	 *  Returns an error if the operation fails.
 	 */
 	textProcessingCheckServer: (options?: InvokeOptions) => __TAURI_INVOKE<boolean>("text_processing_check_server", undefined, options),
 	/**
@@ -394,7 +394,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if the operation fails.
+	 *  Returns an error if the operation fails.
 	 */
 	textProcessingChat: (text: string, modelId: string | null, options?: InvokeOptions) => __TAURI_INVOKE<string>("text_processing_chat", { text, modelId }, options),
 	/**
@@ -406,7 +406,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if the operation fails or the model returns JSON
+	 *  Returns an error if the operation fails or the model returns JSON
 	 *  that does not match the schema.
 	 */
 	textProcessingSummarize: (text: string, modelId: string | null, options?: InvokeOptions) => __TAURI_INVOKE<StructuredSummary_Serialize>("text_processing_summarize", { text, modelId }, options),
@@ -415,7 +415,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if the operation fails.
+	 *  Returns an error if the operation fails.
 	 */
 	textProcessingCancel: (taskId: string, options?: InvokeOptions) => __TAURI_INVOKE<boolean>("text_processing_cancel", { taskId }, options),
 	/**
@@ -423,7 +423,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if the operation fails.
+	 *  Returns an error if the operation fails.
 	 */
 	textProcessingGenerateTitle: (text: string, modelId: string | null, options?: InvokeOptions) => __TAURI_INVOKE<string>("text_processing_generate_title", { text, modelId }, options),
 	/**
@@ -431,7 +431,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if the operation fails.
+	 *  Returns an error if the operation fails.
 	 */
 	textProcessingCleanText: (text: string, modelId: string | null, options?: InvokeOptions) => __TAURI_INVOKE<string>("text_processing_clean_text", { text, modelId }, options),
 	/**
@@ -439,7 +439,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if the settings store cannot be read.
+	 *  Returns an error if the settings store cannot be read.
 	 */
 	notionGetSettings: (options?: InvokeOptions) => __TAURI_INVOKE<NotionSettings_Serialize>("notion_get_settings", undefined, options),
 	/**
@@ -447,7 +447,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if the settings store cannot be written.
+	 *  Returns an error if the settings store cannot be written.
 	 */
 	notionSetSettings: (settings: NotionSettings_Deserialize, options?: InvokeOptions) => __TAURI_INVOKE<null>("notion_set_settings", { settings }, options),
 	/**
@@ -458,7 +458,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string if the HTTP request fails, the database lacks a
+	 *  Returns an error if the HTTP request fails, the database lacks a
 	 *  title property, or the response cannot be parsed.
 	 */
 	notionTestConnection: (token: string, databaseId: string, options?: InvokeOptions) => __TAURI_INVOKE<NotionDatabaseInfo>("notion_test_connection", { token, databaseId }, options),
@@ -467,7 +467,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string when Notion is not configured, the HTTP request
+	 *  Returns an error when Notion is not configured, the HTTP request
 	 *  fails, the API returns a non-2xx status, or the response cannot be parsed.
 	 */
 	notionCreatePage: (payload: NotionPagePayload_Deserialize, options?: InvokeOptions) => __TAURI_INVOKE<NotionPageRef_Serialize>("notion_create_page", { payload }, options),
@@ -480,7 +480,7 @@ export const commands = {
 	 * 
 	 *  # Errors
 	 * 
-	 *  Returns an error string when the request fails (offline, timeout,
+	 *  Returns an error when the request fails (offline, timeout,
 	 *  non-2xx status) or the response has no usable `tag_name`.
 	 */
 	checkLatestVersion: (options?: InvokeOptions) => __TAURI_INVOKE<string>("check_latest_version", undefined, options),
