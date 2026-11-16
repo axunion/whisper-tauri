@@ -21,7 +21,7 @@ Source: `src-tauri/src/lib.rs` / `src-tauri/tauri.conf.json` / `src-tauri/capabi
 | `download.rs` | 共通ダウンロードヘルパー (ストリーミング + 100ms スロットルの進捗コールバック) | — |
 | `paths.rs` | app data ディレクトリ解決 + UTF-8 パス変換 | — |
 
-ドメインモジュールは `commands.rs` / `types.rs` / `error.rs` / `mod.rs` の共通構成。全コマンドは `lib.rs` の `invoke_handler` に登録する (現在 49 コマンド)。
+ドメインモジュールは `commands.rs` / `types.rs` / `error.rs` / `mod.rs` の共通構成。全コマンドは `lib.rs` の `invoke_handler` に登録する (現在 50 コマンド)。
 
 **共有状態** (`lib.rs` の `.manage()`):
 - `std::sync::Mutex<RecordingManager>` — 録音セッション
@@ -84,6 +84,7 @@ mirrors.json       # ダウンロード元の差し替え (任意・手編集)
 
 - `capabilities/default.json`: 各プラグインの `*:default` に加え、`fs:allow-write-text-file` (スコープなし — 書き込み先は保存ダイアログが実行時に許可する) と `fs:allow-copy-file` (`$APPDATA/recordings/*` のみ) を明示許可 (詳細は `.claude/rules/tauri-permissions.md`)、`clipboard-manager:allow-write-text`、window の set-size / set-min-size / center / show / destroy (destroy は終了ガード用 — 下記)
 - CSP (`tauri.conf.json`): `default-src 'self'` ベース。`connect-src 'self' ipc: http://ipc.localhost` — WebView からの外部通信を遮断し、ネットワークアクセスはすべて Rust 側 (reqwest) に集約
+- アセットプロトコル (`tauri.conf.json` の `assetProtocol`、Cargo の `protocol-asset` feature): 録音音声の再生用に有効化。scope は `$APPDATA/audio/*` のみで、CSP の `media-src` も `asset:` / `http://asset.localhost` に限る。アセットプロトコルの静的 scope はこのディレクトリだけ (ダイアログで選んだファイルは dialog プラグインが実行時に scope へ追加する)
 - Rust は `unsafe_code = "forbid"`、clippy `pedantic` + `unwrap_used` / `expect_used` 警告
 
 ## 終了ガード

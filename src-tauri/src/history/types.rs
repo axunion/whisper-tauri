@@ -110,8 +110,8 @@ pub struct HistoryEntry {
     /// Segments with timing information
     pub segments: Vec<HistorySegment>,
     pub vad_enabled: Option<bool>,
-    /// Whether the entry's recording audio is kept on disk
-    pub has_audio: bool,
+    /// Path of the entry's recording audio, if it is kept on disk
+    pub audio_path: Option<String>,
 }
 
 /// Disk used by recording audio.
@@ -283,10 +283,10 @@ mod tests {
                 text: "Hello world".to_string(),
             }],
             vad_enabled: Some(false),
-            has_audio: false,
+            audio_path: None,
         };
         let json = serde_json::to_string(&entry).expect("Failed to serialize");
-        assert!(json.contains("\"hasAudio\":false"));
+        assert!(json.contains("\"audioPath\":null"));
         assert!(json.contains("\"segments\":["));
         assert!(json.contains("\"text\":\"Hello world\""));
         assert!(json.contains("\"vadEnabled\":false"));

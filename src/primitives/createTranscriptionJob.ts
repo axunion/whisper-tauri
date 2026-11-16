@@ -10,6 +10,16 @@ import type { AppError } from "~/types/errors";
 
 type JobPhase = "idle" | "converting" | "processing" | "done";
 
+/** A history entry's kept recording, offered for another transcription. */
+export interface AudioSource {
+  /** The history entry the audio belongs to. */
+  id: string;
+  /** Path of its audio file. */
+  path: string;
+  /** Name to show for it and to save the new entry under. */
+  name: string;
+}
+
 interface StartOptions {
   /** Toast shown once the result is safely in history. */
   completedMessage: string;
@@ -33,12 +43,15 @@ const {
   setSaveError,
   attachError,
   setAttachError,
+  audioSource,
+  setAudioSource,
 } = createRoot(() => {
   const converter = createFileConverter();
   const [convertedPath, setConvertedPath] = createSignal<string | null>(null);
   const [historyId, setHistoryId] = createSignal<string | null>(null);
   const [saveError, setSaveError] = createSignal<AppError | null>(null);
   const [attachError, setAttachError] = createSignal<AppError | null>(null);
+  const [audioSource, setAudioSource] = createSignal<AudioSource | null>(null);
   return {
     converter,
     convertedPath,
@@ -49,6 +62,8 @@ const {
     setSaveError,
     attachError,
     setAttachError,
+    audioSource,
+    setAudioSource,
   };
 });
 
@@ -57,6 +72,11 @@ function phase(): JobPhase {
   if (whisper.isProcessing()) return "processing";
   if (converter.isConverting()) return "converting";
   return "idle";
+}
+
+function isRunning(): boolean {
+  const current = phase();
+  return current === "converting" || current === "processing";
 }
 
 function canStartFile(): boolean {
@@ -158,10 +178,17 @@ function beginRun(): void {
 async function startFile(options: StartOptions): Promise<void> {
   const file = whisper.file();
   if (!file || !canStartFile()) return;
+  // Captured with the file: both describe this run, and either can be
+  // replaced from another page while the transcription is in flight. The path
+  // check drops a source the user has since picked a different file over.
+  const pending = audioSource();
+  const source = pending?.path === file.path ? pending : null;
   beginRun();
   await cleanupConverted();
 
-  if (file.name.toLowerCase().endsWith(".wav")) {
+  // Decided by the path, not the display name: a kept recording is shown
+  // under its history title, which has no extension.
+  if (file.path.toLowerCase().endsWith(".wav")) {
     await whisper.startTranscription();
   } else {
     const converted = await converter.convert(file.path);
@@ -170,7 +197,36 @@ async function startFile(options: StartOptions): Promise<void> {
     await whisper.startTranscription(converted.outputPath);
   }
 
-  await saveToHistory(file.name, "file", options.completedMessage);
+  if (!source) {
+    await saveToHistory(file.name, "file", options.completedMessage);
+    return;
+  }
+  // A re-transcription of a kept recording is still a recording, and the new
+  // entry gets its own copy of the audio.
+  const id = await saveToHistory(
+    file.name,
+    "recording",
+    options.completedMessage,
+  );
+  if (!id) return;
+  try {
+    await invoke("history_copy_audio", { fromId: source.id, toId: id });
+  } catch (e) {
+    setAttachError(parseError(e));
+  }
+}
+
+/**
+ * Selects a history entry's kept recording as the file to transcribe. Ignored
+ * while a run is in flight — callers gate on `isRunning`.
+ */
+async function prepareRetranscription(source: AudioSource): Promise<void> {
+  // Selecting a file mid-run would relabel the run in flight.
+  if (isRunning()) return;
+  // A finished result still on screen would hide the new selection.
+  if (phase() === "done") await reset();
+  setAudioSource(source);
+  await whisper.selectFile({ path: source.path, name: source.name, size: 0 });
 }
 
 async function startRecording(options: StartRecordingOptions): Promise<void> {
@@ -206,6 +262,7 @@ async function reset(): Promise<void> {
   setHistoryId(null);
   setSaveError(null);
   setAttachError(null);
+  setAudioSource(null);
   whisper.reset();
 }
 
@@ -225,6 +282,7 @@ async function discardRecording(): Promise<void> {
  */
 const jobInstance = {
   phase,
+  isRunning,
   historyId,
   error,
   saveFailed,
@@ -233,6 +291,7 @@ const jobInstance = {
   canStartRecording,
   startFile,
   startRecording,
+  prepareRetranscription,
   reset,
   discardRecording,
   clearError,
@@ -249,4 +308,5 @@ export function _resetTranscriptionJobForTesting(): void {
   setHistoryId(null);
   setSaveError(null);
   setAttachError(null);
+  setAudioSource(null);
 }

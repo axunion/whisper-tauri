@@ -60,8 +60,8 @@ export interface HistoryEntry {
   /** Segments with timing information */
   segments: HistorySegment[];
   vadEnabled: boolean | null;
-  /** Whether the entry's recording audio is kept on disk */
-  hasAudio: boolean;
+  /** Path of the entry's recording audio, or null if none is kept on disk */
+  audioPath: string | null;
 }
 
 /**

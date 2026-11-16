@@ -1,3 +1,4 @@
+import { useNavigate } from "@solidjs/router";
 import { FiCheck, FiCheckSquare, FiX } from "solid-icons/fi";
 import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
@@ -17,10 +18,13 @@ import { runWithToast } from "~/lib/actionToast";
 import { toast } from "~/lib/toast";
 import type { AiOperation } from "~/primitives/createAiSession";
 import { createHistory } from "~/primitives/createHistory";
+import { createTranscriptionJob } from "~/primitives/createTranscriptionJob";
 import type { HistorySortBy, SortOrder } from "~/types";
 
 export default function History() {
   const { t } = useI18n();
+  const navigate = useNavigate();
+  const job = createTranscriptionJob();
   const history = createHistory();
   const [selectionMode, setSelectionMode] = createSignal(false);
   const [currentOp, setCurrentOp] = createSignal<AiOperation>(null);
@@ -202,6 +206,20 @@ export default function History() {
                     <HistoryDetail
                       entry={entry()}
                       onRename={history.renameEntry}
+                      canRetranscribe={currentOp() === null && !job.isRunning()}
+                      onRetranscribe={(entry) => {
+                        const path = entry.audioPath;
+                        if (!path) return;
+                        navigate("/transcription", {
+                          state: {
+                            retranscribe: {
+                              id: entry.id,
+                              path,
+                              name: entry.fileName,
+                            },
+                          },
+                        });
+                      }}
                       onDeleteAudio={(id) =>
                         runWithToast({
                           action: () => history.deleteAudio(id),

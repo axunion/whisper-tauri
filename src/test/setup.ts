@@ -15,6 +15,7 @@ vi.mock("@tauri-apps/api/app", () => ({
 // Mock @tauri-apps/api/core
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
+  convertFileSrc: vi.fn((path: string) => `asset://localhost/${path}`),
 }));
 
 // Mock @tauri-apps/api/event

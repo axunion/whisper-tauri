@@ -28,10 +28,38 @@ fn audio_path(app_data_dir: &Path, id: &str) -> Result<PathBuf, HistoryError> {
     Ok(audio_dir(app_data_dir).join(format!("{uuid}.wav")))
 }
 
-/// Returns whether entry `id` has audio.
+/// Returns the audio file of entry `id`, if it has one.
 #[must_use]
-pub(crate) fn has_audio(app_data_dir: &Path, id: &str) -> bool {
-    audio_path(app_data_dir, id).is_ok_and(|path| path.is_file())
+pub(crate) fn existing_audio(app_data_dir: &Path, id: &str) -> Option<PathBuf> {
+    audio_path(app_data_dir, id)
+        .ok()
+        .filter(|path| path.is_file())
+}
+
+/// Gives entry `to_id` a copy of the audio of entry `from_id` — a
+/// re-transcription is a new entry over the same recording.
+///
+/// # Errors
+///
+/// Returns `HistoryError::NotFound` if either id is not a UUID, or
+/// `HistoryError::Io` if the source has no audio or the copy fails.
+pub(crate) fn copy_audio(
+    app_data_dir: &Path,
+    from_id: &str,
+    to_id: &str,
+) -> Result<(), HistoryError> {
+    let source = audio_path(app_data_dir, from_id)?;
+    let target = audio_path(app_data_dir, to_id)?;
+    // Copying a file onto itself truncates it.
+    if source == target {
+        return Ok(());
+    }
+    if let Err(e) = std::fs::copy(&source, &target) {
+        // A partial file would pass for the entry's audio.
+        let _ = std::fs::remove_file(&target);
+        return Err(e.into());
+    }
+    Ok(())
 }
 
 /// Moves an untranscribed recording to become the audio of entry `id`.
@@ -183,6 +211,10 @@ mod tests {
     const ID: &str = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
     const OTHER_ID: &str = "550e8400-e29b-41d4-a716-446655440000";
 
+    fn has_audio(app_data_dir: &Path, id: &str) -> bool {
+        existing_audio(app_data_dir, id).is_some()
+    }
+
     /// Creates an app data dir holding one untranscribed recording.
     fn setup() -> (TempDir, PathBuf) {
         let dir = TempDir::new().expect("create temp dir");
@@ -237,6 +269,39 @@ mod tests {
         let err = attach_recording(dir.path(), ID, &escaping).expect_err("must reject");
 
         assert!(matches!(err, HistoryError::Io(_)));
+    }
+
+    #[test]
+    fn copy_audio_gives_the_new_entry_its_own_file() {
+        let (dir, recording) = setup();
+        attach_recording(dir.path(), ID, &recording).expect("attach");
+
+        copy_audio(dir.path(), ID, OTHER_ID).expect("copy");
+        delete_audio(dir.path(), ID).expect("delete the original");
+
+        let copied = existing_audio(dir.path(), OTHER_ID).expect("copy survives");
+        assert_eq!(std::fs::read(copied).expect("read"), b"12345");
+    }
+
+    #[test]
+    fn copy_audio_onto_the_same_entry_leaves_the_audio_intact() {
+        let (dir, recording) = setup();
+        attach_recording(dir.path(), ID, &recording).expect("attach");
+
+        copy_audio(dir.path(), ID, ID).expect("copy onto itself");
+
+        let audio = existing_audio(dir.path(), ID).expect("audio survives");
+        assert_eq!(std::fs::read(audio).expect("read"), b"12345");
+    }
+
+    #[test]
+    fn copy_audio_fails_when_the_source_has_no_audio() {
+        let (dir, _recording) = setup();
+
+        let err = copy_audio(dir.path(), ID, OTHER_ID).expect_err("must fail");
+
+        assert!(matches!(err, HistoryError::Io(_)));
+        assert!(!has_audio(dir.path(), OTHER_ID));
     }
 
     #[test]

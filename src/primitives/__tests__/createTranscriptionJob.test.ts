@@ -62,6 +62,7 @@ function mockBackend(overrides: Record<string, Handler> = {}): void {
     }),
     cleanup_recording: () => undefined,
     history_attach_recording: () => undefined,
+    history_copy_audio: () => undefined,
     ...overrides,
   };
   vi.mocked(invoke).mockImplementation(async (command, args) => {
@@ -374,6 +375,152 @@ describe("createTranscriptionJob", () => {
       await job.startFile(options);
 
       expect(commandsCalled()).not.toContain("transcribe_audio");
+    });
+  });
+
+  describe("re-transcription of kept audio", () => {
+    const source = {
+      id: "history-0",
+      path: "/audio/history-0.wav",
+      name: "録音 2026-11-15 14:30",
+    };
+
+    it("saves a new recording entry and copies the audio to it", async () => {
+      mockBackend();
+      await createWhisper().loadModels();
+      const job = createTranscriptionJob();
+
+      await job.prepareRetranscription(source);
+      await job.startFile(options);
+
+      expect(invoke).toHaveBeenCalledWith(
+        "transcribe_audio",
+        expect.objectContaining({ audioPath: "/audio/history-0.wav" }),
+      );
+      expect(invoke).toHaveBeenCalledWith("history_save", {
+        params: expect.objectContaining({
+          fileName: "録音 2026-11-15 14:30",
+          source: "recording",
+        }),
+      });
+      expect(invoke).toHaveBeenCalledWith("history_copy_audio", {
+        fromId: "history-0",
+        toId: "history-1",
+      });
+      expect(job.error()).toBeNull();
+    });
+
+    it("ignores a re-transcription request while a run is in flight", async () => {
+      const transcription = deferred<TranscriptionResult>();
+      mockBackend({ transcribe_audio: () => transcription.promise });
+      await selectFile("meeting.wav");
+      const job = createTranscriptionJob();
+      const run = job.startFile(options);
+      await vi.waitFor(() => expect(job.isRunning()).toBe(true));
+
+      await job.prepareRetranscription(source);
+
+      expect(createWhisper().file()?.name).toBe("meeting.wav");
+      transcription.resolve(result);
+      await run;
+      expect(invoke).toHaveBeenCalledWith("history_save", {
+        params: expect.objectContaining({
+          fileName: "meeting.wav",
+          source: "file",
+        }),
+      });
+    });
+
+    it("replaces a finished result still on screen with the new selection", async () => {
+      mockBackend();
+      await selectFile("meeting.wav");
+      const job = createTranscriptionJob();
+      await job.startFile(options);
+      expect(job.phase()).toBe("done");
+
+      await job.prepareRetranscription(source);
+
+      expect(job.phase()).toBe("idle");
+      expect(job.historyId()).toBeNull();
+      expect(createWhisper().file()?.path).toBe("/audio/history-0.wav");
+
+      await job.startFile(options);
+      expect(invoke).toHaveBeenCalledWith("history_copy_audio", {
+        fromId: "history-0",
+        toId: "history-1",
+      });
+    });
+
+    it("treats a different file picked afterwards as an ordinary file", async () => {
+      mockBackend();
+      const job = createTranscriptionJob();
+      await job.prepareRetranscription(source);
+
+      await selectFile("meeting.wav");
+      await job.startFile(options);
+
+      expect(invoke).toHaveBeenCalledWith("history_save", {
+        params: expect.objectContaining({ source: "file" }),
+      });
+      expect(commandsCalled()).not.toContain("history_copy_audio");
+    });
+
+    it("reports a failed copy without calling the save a failure", async () => {
+      mockBackend({
+        history_copy_audio: () => {
+          throw "IO error: no such file";
+        },
+      });
+      await createWhisper().loadModels();
+      const job = createTranscriptionJob();
+
+      await job.prepareRetranscription(source);
+      await job.startFile(options);
+
+      expect(job.historyId()).toBe("history-1");
+      expect(job.saveFailed()).toBe(false);
+      expect(job.attachFailed()).toBe(true);
+    });
+
+    it("forgets the source on reset, so the same path later saves as a file", async () => {
+      mockBackend();
+      const job = createTranscriptionJob();
+      await job.prepareRetranscription(source);
+      await job.reset();
+
+      await selectFile("history-0.wav");
+      await job.startFile(options);
+
+      expect(invoke).toHaveBeenCalledWith("history_save", {
+        params: expect.objectContaining({ source: "file" }),
+      });
+      expect(commandsCalled()).not.toContain("history_copy_audio");
+    });
+
+    it("does not convert an upper-case .WAV path", async () => {
+      mockBackend();
+      await selectFile("MEETING.WAV");
+      const job = createTranscriptionJob();
+
+      await job.startFile(options);
+
+      expect(commandsCalled()).not.toContain("convert_audio_file");
+      expect(invoke).toHaveBeenCalledWith(
+        "transcribe_audio",
+        expect.objectContaining({ audioPath: "/audio/MEETING.WAV" }),
+      );
+    });
+
+    it("converts a path without an extension", async () => {
+      mockBackend();
+      await selectFile("recording");
+      const job = createTranscriptionJob();
+
+      await job.startFile(options);
+
+      expect(invoke).toHaveBeenCalledWith("convert_audio_file", {
+        inputPath: "/audio/recording",
+      });
     });
   });
 

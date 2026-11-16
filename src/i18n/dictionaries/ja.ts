@@ -76,6 +76,7 @@ export const ja: Dictionary = {
     detail: "詳細",
     noEntries: "履歴が見つかりません。",
     loadMore: "さらに読み込む",
+    retranscribe: "この音声をもう一度文字起こし",
     deleteAudio: "音声を削除",
     deleteAudioConfirmation:
       "この履歴の録音音声を削除しますか？文字起こしの内容は残ります。この操作は取り消せません。",

@@ -28,7 +28,10 @@ import { cn } from "~/lib/utils";
 import { createHistory } from "~/primitives/createHistory";
 import { createRecording } from "~/primitives/createRecording";
 import { createSettings } from "~/primitives/createSettings";
-import { createTranscriptionJob } from "~/primitives/createTranscriptionJob";
+import {
+  type AudioSource,
+  createTranscriptionJob,
+} from "~/primitives/createTranscriptionJob";
 import { createWhisper } from "~/primitives/createWhisper";
 
 export default function Transcription() {
@@ -40,7 +43,11 @@ export default function Transcription() {
   const recording = createRecording();
   const settings = createSettings();
 
-  const location = useLocation<{ filePath?: string; tab?: string }>();
+  const location = useLocation<{
+    filePath?: string;
+    tab?: string;
+    retranscribe?: AudioSource;
+  }>();
 
   const [activeTab, setActiveTab] = createSignal("file");
 
@@ -70,6 +77,9 @@ export default function Transcription() {
         if (state?.filePath) {
           const path = state.filePath;
           whisper.selectFile({ path, name: extractFilename(path), size: 0 });
+        }
+        if (state?.retranscribe) {
+          void job.prepareRetranscription(state.retranscribe);
         }
         if (state?.tab === "record") {
           activateTab("record");

@@ -114,6 +114,7 @@ pub fn run() {
             history::commands::history_get_ai_content,
             history::commands::history_get_all_ai_content,
             history::commands::history_attach_recording,
+            history::commands::history_copy_audio,
             history::commands::history_delete_audio,
             history::commands::history_delete_all_audio,
             history::commands::history_delete_pending_recordings,

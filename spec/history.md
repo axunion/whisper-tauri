@@ -65,12 +65,14 @@ CREATE INDEX idx_ai_content_history ON ai_content(history_id);
 マイク録音の WAV は、文字起こしが履歴に保存された時点で `recordings/` から `{app_data}/audio/{history_id}.wav` へ rename で移動し、履歴と一緒に残す。ファイル由来の履歴は音声を持たない。
 
 - パスは履歴 ID から導出し、DB には参照を持たない。ID はファイル名になるため **UUID として検証してから**結合する (パス区切りや `..` を持てない)
-- `HistoryEntry.hasAudio` は `history_get` がディスクを見て埋める (DB 層は常に `false`)。一覧 (`HistoryMeta`) は持たない
+- `HistoryEntry.audioPath` は `history_get` がディスクを見て埋める (DB 層は常に `None`)。一覧 (`HistoryMeta`) は持たない
 - 履歴の削除 (`history_delete` / `history_delete_all`) は音声ファイルも削除する。行の削除後なのでファイル削除はベストエフォート (失敗はログのみ — エラーを返すと FE が消えた行を表示し続ける)
 - `history_attach_recording` は移動元が `recordings/` 直下であることを canonicalize して検証する (`RecordingManager::cleanup` と同じ理由)
 - 移動に失敗しても文字起こしは保存済み。WAV は未処理の録音として残り、FE (`createTranscriptionJob`) がエラーを表示する
+- **再生**: 履歴詳細 (`HistoryDetail` → `ResultViewer` の `audio` prop) が `convertFileSrc(audioPath)` を `<audio>` に渡す。タイムラインの行をクリックするとその開始位置から再生し、再生位置を含むセグメントをハイライトする (`ResultTimelineTab` の `onSeek` / `positionMs`)。音声は 32-bit float WAV のままなので、WebView で再生できるかは実機確認が必要
+- **再文字起こし**: 履歴詳細から保存済み音声を文字起こし画面に渡す (`createTranscriptionJob.prepareRetranscription`)。結果は新しい履歴として保存され、`history_copy_audio` で音声のコピーを持つ (元の履歴と独立に削除できる)。変換の要否は表示名ではなくパスの拡張子で決める (保存済み音声の表示名は履歴タイトルで拡張子がない)
 - 設定画面の「データ管理」(`DataManagement.tsx` / `createStorage.ts`): 音声の件数と容量 (`history_storage_stats`)、全音声の削除、未処理の録音の件数と削除 (セッションが保持中の 1 件は件数にも削除にも含めない)、全履歴の削除
 
 ## コマンド一覧
 
-`history_save` / `history_list` (フィルタ + ソート) / `history_get` / `history_delete` / `history_delete_all` / `history_search` / `history_rename` / `history_save_ai_content` / `history_get_ai_content` / `history_get_all_ai_content` / `history_attach_recording` / `history_delete_audio` / `history_delete_all_audio` / `history_delete_pending_recordings` / `history_storage_stats`
+`history_save` / `history_list` (フィルタ + ソート) / `history_get` / `history_delete` / `history_delete_all` / `history_search` / `history_rename` / `history_save_ai_content` / `history_get_ai_content` / `history_get_all_ai_content` / `history_attach_recording` / `history_copy_audio` / `history_delete_audio` / `history_delete_all_audio` / `history_delete_pending_recordings` / `history_storage_stats`

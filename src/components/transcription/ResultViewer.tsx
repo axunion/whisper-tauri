@@ -44,6 +44,11 @@ interface ResultViewerProps {
   // the payload helper. History-detail callers omit `processingMs` because
   // the timing is not persisted to history yet.
   notionMeta?: NotionMetaContext | undefined;
+  /**
+   * The recording behind the result. `src` is a URL the webview can load;
+   * `actions` are controls shown next to the player.
+   */
+  audio?: { src: string; actions?: JSX.Element } | undefined;
 }
 
 const ResultViewer: Component<ResultViewerProps> = (props) => {
@@ -62,6 +67,18 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
   const [failedShareTab, setFailedShareTab] = createSignal<ResultTab | null>(
     null,
   );
+  // Playback position in ms; undefined until the audio first reports one, so
+  // no timeline segment is highlighted before the user plays anything.
+  const [positionMs, setPositionMs] = createSignal<number | undefined>();
+  let audioRef: HTMLAudioElement | undefined;
+
+  function seek(ms: number): void {
+    if (!audioRef) return;
+    audioRef.currentTime = ms / 1000;
+    // A refused or failed play shows in the player's own controls.
+    audioRef.play().catch(() => {});
+  }
+
   const tp = createTextProcessing();
   const session = createAiSession(() => props.historyId);
   const notion = createNotionSettings();
@@ -348,6 +365,24 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         isSharingToNotion={isSharingNotion()}
         canSave={canSave()}
       />
+      <Show when={props.audio}>
+        {(audio) => (
+          <div class="flex items-center gap-3">
+            {/* biome-ignore lint/a11y/useMediaCaption: the transcript shown below is the caption */}
+            <audio
+              ref={audioRef}
+              class="h-9 min-w-0 flex-1"
+              controls
+              preload="metadata"
+              src={audio().src}
+              onTimeUpdate={(e) =>
+                setPositionMs(e.currentTarget.currentTime * 1000)
+              }
+            />
+            {audio().actions}
+          </div>
+        )}
+      </Show>
       <Tabs
         value={activeTab()}
         onChange={(value) => setActiveTab(value as ResultTab)}
@@ -369,7 +404,11 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
           <ResultTextTab text={props.result.text} />
         </TabsContent>
         <TabsContent value="timeline" class="mt-3 min-h-0 flex-1">
-          <ResultTimelineTab segments={props.result.segments} />
+          <ResultTimelineTab
+            segments={props.result.segments}
+            positionMs={props.audio ? positionMs() : undefined}
+            onSeek={props.audio ? seek : undefined}
+          />
         </TabsContent>
         <Show when={cleanTextTabVisible()}>
           <TabsContent value="cleanText" class="mt-3 min-h-0 flex-1">

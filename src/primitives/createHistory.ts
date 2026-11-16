@@ -206,7 +206,7 @@ export function createHistory() {
       await invoke("history_delete_audio", { id });
       const current = selectedEntry();
       if (current?.id === id) {
-        setSelectedEntry({ ...current, hasAudio: false });
+        setSelectedEntry({ ...current, audioPath: null });
       }
       return true;
     } catch (e) {

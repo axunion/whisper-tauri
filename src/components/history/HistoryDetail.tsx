@@ -1,17 +1,19 @@
+import { convertFileSrc } from "@tauri-apps/api/core";
 import {
   FiCalendar,
   FiCheck,
   FiClock,
   FiEdit2,
   FiMusic,
+  FiRefreshCw,
   FiTrash2,
-  FiVolumeX,
   FiX,
 } from "solid-icons/fi";
 import type { Component } from "solid-js";
-import { createSignal, Show } from "solid-js";
+import { createMemo, createSignal, Show } from "solid-js";
 import { VadBadge } from "~/components/history/VadBadge";
 import { ResultViewer } from "~/components/transcription/ResultViewer";
+import { Button } from "~/components/ui/Button";
 import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { useI18n } from "~/i18n";
 import { formatDate, formatDuration } from "~/lib/format";
@@ -23,6 +25,9 @@ interface HistoryDetailProps {
   entry: HistoryEntry;
   onRename?: (id: string, newFileName: string) => void;
   onDeleteAudio: (id: string) => void | Promise<void>;
+  onRetranscribe: (entry: HistoryEntry) => void;
+  /** False while leaving for a re-transcription would interrupt running work. */
+  canRetranscribe: boolean;
   onProcessingChange?: (
     operation: AiOperation,
     cancel: () => Promise<void>,
@@ -70,6 +75,56 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
 
   const result = () => toTranscriptionResult(props.entry);
 
+  const audioActions = () => (
+    <div class="flex shrink-0 items-center gap-1">
+      <Button
+        variant="ghost"
+        size="icon"
+        class="size-8"
+        aria-label={t("history.retranscribe")}
+        title={t("history.retranscribe")}
+        disabled={!props.canRetranscribe}
+        onClick={() => props.onRetranscribe(props.entry)}
+      >
+        <FiRefreshCw class="size-4" aria-hidden="true" />
+      </Button>
+      <ConfirmDialog
+        title={t("history.deleteAudio")}
+        description={t("history.deleteAudioConfirmation")}
+        confirmLabel={
+          <>
+            <FiTrash2 />
+            {t("common.delete")}
+          </>
+        }
+        onConfirm={() => props.onDeleteAudio(props.entry.id)}
+      >
+        {(openDialog) => (
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-8 hover:text-destructive"
+            aria-label={t("history.deleteAudio")}
+            title={t("history.deleteAudio")}
+            onClick={openDialog}
+          >
+            <FiTrash2 class="size-4" aria-hidden="true" />
+          </Button>
+        )}
+      </ConfirmDialog>
+    </div>
+  );
+
+  // Derived through a path-only memo: a rename replaces the entry object, and
+  // handing the player a new `src` — even an equal one — restarts playback.
+  const audioPath = createMemo(() => props.entry.audioPath);
+  const audio = createMemo(() => {
+    const path = audioPath();
+    return path
+      ? { src: convertFileSrc(path), actions: audioActions() }
+      : undefined;
+  });
+
   const metadataJSX = () => (
     <span class="inline-flex items-center gap-3 text-xs text-muted-foreground">
       <span class="inline-flex items-center gap-1">
@@ -85,30 +140,6 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
         {props.entry.modelId}
       </span>
       <VadBadge vadEnabled={props.entry.vadEnabled} />
-      <Show when={props.entry.hasAudio}>
-        <ConfirmDialog
-          title={t("history.deleteAudio")}
-          description={t("history.deleteAudioConfirmation")}
-          confirmLabel={
-            <>
-              <FiTrash2 />
-              {t("common.delete")}
-            </>
-          }
-          onConfirm={() => props.onDeleteAudio(props.entry.id)}
-        >
-          {(openDialog) => (
-            <button
-              type="button"
-              class="inline-flex items-center gap-1 hover:text-destructive"
-              onClick={openDialog}
-            >
-              <FiVolumeX class="size-3" aria-hidden="true" />
-              {t("history.deleteAudio")}
-            </button>
-          )}
-        </ConfirmDialog>
-      </Show>
     </span>
   );
 
@@ -200,6 +231,7 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
           onTitleGenerated={(title) => startSuggestion(title)}
           onGeneratingTitleChange={setIsGeneratingTitle}
           onProcessingChange={props.onProcessingChange}
+          audio={audio()}
           notionMeta={{
             createdAt: props.entry.createdAt,
             modelId: props.entry.modelId,

@@ -71,7 +71,9 @@ pub async fn history_list(
 pub async fn history_get(app: AppHandle, id: String) -> Result<HistoryEntry, String> {
     let db_path = get_db_path(&app)?;
     let mut entry = db::get_entry(&db_path, &id)?;
-    entry.has_audio = audio::has_audio(&paths::app_data_dir(&app)?, &entry.id);
+    entry.audio_path = audio::existing_audio(&paths::app_data_dir(&app)?, &entry.id)
+        .map(|path| paths::path_to_owned_string(&path))
+        .transpose()?;
     Ok(entry)
 }
 
@@ -128,6 +130,20 @@ pub async fn history_attach_recording(
     let app_data_dir = paths::app_data_dir(&app)?;
     audio::attach_recording(&app_data_dir, &id, std::path::Path::new(&recording_path))
         .map_err(Into::into)
+}
+
+/// Gives history entry `to_id` a copy of the audio of entry `from_id`.
+///
+/// # Errors
+///
+/// Returns an error if the source entry has no audio or the copy fails.
+#[tauri::command]
+pub async fn history_copy_audio(
+    app: AppHandle,
+    from_id: String,
+    to_id: String,
+) -> Result<(), String> {
+    audio::copy_audio(&paths::app_data_dir(&app)?, &from_id, &to_id).map_err(Into::into)
 }
 
 /// Deletes the audio of history entry `id`, keeping the entry itself.

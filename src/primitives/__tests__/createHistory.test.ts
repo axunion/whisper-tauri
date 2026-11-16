@@ -30,7 +30,7 @@ const mockEntry: HistoryEntry = {
     { start: 3000, end: 5000, text: "transcription." },
   ],
   vadEnabled: true,
-  hasAudio: false,
+  audioPath: null,
 };
 
 describe("createHistory", () => {
@@ -823,7 +823,7 @@ describe("createHistory", () => {
         const history = createHistory();
         vi.mocked(invoke).mockResolvedValueOnce({
           ...mockEntry,
-          hasAudio: true,
+          audioPath: "/audio/entry-1.wav",
         });
         await history.getEntry("entry-1");
 
@@ -834,7 +834,7 @@ describe("createHistory", () => {
         expect(invoke).toHaveBeenLastCalledWith("history_delete_audio", {
           id: "entry-1",
         });
-        expect(history.selectedEntry()?.hasAudio).toBe(false);
+        expect(history.selectedEntry()?.audioPath).toBeNull();
         dispose();
       });
     });
@@ -844,7 +844,7 @@ describe("createHistory", () => {
         const history = createHistory();
         vi.mocked(invoke).mockResolvedValueOnce({
           ...mockEntry,
-          hasAudio: true,
+          audioPath: "/audio/entry-1.wav",
         });
         await history.getEntry("entry-1");
 
@@ -852,7 +852,7 @@ describe("createHistory", () => {
         const ok = await history.deleteAudio("entry-1");
 
         expect(ok).toBe(false);
-        expect(history.selectedEntry()?.hasAudio).toBe(true);
+        expect(history.selectedEntry()?.audioPath).toBe("/audio/entry-1.wav");
         expect(history.error()).not.toBeNull();
         dispose();
       });

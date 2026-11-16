@@ -76,6 +76,7 @@ export const en: Dictionary = {
     detail: "Detail",
     noEntries: "No history entries found.",
     loadMore: "Load more",
+    retranscribe: "Transcribe this audio again",
     deleteAudio: "Delete audio",
     deleteAudioConfirmation:
       "Delete the recording audio of this entry? The transcription is kept. This cannot be undone.",

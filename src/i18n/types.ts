@@ -73,6 +73,7 @@ export interface Dictionary {
     detail: string;
     noEntries: string;
     loadMore: string;
+    retranscribe: string;
     deleteAudio: string;
     deleteAudioConfirmation: string;
     audioDeletedToast: string;
