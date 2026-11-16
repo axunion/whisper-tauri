@@ -21,7 +21,7 @@ Source: `src-tauri/src/lib.rs` / `src-tauri/tauri.conf.json` / `src-tauri/capabi
 | `download.rs` | 共通ダウンロードヘルパー (ストリーミング + 100ms スロットルの進捗コールバック) | — |
 | `paths.rs` | app data ディレクトリ解決 + UTF-8 パス変換 | — |
 
-ドメインモジュールは `commands.rs` / `types.rs` / `error.rs` / `mod.rs` の共通構成。全コマンドは `lib.rs` の `invoke_handler` に登録する (現在 53 コマンド)。
+ドメインモジュールは `commands.rs` / `types.rs` / `error.rs` / `mod.rs` の共通構成。全コマンドとイベントは `lib.rs::ipc_builder` に登録する (現在 53 コマンド / 6 イベント)。ここから tauri-specta が `src/bindings.ts` (型付きの `commands` / `events` と IPC 型) を生成する。生成は `cargo test` の `bindings_are_up_to_date` が行い、コミット済みのファイルが古ければ書き換えたうえで失敗する。tauri-specta はリリース候補版のため `Cargo.toml` でバージョンを完全固定している。
 
 **共有状態** (`lib.rs` の `.manage()`):
 - `std::sync::Mutex<RecordingManager>` — 録音セッション
@@ -35,7 +35,7 @@ Source: `src-tauri/src/lib.rs` / `src-tauri/tauri.conf.json` / `src-tauri/capabi
 - 状態管理: `src/primitives/` の `create*` ファクトリ (createWhisper / createRecording / createSettings / createAiSession など)。`createSettings` はモジュールレベル・シングルトンで `LazyStore("settings.json")` を包む
 - 文字起こしの一連 (変換 → 推論 → 履歴保存 → 後始末) は `createTranscriptionJob` (モジュールレベル・シングルトン) が担う。実行は画面遷移をまたいで続くため、手順をページコンポーネントに置かない。履歴保存に成功するまで完了トーストを出さず、録音 WAV も消さない
 - i18n: `src/i18n/` の独自 context ベース。ロケールは `ja` (デフォルト) / `en` の 2 つ。UI 文字列のハードコード禁止 (`.claude/rules/frontend-conventions.md`)
-- 型: `src/types/` が Rust の serde 型 (`src-tauri/src/*/types.rs`) をミラーする。`#[serde(rename_all = "camelCase")]` で IPC 境界を camelCase に統一
+- 型: IPC を越える型は生成された `src/bindings.ts` が実体で、`src/types/` はそれを既存の名前で再エクスポートする (手書きで残るのはフロント専用の型のみ)。serde の入出力で形が違う型は `_Serialize` / `_Deserialize` に分かれて生成され、`src/types/` は厳しい側の `_Serialize` を指す。`#[serde(rename_all = "camelCase")]` で IPC 境界を camelCase に統一。バックエンドの呼び出しは `invoke()` / `listen()` を直接使わず `commands.*` / `events.*` を通す
 
 ## IPC イベント (Rust → TS)
 
@@ -105,4 +105,4 @@ macOS の標準 Quit メニュー (Cmd+Q) は close-requested を経由せずプ
 
 ## エラー変換システム
 
-Rust のエラーは文字列化されて IPC を越え、フロントの `src/lib/errors.ts::PREFIX_MAP` が prefix (`startsWith`) マッチで `ErrorCode` に変換 → カテゴリ / i18n メッセージキー / 回復可能性を決める。非回復扱いは `MODEL_LOAD_ERROR` と `CANCELLED` のみ。**Rust 側で新しい prefix を作ったら PREFIX_MAP との同期が必須** — prefix の一覧は `src/lib/errors.ts::PREFIX_MAP` が実体で、同期の手順・命名ルールは `.claude/rules/error-handling.md` を一次ソースとする。
+全コマンドは `Result<T, IpcError>` を返す。`IpcError` (`src-tauri/src/ipc_error.rs`) は `code` (`ErrorCode`) と `message` を持ち、各エラー enum の `From<XxxError> for IpcError` が variant ごとにコードを決める (網羅 match なので、variant を足すとコードを割り当てるまでコンパイルが通らない)。フロントの `src/lib/errors.ts::parseError` は `code` からカテゴリ / i18n メッセージキー / 回復可能性を決め、`message` を詳細として表示する。非回復扱いは `MODEL_LOAD_ERROR` と `CANCELLED` のみ。コマンドに届く前の失敗 (権限不足など Tauri 自身の reject) は文字列で届くため `UNKNOWN_ERROR` になる。`ErrorCode` は `src/bindings.ts` に生成されるので両側の同期は不要。コードの選び方・追加手順は `.claude/rules/error-handling.md` を一次ソースとする。

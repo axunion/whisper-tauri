@@ -46,7 +46,7 @@ meta callout (📋、メタ情報を列挙)
 
 ## エラーの取り扱い
 
-Notion API の生のレスポンスボディはユーザー向けエラーに echo しない — 構造化された `message` フィールドのみ表示し、なければステータス行にフォールバック (生ボディは開発時診断用に stderr へ)。リクエストデータがエラーボディに反射された場合の漏えい面を広げないための縦深防御。エラー prefix は `Notion API error` / `Invalid response from Notion API` (`src/lib/errors.ts::PREFIX_MAP` と同期)。
+Notion API の生のレスポンスボディはユーザー向けエラーに echo しない — 構造化された `message` フィールドのみ表示し、なければステータス行にフォールバック (生ボディは開発時診断用に stderr へ)。リクエストデータがエラーボディに反射された場合の漏えい面を広げないための縦深防御。エラーメッセージは `Notion API error` / `Invalid response from Notion API` で始まり、どちらも `NETWORK_ERROR` として返す (`notion/error.rs` の `From<NotionError> for IpcError`)。
 
 ## コマンド一覧
 
