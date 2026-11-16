@@ -15,6 +15,7 @@ use tauri::Manager;
 pub mod converter;
 pub mod download;
 pub mod history;
+pub mod ipc_error;
 pub mod mirrors;
 pub mod notion;
 pub mod paths;

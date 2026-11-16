@@ -1,3 +1,4 @@
+use crate::ipc_error::IpcError;
 use std::sync::Mutex;
 
 use tauri::{AppHandle, State};
@@ -16,7 +17,7 @@ use super::types::{AudioDevice, RecordingStopResult};
 #[specta::specta]
 pub async fn list_audio_devices(
     _state: State<'_, Mutex<RecordingManager>>,
-) -> Result<Vec<AudioDevice>, String> {
+) -> Result<Vec<AudioDevice>, IpcError> {
     RecordingManager::list_devices().map_err(Into::into)
 }
 
@@ -34,7 +35,7 @@ pub async fn start_recording(
     app: AppHandle,
     state: State<'_, Mutex<RecordingManager>>,
     device_id: Option<String>,
-) -> Result<(), String> {
+) -> Result<(), IpcError> {
     let manager = state.lock().map_err(|e| format!("Lock error: {e}"))?;
     manager.start(device_id, app).map_err(Into::into)
 }
@@ -46,7 +47,7 @@ pub async fn start_recording(
 /// Returns an error string if no recording is in progress.
 #[tauri::command]
 #[specta::specta]
-pub async fn pause_recording(state: State<'_, Mutex<RecordingManager>>) -> Result<(), String> {
+pub async fn pause_recording(state: State<'_, Mutex<RecordingManager>>) -> Result<(), IpcError> {
     let manager = state.lock().map_err(|e| format!("Lock error: {e}"))?;
     manager.set_paused(true).map_err(Into::into)
 }
@@ -58,7 +59,7 @@ pub async fn pause_recording(state: State<'_, Mutex<RecordingManager>>) -> Resul
 /// Returns an error string if no recording is in progress.
 #[tauri::command]
 #[specta::specta]
-pub async fn resume_recording(state: State<'_, Mutex<RecordingManager>>) -> Result<(), String> {
+pub async fn resume_recording(state: State<'_, Mutex<RecordingManager>>) -> Result<(), IpcError> {
     let manager = state.lock().map_err(|e| format!("Lock error: {e}"))?;
     manager.set_paused(false).map_err(Into::into)
 }
@@ -77,7 +78,7 @@ pub async fn resume_recording(state: State<'_, Mutex<RecordingManager>>) -> Resu
 pub async fn stop_recording(
     app: AppHandle,
     state: State<'_, Mutex<RecordingManager>>,
-) -> Result<RecordingStopResult, String> {
+) -> Result<RecordingStopResult, IpcError> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let manager = state.lock().map_err(|e| format!("Lock error: {e}"))?;
     manager.stop(&app_data_dir).map_err(Into::into)
@@ -91,7 +92,7 @@ pub async fn stop_recording(
 /// or the file cannot be deleted.
 #[tauri::command]
 #[specta::specta]
-pub async fn cleanup_recording(app: AppHandle, path: String) -> Result<(), String> {
+pub async fn cleanup_recording(app: AppHandle, path: String) -> Result<(), IpcError> {
     let app_data_dir = paths::app_data_dir(&app)?;
     RecordingManager::cleanup(&app_data_dir, std::path::Path::new(&path)).map_err(Into::into)
 }

@@ -1,3 +1,5 @@
+use crate::ipc_error::{ErrorCode, IpcError};
+
 /// Errors that can occur during audio recording operations.
 #[derive(Debug, thiserror::Error)]
 pub enum RecordingError {
@@ -26,9 +28,16 @@ pub enum RecordingError {
     WavError(String),
 }
 
-impl From<RecordingError> for String {
+impl From<RecordingError> for IpcError {
     fn from(err: RecordingError) -> Self {
-        err.to_string()
+        let code = match &err {
+            RecordingError::DeviceNotFound(_)
+            | RecordingError::DeviceError(_)
+            | RecordingError::AlreadyRecording
+            | RecordingError::NotRecording => ErrorCode::UnknownError,
+            RecordingError::Io(_) | RecordingError::WavError(_) => ErrorCode::FileReadError,
+        };
+        Self::new(code, err.to_string())
     }
 }
 
@@ -74,17 +83,21 @@ mod tests {
     }
 
     #[test]
-    fn error_converts_to_string() {
+    fn error_classifies_for_ipc() {
         let err = RecordingError::AlreadyRecording;
-        let s: String = err.into();
-        assert_eq!(s, "Already recording");
+        assert_eq!(
+            IpcError::from(err),
+            IpcError::new(ErrorCode::UnknownError, "Already recording")
+        );
     }
 
     #[test]
-    fn error_converts_io_to_string() {
+    fn error_classifies_io_for_ipc() {
         let io_err = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "access denied");
         let err = RecordingError::Io(io_err);
-        let s: String = err.into();
-        assert_eq!(s, "IO error: access denied");
+        assert_eq!(
+            IpcError::from(err),
+            IpcError::new(ErrorCode::FileReadError, "IO error: access denied")
+        );
     }
 }

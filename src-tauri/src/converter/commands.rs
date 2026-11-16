@@ -1,3 +1,4 @@
+use crate::ipc_error::{ErrorCode, IpcError};
 use std::path::{Path, PathBuf};
 
 use tauri::AppHandle;
@@ -11,6 +12,11 @@ use super::duration;
 use super::error::ConverterError;
 use super::ffmpeg;
 use super::types::{ConversionResult, FfmpegDownloadProgress};
+
+/// An I/O failure outside `ConverterError`, classified like its `Io` variant.
+fn io_error(message: &str) -> IpcError {
+    IpcError::new(ErrorCode::FileReadError, format!("IO error: {message}"))
+}
 
 /// Resolves the bundled ffmpeg binary path.
 ///
@@ -52,7 +58,7 @@ fn validate_input_file(path: &Path) -> Result<(), ConverterError> {
 /// Returns an error if the app data directory cannot be resolved.
 #[tauri::command]
 #[specta::specta]
-pub async fn check_ffmpeg_bundled(app: AppHandle) -> Result<bool, String> {
+pub async fn check_ffmpeg_bundled(app: AppHandle) -> Result<bool, IpcError> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let bundled_path = downloader::get_ffmpeg_path(&app_data_dir);
     Ok(ffmpeg::check_available(&bundled_path).is_ok())
@@ -68,7 +74,7 @@ pub async fn check_ffmpeg_bundled(app: AppHandle) -> Result<bool, String> {
 /// Returns an error if the app data directory cannot be resolved.
 #[tauri::command]
 #[specta::specta]
-pub async fn check_ffmpeg_needs_update(app: AppHandle) -> Result<bool, String> {
+pub async fn check_ffmpeg_needs_update(app: AppHandle) -> Result<bool, IpcError> {
     let app_data_dir = paths::app_data_dir(&app)?;
     Ok(downloader::ffmpeg_needs_update(&app_data_dir))
 }
@@ -81,13 +87,13 @@ pub async fn check_ffmpeg_needs_update(app: AppHandle) -> Result<bool, String> {
 /// the file cannot be deleted.
 #[tauri::command]
 #[specta::specta]
-pub async fn delete_ffmpeg(app: AppHandle) -> Result<(), String> {
+pub async fn delete_ffmpeg(app: AppHandle) -> Result<(), IpcError> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let bundled_path = downloader::get_ffmpeg_path(&app_data_dir);
 
     if bundled_path.exists() {
         std::fs::remove_file(&bundled_path)
-            .map_err(|e| format!("IO error: failed to delete ffmpeg: {e}"))?;
+            .map_err(|e| io_error(&format!("failed to delete ffmpeg: {e}")))?;
     }
 
     // Also remove version marker
@@ -104,7 +110,7 @@ pub async fn delete_ffmpeg(app: AppHandle) -> Result<(), String> {
 /// Returns an error if the download fails.
 #[tauri::command]
 #[specta::specta]
-pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
+pub async fn download_ffmpeg(app: AppHandle) -> Result<String, IpcError> {
     let app_data_dir = paths::app_data_dir(&app)?;
 
     let custom_url = mirrors::get(&app_data_dir, mirrors::FFMPEG_URL);
@@ -123,7 +129,7 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
         },
     )
     .await
-    .map_err::<String, _>(Into::into)?;
+    .map_err::<IpcError, _>(Into::into)?;
 
     paths::path_to_owned_string(&path).map_err(Into::into)
 }
@@ -138,7 +144,7 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
 /// Returns an error if the duration cannot be determined by either method.
 #[tauri::command]
 #[specta::specta]
-pub async fn get_audio_duration(app: AppHandle, file_path: String) -> Result<u64, String> {
+pub async fn get_audio_duration(app: AppHandle, file_path: String) -> Result<u64, IpcError> {
     let input_path = PathBuf::from(&file_path);
     validate_input_file(&input_path)?;
     let app_data_dir = paths::app_data_dir(&app)?;
@@ -160,6 +166,7 @@ pub async fn get_audio_duration(app: AppHandle, file_path: String) -> Result<u64
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))?
+    .map_err(Into::into)
 }
 
 /// Converts an audio/video file to WAV format using ffmpeg.
@@ -175,7 +182,7 @@ pub async fn get_audio_duration(app: AppHandle, file_path: String) -> Result<u64
 pub async fn convert_audio_file(
     app: AppHandle,
     input_path: String,
-) -> Result<ConversionResult, String> {
+) -> Result<ConversionResult, IpcError> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let ffmpeg_path = resolve_ffmpeg_path(&app_data_dir)?;
 
@@ -217,7 +224,7 @@ pub async fn convert_audio_file(
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))?
-    .map_err::<String, _>(Into::into)?;
+    .map_err::<IpcError, _>(Into::into)?;
 
     let output_str = paths::path_to_owned_string(&output_path)?;
 
@@ -236,13 +243,15 @@ pub async fn convert_audio_file(
 /// Returns an error if the file cannot be deleted.
 #[tauri::command]
 #[specta::specta]
-pub async fn cleanup_converted_file(file_path: String) -> Result<(), String> {
+pub async fn cleanup_converted_file(file_path: String) -> Result<(), IpcError> {
     let path = std::path::Path::new(&file_path);
     let temp_dir = std::env::temp_dir();
 
     // Safety check: only delete files in the temp directory.
     if !path.starts_with(&temp_dir) {
-        return Err("Cannot delete files outside of temp directory".to_string());
+        return Err("Cannot delete files outside of temp directory"
+            .to_string()
+            .into());
     }
 
     if !path.exists() {
@@ -253,15 +262,17 @@ pub async fn cleanup_converted_file(file_path: String) -> Result<(), String> {
     // resolve `..`, so it would also accept `<temp>/../../etc/hosts`. Re-check
     // containment against the canonicalized paths before deleting anything.
     let real_path = std::fs::canonicalize(path)
-        .map_err(|e| format!("IO error: failed to resolve cleanup path: {e}"))?;
+        .map_err(|e| io_error(&format!("failed to resolve cleanup path: {e}")))?;
     let real_temp_dir = std::fs::canonicalize(&temp_dir)
-        .map_err(|e| format!("IO error: failed to resolve temp directory: {e}"))?;
+        .map_err(|e| io_error(&format!("failed to resolve temp directory: {e}")))?;
     if !real_path.starts_with(&real_temp_dir) {
-        return Err("Cannot delete files outside of temp directory".to_string());
+        return Err("Cannot delete files outside of temp directory"
+            .to_string()
+            .into());
     }
 
     std::fs::remove_file(&real_path)
-        .map_err(|e| format!("IO error: failed to clean up converted file: {e}"))?;
+        .map_err(|e| io_error(&format!("failed to clean up converted file: {e}")))?;
 
     Ok(())
 }
@@ -330,6 +341,7 @@ mod tests {
         assert!(result.is_err());
         assert!(result
             .unwrap_err()
+            .message
             .contains("Cannot delete files outside of temp directory"));
     }
 
@@ -351,7 +363,7 @@ mod tests {
 
         let result = cleanup_converted_file(escaping.to_string_lossy().to_string()).await;
         assert!(
-            result.is_err_and(|e| e.contains("outside of temp directory")),
+            result.is_err_and(|e| e.message.contains("outside of temp directory")),
             "escaping path must be rejected by the containment check"
         );
     }

@@ -610,6 +610,12 @@ export type DownloadProgress = {
 	progress: number,
 };
 
+/**
+ *  How the frontend classifies a failure: which message it shows and whether
+ *  a retry is offered.
+ */
+export type ErrorCode = "FILE_NOT_FOUND" | "FILE_READ_ERROR" | "UNSUPPORTED_FORMAT" | "MODEL_NOT_FOUND" | "MODEL_LOAD_ERROR" | "MODEL_DOWNLOAD_ERROR" | "TRANSCRIPTION_ERROR" | "INFERENCE_ERROR" | "NETWORK_ERROR" | "CANCELLED" | "UNKNOWN_ERROR";
+
 /**  `FFmpeg` download progress event payload. */
 export type FfmpegDownloadProgress = {
 	/**  Downloaded bytes */
@@ -878,6 +884,12 @@ export type InferenceProgress = {
 	accumulatedText: string,
 	/**  Whether inference is complete */
 	done: boolean,
+};
+
+/**  A command failure: a code to branch on and the detail text to show. */
+export type IpcError = {
+	code: ErrorCode,
+	message: string,
 };
 
 /**  Whisper model information. */

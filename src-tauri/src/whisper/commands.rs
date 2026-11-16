@@ -1,3 +1,4 @@
+use crate::ipc_error::IpcError;
 use std::path::{Path, PathBuf};
 
 use tauri::AppHandle;
@@ -47,7 +48,7 @@ fn model_exists(app_data_dir: &Path, model_id: &str) -> Result<bool, WhisperErro
 /// Returns an error if the app data directory cannot be resolved.
 #[tauri::command]
 #[specta::specta]
-pub async fn get_available_models(app: AppHandle) -> Result<Vec<ModelInfo>, String> {
+pub async fn get_available_models(app: AppHandle) -> Result<Vec<ModelInfo>, IpcError> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let mut model_list = models::get_model_list_with_speed_factors();
 
@@ -71,7 +72,7 @@ pub async fn get_available_models(app: AppHandle) -> Result<Vec<ModelInfo>, Stri
 /// cannot be resolved.
 #[tauri::command]
 #[specta::specta]
-pub async fn check_model_exists(app: AppHandle, model_id: String) -> Result<bool, String> {
+pub async fn check_model_exists(app: AppHandle, model_id: String) -> Result<bool, IpcError> {
     let app_data_dir = paths::app_data_dir(&app)?;
     model_exists(&app_data_dir, &model_id).map_err(Into::into)
 }
@@ -87,7 +88,7 @@ pub async fn check_model_exists(app: AppHandle, model_id: String) -> Result<bool
 /// the file cannot be written.
 #[tauri::command]
 #[specta::specta]
-pub async fn download_model(app: AppHandle, model_id: String) -> Result<String, String> {
+pub async fn download_model(app: AppHandle, model_id: String) -> Result<String, IpcError> {
     if !models::is_valid_model_id(&model_id) {
         return Err(WhisperError::ModelNotFound(model_id).into());
     }
@@ -149,7 +150,7 @@ pub async fn download_model(app: AppHandle, model_id: String) -> Result<String, 
 /// Returns an error if the model ID is invalid or the file cannot be deleted.
 #[tauri::command]
 #[specta::specta]
-pub async fn delete_model(app: AppHandle, model_id: String) -> Result<(), String> {
+pub async fn delete_model(app: AppHandle, model_id: String) -> Result<(), IpcError> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let path = model_path(&app_data_dir, &model_id)?;
 
@@ -175,7 +176,7 @@ fn vad_model_path(app_data_dir: &Path) -> PathBuf {
 /// download fails.
 #[tauri::command]
 #[specta::specta]
-pub async fn ensure_vad_model(app: AppHandle) -> Result<String, String> {
+pub async fn ensure_vad_model(app: AppHandle) -> Result<String, IpcError> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let path = vad_model_path(&app_data_dir);
 
@@ -217,7 +218,7 @@ pub async fn transcribe_audio(
     model_path: String,
     language: Option<String>,
     vad_model_path: Option<String>,
-) -> Result<TranscriptionResult, String> {
+) -> Result<TranscriptionResult, IpcError> {
     let task_id = uuid::Uuid::new_v4().to_string();
     let token = process::TASK_MANAGER.create_task(&task_id);
     let _guard = TaskGuard {
@@ -239,7 +240,7 @@ pub async fn transcribe_audio(
 
     // Load WAV file on current thread (I/O bound)
     let path = PathBuf::from(&audio_path);
-    let samples = process::load_wav_file(&path).map_err::<String, _>(Into::into)?;
+    let samples = process::load_wav_file(&path).map_err::<IpcError, _>(Into::into)?;
 
     if token.is_cancelled() {
         return Err(WhisperError::Cancelled.into());
@@ -261,7 +262,7 @@ pub async fn transcribe_audio(
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))?
-    .map_err::<String, _>(Into::into)
+    .map_err::<IpcError, _>(Into::into)
 }
 
 /// RAII guard that removes a task from the transcription task manager on drop.
@@ -283,7 +284,7 @@ impl Drop for TaskGuard {
 /// task ID was not found.
 #[tauri::command]
 #[specta::specta]
-pub async fn cancel_transcription(task_id: String) -> Result<bool, String> {
+pub async fn cancel_transcription(task_id: String) -> Result<bool, IpcError> {
     Ok(process::TASK_MANAGER.cancel_task(&task_id))
 }
 

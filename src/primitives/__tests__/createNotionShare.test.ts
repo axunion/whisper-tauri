@@ -69,9 +69,10 @@ describe("createNotionShare", () => {
     });
 
     it("should return null and expose a network error when the Notion API fails", async () => {
-      vi.mocked(invoke).mockRejectedValueOnce(
-        "Notion API error (401): unauthorized",
-      );
+      vi.mocked(invoke).mockRejectedValueOnce({
+        code: "NETWORK_ERROR",
+        message: "Notion API error (401): unauthorized",
+      });
 
       await createRoot(async (dispose) => {
         const share = createNotionShare();
@@ -122,7 +123,10 @@ describe("createNotionShare", () => {
 
     it("should recover to idle when a retry after an error succeeds", async () => {
       vi.mocked(invoke)
-        .mockRejectedValueOnce("HTTP error: status 500")
+        .mockRejectedValueOnce({
+          code: "NETWORK_ERROR",
+          message: "HTTP error: status 500",
+        })
         .mockResolvedValueOnce(pageRef);
 
       await createRoot(async (dispose) => {

@@ -10,7 +10,7 @@ import type {
   TranscriptionProgress,
   TranscriptionResult,
 } from "~/types";
-import type { AppError } from "~/types/errors";
+import { type AppError, ErrorCode } from "~/types/errors";
 
 // Module-level singleton state — all consumers share the same signals.
 const {
@@ -255,7 +255,12 @@ async function startTranscription(overrideAudioPath?: string): Promise<void> {
   if (!modelPath) {
     batch(() => {
       setResult(null);
-      setError(parseError(`Model not found: ${currentModel.id}`));
+      setError(
+        parseError({
+          code: ErrorCode.MODEL_NOT_FOUND,
+          message: `Model not found: ${currentModel.id}`,
+        }),
+      );
     });
     return;
   }

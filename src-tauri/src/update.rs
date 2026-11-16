@@ -1,3 +1,4 @@
+use crate::ipc_error::{ErrorCode, IpcError};
 use serde_json::Value;
 
 const RELEASES_LATEST_URL: &str =
@@ -18,9 +19,12 @@ impl From<reqwest::Error> for UpdateError {
     }
 }
 
-impl From<UpdateError> for String {
+impl From<UpdateError> for IpcError {
     fn from(err: UpdateError) -> Self {
-        err.to_string()
+        let code = match &err {
+            UpdateError::Http(_) | UpdateError::InvalidResponse => ErrorCode::NetworkError,
+        };
+        Self::new(code, err.to_string())
     }
 }
 
@@ -44,7 +48,7 @@ fn parse_tag_name(body: &Value) -> Result<String, UpdateError> {
 /// non-2xx status) or the response has no usable `tag_name`.
 #[tauri::command]
 #[specta::specta]
-pub async fn check_latest_version() -> Result<String, String> {
+pub async fn check_latest_version() -> Result<String, IpcError> {
     let client = reqwest::Client::builder()
         // GitHub API rejects requests without a User-Agent (403)
         .user_agent(concat!("whisper-tauri/", env!("CARGO_PKG_VERSION")))
@@ -86,10 +90,12 @@ mod tests {
     }
 
     #[test]
-    fn converts_to_string() {
+    fn classifies_for_ipc() {
         let err = UpdateError::Http("status 404".to_string());
-        let s: String = err.into();
-        assert_eq!(s, "HTTP error: status 404");
+        assert_eq!(
+            IpcError::from(err),
+            IpcError::new(ErrorCode::NetworkError, "HTTP error: status 404")
+        );
     }
 
     #[test]

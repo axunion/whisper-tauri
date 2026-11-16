@@ -71,9 +71,10 @@ describe("createFileConverter", () => {
     });
 
     it("should set error on failure", async () => {
-      vi.mocked(invoke).mockRejectedValueOnce(
-        new Error("Conversion failed: exit code 1"),
-      );
+      vi.mocked(invoke).mockRejectedValueOnce({
+        code: "TRANSCRIPTION_ERROR",
+        message: "Conversion failed: exit code 1",
+      });
 
       await createRoot(async (dispose) => {
         const converter = createFileConverter();

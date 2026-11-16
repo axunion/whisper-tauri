@@ -1,3 +1,4 @@
+use crate::ipc_error::IpcError;
 use std::path::PathBuf;
 
 use tauri::AppHandle;
@@ -18,7 +19,7 @@ use super::types::{
 /// history command. The lock is held across `init_db` so that two commands
 /// arriving together cannot both run a migration: a step such as `ALTER TABLE
 /// … ADD COLUMN` fails if it runs twice.
-fn get_db_path(app: &AppHandle) -> Result<PathBuf, String> {
+fn get_db_path(app: &AppHandle) -> Result<PathBuf, IpcError> {
     static INITIALIZED: std::sync::Mutex<bool> = std::sync::Mutex::new(false);
 
     let app_data_dir = paths::app_data_dir(app)?;
@@ -44,7 +45,7 @@ fn get_db_path(app: &AppHandle) -> Result<PathBuf, String> {
 /// Returns an error if the database cannot be accessed or the entry cannot be saved.
 #[tauri::command]
 #[specta::specta]
-pub async fn history_save(app: AppHandle, params: HistorySaveParams) -> Result<String, String> {
+pub async fn history_save(app: AppHandle, params: HistorySaveParams) -> Result<String, IpcError> {
     let db_path = get_db_path(&app)?;
     db::save_entry(&db_path, &params).map_err(Into::into)
 }
@@ -59,7 +60,7 @@ pub async fn history_save(app: AppHandle, params: HistorySaveParams) -> Result<S
 pub async fn history_list(
     app: AppHandle,
     filter: HistoryFilter,
-) -> Result<Vec<HistoryMeta>, String> {
+) -> Result<Vec<HistoryMeta>, IpcError> {
     let db_path = get_db_path(&app)?;
     db::list_entries(&db_path, &filter).map_err(Into::into)
 }
@@ -71,7 +72,7 @@ pub async fn history_list(
 /// Returns an error if the entry is not found or the database cannot be accessed.
 #[tauri::command]
 #[specta::specta]
-pub async fn history_get(app: AppHandle, id: String) -> Result<HistoryEntry, String> {
+pub async fn history_get(app: AppHandle, id: String) -> Result<HistoryEntry, IpcError> {
     let db_path = get_db_path(&app)?;
     let mut entry = db::get_entry(&db_path, &id)?;
     entry.audio_path = audio::existing_audio(&paths::app_data_dir(&app)?, &entry.id)
@@ -87,7 +88,7 @@ pub async fn history_get(app: AppHandle, id: String) -> Result<HistoryEntry, Str
 /// Returns an error if the database cannot be accessed.
 #[tauri::command]
 #[specta::specta]
-pub async fn history_delete(app: AppHandle, ids: Vec<String>) -> Result<u64, String> {
+pub async fn history_delete(app: AppHandle, ids: Vec<String>) -> Result<u64, IpcError> {
     let db_path = get_db_path(&app)?;
     let deleted = db::delete_entries(&db_path, &ids)?;
     // The rows are gone at this point, so a file that cannot be removed must
@@ -110,7 +111,7 @@ pub async fn history_delete(app: AppHandle, ids: Vec<String>) -> Result<u64, Str
 /// Returns an error if the database cannot be accessed.
 #[tauri::command]
 #[specta::specta]
-pub async fn history_delete_all(app: AppHandle) -> Result<u64, String> {
+pub async fn history_delete_all(app: AppHandle) -> Result<u64, IpcError> {
     let db_path = get_db_path(&app)?;
     let deleted = db::delete_all_entries(&db_path)?;
     // Best-effort for the same reason as in `history_delete`.
@@ -132,7 +133,7 @@ pub async fn history_attach_recording(
     app: AppHandle,
     id: String,
     recording_path: String,
-) -> Result<(), String> {
+) -> Result<(), IpcError> {
     let app_data_dir = paths::app_data_dir(&app)?;
     audio::attach_recording(&app_data_dir, &id, std::path::Path::new(&recording_path))
         .map_err(Into::into)
@@ -149,7 +150,7 @@ pub async fn history_copy_audio(
     app: AppHandle,
     from_id: String,
     to_id: String,
-) -> Result<(), String> {
+) -> Result<(), IpcError> {
     audio::copy_audio(&paths::app_data_dir(&app)?, &from_id, &to_id).map_err(Into::into)
 }
 
@@ -160,7 +161,7 @@ pub async fn history_copy_audio(
 /// Returns an error if the file cannot be deleted.
 #[tauri::command]
 #[specta::specta]
-pub async fn history_delete_audio(app: AppHandle, id: String) -> Result<(), String> {
+pub async fn history_delete_audio(app: AppHandle, id: String) -> Result<(), IpcError> {
     audio::delete_audio(&paths::app_data_dir(&app)?, &id).map_err(Into::into)
 }
 
@@ -171,7 +172,7 @@ pub async fn history_delete_audio(app: AppHandle, id: String) -> Result<(), Stri
 /// Returns an error if a file cannot be deleted.
 #[tauri::command]
 #[specta::specta]
-pub async fn history_delete_all_audio(app: AppHandle) -> Result<(), String> {
+pub async fn history_delete_all_audio(app: AppHandle) -> Result<(), IpcError> {
     audio::delete_all_audio(&paths::app_data_dir(&app)?).map_err(Into::into)
 }
 
@@ -186,7 +187,7 @@ pub async fn history_delete_all_audio(app: AppHandle) -> Result<(), String> {
 pub async fn history_delete_pending_recordings(
     app: AppHandle,
     keep_path: Option<String>,
-) -> Result<(), String> {
+) -> Result<(), IpcError> {
     audio::delete_pending_recordings(
         &paths::app_data_dir(&app)?,
         keep_path.as_deref().map(std::path::Path::new),
@@ -205,7 +206,7 @@ pub async fn history_delete_pending_recordings(
 pub async fn history_storage_stats(
     app: AppHandle,
     keep_path: Option<String>,
-) -> Result<StorageStats, String> {
+) -> Result<StorageStats, IpcError> {
     audio::storage_stats(
         &paths::app_data_dir(&app)?,
         keep_path.as_deref().map(std::path::Path::new),
@@ -220,7 +221,7 @@ pub async fn history_storage_stats(
 /// Returns an error if the entry is not found or the database cannot be accessed.
 #[tauri::command]
 #[specta::specta]
-pub async fn history_rename(app: AppHandle, id: String, file_name: String) -> Result<(), String> {
+pub async fn history_rename(app: AppHandle, id: String, file_name: String) -> Result<(), IpcError> {
     let db_path = get_db_path(&app)?;
     db::rename_entry(&db_path, &id, &file_name).map_err(Into::into)
 }
@@ -239,7 +240,7 @@ pub async fn history_update_segment(
     id: String,
     index: usize,
     text: String,
-) -> Result<SegmentUpdate, String> {
+) -> Result<SegmentUpdate, IpcError> {
     let db_path = get_db_path(&app)?;
     db::update_segment(&db_path, &id, index, &text).map_err(Into::into)
 }
@@ -254,7 +255,7 @@ pub async fn history_update_segment(
 pub async fn history_search(
     app: AppHandle,
     params: HistorySearchParams,
-) -> Result<Vec<HistoryMeta>, String> {
+) -> Result<Vec<HistoryMeta>, IpcError> {
     let db_path = get_db_path(&app)?;
     let conn = db::open_connection(&db_path)?;
     super::search::search_entries(&conn, &params).map_err(Into::into)
@@ -270,7 +271,7 @@ pub async fn history_search(
 pub async fn history_save_ai_content(
     app: AppHandle,
     params: AiContentSaveParams,
-) -> Result<String, String> {
+) -> Result<String, IpcError> {
     let db_path = get_db_path(&app)?;
     db::save_ai_content(&db_path, &params).map_err(Into::into)
 }
@@ -286,7 +287,7 @@ pub async fn history_get_ai_content(
     app: AppHandle,
     history_id: String,
     content_type: String,
-) -> Result<Option<AiContent>, String> {
+) -> Result<Option<AiContent>, IpcError> {
     let db_path = get_db_path(&app)?;
     db::get_ai_content(&db_path, &history_id, &content_type).map_err(Into::into)
 }
@@ -301,7 +302,7 @@ pub async fn history_get_ai_content(
 pub async fn history_get_all_ai_content(
     app: AppHandle,
     history_id: String,
-) -> Result<Vec<AiContent>, String> {
+) -> Result<Vec<AiContent>, IpcError> {
     let db_path = get_db_path(&app)?;
     db::get_all_ai_content(&db_path, &history_id).map_err(Into::into)
 }

@@ -1,3 +1,4 @@
+use crate::ipc_error::IpcError;
 use tauri::AppHandle;
 
 use super::client;
@@ -31,7 +32,7 @@ fn read_settings(app: &AppHandle) -> Result<NotionSettings, NotionError> {
 /// Returns an error string if the settings store cannot be read.
 #[tauri::command]
 #[specta::specta]
-pub async fn notion_get_settings(app: AppHandle) -> Result<NotionSettings, String> {
+pub async fn notion_get_settings(app: AppHandle) -> Result<NotionSettings, IpcError> {
     read_settings(&app).map_err(Into::into)
 }
 
@@ -42,7 +43,7 @@ pub async fn notion_get_settings(app: AppHandle) -> Result<NotionSettings, Strin
 /// Returns an error string if the settings store cannot be written.
 #[tauri::command]
 #[specta::specta]
-pub async fn notion_set_settings(app: AppHandle, settings: NotionSettings) -> Result<(), String> {
+pub async fn notion_set_settings(app: AppHandle, settings: NotionSettings) -> Result<(), IpcError> {
     set_or_delete_strings(
         &app,
         &[
@@ -55,7 +56,7 @@ pub async fn notion_set_settings(app: AppHandle, settings: NotionSettings) -> Re
             (KEY_TITLE_PROPERTY, settings.title_property),
         ],
     )
-    .map_err(|e| e.to_string())
+    .map_err(Into::into)
 }
 
 /// Verifies the API token and database ID and discovers the title property.
@@ -73,10 +74,9 @@ pub async fn notion_test_connection(
     app: AppHandle,
     token: String,
     database_id: String,
-) -> Result<NotionDatabaseInfo, String> {
+) -> Result<NotionDatabaseInfo, IpcError> {
     let info = client::fetch_database(&token, &database_id).await?;
-    set_or_delete_string(&app, KEY_TITLE_PROPERTY, Some(info.title_property.clone()))
-        .map_err(|e| e.to_string())?;
+    set_or_delete_string(&app, KEY_TITLE_PROPERTY, Some(info.title_property.clone()))?;
     Ok(info)
 }
 
@@ -91,8 +91,8 @@ pub async fn notion_test_connection(
 pub async fn notion_create_page(
     app: AppHandle,
     payload: NotionPagePayload,
-) -> Result<NotionPageRef, String> {
-    let settings = read_settings(&app).map_err(Into::<String>::into)?;
+) -> Result<NotionPageRef, IpcError> {
+    let settings = read_settings(&app).map_err(IpcError::from)?;
     let token = settings
         .token
         .ok_or_else(|| NotionError::NotConfigured.to_string())?;

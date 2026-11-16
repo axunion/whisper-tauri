@@ -1,3 +1,4 @@
+use crate::ipc_error::{ErrorCode, IpcError};
 use tauri::AppHandle;
 use tauri_plugin_store::StoreExt;
 
@@ -11,9 +12,12 @@ pub enum SettingsError {
     Store(String),
 }
 
-impl From<SettingsError> for String {
+impl From<SettingsError> for IpcError {
     fn from(err: SettingsError) -> Self {
-        err.to_string()
+        let code = match &err {
+            SettingsError::Store(_) => ErrorCode::UnknownError,
+        };
+        Self::new(code, err.to_string())
     }
 }
 
@@ -116,9 +120,11 @@ mod tests {
     }
 
     #[test]
-    fn settings_error_converts_to_string() {
+    fn settings_error_classifies_for_ipc() {
         let err = SettingsError::Store("locked".to_string());
-        let s: String = err.into();
-        assert_eq!(s, "Store error: locked");
+        assert_eq!(
+            IpcError::from(err),
+            IpcError::new(ErrorCode::UnknownError, "Store error: locked")
+        );
     }
 }

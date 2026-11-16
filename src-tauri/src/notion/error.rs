@@ -1,3 +1,4 @@
+use crate::ipc_error::{ErrorCode, IpcError};
 use crate::settings::SettingsError;
 
 #[derive(Debug, thiserror::Error)]
@@ -22,9 +23,16 @@ impl From<reqwest::Error> for NotionError {
     }
 }
 
-impl From<NotionError> for String {
+impl From<NotionError> for IpcError {
     fn from(err: NotionError) -> Self {
-        err.to_string()
+        let code = match &err {
+            NotionError::Http(_)
+            | NotionError::Api { .. }
+            | NotionError::NoTitleProperty
+            | NotionError::InvalidResponse => ErrorCode::NetworkError,
+            NotionError::NotConfigured | NotionError::Settings(_) => ErrorCode::UnknownError,
+        };
+        Self::new(code, err.to_string())
     }
 }
 
@@ -78,9 +86,11 @@ mod tests {
     }
 
     #[test]
-    fn converts_to_string() {
+    fn classifies_for_ipc() {
         let err = NotionError::NotConfigured;
-        let s: String = err.into();
-        assert_eq!(s, "Notion is not configured");
+        assert_eq!(
+            IpcError::from(err),
+            IpcError::new(ErrorCode::UnknownError, "Notion is not configured")
+        );
     }
 }

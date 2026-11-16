@@ -1,3 +1,4 @@
+use crate::ipc_error::IpcError;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -22,7 +23,7 @@ use super::types::{StructuredSummary, TextDownloadProgress, TextModelInfo};
 /// Returns an error string if the operation fails.
 #[tauri::command]
 #[specta::specta]
-pub async fn text_processing_list_models(app: AppHandle) -> Result<Vec<TextModelInfo>, String> {
+pub async fn text_processing_list_models(app: AppHandle) -> Result<Vec<TextModelInfo>, IpcError> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let mut model_list = models::get_model_list();
 
@@ -48,7 +49,7 @@ pub async fn text_processing_list_models(app: AppHandle) -> Result<Vec<TextModel
 pub async fn text_processing_download_model(
     app: AppHandle,
     model_id: String,
-) -> Result<String, String> {
+) -> Result<String, IpcError> {
     if !models::is_valid_model_id(&model_id) {
         return Err(TextProcessingError::ModelNotFound(model_id).into());
     }
@@ -59,10 +60,10 @@ pub async fn text_processing_download_model(
 
     let base_url = mirrors::get(&app_data_dir, mirrors::TEXT_MODEL_BASE_URL);
     let url = models::get_model_url(&model_id, base_url.as_deref())
-        .ok_or_else(|| TextProcessingError::ModelNotFound(model_id.clone()).to_string())?;
+        .ok_or_else(|| TextProcessingError::ModelNotFound(model_id.clone()))?;
 
     let final_path = models::text_model_path(&app_data_dir, &model_id)
-        .ok_or_else(|| TextProcessingError::ModelNotFound(model_id.clone()).to_string())?;
+        .ok_or_else(|| TextProcessingError::ModelNotFound(model_id.clone()))?;
     let part_path = final_path.with_extension("gguf.part");
 
     let model_id_cb = model_id.clone();
@@ -106,10 +107,13 @@ pub async fn text_processing_download_model(
 /// or an IO error if removal fails.
 #[tauri::command]
 #[specta::specta]
-pub async fn text_processing_delete_model(app: AppHandle, model_id: String) -> Result<(), String> {
+pub async fn text_processing_delete_model(
+    app: AppHandle,
+    model_id: String,
+) -> Result<(), IpcError> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let path = models::known_model_path(&app_data_dir, &model_id)
-        .ok_or_else(|| TextProcessingError::ModelNotFound(model_id.clone()).to_string())?;
+        .ok_or_else(|| TextProcessingError::ModelNotFound(model_id.clone()))?;
 
     if path.exists() {
         std::fs::remove_file(&path).map_err(TextProcessingError::from)?;
@@ -124,7 +128,7 @@ pub async fn text_processing_delete_model(app: AppHandle, model_id: String) -> R
 /// Returns an error string if the operation fails.
 #[tauri::command]
 #[specta::specta]
-pub async fn text_processing_download_server(app: AppHandle) -> Result<String, String> {
+pub async fn text_processing_download_server(app: AppHandle) -> Result<String, IpcError> {
     let app_data_dir = paths::app_data_dir(&app)?;
 
     let custom_url = mirrors::get(&app_data_dir, mirrors::TEXT_SERVER_URL);
@@ -179,7 +183,7 @@ pub async fn text_processing_download_server(app: AppHandle) -> Result<String, S
 /// Returns an error string if the operation fails.
 #[tauri::command]
 #[specta::specta]
-pub async fn text_processing_delete_server(app: AppHandle) -> Result<(), String> {
+pub async fn text_processing_delete_server(app: AppHandle) -> Result<(), IpcError> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let bin_dir = app_data_dir.join("bin");
 
@@ -211,7 +215,7 @@ pub async fn text_processing_delete_server(app: AppHandle) -> Result<(), String>
 /// Returns an error string if the operation fails.
 #[tauri::command]
 #[specta::specta]
-pub async fn text_processing_check_server(app: AppHandle) -> Result<bool, String> {
+pub async fn text_processing_check_server(app: AppHandle) -> Result<bool, IpcError> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let exists = models::llama_server_path(&app_data_dir).exists()
         && models::is_server_version_current(&app_data_dir);
@@ -230,7 +234,7 @@ pub async fn text_processing_chat(
     manager: State<'_, tokio::sync::Mutex<LlamaServerManager>>,
     text: String,
     model_id: Option<String>,
-) -> Result<String, String> {
+) -> Result<String, IpcError> {
     let task = begin_task(
         &app,
         &manager,
@@ -250,7 +254,7 @@ pub async fn text_processing_chat(
         &app,
     )
     .await
-    .map_err::<String, _>(Into::into)?;
+    .map_err::<IpcError, _>(Into::into)?;
 
     Ok(result)
 }
@@ -271,7 +275,7 @@ pub async fn text_processing_summarize(
     manager: State<'_, tokio::sync::Mutex<LlamaServerManager>>,
     text: String,
     model_id: Option<String>,
-) -> Result<StructuredSummary, String> {
+) -> Result<StructuredSummary, IpcError> {
     let task = begin_task(
         &app,
         &manager,
@@ -307,7 +311,7 @@ pub async fn text_processing_summarize(
                 &app,
             )
             .await
-            .map_err::<String, _>(Into::into)?;
+            .map_err::<IpcError, _>(Into::into)?;
             chunk_summaries.push(summary);
         }
         chunk_summaries.join("\n\n")
@@ -329,10 +333,10 @@ pub async fn text_processing_summarize(
         &app,
     )
     .await
-    .map_err::<String, _>(Into::into)?;
+    .map_err::<IpcError, _>(Into::into)?;
 
     serde_json::from_str::<StructuredSummary>(&json).map_err(|e| {
-        TextProcessingError::InferenceError(format!("summary JSON parse failed: {e}")).to_string()
+        TextProcessingError::InferenceError(format!("summary JSON parse failed: {e}")).into()
     })
 }
 
@@ -343,7 +347,7 @@ pub async fn text_processing_summarize(
 /// Returns an error string if the operation fails.
 #[tauri::command]
 #[specta::specta]
-pub async fn text_processing_cancel(task_id: String) -> Result<bool, String> {
+pub async fn text_processing_cancel(task_id: String) -> Result<bool, IpcError> {
     Ok(inference::INFERENCE_TASK_MANAGER.cancel_task(&task_id))
 }
 
@@ -359,7 +363,7 @@ pub async fn text_processing_generate_title(
     manager: State<'_, tokio::sync::Mutex<LlamaServerManager>>,
     text: String,
     model_id: Option<String>,
-) -> Result<String, String> {
+) -> Result<String, IpcError> {
     // Silent: no UI shows the title stream, and reporting would let it override
     // the progress signal (and therefore the cancel target) of a summarize or
     // clean-text run happening at the same time.
@@ -384,7 +388,7 @@ pub async fn text_processing_generate_title(
         &app,
     )
     .await
-    .map_err::<String, _>(Into::into)?;
+    .map_err::<IpcError, _>(Into::into)?;
 
     // Clean up: trim whitespace, remove surrounding quotes if present
     let title = result
@@ -408,7 +412,7 @@ pub async fn text_processing_clean_text(
     manager: State<'_, tokio::sync::Mutex<LlamaServerManager>>,
     text: String,
     model_id: Option<String>,
-) -> Result<String, String> {
+) -> Result<String, IpcError> {
     let task = begin_task(
         &app,
         &manager,
@@ -432,7 +436,7 @@ pub async fn text_processing_clean_text(
             &app,
         )
         .await
-        .map_err::<String, _>(Into::into)?
+        .map_err::<IpcError, _>(Into::into)?
     } else {
         let mut cleaned_chunks = Vec::new();
         for chunk in &chunks {
@@ -451,7 +455,7 @@ pub async fn text_processing_clean_text(
                 &app,
             )
             .await
-            .map_err::<String, _>(Into::into)?;
+            .map_err::<IpcError, _>(Into::into)?;
             cleaned_chunks.push(chunk_result);
         }
         cleaned_chunks.join("\n\n")
@@ -525,7 +529,7 @@ async fn begin_task(
     manager: &State<'_, tokio::sync::Mutex<LlamaServerManager>>,
     model_id: Option<&str>,
     reporting: ProgressReporting,
-) -> Result<InferenceTask, String> {
+) -> Result<InferenceTask, IpcError> {
     let task_id = uuid::Uuid::new_v4().to_string();
     let token = inference::INFERENCE_TASK_MANAGER.create_task(&task_id);
     let guard = TaskGuard {
@@ -557,7 +561,7 @@ async fn ensure_server_running(
     app: &AppHandle,
     manager: &State<'_, tokio::sync::Mutex<LlamaServerManager>>,
     model_id: Option<&str>,
-) -> Result<(u16, String), String> {
+) -> Result<(u16, String), IpcError> {
     let app_data_dir = paths::app_data_dir(app)?;
 
     let model_id = if let Some(id) = model_id {
@@ -574,7 +578,7 @@ async fn ensure_server_running(
             }
         }
         found.ok_or_else(|| {
-            TextProcessingError::ModelNotFound("No downloaded model found".to_string()).to_string()
+            TextProcessingError::ModelNotFound("No downloaded model found".to_string())
         })?
     };
 
@@ -595,7 +599,7 @@ async fn ensure_server_running(
     let port = mgr
         .start(&app_data_dir, &model_id)
         .await
-        .map_err::<String, _>(Into::into)?;
+        .map_err::<IpcError, _>(Into::into)?;
 
     Ok((port, model_id))
 }
@@ -613,7 +617,7 @@ async fn quick_health_check(port: u16) -> bool {
 }
 
 /// Downloads a file from a URL to a local path.
-async fn download_file(url: &str, output_path: &Path, app: &AppHandle) -> Result<(), String> {
+async fn download_file(url: &str, output_path: &Path, app: &AppHandle) -> Result<(), IpcError> {
     let app_cb = app.clone();
     crate::download::download_file(
         url,
@@ -629,7 +633,7 @@ async fn download_file(url: &str, output_path: &Path, app: &AppHandle) -> Result
         },
     )
     .await
-    .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).to_string())
+    .map_err(|e| TextProcessingError::DownloadFailed(e.to_string()).into())
 }
 
 #[cfg(test)]

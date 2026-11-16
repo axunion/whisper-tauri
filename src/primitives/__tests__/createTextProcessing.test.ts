@@ -260,7 +260,10 @@ describe("createTextProcessing", () => {
       mockInvoke({
         text_processing_check_server: () => true,
         text_processing_download_model: () =>
-          Promise.reject("Download failed: connection reset"),
+          Promise.reject({
+            code: "MODEL_DOWNLOAD_ERROR",
+            message: "Download failed: connection reset",
+          }),
       });
       const { tp } = await setup();
       await tp.checkServer();
@@ -305,7 +308,10 @@ describe("createTextProcessing", () => {
     it("sets an AppError and returns false on failure", async () => {
       mockInvoke({
         text_processing_download_server: () =>
-          Promise.reject("Download failed: 404"),
+          Promise.reject({
+            code: "MODEL_DOWNLOAD_ERROR",
+            message: "Download failed: 404",
+          }),
       });
       const { tp } = await setup();
 
@@ -371,7 +377,10 @@ describe("createTextProcessing", () => {
     it("converts a failure into an AppError", async () => {
       mockInvoke({
         text_processing_delete_model: () =>
-          Promise.reject("Model not found: qwen"),
+          Promise.reject({
+            code: "MODEL_NOT_FOUND",
+            message: "Model not found: qwen",
+          }),
       });
       const { tp } = await setup();
 
@@ -406,7 +415,10 @@ describe("createTextProcessing", () => {
       mockInvoke({
         text_processing_check_server: () => true,
         text_processing_delete_server: () =>
-          Promise.reject("IO error: permission denied"),
+          Promise.reject({
+            code: "FILE_READ_ERROR",
+            message: "IO error: permission denied",
+          }),
       });
       const { tp } = await setup();
       await tp.checkServer();
@@ -514,7 +526,11 @@ describe("createTextProcessing", () => {
 
     it("converts an inference failure into an AppError and returns null", async () => {
       mockInvoke({
-        text_processing_chat: () => Promise.reject("Inference error: boom"),
+        text_processing_chat: () =>
+          Promise.reject({
+            code: "INFERENCE_ERROR",
+            message: "Inference error: boom",
+          }),
       });
       const { tp } = await setup();
 
@@ -533,7 +549,11 @@ describe("createTextProcessing", () => {
 
     it("maps a cancelled inference to a non-recoverable CANCELLED error", async () => {
       mockInvoke({
-        text_processing_chat: () => Promise.reject("Inference cancelled"),
+        text_processing_chat: () =>
+          Promise.reject({
+            code: "CANCELLED",
+            message: "Inference cancelled",
+          }),
       });
       const { tp } = await setup();
 
