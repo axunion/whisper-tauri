@@ -12,7 +12,7 @@ export const commands = {
 	 * 
 	 *  Returns an error if the app data directory cannot be resolved.
 	 */
-	getAvailableModels: (options?: InvokeOptions) => __TAURI_INVOKE<ModelInfo[]>("get_available_models", undefined, options),
+	getAvailableModels: (options?: InvokeOptions) => __TAURI_INVOKE<ModelInfo_Serialize[]>("get_available_models", undefined, options),
 	/**
 	 *  Checks whether a specific model file exists.
 	 * 
@@ -149,7 +149,7 @@ export const commands = {
 	 * 
 	 *  Returns an error if the database cannot be accessed or the entry cannot be saved.
 	 */
-	historySave: (params: HistorySaveParams, options?: InvokeOptions) => __TAURI_INVOKE<string>("history_save", { params }, options),
+	historySave: (params: HistorySaveParams_Deserialize, options?: InvokeOptions) => __TAURI_INVOKE<string>("history_save", { params }, options),
 	/**
 	 *  Lists history entries matching the given filter.
 	 * 
@@ -157,7 +157,7 @@ export const commands = {
 	 * 
 	 *  Returns an error if the database cannot be accessed.
 	 */
-	historyList: (filter: HistoryFilter, options?: InvokeOptions) => __TAURI_INVOKE<HistoryMeta[]>("history_list", { filter }, options),
+	historyList: (filter: HistoryFilter_Deserialize, options?: InvokeOptions) => __TAURI_INVOKE<HistoryMeta_Serialize[]>("history_list", { filter }, options),
 	/**
 	 *  Gets a full history entry by ID.
 	 * 
@@ -165,7 +165,7 @@ export const commands = {
 	 * 
 	 *  Returns an error if the entry is not found or the database cannot be accessed.
 	 */
-	historyGet: (id: string, options?: InvokeOptions) => __TAURI_INVOKE<HistoryEntry>("history_get", { id }, options),
+	historyGet: (id: string, options?: InvokeOptions) => __TAURI_INVOKE<HistoryEntry_Serialize>("history_get", { id }, options),
 	/**
 	 *  Deletes history entries by their IDs.
 	 * 
@@ -189,7 +189,7 @@ export const commands = {
 	 * 
 	 *  Returns an error if the database cannot be accessed or the search fails.
 	 */
-	historySearch: (params: HistorySearchParams, options?: InvokeOptions) => __TAURI_INVOKE<HistoryMeta[]>("history_search", { params }, options),
+	historySearch: (params: HistorySearchParams_Deserialize, options?: InvokeOptions) => __TAURI_INVOKE<HistoryMeta_Serialize[]>("history_search", { params }, options),
 	/**
 	 *  Renames a history entry's file name.
 	 * 
@@ -215,7 +215,7 @@ export const commands = {
 	 * 
 	 *  Returns an error if the database cannot be accessed or the content cannot be saved.
 	 */
-	historySaveAiContent: (params: AiContentSaveParams, options?: InvokeOptions) => __TAURI_INVOKE<string>("history_save_ai_content", { params }, options),
+	historySaveAiContent: (params: AiContentSaveParams_Deserialize, options?: InvokeOptions) => __TAURI_INVOKE<string>("history_save_ai_content", { params }, options),
 	/**
 	 *  Gets AI-generated content by history ID and content type.
 	 * 
@@ -223,7 +223,7 @@ export const commands = {
 	 * 
 	 *  Returns an error if the database cannot be accessed.
 	 */
-	historyGetAiContent: (historyId: string, contentType: string, options?: InvokeOptions) => __TAURI_INVOKE<AiContent | null>("history_get_ai_content", { historyId, contentType }, options),
+	historyGetAiContent: (historyId: string, contentType: string, options?: InvokeOptions) => __TAURI_INVOKE<AiContent_Serialize | null>("history_get_ai_content", { historyId, contentType }, options),
 	/**
 	 *  Gets all AI-generated content for a history entry.
 	 * 
@@ -231,7 +231,7 @@ export const commands = {
 	 * 
 	 *  Returns an error if the database cannot be accessed.
 	 */
-	historyGetAllAiContent: (historyId: string, options?: InvokeOptions) => __TAURI_INVOKE<AiContent[]>("history_get_all_ai_content", { historyId }, options),
+	historyGetAllAiContent: (historyId: string, options?: InvokeOptions) => __TAURI_INVOKE<AiContent_Serialize[]>("history_get_all_ai_content", { historyId }, options),
 	/**
 	 *  Keeps a just-transcribed recording as the audio of history entry `id`.
 	 * 
@@ -346,7 +346,7 @@ export const commands = {
 	 * 
 	 *  Returns an error string if the operation fails.
 	 */
-	textProcessingListModels: (options?: InvokeOptions) => __TAURI_INVOKE<TextModelInfo[]>("text_processing_list_models", undefined, options),
+	textProcessingListModels: (options?: InvokeOptions) => __TAURI_INVOKE<TextModelInfo_Serialize[]>("text_processing_list_models", undefined, options),
 	/**
 	 *  Downloads a text model file with progress reporting.
 	 * 
@@ -408,7 +408,7 @@ export const commands = {
 	 *  Returns an error string if the operation fails or the model returns JSON
 	 *  that does not match the schema.
 	 */
-	textProcessingSummarize: (text: string, modelId: string | null, options?: InvokeOptions) => __TAURI_INVOKE<StructuredSummary>("text_processing_summarize", { text, modelId }, options),
+	textProcessingSummarize: (text: string, modelId: string | null, options?: InvokeOptions) => __TAURI_INVOKE<StructuredSummary_Serialize>("text_processing_summarize", { text, modelId }, options),
 	/**
 	 *  Cancels an in-progress inference task.
 	 * 
@@ -440,7 +440,7 @@ export const commands = {
 	 * 
 	 *  Returns an error string if the settings store cannot be read.
 	 */
-	notionGetSettings: (options?: InvokeOptions) => __TAURI_INVOKE<NotionSettings>("notion_get_settings", undefined, options),
+	notionGetSettings: (options?: InvokeOptions) => __TAURI_INVOKE<NotionSettings_Serialize>("notion_get_settings", undefined, options),
 	/**
 	 *  Persists Notion integration settings.
 	 * 
@@ -448,7 +448,7 @@ export const commands = {
 	 * 
 	 *  Returns an error string if the settings store cannot be written.
 	 */
-	notionSetSettings: (settings: NotionSettings, options?: InvokeOptions) => __TAURI_INVOKE<null>("notion_set_settings", { settings }, options),
+	notionSetSettings: (settings: NotionSettings_Deserialize, options?: InvokeOptions) => __TAURI_INVOKE<null>("notion_set_settings", { settings }, options),
 	/**
 	 *  Verifies the API token and database ID and discovers the title property.
 	 * 
@@ -469,7 +469,7 @@ export const commands = {
 	 *  Returns an error string when Notion is not configured, the HTTP request
 	 *  fails, the API returns a non-2xx status, or the response cannot be parsed.
 	 */
-	notionCreatePage: (payload: NotionPagePayload, options?: InvokeOptions) => __TAURI_INVOKE<NotionPageRef>("notion_create_page", { payload }, options),
+	notionCreatePage: (payload: NotionPagePayload_Deserialize, options?: InvokeOptions) => __TAURI_INVOKE<NotionPageRef_Serialize>("notion_create_page", { payload }, options),
 	/**
 	 *  Fetch the latest release tag (e.g. "v0.2.0") from the GitHub Releases API.
 	 * 
@@ -493,15 +493,62 @@ export const commands = {
  *  is unreliable from transcripts alone. Only the task itself and an optional
  *  due date / timeframe are captured.
  */
-export type ActionItem = {
+export type ActionItem = ActionItem_Serialize | ActionItem_Deserialize;
+
+/**
+ *  A single action item extracted from a transcription.
+ * 
+ *  Assignee inference is intentionally not supported — speaker identification
+ *  is unreliable from transcripts alone. Only the task itself and an optional
+ *  due date / timeframe are captured.
+ */
+export type ActionItem_Deserialize = {
 	/**  The task itself. */
 	what: string,
 	/**  Due date or timeframe phrase. None when unspecified. */
 	due?: string | null,
 };
 
+/**
+ *  A single action item extracted from a transcription.
+ * 
+ *  Assignee inference is intentionally not supported — speaker identification
+ *  is unreliable from transcripts alone. Only the task itself and an optional
+ *  due date / timeframe are captured.
+ */
+export type ActionItem_Serialize = {
+	/**  The task itself. */
+	what: string,
+	/**  Due date or timeframe phrase. None when unspecified. */
+	due?: string,
+};
+
 /**  AI-generated content associated with a history entry. */
-export type AiContent = {
+export type AiContent = AiContent_Serialize | AiContent_Deserialize;
+
+/**  Parameters for saving AI-generated content. */
+export type AiContentSaveParams = AiContentSaveParams_Serialize | AiContentSaveParams_Deserialize;
+
+/**  Parameters for saving AI-generated content. */
+export type AiContentSaveParams_Deserialize = {
+	historyId: string,
+	contentType: string,
+	text: string,
+	optionsJson?: string | null,
+	textModelId: string,
+};
+
+/**  Parameters for saving AI-generated content. */
+export type AiContentSaveParams_Serialize = {
+	historyId: string,
+	contentType: string,
+	text: string,
+	optionsJson?: string,
+	textModelId: string,
+};
+
+/**  AI-generated content associated with a history entry. */
+export type AiContent_Deserialize = {
 	id: string,
 	historyId: string,
 	contentType: string,
@@ -511,12 +558,14 @@ export type AiContent = {
 	textModelId: string,
 };
 
-/**  Parameters for saving AI-generated content. */
-export type AiContentSaveParams = {
+/**  AI-generated content associated with a history entry. */
+export type AiContent_Serialize = {
+	id: string,
 	historyId: string,
 	contentType: string,
+	createdAt: string,
 	text: string,
-	optionsJson?: string | null,
+	optionsJson?: string,
 	textModelId: string,
 };
 
@@ -539,7 +588,33 @@ export type ConversionResult = {
 };
 
 /**  Full history entry including text and segments. */
-export type HistoryEntry = {
+export type HistoryEntry = HistoryEntry_Serialize | HistoryEntry_Deserialize;
+
+/**  Full history entry including text and segments. */
+export type HistoryEntry_Deserialize = {
+	/**  Unique identifier */
+	id: string,
+	/**  Creation timestamp (ISO 8601) */
+	createdAt: string,
+	/**  Original file name */
+	fileName: string,
+	/**  Detected language code */
+	language: string,
+	/**  Model used for transcription */
+	modelId: string,
+	/**  Total duration in milliseconds */
+	duration: number,
+	/**  Full transcribed text */
+	text: string,
+	/**  Segments with timing information */
+	segments: HistorySegment[],
+	vadEnabled?: boolean | null,
+	/**  Path of the entry's recording audio, if it is kept on disk */
+	audioPath?: string | null,
+};
+
+/**  Full history entry including text and segments. */
+export type HistoryEntry_Serialize = {
 	/**  Unique identifier */
 	id: string,
 	/**  Creation timestamp (ISO 8601) */
@@ -562,7 +637,10 @@ export type HistoryEntry = {
 };
 
 /**  Filter for listing history entries. */
-export type HistoryFilter = {
+export type HistoryFilter = HistoryFilter_Serialize | HistoryFilter_Deserialize;
+
+/**  Filter for listing history entries. */
+export type HistoryFilter_Deserialize = {
 	/**
 	 *  Inclusive lower bound, as a suffix-less UTC timestamp matching
 	 *  `created_at` (e.g. "2026-01-01T15:00:00")
@@ -580,8 +658,51 @@ export type HistoryFilter = {
 	sortOrder?: SortOrder | null,
 };
 
+/**  Filter for listing history entries. */
+export type HistoryFilter_Serialize = {
+	/**
+	 *  Inclusive lower bound, as a suffix-less UTC timestamp matching
+	 *  `created_at` (e.g. "2026-01-01T15:00:00")
+	 */
+	dateFrom?: string,
+	/**  Exclusive upper bound, same format as `date_from` */
+	dateTo?: string,
+	/**  Maximum number of entries to return */
+	limit?: number,
+	/**  Number of leading entries to skip, for paging */
+	offset?: number,
+	/**  Sort by field */
+	sortBy?: HistorySortBy,
+	/**  Sort direction */
+	sortOrder?: SortOrder,
+};
+
 /**  Metadata for a history entry (used in list views, without full text/segments). */
-export type HistoryMeta = {
+export type HistoryMeta = HistoryMeta_Serialize | HistoryMeta_Deserialize;
+
+/**  Metadata for a history entry (used in list views, without full text/segments). */
+export type HistoryMeta_Deserialize = {
+	/**  Unique identifier */
+	id: string,
+	/**  Creation timestamp (ISO 8601) */
+	createdAt: string,
+	/**  Original file name */
+	fileName: string,
+	/**  Detected language code */
+	language: string,
+	/**  Model used for transcription */
+	modelId: string,
+	/**  Total duration in milliseconds */
+	duration: number,
+	/**  Preview of the transcribed text */
+	textPreview: string,
+	vadEnabled?: boolean | null,
+	/**  Where the audio came from */
+	source: HistorySource,
+};
+
+/**  Metadata for a history entry (used in list views, without full text/segments). */
+export type HistoryMeta_Serialize = {
 	/**  Unique identifier */
 	id: string,
 	/**  Creation timestamp (ISO 8601) */
@@ -602,7 +723,10 @@ export type HistoryMeta = {
 };
 
 /**  Parameters for saving a new history entry. */
-export type HistorySaveParams = {
+export type HistorySaveParams = HistorySaveParams_Serialize | HistorySaveParams_Deserialize;
+
+/**  Parameters for saving a new history entry. */
+export type HistorySaveParams_Deserialize = {
 	/**  Original file name */
 	fileName: string,
 	/**  Detected language code */
@@ -620,8 +744,30 @@ export type HistorySaveParams = {
 	source: HistorySource,
 };
 
+/**  Parameters for saving a new history entry. */
+export type HistorySaveParams_Serialize = {
+	/**  Original file name */
+	fileName: string,
+	/**  Detected language code */
+	language: string,
+	/**  Model used for transcription */
+	modelId: string,
+	/**  Total duration in milliseconds */
+	duration: number,
+	/**  Full transcribed text */
+	text: string,
+	/**  Segments with timing information */
+	segments: HistorySegment[],
+	vadEnabled?: boolean,
+	/**  Where the audio came from */
+	source: HistorySource,
+};
+
 /**  Parameters for full-text search of history entries. */
-export type HistorySearchParams = {
+export type HistorySearchParams = HistorySearchParams_Serialize | HistorySearchParams_Deserialize;
+
+/**  Parameters for full-text search of history entries. */
+export type HistorySearchParams_Deserialize = {
 	/**  Search query (space-separated keywords for AND search) */
 	query: string,
 	/**
@@ -639,6 +785,27 @@ export type HistorySearchParams = {
 	sortBy?: HistorySortBy | null,
 	/**  Sort direction */
 	sortOrder?: SortOrder | null,
+};
+
+/**  Parameters for full-text search of history entries. */
+export type HistorySearchParams_Serialize = {
+	/**  Search query (space-separated keywords for AND search) */
+	query: string,
+	/**
+	 *  Optional inclusive lower bound, as a suffix-less UTC timestamp matching
+	 *  `created_at` (e.g. "2026-01-01T15:00:00")
+	 */
+	dateFrom?: string,
+	/**  Optional exclusive upper bound, same format as `date_from` */
+	dateTo?: string,
+	/**  Maximum number of entries to return */
+	limit?: number,
+	/**  Number of leading entries to skip, for paging */
+	offset?: number,
+	/**  Sort by field */
+	sortBy?: HistorySortBy,
+	/**  Sort direction */
+	sortOrder?: SortOrder,
 };
 
 /**  A segment of transcribed text with timing information (for history storage). */
@@ -667,7 +834,10 @@ export type HistorySource =
 "file";
 
 /**  Whisper model information. */
-export type ModelInfo = {
+export type ModelInfo = ModelInfo_Serialize | ModelInfo_Deserialize;
+
+/**  Whisper model information. */
+export type ModelInfo_Deserialize = {
 	/**  Model identifier (e.g., "small", "large-v3-turbo") */
 	id: string,
 	/**  Display name */
@@ -683,16 +853,47 @@ export type ModelInfo = {
 	/**  Whether the model is bundled with the app */
 	bundled: boolean,
 	/**  Estimated seconds to process 1 minute of audio (lower bound) */
-	speedSecondsPerMinuteLow: number | null,
+	speedSecondsPerMinuteLow: number,
 	/**  Estimated seconds to process 1 minute of audio (upper bound) */
-	speedSecondsPerMinuteHigh: number | null,
+	speedSecondsPerMinuteHigh: number,
 	/**  Path to the model file (if downloaded) */
 	path?: string | null,
 };
 
-export type NotionActionItem = {
+/**  Whisper model information. */
+export type ModelInfo_Serialize = {
+	/**  Model identifier (e.g., "small", "large-v3-turbo") */
+	id: string,
+	/**  Display name */
+	name: string,
+	/**  Human-readable size (e.g., "142MB") */
+	size: string,
+	/**  Size in bytes */
+	sizeBytes: number,
+	/**  Model description */
+	description: string,
+	/**  Whether the model is downloaded */
+	downloaded: boolean,
+	/**  Whether the model is bundled with the app */
+	bundled: boolean,
+	/**  Estimated seconds to process 1 minute of audio (lower bound) */
+	speedSecondsPerMinuteLow: number,
+	/**  Estimated seconds to process 1 minute of audio (upper bound) */
+	speedSecondsPerMinuteHigh: number,
+	/**  Path to the model file (if downloaded) */
+	path?: string,
+};
+
+export type NotionActionItem = NotionActionItem_Serialize | NotionActionItem_Deserialize;
+
+export type NotionActionItem_Deserialize = {
 	what: string,
 	due?: string | null,
+};
+
+export type NotionActionItem_Serialize = {
+	what: string,
+	due?: string,
 };
 
 /**  Information about a database returned by a successful connection test. */
@@ -709,10 +910,21 @@ export type NotionMetaField = {
 };
 
 /**  Payload for creating a single Notion page. */
-export type NotionPagePayload = {
+export type NotionPagePayload = NotionPagePayload_Serialize | NotionPagePayload_Deserialize;
+
+/**  Payload for creating a single Notion page. */
+export type NotionPagePayload_Deserialize = {
 	title: string,
 	meta?: NotionMetaField[],
-	summary?: NotionSummary | null,
+	summary?: NotionSummary_Deserialize | null,
+	bodyText: string,
+};
+
+/**  Payload for creating a single Notion page. */
+export type NotionPagePayload_Serialize = {
+	title: string,
+	meta: NotionMetaField[],
+	summary: NotionSummary_Serialize | null,
 	bodyText: string,
 };
 
@@ -722,14 +934,46 @@ export type NotionPagePayload = {
  *  `partial` is true when the page was created but some appended children
  *  blocks failed to send — the URL is still valid and openable.
  */
-export type NotionPageRef = {
+export type NotionPageRef = NotionPageRef_Serialize | NotionPageRef_Deserialize;
+
+/**
+ *  Reference to a freshly created Notion page.
+ * 
+ *  `partial` is true when the page was created but some appended children
+ *  blocks failed to send — the URL is still valid and openable.
+ */
+export type NotionPageRef_Deserialize = {
 	pageId: string,
 	url: string,
 	partial?: boolean,
 };
 
+/**
+ *  Reference to a freshly created Notion page.
+ * 
+ *  `partial` is true when the page was created but some appended children
+ *  blocks failed to send — the URL is still valid and openable.
+ */
+export type NotionPageRef_Serialize = {
+	pageId: string,
+	url: string,
+	partial: boolean,
+};
+
 /**  User-configurable Notion integration settings persisted in the settings store. */
-export type NotionSettings = {
+export type NotionSettings = NotionSettings_Serialize | NotionSettings_Deserialize;
+
+/**  User-configurable Notion integration settings persisted in the settings store. */
+export type NotionSettings_Deserialize = {
+	enabled: boolean,
+	token?: string | null,
+	databaseId?: string | null,
+	/**  Title property name discovered when the connection was tested. */
+	titleProperty?: string | null,
+};
+
+/**  User-configurable Notion integration settings persisted in the settings store. */
+export type NotionSettings_Serialize = {
 	enabled: boolean,
 	token: string | null,
 	databaseId: string | null,
@@ -743,14 +987,7 @@ export type NotionSettings = {
  *  `labels` carries the user-facing heading text in the caller's locale so
  *  the page renders in the same language the user saw in the summary tab.
  */
-export type NotionSummary = {
-	headline?: string,
-	tldr: string,
-	keyPoints: string[],
-	actionItems: NotionActionItem[],
-	keywords: string[],
-	labels: NotionSummaryLabels,
-};
+export type NotionSummary = NotionSummary_Serialize | NotionSummary_Deserialize;
 
 /**
  *  Localized section headings used when rendering a `NotionSummary` into
@@ -762,6 +999,36 @@ export type NotionSummaryLabels = {
 	actionItems: string,
 	keywords: string,
 	due: string,
+};
+
+/**
+ *  Structured summary block contents derived from `StructuredSummary`.
+ *  Empty vectors / empty strings mark sections to skip in rendering.
+ *  `labels` carries the user-facing heading text in the caller's locale so
+ *  the page renders in the same language the user saw in the summary tab.
+ */
+export type NotionSummary_Deserialize = {
+	headline?: string,
+	tldr: string,
+	keyPoints: string[],
+	actionItems: NotionActionItem_Deserialize[],
+	keywords: string[],
+	labels: NotionSummaryLabels,
+};
+
+/**
+ *  Structured summary block contents derived from `StructuredSummary`.
+ *  Empty vectors / empty strings mark sections to skip in rendering.
+ *  `labels` carries the user-facing heading text in the caller's locale so
+ *  the page renders in the same language the user saw in the summary tab.
+ */
+export type NotionSummary_Serialize = {
+	headline: string,
+	tldr: string,
+	keyPoints: string[],
+	actionItems: NotionActionItem_Serialize[],
+	keywords: string[],
+	labels: NotionSummaryLabels,
 };
 
 /**  Result returned when recording is stopped. */
@@ -808,7 +1075,18 @@ export type StorageStats = {
  *  transcription does not yield that kind of content (e.g. a monologue with
  *  no action items).
  */
-export type StructuredSummary = {
+export type StructuredSummary = StructuredSummary_Serialize | StructuredSummary_Deserialize;
+
+/**
+ *  Structured summary returned by `text_processing_summarize`.
+ * 
+ *  Every field is required in the JSON schema. `tldr` is a 1–2 sentence
+ *  paragraph that summarises the whole transcription, while `keyPoints` is a
+ *  bullet-style list of sub-topics. Arrays may be empty when the
+ *  transcription does not yield that kind of content (e.g. a monologue with
+ *  no action items).
+ */
+export type StructuredSummary_Deserialize = {
 	/**  Single-line title. */
 	headline: string,
 	/**  1–2 sentence overall recap (lead paragraph). */
@@ -816,13 +1094,38 @@ export type StructuredSummary = {
 	/**  Salient keywords / topical noun phrases. */
 	keywords: string[],
 	/**  Extracted action items, possibly empty. */
-	actionItems: ActionItem[],
+	actionItems: ActionItem_Deserialize[],
+	/**  Sub-topic bullets, 2–5 entries detailing the body of the discussion. */
+	keyPoints: string[],
+};
+
+/**
+ *  Structured summary returned by `text_processing_summarize`.
+ * 
+ *  Every field is required in the JSON schema. `tldr` is a 1–2 sentence
+ *  paragraph that summarises the whole transcription, while `keyPoints` is a
+ *  bullet-style list of sub-topics. Arrays may be empty when the
+ *  transcription does not yield that kind of content (e.g. a monologue with
+ *  no action items).
+ */
+export type StructuredSummary_Serialize = {
+	/**  Single-line title. */
+	headline: string,
+	/**  1–2 sentence overall recap (lead paragraph). */
+	tldr: string,
+	/**  Salient keywords / topical noun phrases. */
+	keywords: string[],
+	/**  Extracted action items, possibly empty. */
+	actionItems: ActionItem_Serialize[],
 	/**  Sub-topic bullets, 2–5 entries detailing the body of the discussion. */
 	keyPoints: string[],
 };
 
 /**  Text processing model information. */
-export type TextModelInfo = {
+export type TextModelInfo = TextModelInfo_Serialize | TextModelInfo_Deserialize;
+
+/**  Text processing model information. */
+export type TextModelInfo_Deserialize = {
 	/**  Model identifier (e.g., "gemma-4-e2b", "qwen3.5-4b") */
 	id: string,
 	/**  Display name */
@@ -837,6 +1140,24 @@ export type TextModelInfo = {
 	downloaded: boolean,
 	/**  Path to the model file (if downloaded) */
 	path?: string | null,
+};
+
+/**  Text processing model information. */
+export type TextModelInfo_Serialize = {
+	/**  Model identifier (e.g., "gemma-4-e2b", "qwen3.5-4b") */
+	id: string,
+	/**  Display name */
+	name: string,
+	/**  Human-readable size (e.g., "2.7GB") */
+	size: string,
+	/**  Size in bytes */
+	sizeBytes: number,
+	/**  Model description */
+	description: string,
+	/**  Whether the model is downloaded */
+	downloaded: boolean,
+	/**  Path to the model file (if downloaded) */
+	path?: string,
 };
 
 /**  Transcription result with full text and segments. */

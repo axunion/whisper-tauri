@@ -17,8 +17,10 @@ pub struct AudioDevice {
 #[serde(rename_all = "camelCase")]
 pub struct RecordingLevel {
     /// RMS level (0.0 - 1.0).
+    #[specta(type = specta_typescript::Number)]
     pub level: f32,
     /// Peak level (0.0 - 1.0).
+    #[specta(type = specta_typescript::Number)]
     pub peak_level: f32,
 }
 

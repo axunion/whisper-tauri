@@ -1,12 +1,4 @@
-/**
- * Result of an audio file conversion.
- */
-export interface ConversionResult {
-  /** Path to the converted WAV file */
-  outputPath: string;
-  /** Original file path */
-  originalPath: string;
-}
+export type { ConversionResult } from "~/bindings";
 
 /**
  * FFmpeg download progress event payload.

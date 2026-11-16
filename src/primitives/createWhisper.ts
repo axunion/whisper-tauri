@@ -1,6 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { batch, createRoot, createSignal } from "solid-js";
+import { commands } from "~/bindings";
 import { parseError } from "~/lib/errors";
 import { sumDownloadedBytes } from "~/lib/format";
 import { createSettings } from "~/primitives/createSettings";
@@ -111,9 +111,7 @@ listen<TranscriptionProgress>("whisper:progress", (event) => {
   setCurrentTaskId(event.payload.taskId);
   if (cancelRequested) {
     cancelRequested = false;
-    invoke("cancel_transcription", { taskId: event.payload.taskId }).catch(
-      console.error,
-    );
+    commands.cancelTranscription(event.payload.taskId).catch(console.error);
   }
 }).catch(console.error);
 
@@ -157,7 +155,7 @@ let loadModelsPromise: Promise<void> | null = null;
 /** Unguarded refresh — used after mutations that change what is on disk. */
 async function fetchModels(): Promise<void> {
   try {
-    const res = await invoke<ModelInfo[]>("get_available_models");
+    const res = await commands.getAvailableModels();
     setModels(res);
     autoSelectModel();
     modelsLoaded = true;
@@ -193,7 +191,7 @@ async function downloadModel(modelId: string): Promise<boolean> {
   if (isDownloading()) return false;
   setIsDownloading(true);
   try {
-    await invoke("download_model", { modelId });
+    await commands.downloadModel(modelId);
     await fetchModels();
     return true;
   } catch (e) {
@@ -206,7 +204,7 @@ async function downloadModel(modelId: string): Promise<boolean> {
 
 async function deleteModel(modelId: string): Promise<boolean> {
   try {
-    await invoke("delete_model", { modelId });
+    await commands.deleteModel(modelId);
     const wasSelected = selectedModel()?.id === modelId;
     if (wasSelected) {
       setSelectedModel(null);
@@ -232,7 +230,7 @@ async function selectFile(fileInfo: FileInfo): Promise<void> {
   // Fetch duration asynchronously — non-critical, UI works without it
   const filePath = fileInfo.path;
   try {
-    const duration = await invoke<number>("get_audio_duration", { filePath });
+    const duration = await commands.getAudioDuration(filePath);
     // Only update if the file hasn't changed while we were fetching
     const current = file();
     if (current?.path === filePath) {
@@ -246,7 +244,9 @@ async function selectFile(fileInfo: FileInfo): Promise<void> {
 async function startTranscription(overrideAudioPath?: string): Promise<void> {
   const currentFile = file();
   const currentModel = selectedModel();
-  if (!currentFile || !currentModel) return;
+  const modelPath = currentModel?.path;
+  // A model only has a path once downloaded.
+  if (!currentFile || !modelPath) return;
   if (isProcessing()) return;
 
   cancelRequested = false;
@@ -263,17 +263,14 @@ async function startTranscription(overrideAudioPath?: string): Promise<void> {
   try {
     let vadModelPath: string | null = null;
     if (vadEnabled()) {
-      vadModelPath = await invoke<string>("ensure_vad_model");
+      vadModelPath = await commands.ensureVadModel();
     }
 
-    const transcriptionResult = await invoke<TranscriptionResult>(
-      "transcribe_audio",
-      {
-        audioPath: overrideAudioPath ?? currentFile.path,
-        modelPath: currentModel.path,
-        language: language(),
-        vadModelPath,
-      },
+    const transcriptionResult = await commands.transcribeAudio(
+      overrideAudioPath ?? currentFile.path,
+      modelPath,
+      language(),
+      vadModelPath,
     );
     batch(() => {
       setResult(transcriptionResult);
@@ -294,7 +291,7 @@ async function cancelTranscription(): Promise<void> {
     cancelRequested = isProcessing();
     return;
   }
-  await invoke("cancel_transcription", { taskId });
+  await commands.cancelTranscription(taskId);
 }
 
 function reset(): void {

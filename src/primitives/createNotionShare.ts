@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { createSignal } from "solid-js";
+import { commands } from "~/bindings";
 import type { DictionaryKey } from "~/i18n/types";
 import { parseError } from "~/lib/errors";
 import type { NotionPagePayload, NotionPageRef } from "~/types";
@@ -17,9 +17,7 @@ export function createNotionShare() {
   ): Promise<NotionPageRef | null> {
     setState({ kind: "sending" });
     try {
-      const pageRef = await invoke<NotionPageRef>("notion_create_page", {
-        payload,
-      });
+      const pageRef = await commands.notionCreatePage(payload);
       setState({ kind: "idle" });
       return pageRef;
     } catch (e) {

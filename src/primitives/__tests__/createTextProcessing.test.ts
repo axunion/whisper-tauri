@@ -455,11 +455,11 @@ describe("createTextProcessing", () => {
       mockInvoke({ text_processing_chat: () => "ok" });
       const { tp } = await setup();
 
-      // No selection: modelId undefined lets the backend auto-pick
+      // No selection: a null modelId lets the backend auto-pick
       await tp.chat("hello");
       expect(invoke).toHaveBeenCalledWith("text_processing_chat", {
         text: "hello",
-        modelId: undefined,
+        modelId: null,
       });
 
       // Explicit override wins over the current selection

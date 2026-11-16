@@ -62,7 +62,6 @@ fn ipc_builder() -> tauri_specta::Builder<tauri::Wry> {
     tauri_specta::Builder::<tauri::Wry>::new()
         // Durations, sizes and counts stay far below 2^53.
         .dangerously_cast_bigints_to_number()
-        .disable_serde_phases()
         .commands(tauri_specta::collect_commands![
             whisper::commands::get_available_models,
             whisper::commands::check_model_exists,

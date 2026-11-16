@@ -19,8 +19,10 @@ pub struct ModelInfo {
     /// Whether the model is bundled with the app
     pub bundled: bool,
     /// Estimated seconds to process 1 minute of audio (lower bound)
+    #[specta(type = specta_typescript::Number)]
     pub speed_seconds_per_minute_low: f64,
     /// Estimated seconds to process 1 minute of audio (upper bound)
+    #[specta(type = specta_typescript::Number)]
     pub speed_seconds_per_minute_high: f64,
     /// Path to the model file (if downloaded)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -62,6 +64,7 @@ pub struct TranscriptionProgress {
     /// Task identifier
     pub task_id: String,
     /// Progress percentage (0-100)
+    #[specta(type = specta_typescript::Number)]
     pub progress: f64,
     /// Elapsed time in milliseconds
     pub elapsed_ms: u64,
@@ -78,6 +81,7 @@ pub struct DownloadProgress {
     /// Total bytes
     pub total_bytes: u64,
     /// Progress percentage (0-100)
+    #[specta(type = specta_typescript::Number)]
     pub progress: f64,
 }
 

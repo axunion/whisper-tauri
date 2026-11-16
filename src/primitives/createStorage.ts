@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { createSignal } from "solid-js";
+import { commands } from "~/bindings";
 import { parseError } from "~/lib/errors";
 import { createRecording } from "~/primitives/createRecording";
 import type { StorageStats } from "~/types";
@@ -15,9 +15,7 @@ export function createStorage() {
       // The recording this session still holds is on screen in the record
       // tab, not a leftover: it is neither counted here nor deleted below.
       setStats(
-        await invoke<StorageStats>("history_storage_stats", {
-          keepPath: createRecording().tempFilePath(),
-        }),
+        await commands.historyStorageStats(createRecording().tempFilePath()),
       );
     } catch (e) {
       setError(parseError(e));
@@ -25,12 +23,9 @@ export function createStorage() {
   }
 
   /** Runs a delete command, then refreshes the usage it changed. */
-  async function runDelete(
-    command: string,
-    args?: Record<string, unknown>,
-  ): Promise<boolean> {
+  async function runDelete(command: () => Promise<unknown>): Promise<boolean> {
     try {
-      await invoke(command, args);
+      await command();
       await load();
       return true;
     } catch (e) {
@@ -41,19 +36,19 @@ export function createStorage() {
 
   /** Deletes the audio of every history entry, keeping the entries. */
   function deleteAllAudio(): Promise<boolean> {
-    return runDelete("history_delete_all_audio");
+    return runDelete(commands.historyDeleteAllAudio);
   }
 
   /** Deletes every history entry together with its audio. */
   function deleteAllHistory(): Promise<boolean> {
-    return runDelete("history_delete_all");
+    return runDelete(commands.historyDeleteAll);
   }
 
   /** Deletes recordings that were never transcribed. */
   function deletePendingRecordings(): Promise<boolean> {
-    return runDelete("history_delete_pending_recordings", {
-      keepPath: createRecording().tempFilePath(),
-    });
+    return runDelete(() =>
+      commands.historyDeletePendingRecordings(createRecording().tempFilePath()),
+    );
   }
 
   function clearError(): void {

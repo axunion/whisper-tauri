@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { createRoot, createSignal } from "solid-js";
+import { commands } from "~/bindings";
 import { extractFilename } from "~/lib/constants";
 import { parseError } from "~/lib/errors";
 import { notifyUnlessFocused } from "~/lib/notify";
@@ -199,7 +199,7 @@ async function saveToHistory(
   };
   let id: string;
   try {
-    id = await invoke<string>("history_save", { params });
+    id = await commands.historySave(params);
   } catch (e) {
     // The caller announces completion only for a saved result: announcing it
     // here would tell the user the result is safe when it is not in history.
@@ -250,7 +250,7 @@ async function runFile(
   const id = await saveToHistory(file.name, "recording");
   if (!id) return false;
   try {
-    await invoke("history_copy_audio", { fromId: source.id, toId: id });
+    await commands.historyCopyAudio(source.id, id);
   } catch (e) {
     setAttachError(parseError(e));
   }
@@ -407,7 +407,7 @@ async function startRecording(options: StartRecordingOptions): Promise<void> {
   // The WAV becomes the entry's audio. If the move fails it is still an
   // untranscribed recording as far as the UI goes, so nothing is lost.
   try {
-    await invoke("history_attach_recording", { id, recordingPath: tempPath });
+    await commands.historyAttachRecording(id, tempPath);
     recording.release();
   } catch (e) {
     setAttachError(parseError(e));

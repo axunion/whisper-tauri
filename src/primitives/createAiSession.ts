@@ -1,6 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
 import type { Accessor } from "solid-js";
 import { createSignal, onCleanup } from "solid-js";
+import { commands } from "~/bindings";
 import { parseError } from "~/lib/errors";
 import { createTextProcessing } from "~/primitives/createTextProcessing";
 import type {
@@ -127,10 +127,8 @@ export function createAiSession(
     const hid = historyIdGetter();
     if (!hid) return;
     try {
-      const content = await invoke<AiContent[]>("history_get_all_ai_content", {
-        historyId: hid,
-      });
-      loadFromAiContent(content);
+      const content = await commands.historyGetAllAiContent(hid);
+      loadFromAiContent(content as AiContent[]);
     } catch {
       // Best-effort: silently ignore load failures
     }
@@ -146,19 +144,19 @@ export function createAiSession(
   ): void {
     const historyId = historyIdGetter();
     if (!historyId) return;
-    invoke("history_save_ai_content", {
-      params: {
+    commands
+      .historySaveAiContent({
         historyId,
         contentType,
         text,
         ...(optionsJson !== undefined && { optionsJson }),
         textModelId: modelId,
-      },
-    }).catch(console.error);
+      })
+      .catch(console.error);
   }
 
   async function runExtraction<TResult>(
-    command: string,
+    run: (text: string, modelId: string | null) => Promise<TResult>,
     contentType: AiContentType,
     operation: "summary" | "cleanText",
     setResult: (v: TResult | null) => void,
@@ -171,7 +169,7 @@ export function createAiSession(
     setError(null);
     try {
       const modelId = tp.effectiveModelId();
-      const result = await invoke<TResult>(command, { text, modelId });
+      const result = await run(text, modelId ?? null);
       setResult(result);
       if (result !== null && result !== undefined) {
         saveToHistory(contentType, serialize(result), modelId ?? "unknown");
@@ -188,7 +186,7 @@ export function createAiSession(
 
   async function summarize(text: string): Promise<StructuredSummary | null> {
     return runExtraction<StructuredSummary>(
-      "text_processing_summarize",
+      commands.textProcessingSummarize,
       "summary",
       "summary",
       setSummaryResult,
@@ -199,7 +197,7 @@ export function createAiSession(
 
   async function cleanText(text: string): Promise<string | null> {
     return runExtraction<string>(
-      "text_processing_clean_text",
+      commands.textProcessingCleanText,
       "cleanText",
       "cleanText",
       setCleanTextResult,

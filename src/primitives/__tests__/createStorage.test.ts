@@ -47,10 +47,7 @@ describe("createStorage", () => {
       const ok = await storage.deleteAllAudio();
 
       expect(ok).toBe(true);
-      expect(invoke).toHaveBeenCalledWith(
-        "history_delete_all_audio",
-        undefined,
-      );
+      expect(invoke).toHaveBeenCalledWith("history_delete_all_audio");
       expect(storage.stats()?.audioCount).toBe(0);
       dispose();
     });
@@ -66,7 +63,7 @@ describe("createStorage", () => {
 
       expect(await storage.deleteAllHistory()).toBe(true);
 
-      expect(invoke).toHaveBeenCalledWith("history_delete_all", undefined);
+      expect(invoke).toHaveBeenCalledWith("history_delete_all");
       dispose();
     });
   });

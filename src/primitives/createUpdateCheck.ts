@@ -1,6 +1,6 @@
 import { getVersion } from "@tauri-apps/api/app";
-import { invoke } from "@tauri-apps/api/core";
 import { type Accessor, createSignal } from "solid-js";
+import { commands } from "~/bindings";
 import { isNewerVersion } from "~/lib/version";
 
 export type UpdateStatus =
@@ -34,7 +34,7 @@ export function createUpdateCheck(): UpdateCheck {
         current = await getVersion();
         setCurrentVersion(current);
       }
-      const latest = await invoke<string>("check_latest_version");
+      const latest = await commands.checkLatestVersion();
       setStatus(
         isNewerVersion(current, latest)
           ? { state: "available", version: latest }

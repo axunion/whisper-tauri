@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { createSignal } from "solid-js";
+import { commands } from "~/bindings";
 import { parseError } from "~/lib/errors";
 import type { ConversionResult } from "~/types";
 import type { AppError } from "~/types/errors";
@@ -12,9 +12,7 @@ export function createFileConverter() {
     setIsConverting(true);
     setError(null);
     try {
-      const result = await invoke<ConversionResult>("convert_audio_file", {
-        inputPath,
-      });
+      const result = await commands.convertAudioFile(inputPath);
       return result;
     } catch (e) {
       setError(parseError(e));
@@ -26,7 +24,7 @@ export function createFileConverter() {
 
   async function cleanup(filePath: string): Promise<void> {
     try {
-      await invoke("cleanup_converted_file", { filePath });
+      await commands.cleanupConvertedFile(filePath);
     } catch {
       // Cleanup failures are non-critical
     }

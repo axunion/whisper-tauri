@@ -1,12 +1,11 @@
-import { invoke } from "@tauri-apps/api/core";
 import { createSignal, onCleanup } from "solid-js";
+import { commands } from "~/bindings";
 import { parseError } from "~/lib/errors";
 import type {
   HistoryEntry,
   HistoryFilter,
   HistoryMeta,
   HistorySearchParams,
-  SegmentUpdate,
 } from "~/types";
 import type { AppError } from "~/types/errors";
 
@@ -70,10 +69,10 @@ export function createHistory() {
     };
     if (isSearching()) {
       const params: HistorySearchParams = { query: searchQuery(), ...common };
-      return invoke<HistoryMeta[]>("history_search", { params });
+      return commands.historySearch(params);
     }
     const listFilter: HistoryFilter = common;
-    return invoke<HistoryMeta[]>("history_list", { filter: listFilter });
+    return commands.historyList(listFilter);
   }
 
   async function fetchFirstPage(): Promise<void> {
@@ -144,7 +143,7 @@ export function createHistory() {
 
   async function getEntry(id: string): Promise<void> {
     try {
-      const entry = await invoke<HistoryEntry>("history_get", { id });
+      const entry = await commands.historyGet(id);
       setSelectedEntry(entry);
     } catch (e) {
       setError(parseError(e));
@@ -153,7 +152,7 @@ export function createHistory() {
 
   async function deleteEntries(ids: string[]): Promise<boolean> {
     try {
-      await invoke("history_delete", { ids });
+      await commands.historyDelete(ids);
       setSelectedIds(new Set<string>());
       // Dropped locally instead of reloading, so deleting from a later page
       // keeps the user's place. The database shrinks by the same rows, so the
@@ -169,7 +168,7 @@ export function createHistory() {
 
   async function deleteAllEntries(): Promise<boolean> {
     try {
-      await invoke("history_delete_all");
+      await commands.historyDeleteAll();
       setSelectedIds(new Set<string>());
       await loadEntries();
       return true;
@@ -181,7 +180,7 @@ export function createHistory() {
 
   async function renameEntry(id: string, fileName: string): Promise<void> {
     try {
-      await invoke("history_rename", { id, fileName });
+      await commands.historyRename(id, fileName);
       // Update selectedEntry if it matches
       const current = selectedEntry();
       if (current && current.id === id) {
@@ -208,11 +207,7 @@ export function createHistory() {
     text: string,
   ): Promise<boolean> {
     try {
-      const update = await invoke<SegmentUpdate>("history_update_segment", {
-        id,
-        index,
-        text,
-      });
+      const update = await commands.historyUpdateSegment(id, index, text);
       const current = selectedEntry();
       if (current?.id === id) {
         setSelectedEntry({
@@ -238,7 +233,7 @@ export function createHistory() {
   /** Deletes an entry's recording audio, keeping the entry itself. */
   async function deleteAudio(id: string): Promise<boolean> {
     try {
-      await invoke("history_delete_audio", { id });
+      await commands.historyDeleteAudio(id);
       const current = selectedEntry();
       if (current?.id === id) {
         setSelectedEntry({ ...current, audioPath: null });

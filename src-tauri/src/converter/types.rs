@@ -19,6 +19,7 @@ pub struct FfmpegDownloadProgress {
     /// Total bytes
     pub total_bytes: u64,
     /// Progress percentage (0-100)
+    #[specta(type = specta_typescript::Number)]
     pub progress: f64,
 }
 
