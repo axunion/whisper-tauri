@@ -17,6 +17,7 @@ export const ja: Dictionary = {
     downloadingServer: "llama-serverをダウンロード中",
     helpHintLabel: "用語の説明を表示",
     editTitle: "タイトルを編集",
+    transcribing: "文字起こし中...",
     notifications: "通知",
   },
   closeGuard: {
@@ -156,6 +157,9 @@ export const ja: Dictionary = {
     update: "更新",
     vadEnabled: "VAD",
     vadDescription: "無音をスキップして文字起こしを高速化します。",
+    notifyOnComplete: "完了を通知",
+    notifyOnCompleteDescription:
+      "アプリが前面にないときに、文字起こしの完了を通知で知らせます。",
     appUpdate: "アプリの更新",
     appUpdateCurrentVersion: "現在のバージョン: {version}",
     appUpdateCheck: "更新を確認",

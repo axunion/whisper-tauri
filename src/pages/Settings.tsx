@@ -111,6 +111,21 @@ export default function Settings() {
 
           <Separator />
 
+          <SectionRow
+            title={t("settings.notifyOnComplete")}
+            description={t("settings.notifyOnCompleteDescription")}
+            right={
+              <Checkbox
+                checked={settings.notifyOnComplete()}
+                onChange={(checked: boolean) => {
+                  settings.update({ notifyOnComplete: checked });
+                }}
+              />
+            }
+          />
+
+          <Separator />
+
           <UpdateCheck />
         </CardContent>
       </Card>

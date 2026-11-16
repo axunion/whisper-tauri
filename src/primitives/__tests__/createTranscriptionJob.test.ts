@@ -1,5 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type MockInstance,
+  vi,
+} from "vitest";
 import type { ModelInfo, TranscriptionResult } from "../../types";
 import { _resetRecordingForTesting, createRecording } from "../createRecording";
 import { _resetSettingsForTesting } from "../createSettings";
@@ -9,10 +17,15 @@ import {
 } from "../createTranscriptionJob";
 import { _resetWhisperForTesting, createWhisper } from "../createWhisper";
 
+vi.mock("~/lib/notify", () => ({
+  notifyUnlessFocused: vi.fn(() => Promise.resolve()),
+}));
+
 vi.mock("~/lib/toast", () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() },
 }));
 
+import { notifyUnlessFocused } from "~/lib/notify";
 import { toast } from "~/lib/toast";
 
 const model: ModelInfo = {
@@ -108,6 +121,7 @@ describe("createTranscriptionJob", () => {
     _resetTranscriptionJobForTesting();
     vi.mocked(invoke).mockReset();
     vi.mocked(toast.success).mockReset();
+    vi.mocked(notifyUnlessFocused).mockClear();
   });
 
   describe("file run", () => {
@@ -375,6 +389,83 @@ describe("createTranscriptionJob", () => {
       await job.startFile(options);
 
       expect(commandsCalled()).not.toContain("transcribe_audio");
+    });
+  });
+
+  describe("completion notification", () => {
+    it("notifies once the result is saved", async () => {
+      mockBackend();
+      await selectFile("meeting.wav");
+
+      await createTranscriptionJob().startFile(options);
+
+      expect(notifyUnlessFocused).toHaveBeenCalledWith("完了", "meeting.wav");
+    });
+
+    it("does not notify when the result could not be saved", async () => {
+      mockBackend({
+        history_save: () => {
+          throw "Database error: disk full";
+        },
+      });
+      await selectFile("meeting.wav");
+
+      await createTranscriptionJob().startFile(options);
+
+      expect(notifyUnlessFocused).not.toHaveBeenCalled();
+    });
+
+    it("does not notify when the setting is off", async () => {
+      _resetSettingsForTesting({ notifyOnComplete: false });
+      mockBackend();
+      await selectFile("meeting.wav");
+
+      await createTranscriptionJob().startFile(options);
+
+      expect(notifyUnlessFocused).not.toHaveBeenCalled();
+    });
+
+    it("notifies with the recording's name", async () => {
+      mockBackend();
+      await makeRecording();
+
+      await createTranscriptionJob().startRecording({
+        ...options,
+        name: "録音 2026-11-15 14:30",
+      });
+
+      expect(notifyUnlessFocused).toHaveBeenCalledWith(
+        "完了",
+        "録音 2026-11-15 14:30",
+      );
+    });
+
+    describe("when the notification API rejects", () => {
+      let consoleError: MockInstance;
+
+      beforeEach(() => {
+        consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      });
+
+      afterEach(() => {
+        consoleError.mockRestore();
+      });
+
+      it("still completes the run when the notification cannot be sent", async () => {
+        vi.mocked(notifyUnlessFocused).mockRejectedValueOnce(
+          new Error("notification failed"),
+        );
+        mockBackend();
+        await selectFile("meeting.wav");
+        const job = createTranscriptionJob();
+
+        await job.startFile(options);
+
+        expect(job.phase()).toBe("done");
+        expect(job.historyId()).toBe("history-1");
+        expect(job.error()).toBeNull();
+        await vi.waitFor(() => expect(consoleError).toHaveBeenCalled());
+      });
     });
   });
 

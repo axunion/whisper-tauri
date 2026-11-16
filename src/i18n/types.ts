@@ -17,6 +17,7 @@ export interface Dictionary {
     downloadingServer: string;
     helpHintLabel: string;
     editTitle: string;
+    transcribing: string;
     notifications: string;
   };
   closeGuard: {
@@ -143,6 +144,8 @@ export interface Dictionary {
     update: string;
     vadEnabled: string;
     vadDescription: string;
+    notifyOnComplete: string;
+    notifyOnCompleteDescription: string;
     appUpdate: string;
     appUpdateCurrentVersion: string;
     appUpdateCheck: string;

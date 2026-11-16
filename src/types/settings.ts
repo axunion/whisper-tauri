@@ -6,6 +6,7 @@ export interface AppSettings {
   textModelId: string | null;
   onboardingCompleted: boolean;
   vadEnabled: boolean;
+  notifyOnComplete: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -16,4 +17,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   textModelId: null,
   onboardingCompleted: false,
   vadEnabled: true,
+  notifyOnComplete: true,
 };

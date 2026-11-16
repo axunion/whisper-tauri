@@ -1,9 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { createRoot, createSignal } from "solid-js";
 import { parseError } from "~/lib/errors";
+import { notifyUnlessFocused } from "~/lib/notify";
 import { toast } from "~/lib/toast";
 import { createFileConverter } from "~/primitives/createFileConverter";
 import { createRecording } from "~/primitives/createRecording";
+import { createSettings } from "~/primitives/createSettings";
 import { createWhisper } from "~/primitives/createWhisper";
 import type { HistorySaveParams, HistorySource } from "~/types";
 import type { AppError } from "~/types/errors";
@@ -162,6 +164,9 @@ async function saveToHistory(
   }
   setHistoryId(id);
   toast.success(completedMessage);
+  if (createSettings().notifyOnComplete()) {
+    notifyUnlessFocused(completedMessage, fileName).catch(console.error);
+  }
   return id;
 }
 

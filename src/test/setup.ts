@@ -28,6 +28,7 @@ vi.mock("@tauri-apps/api/event", () => ({
 vi.mock("@tauri-apps/api/window", () => {
   const currentWindow = {
     show: vi.fn(() => Promise.resolve()),
+    isFocused: vi.fn(() => Promise.resolve(true)),
     center: vi.fn(() => Promise.resolve()),
     setSize: vi.fn(() => Promise.resolve()),
     setMinSize: vi.fn(() => Promise.resolve()),
@@ -41,6 +42,11 @@ vi.mock("@tauri-apps/api/window", () => {
     }),
   };
 });
+
+// Mock @tauri-apps/plugin-notification
+vi.mock("@tauri-apps/plugin-notification", () => ({
+  sendNotification: vi.fn(),
+}));
 
 // Mock @tauri-apps/plugin-dialog
 vi.mock("@tauri-apps/plugin-dialog", () => ({

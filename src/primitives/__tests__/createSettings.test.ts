@@ -50,6 +50,7 @@ describe("createSettings", () => {
         textModelId: "gemma-4-e2b",
         onboardingCompleted: true,
         vadEnabled: false,
+        notifyOnComplete: false,
       };
 
       await createRoot(async (dispose) => {
@@ -77,6 +78,30 @@ describe("createSettings", () => {
           ...DEFAULT_SETTINGS,
           language: "en",
         });
+        dispose();
+      });
+    });
+
+    it("should default notifyOnComplete to true for settings saved before it existed", async () => {
+      const predating = {
+        language: "en",
+        theme: "dark",
+        whisperLanguage: "ja",
+        whisperModelId: "large-v3-turbo",
+        textModelId: null,
+        onboardingCompleted: true,
+        vadEnabled: false,
+      };
+
+      await createRoot(async (dispose) => {
+        const settings = createSettings();
+        const store = getLastStoreInstance();
+        store.get.mockResolvedValueOnce(predating);
+
+        await settings.load();
+
+        expect(settings.notifyOnComplete()).toBe(true);
+        expect(settings.vadEnabled()).toBe(false);
         dispose();
       });
     });

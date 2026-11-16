@@ -19,6 +19,7 @@ Source: `src-tauri/src/settings.rs` / `src-tauri/src/update.rs` / `src/primitive
 | `textModelId` | `string \| null` | `null` |
 | `onboardingCompleted` | `boolean` | `false` |
 | `vadEnabled` | `boolean` | `true` |
+| `notifyOnComplete` | `boolean` | `true` |
 
 `whisperModelId` / `textModelId` は選択したモデルの永続化に使う。選択時に書き込み、モデル一覧の初回ロード時に復元する (`createWhisper.ts::autoSelectModel` / `createTextProcessing.ts::fetchModels`)。保存された ID のモデルが未ダウンロードの場合、Whisper はダウンロード済みの先頭にフォールバックし、LLM は未選択のままになる。
 

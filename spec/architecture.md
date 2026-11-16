@@ -27,7 +27,7 @@ Source: `src-tauri/src/lib.rs` / `src-tauri/tauri.conf.json` / `src-tauri/capabi
 - `std::sync::Mutex<RecordingManager>` — 録音セッション
 - `tokio::sync::Mutex<LlamaServerManager>` — llama-server 子プロセス。`RunEvent::Exit` で `shutdown()` を呼び、アプリ終了時に必ず停止する
 
-**プラグイン**: `opener` / `dialog` / `fs` / `store` / `clipboard-manager`
+**プラグイン**: `opener` / `dialog` / `fs` / `store` / `clipboard-manager` / `notification`
 
 ### フロントエンド (`src/`)
 
@@ -86,6 +86,11 @@ mirrors.json       # ダウンロード元の差し替え (任意・手編集)
 - CSP (`tauri.conf.json`): `default-src 'self'` ベース。`connect-src 'self' ipc: http://ipc.localhost` — WebView からの外部通信を遮断し、ネットワークアクセスはすべて Rust 側 (reqwest) に集約
 - アセットプロトコル (`tauri.conf.json` の `assetProtocol`、Cargo の `protocol-asset` feature): 録音音声の再生用に有効化。scope は `$APPDATA/audio/*` のみで、CSP の `media-src` も `asset:` / `http://asset.localhost` に限る。アセットプロトコルの静的 scope はこのディレクトリだけ (ダイアログで選んだファイルは dialog プラグインが実行時に scope へ追加する)
 - Rust は `unsafe_code = "forbid"`、clippy `pedantic` + `unwrap_used` / `expect_used` 警告
+
+## 実行中の表示と完了通知
+
+- サイドバーの `TranscriptionIndicator` が、変換中・推論中の進捗を全ページで表示する (クリックで `/transcription`)
+- 履歴への保存に成功した時点で、ウィンドウが非フォーカスなら OS 通知を出す (`src/lib/notify.ts`、設定 `notifyOnComplete`)。前面にあるときはアプリ内トーストだけ。許可は求めない — デスクトップの通知プラグインは許可済みを返すだけで、ユーザーが OS 側で通知を切っていれば OS が黙って捨てる。通知はローカルの OS 機能で、ネットワークは使わない。`tauri dev` では Terminal の通知として出るため、実アプリとしての表示はバンドル版 (`/smoke`) でしか確認できない
 
 ## 終了ガード
 

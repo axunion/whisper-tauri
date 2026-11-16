@@ -17,6 +17,7 @@ export const en: Dictionary = {
     downloadingServer: "Downloading llama-server",
     helpHintLabel: "Show term description",
     editTitle: "Edit Title",
+    transcribing: "Transcribing...",
     notifications: "Notifications",
   },
   closeGuard: {
@@ -156,6 +157,9 @@ export const en: Dictionary = {
     update: "Update",
     vadEnabled: "VAD",
     vadDescription: "Skip silent sections to speed up transcription.",
+    notifyOnComplete: "Notify when done",
+    notifyOnCompleteDescription:
+      "Show a notification when a transcription finishes while the app is in the background.",
     appUpdate: "App Updates",
     appUpdateCurrentVersion: "Current version: {version}",
     appUpdateCheck: "Check Now",

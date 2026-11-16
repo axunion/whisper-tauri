@@ -8,6 +8,7 @@ import {
 } from "solid-icons/fi";
 import { For, Show } from "solid-js";
 import { DownloadIndicator } from "~/components/layout/DownloadIndicator";
+import { TranscriptionIndicator } from "~/components/layout/TranscriptionIndicator";
 import {
   Sidebar,
   SidebarContent,
@@ -95,6 +96,7 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
+      <TranscriptionIndicator />
       <DownloadIndicator />
       <Show when={import.meta.env.DEV}>
         <SidebarFooter>
