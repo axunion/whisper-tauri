@@ -1,10 +1,14 @@
 import { useLocation } from "@solidjs/router";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { FiX } from "solid-icons/fi";
 import {
   createEffect,
   createMemo,
   createSignal,
+  For,
   Match,
   on,
+  onCleanup,
   onMount,
   Show,
   Switch,
@@ -21,7 +25,7 @@ import { Card, CardContent } from "~/components/ui/Card";
 import { Progress } from "~/components/ui/Progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/Tabs";
 import { useI18n } from "~/i18n";
-import { extractFilename } from "~/lib/constants";
+import { AUDIO_EXTENSIONS } from "~/lib/constants";
 import { combineErrorProviders } from "~/lib/errors";
 import { formatLocalDateTime } from "~/lib/format";
 import { cn } from "~/lib/utils";
@@ -61,6 +65,36 @@ export default function Transcription() {
     }
   }
 
+  const [isDragging, setIsDragging] = createSignal(false);
+
+  onMount(() => {
+    const unlisten = getCurrentWebview().onDragDropEvent(({ payload }) => {
+      if (payload.type === "over") return;
+      setIsDragging(payload.type === "enter");
+      // Only while choosing input or running: on the result view a drop would
+      // replace a result the user has not finished with, saved or not.
+      if (
+        payload.type !== "drop" ||
+        recording.isRecording() ||
+        job.phase() === "done"
+      ) {
+        return;
+      }
+
+      const audioPaths = payload.paths.filter((path) =>
+        AUDIO_EXTENSIONS.includes(
+          path.slice(path.lastIndexOf(".") + 1).toLowerCase(),
+        ),
+      );
+      if (audioPaths.length === 0) return;
+      activateTab("file");
+      void job.addFiles(audioPaths);
+    });
+    onCleanup(() => {
+      void unlisten.then((stop) => stop());
+    });
+  });
+
   onMount(async () => {
     whisper.loadModels();
     await settings.load();
@@ -75,8 +109,7 @@ export default function Transcription() {
       () => location.state,
       (state) => {
         if (state?.filePath) {
-          const path = state.filePath;
-          whisper.selectFile({ path, name: extractFilename(path), size: 0 });
+          void job.addFiles([state.filePath]);
         }
         if (state?.retranscribe) {
           void job.prepareRetranscription(state.retranscribe);
@@ -119,7 +152,11 @@ export default function Transcription() {
 
   function handleStartFile() {
     history.clearError();
-    return job.startFile({ completedMessage: completedMessage() });
+    return job.startFile({
+      completedMessage: completedMessage(),
+      batchCompletedMessage: (count) =>
+        t("transcription.batchCompletedToast", { count }),
+    });
   }
 
   function handleStartRecording() {
@@ -196,14 +233,45 @@ export default function Transcription() {
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="file" class="flex-1">
-                    <div class="flex h-full flex-col justify-center">
-                      <FileSelector
-                        file={whisper.file()}
-                        estimateLabel={estimateLabel()}
-                        onFileSelect={(file) => whisper.selectFile(file)}
-                        onFileClear={() => whisper.setFile(null)}
-                        disabled={job.phase() !== "idle"}
-                      />
+                    <div class="flex h-full flex-col gap-2">
+                      <div class="flex min-h-0 flex-1 flex-col justify-center">
+                        <FileSelector
+                          file={whisper.file()}
+                          estimateLabel={estimateLabel()}
+                          onFileSelect={(file) => whisper.selectFile(file)}
+                          onFilesAdd={(paths) => void job.addFiles(paths)}
+                          onFileClear={() => void job.clearSelectedFile()}
+                          disabled={job.phase() !== "idle"}
+                          dragging={isDragging()}
+                        />
+                      </div>
+                      <Show when={job.queue().length > 0}>
+                        <ul
+                          class="max-h-20 shrink-0 space-y-0.5 overflow-y-auto rounded-lg bg-muted/40 px-3 py-1.5"
+                          aria-label={t("transcription.queuedFiles")}
+                        >
+                          <For each={job.queue()}>
+                            {(file) => (
+                              <li class="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span class="min-w-0 flex-1 truncate">
+                                  {file.name}
+                                </span>
+                                <button
+                                  type="button"
+                                  class="shrink-0 rounded-sm p-1 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                  aria-label={t(
+                                    "transcription.removeQueuedFile",
+                                    { name: file.name },
+                                  )}
+                                  onClick={() => job.removeQueued(file.path)}
+                                >
+                                  <FiX class="size-3" aria-hidden="true" />
+                                </button>
+                              </li>
+                            )}
+                          </For>
+                        </ul>
+                      </Show>
                     </div>
                   </TabsContent>
                   <TabsContent value="record" class="flex-1">
@@ -284,11 +352,25 @@ export default function Transcription() {
                     </p>
                   )}
                 </Show>
-                <TranscriptionProgress
-                  progress={whisper.progress()}
-                  estimatedTotalSec={estimatedTotalSec()}
-                  onCancel={() => whisper.cancelTranscription()}
-                />
+                <Show when={job.batch()}>
+                  {(batch) => (
+                    <p class="text-center text-xs text-muted-foreground">
+                      {t("transcription.batchProgress", batch())}
+                    </p>
+                  )}
+                </Show>
+                {/* Keyed per file: the progress view anchors its elapsed-time
+                    clock on the first progress event it sees, which must not
+                    carry over from the previous file of a run. */}
+                <Show when={job.batch()?.index ?? 1} keyed>
+                  {(_index) => (
+                    <TranscriptionProgress
+                      progress={whisper.progress()}
+                      estimatedTotalSec={estimatedTotalSec()}
+                      onCancel={() => whisper.cancelTranscription()}
+                    />
+                  )}
+                </Show>
               </div>
             </Match>
 

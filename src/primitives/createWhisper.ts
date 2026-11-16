@@ -309,6 +309,12 @@ function reset(): void {
   setError(null);
 }
 
+/** Drops the last run's result and progress but keeps the selected file. */
+function clearRun(): void {
+  setResult(null);
+  setProgress(null);
+}
+
 function clearError(): void {
   setError(null);
 }
@@ -343,6 +349,7 @@ const whisperInstance = {
   startTranscription,
   cancelTranscription,
   reset,
+  clearRun,
   clearError,
 };
 

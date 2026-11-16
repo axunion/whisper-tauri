@@ -43,6 +43,14 @@ vi.mock("@tauri-apps/api/window", () => {
   };
 });
 
+// Mock @tauri-apps/api/webview
+vi.mock("@tauri-apps/api/webview", () => {
+  const currentWebview = {
+    onDragDropEvent: vi.fn(() => Promise.resolve(() => {})),
+  };
+  return { getCurrentWebview: () => currentWebview };
+});
+
 // Mock @tauri-apps/plugin-notification
 vi.mock("@tauri-apps/plugin-notification", () => ({
   sendNotification: vi.fn(),

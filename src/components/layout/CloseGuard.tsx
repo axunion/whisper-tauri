@@ -4,7 +4,7 @@ import { onCleanup, onMount } from "solid-js";
 import type { DictionaryKey } from "~/i18n";
 import { useI18n } from "~/i18n";
 import { createRecording } from "~/primitives/createRecording";
-import { createWhisper } from "~/primitives/createWhisper";
+import { createTranscriptionJob } from "~/primitives/createTranscriptionJob";
 
 /**
  * Asks before the window closes while closing would lose work: a recording in
@@ -13,11 +13,11 @@ import { createWhisper } from "~/primitives/createWhisper";
 export function CloseGuard() {
   const { t } = useI18n();
   const recording = createRecording();
-  const whisper = createWhisper();
+  const job = createTranscriptionJob();
 
   function workAtRisk(): DictionaryKey | null {
     if (recording.isRecording()) return "closeGuard.recording";
-    if (whisper.isProcessing()) return "closeGuard.processing";
+    if (job.isRunning()) return "closeGuard.processing";
     if (recording.tempFilePath() !== null) return "closeGuard.unsavedRecording";
     return null;
   }

@@ -65,6 +65,11 @@ export interface Dictionary {
     clearFile: string;
     supportedFormats: string;
     completedToast: string;
+    batchCompletedToast: string;
+    batchProgress: string;
+    addFiles: string;
+    queuedFiles: string;
+    removeQueuedFile: string;
     estimatedTime: string;
     remainingTime: string;
     almostDone: string;

@@ -100,10 +100,22 @@ describe("TranscriptionIndicator", () => {
     const job = createTranscriptionJob();
     renderIndicator();
 
-    const run = job.startFile({ completedMessage: "完了" });
+    const run = job.startFile({
+      completedMessage: "完了",
+      batchCompletedMessage: () => "完了",
+    });
 
     expect(await screen.findByRole("status")).toHaveTextContent("文字起こし中");
     expect(screen.getByRole("link")).toHaveAttribute("href", "/transcription");
+
+    // The indicator appears as soon as the run starts; wait for the backend
+    // call itself before resolving it.
+    await vi.waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith(
+        "transcribe_audio",
+        expect.anything(),
+      ),
+    );
 
     finish({
       taskId: "t",
@@ -136,7 +148,10 @@ describe("TranscriptionIndicator", () => {
     const job = createTranscriptionJob();
     renderIndicator();
 
-    const run = job.startFile({ completedMessage: "完了" });
+    const run = job.startFile({
+      completedMessage: "完了",
+      batchCompletedMessage: () => "完了",
+    });
 
     expect(await screen.findByRole("status")).toHaveTextContent(
       "ファイルを変換中...",
@@ -167,7 +182,10 @@ describe("TranscriptionIndicator", () => {
     const job = createTranscriptionJob();
     renderIndicator();
 
-    const run = job.startFile({ completedMessage: "完了" });
+    const run = job.startFile({
+      completedMessage: "完了",
+      batchCompletedMessage: () => "完了",
+    });
     await screen.findByRole("status");
 
     const onProgress = progressListener();

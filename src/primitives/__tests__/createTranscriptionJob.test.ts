@@ -102,7 +102,10 @@ async function makeRecording(): Promise<void> {
   await recording.stopRecording();
 }
 
-const options = { completedMessage: "完了" };
+const options = {
+  completedMessage: "完了",
+  batchCompletedMessage: (count: number) => `${count}件完了`,
+};
 
 /** A backend call the test resolves itself, to hold a run in one phase. */
 function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
@@ -392,6 +395,361 @@ describe("createTranscriptionJob", () => {
     });
   });
 
+  describe("queue of files", () => {
+    it("selects the first added file and queues the rest, skipping duplicates", async () => {
+      mockBackend();
+      const job = createTranscriptionJob();
+
+      await job.addFiles(["/a/one.wav", "/a/two.wav", "/a/one.wav"]);
+      await job.addFiles(["/a/two.wav", "/a/three.mp3"]);
+
+      expect(createWhisper().file()?.path).toBe("/a/one.wav");
+      expect(job.queue().map((f) => f.name)).toEqual(["two.wav", "three.mp3"]);
+    });
+
+    it("promotes the next queued file when the selected one is cleared", async () => {
+      mockBackend();
+      const job = createTranscriptionJob();
+      await job.addFiles(["/a/one.wav", "/a/two.wav"]);
+
+      await job.clearSelectedFile();
+      expect(createWhisper().file()?.path).toBe("/a/two.wav");
+      expect(job.queue()).toEqual([]);
+
+      await job.clearSelectedFile();
+      expect(createWhisper().file()).toBeNull();
+    });
+
+    it("removes a queued file without touching the others", async () => {
+      mockBackend();
+      const job = createTranscriptionJob();
+      await job.addFiles(["/a/one.wav", "/a/two.wav", "/a/three.wav"]);
+
+      job.removeQueued("/a/two.wav");
+
+      expect(job.queue().map((f) => f.name)).toEqual(["three.wav"]);
+    });
+
+    it("transcribes every file in order, announces once, and returns to the input", async () => {
+      mockBackend();
+      await createWhisper().loadModels();
+      const job = createTranscriptionJob();
+      await job.addFiles(["/a/one.wav", "/a/two.mp3", "/a/three.wav"]);
+
+      await job.startFile(options);
+
+      const saved = vi
+        .mocked(invoke)
+        .mock.calls.filter(([command]) => command === "history_save")
+        .map(
+          ([, args]) =>
+            (args as { params: { fileName: string } }).params.fileName,
+        );
+      expect(saved).toEqual(["one.wav", "two.mp3", "three.wav"]);
+      expect(toast.success).toHaveBeenCalledTimes(1);
+      expect(toast.success).toHaveBeenCalledWith("3件完了");
+      expect(job.phase()).toBe("idle");
+      expect(job.queue()).toEqual([]);
+      expect(createWhisper().file()).toBeNull();
+    });
+
+    it("reports its position while a run over several files is in flight", async () => {
+      const first = deferred<TranscriptionResult>();
+      mockBackend({ transcribe_audio: () => first.promise });
+      await createWhisper().loadModels();
+      const job = createTranscriptionJob();
+      await job.addFiles(["/a/one.wav", "/a/two.wav"]);
+      expect(job.batch()).toBeNull();
+
+      const run = job.startFile(options);
+      await vi.waitFor(() => expect(job.phase()).toBe("processing"));
+      expect(job.batch()).toEqual({ index: 1, total: 2 });
+
+      mockBackend();
+      first.resolve(result);
+      await run;
+      expect(job.batch()).toBeNull();
+    });
+
+    it("stops at a failing file and keeps the rest queued", async () => {
+      let calls = 0;
+      mockBackend({
+        transcribe_audio: () => {
+          calls += 1;
+          if (calls === 2) throw "Transcription failed: boom";
+          return result;
+        },
+      });
+      await createWhisper().loadModels();
+      const job = createTranscriptionJob();
+      await job.addFiles(["/a/one.wav", "/a/two.wav", "/a/three.wav"]);
+
+      await job.startFile(options);
+
+      expect(calls).toBe(2);
+      expect(createWhisper().file()?.name).toBe("two.wav");
+      expect(job.queue().map((f) => f.name)).toEqual(["three.wav"]);
+      expect(createWhisper().error()).not.toBeNull();
+      // The one file that did finish is still announced.
+      expect(toast.success).toHaveBeenCalledWith("完了");
+      expect(job.phase()).toBe("idle");
+    });
+
+    it("picks up files added while the run is in flight", async () => {
+      const first = deferred<TranscriptionResult>();
+      mockBackend({ transcribe_audio: () => first.promise });
+      await selectFile("one.wav");
+      const job = createTranscriptionJob();
+      const run = job.startFile(options);
+      await vi.waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith(
+          "transcribe_audio",
+          expect.anything(),
+        ),
+      );
+
+      await job.addFiles(["/a/late.wav"]);
+      mockBackend();
+      first.resolve(result);
+      await run;
+
+      expect(invoke).toHaveBeenCalledWith("history_save", {
+        params: expect.objectContaining({ fileName: "late.wav" }),
+      });
+      expect(toast.success).toHaveBeenCalledWith("2件完了");
+      // Once per run, even though the first file started alone.
+      expect(toast.success).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the files still queued when a result is closed after a failed save", async () => {
+      mockBackend({
+        history_save: () => {
+          throw "Database error: disk full";
+        },
+      });
+      await createWhisper().loadModels();
+      const job = createTranscriptionJob();
+      await job.addFiles(["/a/one.wav", "/a/two.wav", "/a/three.wav"]);
+      await job.startFile(options);
+      expect(job.phase()).toBe("done");
+
+      await job.reset();
+
+      expect(job.phase()).toBe("idle");
+      expect(createWhisper().file()?.name).toBe("two.wav");
+      expect(job.queue().map((f) => f.name)).toEqual(["three.wav"]);
+    });
+
+    it("stops after a file whose audio could not be copied, keeping the error", async () => {
+      mockBackend({
+        history_copy_audio: () => {
+          throw "IO error: no such file";
+        },
+      });
+      await createWhisper().loadModels();
+      const job = createTranscriptionJob();
+      await job.prepareRetranscription({
+        id: "history-0",
+        path: "/audio/history-0.wav",
+        name: "録音",
+      });
+      await job.addFiles(["/a/next.wav"]);
+
+      await job.startFile(options);
+
+      expect(job.attachFailed()).toBe(true);
+      expect(job.queue().map((f) => f.name)).toEqual(["next.wav"]);
+      expect(job.phase()).toBe("done");
+    });
+
+    it("puts the selected file back in the queue when a recording takes over", async () => {
+      mockBackend();
+      await makeRecording();
+      const job = createTranscriptionJob();
+      await job.addFiles(["/a/one.wav", "/a/two.wav"]);
+
+      await job.startRecording({ ...options, name: "録音 2026-11-15 14:30" });
+      await job.reset();
+
+      expect(createWhisper().file()?.name).toBe("one.wav");
+      expect(job.queue().map((f) => f.name)).toEqual(["two.wav"]);
+    });
+
+    it("starts each file with the previous run's progress cleared", async () => {
+      mockBackend();
+      await createWhisper().loadModels();
+      const job = createTranscriptionJob();
+      await job.addFiles(["/a/one.wav"]);
+      await job.startFile(options);
+      await job.reset();
+
+      const transcription = deferred<TranscriptionResult>();
+      mockBackend({ transcribe_audio: () => transcription.promise });
+      await job.addFiles(["/a/two.wav"]);
+      const run = job.startFile(options);
+      await vi.waitFor(() => expect(job.phase()).toBe("processing"));
+
+      expect(createWhisper().progress()).toBeNull();
+
+      transcription.resolve(result);
+      await run;
+    });
+
+    it("keeps a single file's result on screen with the ordinary message", async () => {
+      mockBackend();
+      await createWhisper().loadModels();
+      const job = createTranscriptionJob();
+      await job.addFiles(["/a/one.wav"]);
+
+      await job.startFile(options);
+
+      expect(job.phase()).toBe("done");
+      expect(toast.success).toHaveBeenCalledWith("完了");
+    });
+
+    it("cancelling the first of several files leaves the rest queued and announces nothing", async () => {
+      mockBackend({
+        transcribe_audio: () => {
+          throw "Cancelled";
+        },
+      });
+      await createWhisper().loadModels();
+      const job = createTranscriptionJob();
+      await job.addFiles(["/a/one.wav", "/a/two.wav", "/a/three.wav"]);
+
+      await job.startFile(options);
+
+      expect(commandsCalled()).not.toContain("history_save");
+      expect(createWhisper().file()?.name).toBe("one.wav");
+      expect(job.queue().map((f) => f.name)).toEqual(["two.wav", "three.wav"]);
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(notifyUnlessFocused).not.toHaveBeenCalled();
+      expect(job.phase()).toBe("idle");
+    });
+
+    it("stops the run when the first file's history save fails and keeps the rest queued", async () => {
+      mockBackend({
+        history_save: () => {
+          throw "Database error: disk full";
+        },
+      });
+      await createWhisper().loadModels();
+      const job = createTranscriptionJob();
+      await job.addFiles(["/a/one.wav", "/a/two.wav", "/a/three.wav"]);
+
+      await job.startFile(options);
+
+      expect(
+        commandsCalled().filter((command) => command === "transcribe_audio"),
+      ).toHaveLength(1);
+      expect(
+        commandsCalled().filter((command) => command === "history_save"),
+      ).toHaveLength(1);
+      expect(job.saveFailed()).toBe(true);
+      expect(createWhisper().file()?.name).toBe("one.wav");
+      expect(job.queue().map((f) => f.name)).toEqual(["two.wav", "three.wav"]);
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(notifyUnlessFocused).not.toHaveBeenCalled();
+    });
+
+    it("stops at a file whose conversion fails and keeps the rest queued", async () => {
+      let conversions = 0;
+      mockBackend({
+        convert_audio_file: ({ inputPath }) => {
+          conversions += 1;
+          if (conversions === 2) throw "FFmpeg failed";
+          return {
+            outputPath: `/tmp/converted-${conversions}.wav`,
+            originalPath: inputPath,
+          };
+        },
+      });
+      await createWhisper().loadModels();
+      const job = createTranscriptionJob();
+      await job.addFiles(["/a/one.mp3", "/a/two.mp3", "/a/three.mp3"]);
+
+      await job.startFile(options);
+
+      expect(
+        commandsCalled().filter((command) => command === "transcribe_audio"),
+      ).toHaveLength(1);
+      expect(createWhisper().file()?.name).toBe("two.mp3");
+      expect(job.queue().map((f) => f.name)).toEqual(["three.mp3"]);
+      expect(job.error()).not.toBeNull();
+      expect(toast.success).toHaveBeenCalledWith("完了");
+      // Not "done": the first file's result must not show under the second.
+      expect(job.phase()).toBe("idle");
+      expect(createWhisper().result()).toBeNull();
+    });
+
+    it("removes the first file's converted audio before converting the next", async () => {
+      let conversions = 0;
+      mockBackend({
+        convert_audio_file: ({ inputPath }) => {
+          conversions += 1;
+          return {
+            outputPath: `/tmp/converted-${conversions}.wav`,
+            originalPath: inputPath,
+          };
+        },
+      });
+      await createWhisper().loadModels();
+      const job = createTranscriptionJob();
+      await job.addFiles(["/a/one.mp3", "/a/two.mp3"]);
+
+      await job.startFile(options);
+
+      const calls = vi.mocked(invoke).mock.calls;
+      const cleanupFirst = calls.findIndex(
+        ([command, args]) =>
+          command === "cleanup_converted_file" &&
+          (args as { filePath: string }).filePath === "/tmp/converted-1.wav",
+      );
+      const convertSecond = calls.findIndex(
+        ([command, args]) =>
+          command === "convert_audio_file" &&
+          (args as { inputPath: string }).inputPath === "/a/two.mp3",
+      );
+      expect(cleanupFirst).toBeGreaterThanOrEqual(0);
+      expect(cleanupFirst).toBeLessThan(convertSecond);
+    });
+
+    it("does not allow starting while the next file of a run is being prepared", async () => {
+      const job = createTranscriptionJob();
+      const seen: { phase: string; canStart: boolean }[] = [];
+      mockBackend({
+        cleanup_converted_file: () => {
+          // The first cleanup comes from the second file's preparation, after
+          // the first file is saved and before anything is converting.
+          if (seen.length === 0) {
+            seen.push({ phase: job.phase(), canStart: job.canStartFile() });
+          }
+        },
+      });
+      await createWhisper().loadModels();
+      await job.addFiles(["/a/one.mp3", "/a/two.mp3"]);
+
+      await job.startFile(options);
+
+      expect(seen).toEqual([{ phase: "processing", canStart: false }]);
+    });
+
+    it("replaces a finished result on screen when files are added", async () => {
+      mockBackend();
+      await selectFile("meeting.wav");
+      const job = createTranscriptionJob();
+      await job.startFile(options);
+      expect(job.phase()).toBe("done");
+
+      await job.addFiles(["/a/next.wav"]);
+
+      expect(job.phase()).toBe("idle");
+      expect(job.historyId()).toBeNull();
+      expect(createWhisper().file()?.path).toBe("/a/next.wav");
+      expect(job.queue()).toEqual([]);
+    });
+  });
+
   describe("completion notification", () => {
     it("notifies once the result is saved", async () => {
       mockBackend();
@@ -539,6 +897,36 @@ describe("createTranscriptionJob", () => {
       expect(invoke).toHaveBeenCalledWith("history_copy_audio", {
         fromId: "history-0",
         toId: "history-1",
+      });
+    });
+
+    it("copies the kept audio only to the re-transcribed file of a run", async () => {
+      let saves = 0;
+      mockBackend({
+        history_save: () => {
+          saves += 1;
+          return `history-${saves}`;
+        },
+      });
+      await createWhisper().loadModels();
+      const job = createTranscriptionJob();
+      await job.prepareRetranscription(source);
+      await job.addFiles(["/a/ordinary.wav"]);
+
+      await job.startFile(options);
+
+      expect(
+        commandsCalled().filter((command) => command === "history_copy_audio"),
+      ).toHaveLength(1);
+      expect(invoke).toHaveBeenCalledWith("history_copy_audio", {
+        fromId: "history-0",
+        toId: "history-1",
+      });
+      expect(invoke).toHaveBeenCalledWith("history_save", {
+        params: expect.objectContaining({
+          fileName: "ordinary.wav",
+          source: "file",
+        }),
       });
     });
 
