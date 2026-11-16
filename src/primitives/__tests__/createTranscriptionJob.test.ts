@@ -950,6 +950,43 @@ describe("createTranscriptionJob", () => {
       expect(job.audioSourceId()).toBeNull();
     });
 
+    it("still saves a recording with its audio when restarted after a cancel", async () => {
+      mockBackend({
+        transcribe_audio: () => {
+          throw "Cancelled";
+        },
+      });
+      await createWhisper().loadModels();
+      const job = createTranscriptionJob();
+      await job.prepareRetranscription(source);
+      await job.startFile(options);
+      // Cancelled: the source's entry stays protected for the next attempt.
+      expect(job.audioSourceId()).toBe("history-0");
+
+      mockBackend();
+      await job.startFile(options);
+
+      expect(invoke).toHaveBeenCalledWith("history_save", {
+        params: expect.objectContaining({ source: "recording" }),
+      });
+      expect(invoke).toHaveBeenCalledWith("history_copy_audio", {
+        fromId: "history-0",
+        toId: "history-1",
+      });
+    });
+
+    it("stops protecting the source entry once its audio is deselected", async () => {
+      mockBackend();
+      await createWhisper().loadModels();
+      const job = createTranscriptionJob();
+      await job.prepareRetranscription(source);
+      expect(job.audioSourceId()).toBe("history-0");
+
+      await job.clearSelectedFile();
+
+      expect(job.audioSourceId()).toBeNull();
+    });
+
     it("treats a different file picked afterwards as an ordinary file", async () => {
       mockBackend();
       const job = createTranscriptionJob();

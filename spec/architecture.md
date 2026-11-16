@@ -89,7 +89,7 @@ mirrors.json       # ダウンロード元の差し替え (任意・手編集)
 
 ## ショートカットと画面内リンク
 
-- `src/components/layout/Shortcuts.tsx`: Cmd/Ctrl+O (音声ファイルを選んで文字起こし画面へ)、Cmd/Ctrl+F (履歴検索にフォーカス)、Cmd/Ctrl+, (設定)
+- `src/components/layout/Shortcuts.tsx`: 修飾キーは macOS では Cmd、それ以外では Ctrl (macOS の Ctrl+F / Ctrl+O はテキスト編集キーなので奪わない)。O (音声ファイルを選んで文字起こし画面へ。録音中と結果表示中は無効)、F (履歴検索にフォーカス)、`,` (設定)
 - 設定画面へのリンクは `navigate("/settings", { state: { section } })` で該当セクションに着地する (`Settings.tsx::SettingsSection`、要素 id でスクロール)。未セットアップのバナー、AI 未設定ダイアログ、Notion 設定導線が使う
 
 ## 実行中の表示と完了通知

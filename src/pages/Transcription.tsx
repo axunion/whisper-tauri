@@ -113,6 +113,7 @@ export default function Transcription() {
           void job.addFiles([state.filePath]);
         }
         if (state?.filePaths) {
+          activateTab("file");
           void job.addFiles(state.filePaths);
         }
         if (state?.retranscribe) {

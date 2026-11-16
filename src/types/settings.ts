@@ -19,3 +19,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   vadEnabled: true,
   notifyOnComplete: true,
 };
+
+/** Sections of the settings page a link can land on, by element id. */
+export type SettingsSection =
+  | "settings-models"
+  | "settings-ai"
+  | "settings-ffmpeg"
+  | "settings-notion";

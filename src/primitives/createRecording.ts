@@ -55,6 +55,9 @@ const {
 });
 
 listen<RecordingLevel>("recording:level", (event) => {
+  // An event already in flight when the recording was paused would leave the
+  // meter frozen on its last level.
+  if (isPaused()) return;
   setLevel(event.payload);
 }).catch(console.error);
 
@@ -104,7 +107,7 @@ async function startRecording(): Promise<void> {
 
 /** Pauses the recording; audio while paused is not kept. */
 async function pauseRecording(): Promise<void> {
-  if (!isRecording() || isPaused()) return;
+  if (!isRecording() || isPaused() || isStopping) return;
   try {
     await invoke("pause_recording");
     setIsPaused(true);
@@ -115,7 +118,7 @@ async function pauseRecording(): Promise<void> {
 }
 
 async function resumeRecording(): Promise<void> {
-  if (!isRecording() || !isPaused()) return;
+  if (!isRecording() || !isPaused() || isStopping) return;
   try {
     await invoke("resume_recording");
     setIsPaused(false);

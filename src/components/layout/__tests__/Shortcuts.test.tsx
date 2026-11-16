@@ -3,8 +3,9 @@ import { fireEvent, screen } from "@solidjs/testing-library";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { ParentProps } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { HISTORY_SEARCH_ID } from "~/lib/constants";
 import { renderWithI18n } from "~/test/helpers";
-import { HISTORY_SEARCH_ID, Shortcuts } from "../Shortcuts";
+import { Shortcuts } from "../Shortcuts";
 
 /** Shows where the router is and what state it carried there. */
 function Where() {
@@ -47,10 +48,10 @@ describe("Shortcuts", () => {
     vi.mocked(open).mockReset();
   });
 
-  it("opens settings on Cmd+,", async () => {
+  it("opens settings on Ctrl+,", async () => {
     renderApp();
 
-    fireEvent.keyDown(window, { key: ",", metaKey: true });
+    fireEvent.keyDown(window, { key: ",", ctrlKey: true });
 
     await vi.waitFor(() => expect(where()).toContain("/settings"));
   });
@@ -65,22 +66,22 @@ describe("Shortcuts", () => {
     );
   });
 
-  it("focuses the search box on Cmd+F when already on the history page", async () => {
+  it("focuses the search box on Ctrl+F when already on the history page", async () => {
     renderApp();
-    fireEvent.keyDown(window, { key: "f", metaKey: true });
+    fireEvent.keyDown(window, { key: "f", ctrlKey: true });
     const search = await screen.findByLabelText("search");
     search.blur();
 
-    fireEvent.keyDown(window, { key: "f", metaKey: true });
+    fireEvent.keyDown(window, { key: "f", ctrlKey: true });
 
     expect(search).toHaveFocus();
   });
 
-  it("hands the files picked on Cmd+O to the transcription page", async () => {
+  it("hands the files picked on Ctrl+O to the transcription page", async () => {
     vi.mocked(open).mockResolvedValue(["/a/one.wav", "/a/two.mp3"]);
     renderApp();
 
-    fireEvent.keyDown(window, { key: "o", metaKey: true });
+    fireEvent.keyDown(window, { key: "o", ctrlKey: true });
 
     await vi.waitFor(() =>
       expect(where()).toBe(
@@ -96,17 +97,42 @@ describe("Shortcuts", () => {
     vi.mocked(open).mockResolvedValue(null);
     renderApp();
 
-    fireEvent.keyDown(window, { key: "o", metaKey: true });
+    fireEvent.keyDown(window, { key: "o", ctrlKey: true });
     await vi.waitFor(() => expect(open).toHaveBeenCalled());
 
     expect(where()).toContain("/ ");
+  });
+
+  it("uses Cmd rather than Ctrl on macOS, where Ctrl+F moves the text cursor", async () => {
+    const platform = vi
+      .spyOn(navigator, "platform", "get")
+      .mockReturnValue("MacIntel");
+    try {
+      renderApp();
+
+      fireEvent.keyDown(window, { key: ",", ctrlKey: true });
+      expect(where()).toContain("/ ");
+
+      fireEvent.keyDown(window, { key: ",", metaKey: true });
+      await vi.waitFor(() => expect(where()).toContain("/settings"));
+    } finally {
+      platform.mockRestore();
+    }
+  });
+
+  it("matches the letter under Caps Lock", async () => {
+    renderApp();
+
+    fireEvent.keyDown(window, { key: "F", ctrlKey: true });
+
+    await vi.waitFor(() => expect(where()).toContain("/history"));
   });
 
   it("ignores the keys without the modifier, or with extra ones", () => {
     renderApp();
 
     fireEvent.keyDown(window, { key: "," });
-    fireEvent.keyDown(window, { key: ",", metaKey: true, shiftKey: true });
+    fireEvent.keyDown(window, { key: ",", ctrlKey: true, shiftKey: true });
 
     expect(where()).toContain("/ ");
   });

@@ -5,6 +5,7 @@ import type { JSX } from "solid-js";
 import { createSignal, onMount, Show } from "solid-js";
 import { CardButton, CardContent } from "~/components/ui/Card";
 import { useI18n } from "~/i18n";
+import { settingsLink } from "~/lib/constants";
 import { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
 import { createTextProcessing } from "~/primitives/createTextProcessing";
 import { createWhisper } from "~/primitives/createWhisper";
@@ -51,7 +52,7 @@ export function SetupBanner() {
       <CardButton
         class="text-left"
         onClick={() =>
-          navigate("/settings", { state: { section: firstMissing() } })
+          navigate("/settings", { state: settingsLink(firstMissing()) })
         }
       >
         <CardContent class="flex items-center gap-4 p-4">

@@ -17,10 +17,14 @@ import { useI18n } from "~/i18n";
 import { runWithToast } from "~/lib/actionToast";
 import { formatBytes } from "~/lib/format";
 import { createStorage } from "~/primitives/createStorage";
+import { createTranscriptionJob } from "~/primitives/createTranscriptionJob";
 
 export default function DataManagement() {
   const { t } = useI18n();
   const storage = createStorage();
+  // A re-transcription keeps running from other pages; deleting everything
+  // meanwhile would take away the audio it is reading.
+  const audioInUse = () => createTranscriptionJob().audioSourceId() !== null;
 
   onMount(() => {
     void storage.load();
@@ -91,7 +95,7 @@ export default function DataManagement() {
             confirmationKey: "settings.deleteAllAudioConfirmation",
             successKey: "settings.allAudioDeletedToast",
             action: storage.deleteAllAudio,
-            disabled: (storage.stats()?.audioCount ?? 0) === 0,
+            disabled: (storage.stats()?.audioCount ?? 0) === 0 || audioInUse(),
           })}
         />
 
@@ -123,6 +127,7 @@ export default function DataManagement() {
             confirmationKey: "settings.deleteAllHistoryConfirmation",
             successKey: "settings.allHistoryDeletedToast",
             action: storage.deleteAllHistory,
+            disabled: audioInUse(),
           })}
         />
 

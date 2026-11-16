@@ -117,7 +117,7 @@ export function TranscriptionOptionsBar(props: TranscriptionOptionsBarProps) {
                   }
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent class="max-h-72 overflow-y-auto" />
+              <SelectContent />
             </Select>
           </div>
           <div class="flex h-11 items-center self-end">

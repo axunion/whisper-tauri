@@ -11,11 +11,11 @@ import {
   SearchBar,
   SortToggleGroup,
 } from "~/components/history";
-import { HISTORY_SEARCH_ID } from "~/components/layout/Shortcuts";
 import { Button } from "~/components/ui/Button";
 import { Sheet, SheetContent, SheetTitle } from "~/components/ui/Sheet";
 import { useI18n } from "~/i18n";
 import { runWithToast } from "~/lib/actionToast";
+import { HISTORY_SEARCH_ID } from "~/lib/constants";
 import { toast } from "~/lib/toast";
 import type { AiOperation } from "~/primitives/createAiSession";
 import { createHistory } from "~/primitives/createHistory";

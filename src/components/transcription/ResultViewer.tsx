@@ -8,6 +8,7 @@ import { createEffect, createSignal, on, onMount, Show } from "solid-js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/Tabs";
 import type { DictionaryKey } from "~/i18n";
 import { useI18n } from "~/i18n";
+import { settingsLink } from "~/lib/constants";
 import type { ExportFormat } from "~/lib/export";
 import { exportResult, getExtension, toFileStem } from "~/lib/export";
 import { formatSummaryAsText, formatTimeline } from "~/lib/format";
@@ -382,7 +383,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
           void handleShareToNotion();
         }}
         onOpenNotionSetup={() =>
-          navigate("/settings", { state: { section: "settings-notion" } })
+          navigate("/settings", { state: settingsLink("settings-notion") })
         }
         isProcessing={session.isProcessing()}
         isGeneratingTitle={session.isGeneratingTitle()}
@@ -478,7 +479,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         onPrereqOpenChange={actions.setShowPrereqDialog}
         onGoToSettings={() => {
           actions.setShowPrereqDialog(false);
-          navigate("/settings", { state: { section: "settings-ai" } });
+          navigate("/settings", { state: settingsLink("settings-ai") });
         }}
         showOverwrite={() => actions.pendingAction() !== null}
         onOverwriteOpenChange={(open) => {

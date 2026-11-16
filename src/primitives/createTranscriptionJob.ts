@@ -149,9 +149,13 @@ function attachFailed(): boolean {
 /**
  * The history entry whose audio a prepared or running re-transcription reads.
  * Deleting that entry or its audio meanwhile would break the run.
+ *
+ * Null once the user has moved the selection off that audio: the request is
+ * then abandoned, and must not keep its entry undeletable.
  */
 function audioSourceId(): string | null {
-  return audioSource()?.id ?? null;
+  const source = audioSource();
+  return source && whisper.file()?.path === source.path ? source.id : null;
 }
 
 function clearError(): void {
@@ -250,6 +254,9 @@ async function runFile(
   } catch (e) {
     setAttachError(parseError(e));
   }
+  // Consumed. Until here it survives a cancelled or failed attempt, so that
+  // starting again still produces a recording entry with its audio.
+  setAudioSource(null);
   return true;
 }
 
@@ -294,8 +301,6 @@ async function startFile(options: StartFileOptions): Promise<void> {
     }
   } finally {
     setBatchIndex(null);
-    // Consumed: its entry no longer has to be kept from deletion.
-    setAudioSource(null);
   }
 
   // Announced once per run, and only for what reached history.

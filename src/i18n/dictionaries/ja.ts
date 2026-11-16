@@ -271,7 +271,7 @@ export const ja: Dictionary = {
     defaultDevice: "デフォルト",
     startRecording: "録音開始",
     stopRecording: "録音停止",
-    pauseRecording: "一時停止",
+    pauseRecording: "録音を一時停止",
     resumeRecording: "録音を再開",
     paused: "一時停止中",
     recording: "録音中...",

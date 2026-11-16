@@ -25,16 +25,9 @@ import { WhisperModelList } from "~/components/ui/WhisperModelList";
 import { useI18n } from "~/i18n";
 import { createSettings } from "~/primitives/createSettings";
 import { createWhisper } from "~/primitives/createWhisper";
-import type { AppSettings } from "~/types";
+import type { AppSettings, SettingsSection } from "~/types";
 
 type OptionItem = { value: string; label: string };
-
-/** Sections of this page a link can land on, by element id. */
-export type SettingsSection =
-  | "settings-models"
-  | "settings-ai"
-  | "settings-ffmpeg"
-  | "settings-notion";
 
 export default function Settings() {
   const { t, setLocale } = useI18n();

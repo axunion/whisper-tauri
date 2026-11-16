@@ -1,8 +1,8 @@
 import { FiSearch, FiX } from "solid-icons/fi";
 import type { Component } from "solid-js";
 import { createSignal, Show } from "solid-js";
-import { HISTORY_SEARCH_ID } from "~/components/layout/Shortcuts";
 import { useI18n } from "~/i18n";
+import { HISTORY_SEARCH_ID } from "~/lib/constants";
 
 interface SearchBarProps {
   onInput: (value: string) => void;

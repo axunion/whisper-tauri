@@ -79,7 +79,7 @@ CREATE INDEX idx_ai_content_history ON ai_content(history_id);
 - `history_attach_recording` は移動元が `recordings/` 直下であることを canonicalize して検証する (`RecordingManager::cleanup` と同じ理由)
 - 移動に失敗しても文字起こしは保存済み。WAV は未処理の録音として残り、FE (`createTranscriptionJob`) がエラーを表示する
 - **再生**: 履歴詳細 (`HistoryDetail` → `ResultViewer` の `audio` prop) が `convertFileSrc(audioPath)` を `<audio>` に渡す。タイムラインの行をクリックするとその開始位置から再生し、再生位置を含むセグメントをハイライトする (`ResultTimelineTab` の `onSeek` / `positionMs`)。音声は 32-bit float WAV のままなので、WebView で再生できるかは実機確認が必要
-- **再文字起こし**: 履歴詳細から保存済み音声を文字起こし画面に渡す (`createTranscriptionJob.prepareRetranscription`)。結果は新しい履歴として保存され、`history_copy_audio` で音声のコピーを持つ (元の履歴と独立に削除できる)。コピーが済むまでは元の履歴とその音声を削除できない (`job.audioSourceId()` で UI が抑止する)。変換の要否は表示名ではなくパスの拡張子で決める (保存済み音声の表示名は履歴タイトルで拡張子がない)
+- **再文字起こし**: 履歴詳細から保存済み音声を文字起こし画面に渡す (`createTranscriptionJob.prepareRetranscription`)。結果は新しい履歴として保存され、`history_copy_audio` で音声のコピーを持つ (元の履歴と独立に削除できる)。元の音声を選択してからコピーが済むまでは、元の履歴とその音声を削除できない (`job.audioSourceId()` — 履歴詳細・選択削除・設定のデータ管理の一括削除が参照する)。キャンセルや失敗のあとも選択が残っている間は保護が続き、選択を外すと解除される。変換の要否は表示名ではなくパスの拡張子で決める (保存済み音声の表示名は履歴タイトルで拡張子がない)
 - 設定画面の「データ管理」(`DataManagement.tsx` / `createStorage.ts`): 音声の件数と容量 (`history_storage_stats`)、全音声の削除、未処理の録音の件数と削除 (セッションが保持中の 1 件は件数にも削除にも含めない)、全履歴の削除
 
 ## コマンド一覧

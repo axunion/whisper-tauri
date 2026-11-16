@@ -271,7 +271,7 @@ export const en: Dictionary = {
     defaultDevice: "Default",
     startRecording: "Start Recording",
     stopRecording: "Stop Recording",
-    pauseRecording: "Pause",
+    pauseRecording: "Pause Recording",
     resumeRecording: "Resume Recording",
     paused: "Paused",
     recording: "Recording...",

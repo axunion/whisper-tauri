@@ -4,7 +4,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { onMount } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "~/i18n";
-import Settings, { type SettingsSection } from "../Settings";
+import type { SettingsSection } from "~/types";
+import Settings from "../Settings";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(() => Promise.resolve([])),
