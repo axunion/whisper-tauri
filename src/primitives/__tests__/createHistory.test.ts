@@ -30,6 +30,7 @@ const mockEntry: HistoryEntry = {
     { start: 3000, end: 5000, text: "transcription." },
   ],
   vadEnabled: true,
+  hasAudio: false,
 };
 
 describe("createHistory", () => {
@@ -811,6 +812,48 @@ describe("createHistory", () => {
 
         expect(history.isSearching()).toBe(true);
         expect(history.entries().map((e) => e.id)).toEqual(["result-2"]);
+        dispose();
+      });
+    });
+  });
+
+  describe("deleteAudio", () => {
+    it("should clear the audio flag on the open entry", async () => {
+      await createRoot(async (dispose) => {
+        const history = createHistory();
+        vi.mocked(invoke).mockResolvedValueOnce({
+          ...mockEntry,
+          hasAudio: true,
+        });
+        await history.getEntry("entry-1");
+
+        vi.mocked(invoke).mockResolvedValueOnce(undefined);
+        const ok = await history.deleteAudio("entry-1");
+
+        expect(ok).toBe(true);
+        expect(invoke).toHaveBeenLastCalledWith("history_delete_audio", {
+          id: "entry-1",
+        });
+        expect(history.selectedEntry()?.hasAudio).toBe(false);
+        dispose();
+      });
+    });
+
+    it("should keep the audio flag and report the error on failure", async () => {
+      await createRoot(async (dispose) => {
+        const history = createHistory();
+        vi.mocked(invoke).mockResolvedValueOnce({
+          ...mockEntry,
+          hasAudio: true,
+        });
+        await history.getEntry("entry-1");
+
+        vi.mocked(invoke).mockRejectedValueOnce("IO error: permission denied");
+        const ok = await history.deleteAudio("entry-1");
+
+        expect(ok).toBe(false);
+        expect(history.selectedEntry()?.hasAudio).toBe(true);
+        expect(history.error()).not.toBeNull();
         dispose();
       });
     });

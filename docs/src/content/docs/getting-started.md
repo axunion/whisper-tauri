@@ -39,6 +39,8 @@ When it finishes, the result opens automatically and is saved to **History**.
 3. Press stop when you're done. You can save the recording as a WAV file or discard it.
 4. Click **Start Transcription** to transcribe the recording.
 
+Once transcribed, the recording is kept on your device together with its history entry. You can delete the audio of a single entry from its detail view, or all of it at once under **Settings → Data**.
+
 ## 5. Work with the result
 
 The result viewer has two tabs by default:

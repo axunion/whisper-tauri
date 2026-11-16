@@ -4,12 +4,15 @@ import {
   FiClock,
   FiEdit2,
   FiMusic,
+  FiTrash2,
+  FiVolumeX,
   FiX,
 } from "solid-icons/fi";
 import type { Component } from "solid-js";
 import { createSignal, Show } from "solid-js";
 import { VadBadge } from "~/components/history/VadBadge";
 import { ResultViewer } from "~/components/transcription/ResultViewer";
+import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { useI18n } from "~/i18n";
 import { formatDate, formatDuration } from "~/lib/format";
 import type { AiOperation } from "~/primitives/createAiSession";
@@ -19,6 +22,7 @@ import type { HistoryEntry, TranscriptionResult } from "~/types";
 interface HistoryDetailProps {
   entry: HistoryEntry;
   onRename?: (id: string, newFileName: string) => void;
+  onDeleteAudio: (id: string) => void | Promise<void>;
   onProcessingChange?: (
     operation: AiOperation,
     cancel: () => Promise<void>,
@@ -81,6 +85,30 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
         {props.entry.modelId}
       </span>
       <VadBadge vadEnabled={props.entry.vadEnabled} />
+      <Show when={props.entry.hasAudio}>
+        <ConfirmDialog
+          title={t("history.deleteAudio")}
+          description={t("history.deleteAudioConfirmation")}
+          confirmLabel={
+            <>
+              <FiTrash2 />
+              {t("common.delete")}
+            </>
+          }
+          onConfirm={() => props.onDeleteAudio(props.entry.id)}
+        >
+          {(openDialog) => (
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 hover:text-destructive"
+              onClick={openDialog}
+            >
+              <FiVolumeX class="size-3" aria-hidden="true" />
+              {t("history.deleteAudio")}
+            </button>
+          )}
+        </ConfirmDialog>
+      </Show>
     </span>
   );
 

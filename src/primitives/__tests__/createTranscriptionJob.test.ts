@@ -61,6 +61,7 @@ function mockBackend(overrides: Record<string, Handler> = {}): void {
       sampleCount: 16000,
     }),
     cleanup_recording: () => undefined,
+    history_attach_recording: () => undefined,
     ...overrides,
   };
   vi.mocked(invoke).mockImplementation(async (command, args) => {
@@ -379,7 +380,7 @@ describe("createTranscriptionJob", () => {
   describe("recording run", () => {
     const recordingOptions = { ...options, name: "録音 2026-11-15 14:30" };
 
-    it("saves under the given name and discards the WAV after a successful save", async () => {
+    it("saves under the given name and keeps the WAV as the entry's audio", async () => {
       mockBackend();
       await makeRecording();
       const job = createTranscriptionJob();
@@ -397,10 +398,33 @@ describe("createTranscriptionJob", () => {
           source: "recording",
         }),
       });
-      expect(invoke).toHaveBeenCalledWith("cleanup_recording", {
-        path: "/recordings/rec.wav",
+      expect(invoke).toHaveBeenCalledWith("history_attach_recording", {
+        id: "history-1",
+        recordingPath: "/recordings/rec.wav",
       });
+      // Moved, not deleted — and no longer an untranscribed recording.
+      expect(commandsCalled()).not.toContain("cleanup_recording");
       expect(createRecording().tempFilePath()).toBeNull();
+      expect(job.error()).toBeNull();
+    });
+
+    it("keeps the recording and reports it when the audio cannot be attached", async () => {
+      mockBackend({
+        history_attach_recording: () => {
+          throw "IO error: permission denied";
+        },
+      });
+      await makeRecording();
+      const job = createTranscriptionJob();
+
+      await job.startRecording(recordingOptions);
+
+      expect(job.historyId()).toBe("history-1");
+      expect(createRecording().tempFilePath()).toBe("/recordings/rec.wav");
+      expect(job.error()).not.toBeNull();
+      // The transcription itself is safe, so this is not a save failure.
+      expect(job.saveFailed()).toBe(false);
+      expect(job.attachFailed()).toBe(true);
     });
 
     it("keeps the WAV when the transcription fails", async () => {
@@ -414,7 +438,7 @@ describe("createTranscriptionJob", () => {
 
       await job.startRecording(recordingOptions);
 
-      expect(commandsCalled()).not.toContain("cleanup_recording");
+      expect(commandsCalled()).not.toContain("history_attach_recording");
       expect(createRecording().tempFilePath()).toBe("/recordings/rec.wav");
     });
 
@@ -429,7 +453,7 @@ describe("createTranscriptionJob", () => {
 
       await job.startRecording(recordingOptions);
 
-      expect(commandsCalled()).not.toContain("cleanup_recording");
+      expect(commandsCalled()).not.toContain("history_attach_recording");
       expect(createRecording().tempFilePath()).toBe("/recordings/rec.wav");
       expect(job.saveFailed()).toBe(true);
     });

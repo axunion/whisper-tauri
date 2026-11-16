@@ -31,11 +31,14 @@ const {
   setHistoryId,
   saveError,
   setSaveError,
+  attachError,
+  setAttachError,
 } = createRoot(() => {
   const converter = createFileConverter();
   const [convertedPath, setConvertedPath] = createSignal<string | null>(null);
   const [historyId, setHistoryId] = createSignal<string | null>(null);
   const [saveError, setSaveError] = createSignal<AppError | null>(null);
+  const [attachError, setAttachError] = createSignal<AppError | null>(null);
   return {
     converter,
     convertedPath,
@@ -44,6 +47,8 @@ const {
     setHistoryId,
     saveError,
     setSaveError,
+    attachError,
+    setAttachError,
   };
 });
 
@@ -72,7 +77,7 @@ function canStartRecording(): boolean {
 }
 
 function error(): AppError | null {
-  return converter.error() ?? saveError();
+  return converter.error() ?? saveError() ?? attachError();
 }
 
 /**
@@ -84,9 +89,19 @@ function saveFailed(): boolean {
   return saveError() !== null;
 }
 
+/**
+ * True when the entry was saved but its recording could not be attached as
+ * audio. Like a failed save, starting over does not fix it — and would write
+ * a second entry.
+ */
+function attachFailed(): boolean {
+  return attachError() !== null;
+}
+
 function clearError(): void {
   converter.clearError();
   setSaveError(null);
+  setAttachError(null);
 }
 
 async function cleanupConverted(): Promise<void> {
@@ -96,15 +111,15 @@ async function cleanupConverted(): Promise<void> {
   setConvertedPath(null);
 }
 
-/** Returns whether the result was written to history. */
+/** Returns the new history entry's id, or null if the result was not saved. */
 async function saveToHistory(
   fileName: string,
   source: HistorySource,
   completedMessage: string,
-): Promise<boolean> {
+): Promise<string | null> {
   const result = whisper.result();
   const model = whisper.selectedModel();
-  if (!result || !model) return false;
+  if (!result || !model) return null;
 
   const params: HistorySaveParams = {
     fileName,
@@ -116,21 +131,24 @@ async function saveToHistory(
     vadEnabled: whisper.vadEnabled(),
     source,
   };
+  let id: string;
   try {
-    setHistoryId(await invoke<string>("history_save", { params }));
+    id = await invoke<string>("history_save", { params });
   } catch (e) {
     // Reported instead of the completion toast: announcing success would tell
     // the user the result is safe when it is not in history.
     setSaveError(parseError(e));
-    return false;
+    return null;
   }
+  setHistoryId(id);
   toast.success(completedMessage);
-  return true;
+  return id;
 }
 
 /** Clears what the previous run left behind before a new one starts. */
 function beginRun(): void {
   setSaveError(null);
+  setAttachError(null);
   // Dropped up front: the result view mounts as soon as the result arrives,
   // before the new entry is saved, so a stale id would load the previous
   // transcription's AI content and persist this run's summary onto it.
@@ -163,17 +181,22 @@ async function startRecording(options: StartRecordingOptions): Promise<void> {
   whisper.setFile({ path: tempPath, name: options.name, size: 0 });
   await whisper.startTranscription(tempPath);
 
-  const saved = await saveToHistory(
+  const id = await saveToHistory(
     options.name,
     "recording",
     options.completedMessage,
   );
+  // On cancel or failure the WAV stays where it is: it is the user's only
+  // copy, and "Save as WAV" must remain reachable.
+  if (!id) return;
 
-  // Only discard the recording once its transcription is safely in history.
-  // On cancel or failure the WAV is the user's only copy — deleting it here
-  // would make "Save as WAV" unreachable and lose the audio for good.
-  if (saved) {
-    await recording.cleanup();
+  // The WAV becomes the entry's audio. If the move fails it is still an
+  // untranscribed recording as far as the UI goes, so nothing is lost.
+  try {
+    await invoke("history_attach_recording", { id, recordingPath: tempPath });
+    recording.release();
+  } catch (e) {
+    setAttachError(parseError(e));
   }
 }
 
@@ -182,6 +205,7 @@ async function reset(): Promise<void> {
   await cleanupConverted();
   setHistoryId(null);
   setSaveError(null);
+  setAttachError(null);
   whisper.reset();
 }
 
@@ -204,6 +228,7 @@ const jobInstance = {
   historyId,
   error,
   saveFailed,
+  attachFailed,
   canStartFile,
   canStartRecording,
   startFile,
@@ -223,4 +248,5 @@ export function _resetTranscriptionJobForTesting(): void {
   setConvertedPath(null);
   setHistoryId(null);
   setSaveError(null);
+  setAttachError(null);
 }

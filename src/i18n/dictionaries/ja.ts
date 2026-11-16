@@ -76,6 +76,10 @@ export const ja: Dictionary = {
     detail: "詳細",
     noEntries: "履歴が見つかりません。",
     loadMore: "さらに読み込む",
+    deleteAudio: "音声を削除",
+    deleteAudioConfirmation:
+      "この履歴の録音音声を削除しますか？文字起こしの内容は残ります。この操作は取り消せません。",
+    audioDeletedToast: "音声を削除しました",
     deleteSelected: "選択した履歴を削除",
     deleteConfirmation:
       "{count} 件の履歴が完全に削除されます。この操作は取り消せません。",
@@ -106,6 +110,24 @@ export const ja: Dictionary = {
     processingCancelledToast: "処理を中断しました",
   },
   settings: {
+    dataManagement: "データ管理",
+    audioStorage: "録音音声",
+    pendingRecordings: "未処理の録音",
+    storageUsage: "{count}件・{size}",
+    deleteAllAudio: "すべての音声を削除",
+    deleteAllAudioConfirmation:
+      "履歴に保存されている録音音声をすべて削除しますか？文字起こしの内容は残ります。この操作は取り消せません。",
+    allAudioDeletedToast: "すべての音声を削除しました",
+    deletePendingRecordings: "未処理の録音を削除",
+    deletePendingRecordingsConfirmation:
+      "文字起こしされないまま残っている録音を削除しますか？この操作は取り消せません。",
+    pendingRecordingsDeletedToast: "未処理の録音を削除しました",
+    deleteAllHistory: "すべての履歴を削除",
+    deleteAllHistoryDescription:
+      "文字起こし・AI 生成テキスト・録音音声をすべて削除します",
+    deleteAllHistoryConfirmation:
+      "すべての履歴を、AI 生成テキストと録音音声を含めて削除しますか？この操作は取り消せません。",
+    allHistoryDeletedToast: "すべての履歴を削除しました",
     general: "一般設定",
     language: "言語",
     languageDescription: "アプリの表示言語",

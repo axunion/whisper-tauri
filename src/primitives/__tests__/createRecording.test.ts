@@ -423,6 +423,28 @@ describe("createRecording", () => {
     });
   });
 
+  describe("release", () => {
+    it("should clear tempFilePath without invoking cleanup_recording", async () => {
+      vi.mocked(invoke)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(mockStopResult);
+
+      await createRoot(async (dispose) => {
+        const recording = createRecording();
+        await recording.startRecording();
+        await recording.stopRecording();
+        expect(recording.tempFilePath()).toBe(mockStopResult.tempFilePath);
+        vi.mocked(invoke).mockClear();
+
+        recording.release();
+
+        expect(recording.tempFilePath()).toBeNull();
+        expect(invoke).not.toHaveBeenCalled();
+        dispose();
+      });
+    });
+  });
+
   describe("clearError", () => {
     it("should set error to null", async () => {
       vi.mocked(invoke).mockRejectedValueOnce(new Error("Some error"));

@@ -131,6 +131,11 @@ async function cleanup(): Promise<void> {
   }
 }
 
+/** Lets go of the recording without deleting it — its file now lives elsewhere. */
+function release(): void {
+  setTempFilePath(null);
+}
+
 function clearError(): void {
   setError(null);
 }
@@ -148,6 +153,7 @@ const recordingInstance = {
   startRecording,
   stopRecording,
   cleanup,
+  release,
   clearError,
 };
 

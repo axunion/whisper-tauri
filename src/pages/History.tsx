@@ -202,6 +202,14 @@ export default function History() {
                     <HistoryDetail
                       entry={entry()}
                       onRename={history.renameEntry}
+                      onDeleteAudio={(id) =>
+                        runWithToast({
+                          action: () => history.deleteAudio(id),
+                          successKey: "history.audioDeletedToast",
+                          error: history.error,
+                          t,
+                        })
+                      }
                       onProcessingChange={(op, cancel) => {
                         setCurrentOp(op);
                         setCancelFn(() => cancel);

@@ -60,6 +60,22 @@ export interface HistoryEntry {
   /** Segments with timing information */
   segments: HistorySegment[];
   vadEnabled: boolean | null;
+  /** Whether the entry's recording audio is kept on disk */
+  hasAudio: boolean;
+}
+
+/**
+ * Disk used by recording audio.
+ */
+export interface StorageStats {
+  /** Number of audio files kept for history entries */
+  audioCount: number;
+  /** Total size of that audio in bytes */
+  audioBytes: number;
+  /** Number of recordings not yet transcribed */
+  pendingRecordingCount: number;
+  /** Total size of those recordings in bytes */
+  pendingRecordingBytes: number;
 }
 
 /**

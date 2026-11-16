@@ -17,6 +17,7 @@ export type {
   HistorySortBy,
   HistorySource,
   SortOrder,
+  StorageStats,
 } from "./history";
 export type {
   NotionActionItem,

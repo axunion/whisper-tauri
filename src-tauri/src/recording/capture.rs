@@ -19,7 +19,7 @@ const WHISPER_SAMPLE_RATE: u32 = 16_000;
 const LEVEL_EMIT_INTERVAL_MS: u128 = 50;
 
 /// Returns the directory recordings are written to.
-fn recordings_dir(app_data_dir: &Path) -> std::path::PathBuf {
+pub(crate) fn recordings_dir(app_data_dir: &Path) -> std::path::PathBuf {
     app_data_dir.join("recordings")
 }
 

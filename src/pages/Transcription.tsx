@@ -122,9 +122,11 @@ export default function Transcription() {
   }
 
   const retryHandler = () => {
-    // Retry re-runs the transcription, which fixes neither a failed history
-    // save nor a failed rename.
-    if (job.saveFailed() || history.error()) return undefined;
+    // Retry re-runs the transcription, which fixes none of a failed history
+    // save, a failed audio attach or a failed rename.
+    if (job.saveFailed() || job.attachFailed() || history.error()) {
+      return undefined;
+    }
     if (activeTab() === "file") {
       return job.canStartFile() ? handleStartFile : undefined;
     }

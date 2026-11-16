@@ -76,6 +76,10 @@ export const en: Dictionary = {
     detail: "Detail",
     noEntries: "No history entries found.",
     loadMore: "Load more",
+    deleteAudio: "Delete audio",
+    deleteAudioConfirmation:
+      "Delete the recording audio of this entry? The transcription is kept. This cannot be undone.",
+    audioDeletedToast: "Audio deleted",
     deleteSelected: "Delete Selected",
     deleteConfirmation:
       "{count} entries will be permanently deleted. This action cannot be undone.",
@@ -106,6 +110,24 @@ export const en: Dictionary = {
     processingCancelledToast: "Processing cancelled",
   },
   settings: {
+    dataManagement: "Data",
+    audioStorage: "Recording audio",
+    pendingRecordings: "Untranscribed recordings",
+    storageUsage: "{count} · {size}",
+    deleteAllAudio: "Delete all audio",
+    deleteAllAudioConfirmation:
+      "Delete all recording audio kept in history? The transcriptions are kept. This cannot be undone.",
+    allAudioDeletedToast: "All audio deleted",
+    deletePendingRecordings: "Delete untranscribed recordings",
+    deletePendingRecordingsConfirmation:
+      "Delete the recordings that were never transcribed? This cannot be undone.",
+    pendingRecordingsDeletedToast: "Untranscribed recordings deleted",
+    deleteAllHistory: "Delete all history",
+    deleteAllHistoryDescription:
+      "Deletes every transcription, AI-generated text and recording audio",
+    deleteAllHistoryConfirmation:
+      "Delete all history, including AI-generated text and recording audio? This cannot be undone.",
+    allHistoryDeletedToast: "All history deleted",
     general: "General Settings",
     language: "Language",
     languageDescription: "App display language",

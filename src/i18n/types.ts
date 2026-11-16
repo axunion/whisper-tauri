@@ -73,6 +73,9 @@ export interface Dictionary {
     detail: string;
     noEntries: string;
     loadMore: string;
+    deleteAudio: string;
+    deleteAudioConfirmation: string;
+    audioDeletedToast: string;
     deleteSelected: string;
     deleteConfirmation: string;
     deletedToast: string;
@@ -101,6 +104,20 @@ export interface Dictionary {
   };
   settings: {
     general: string;
+    dataManagement: string;
+    audioStorage: string;
+    pendingRecordings: string;
+    storageUsage: string;
+    deleteAllAudio: string;
+    deleteAllAudioConfirmation: string;
+    allAudioDeletedToast: string;
+    deletePendingRecordings: string;
+    deletePendingRecordingsConfirmation: string;
+    pendingRecordingsDeletedToast: string;
+    deleteAllHistory: string;
+    deleteAllHistoryDescription: string;
+    deleteAllHistoryConfirmation: string;
+    allHistoryDeletedToast: string;
     language: string;
     languageDescription: string;
     languageJa: string;

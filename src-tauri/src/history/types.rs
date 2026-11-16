@@ -110,6 +110,22 @@ pub struct HistoryEntry {
     /// Segments with timing information
     pub segments: Vec<HistorySegment>,
     pub vad_enabled: Option<bool>,
+    /// Whether the entry's recording audio is kept on disk
+    pub has_audio: bool,
+}
+
+/// Disk used by recording audio.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageStats {
+    /// Number of audio files kept for history entries
+    pub audio_count: u64,
+    /// Total size of that audio in bytes
+    pub audio_bytes: u64,
+    /// Number of recordings not yet transcribed
+    pub pending_recording_count: u64,
+    /// Total size of those recordings in bytes
+    pub pending_recording_bytes: u64,
 }
 
 /// Parameters for saving a new history entry.
@@ -267,8 +283,10 @@ mod tests {
                 text: "Hello world".to_string(),
             }],
             vad_enabled: Some(false),
+            has_audio: false,
         };
         let json = serde_json::to_string(&entry).expect("Failed to serialize");
+        assert!(json.contains("\"hasAudio\":false"));
         assert!(json.contains("\"segments\":["));
         assert!(json.contains("\"text\":\"Hello world\""));
         assert!(json.contains("\"vadEnabled\":false"));
@@ -406,5 +424,19 @@ mod tests {
         };
         let json = serde_json::to_string(&params).expect("serialize");
         assert!(!json.contains("offset"));
+    }
+
+    #[test]
+    fn storage_stats_serializes_to_camel_case() {
+        let stats = StorageStats {
+            audio_count: 2,
+            audio_bytes: 1024,
+            pending_recording_count: 1,
+            pending_recording_bytes: 512,
+        };
+        assert_eq!(
+            serde_json::to_string(&stats).expect("Failed to serialize"),
+            r#"{"audioCount":2,"audioBytes":1024,"pendingRecordingCount":1,"pendingRecordingBytes":512}"#
+        );
     }
 }

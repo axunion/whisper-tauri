@@ -4,11 +4,12 @@ use tauri::AppHandle;
 
 use crate::paths;
 
+use super::audio;
 use super::db;
 use super::error::HistoryError;
 use super::types::{
     AiContent, AiContentSaveParams, HistoryEntry, HistoryFilter, HistoryMeta, HistorySaveParams,
-    HistorySearchParams,
+    HistorySearchParams, StorageStats,
 };
 
 /// Returns the database path, initializing the database on first use.
@@ -69,7 +70,9 @@ pub async fn history_list(
 #[tauri::command]
 pub async fn history_get(app: AppHandle, id: String) -> Result<HistoryEntry, String> {
     let db_path = get_db_path(&app)?;
-    db::get_entry(&db_path, &id).map_err(Into::into)
+    let mut entry = db::get_entry(&db_path, &id)?;
+    entry.has_audio = audio::has_audio(&paths::app_data_dir(&app)?, &entry.id);
+    Ok(entry)
 }
 
 /// Deletes history entries by their IDs.
@@ -80,7 +83,18 @@ pub async fn history_get(app: AppHandle, id: String) -> Result<HistoryEntry, Str
 #[tauri::command]
 pub async fn history_delete(app: AppHandle, ids: Vec<String>) -> Result<u64, String> {
     let db_path = get_db_path(&app)?;
-    db::delete_entries(&db_path, &ids).map_err(Into::into)
+    let deleted = db::delete_entries(&db_path, &ids)?;
+    // The rows are gone at this point, so a file that cannot be removed must
+    // not turn the delete into a failure: the caller would keep showing
+    // entries that no longer exist. A leftover file only costs disk, and
+    // "delete all audio" in Settings reclaims it.
+    let app_data_dir = paths::app_data_dir(&app)?;
+    for id in &ids {
+        if let Err(e) = audio::delete_audio(&app_data_dir, id) {
+            eprintln!("[history] failed to delete audio of {id}: {e}");
+        }
+    }
+    Ok(deleted)
 }
 
 /// Deletes all history entries.
@@ -91,7 +105,85 @@ pub async fn history_delete(app: AppHandle, ids: Vec<String>) -> Result<u64, Str
 #[tauri::command]
 pub async fn history_delete_all(app: AppHandle) -> Result<u64, String> {
     let db_path = get_db_path(&app)?;
-    db::delete_all_entries(&db_path).map_err(Into::into)
+    let deleted = db::delete_all_entries(&db_path)?;
+    // Best-effort for the same reason as in `history_delete`.
+    if let Err(e) = audio::delete_all_audio(&paths::app_data_dir(&app)?) {
+        eprintln!("[history] failed to delete audio: {e}");
+    }
+    Ok(deleted)
+}
+
+/// Keeps a just-transcribed recording as the audio of history entry `id`.
+///
+/// # Errors
+///
+/// Returns an error if `recording_path` is outside the recordings directory
+/// or the file cannot be moved.
+#[tauri::command]
+pub async fn history_attach_recording(
+    app: AppHandle,
+    id: String,
+    recording_path: String,
+) -> Result<(), String> {
+    let app_data_dir = paths::app_data_dir(&app)?;
+    audio::attach_recording(&app_data_dir, &id, std::path::Path::new(&recording_path))
+        .map_err(Into::into)
+}
+
+/// Deletes the audio of history entry `id`, keeping the entry itself.
+///
+/// # Errors
+///
+/// Returns an error if the file cannot be deleted.
+#[tauri::command]
+pub async fn history_delete_audio(app: AppHandle, id: String) -> Result<(), String> {
+    audio::delete_audio(&paths::app_data_dir(&app)?, &id).map_err(Into::into)
+}
+
+/// Deletes the audio of every history entry, keeping the entries.
+///
+/// # Errors
+///
+/// Returns an error if a file cannot be deleted.
+#[tauri::command]
+pub async fn history_delete_all_audio(app: AppHandle) -> Result<(), String> {
+    audio::delete_all_audio(&paths::app_data_dir(&app)?).map_err(Into::into)
+}
+
+/// Deletes recordings that were never transcribed, except `keep_path` — the
+/// recording the current session still holds.
+///
+/// # Errors
+///
+/// Returns an error if a file cannot be deleted.
+#[tauri::command]
+pub async fn history_delete_pending_recordings(
+    app: AppHandle,
+    keep_path: Option<String>,
+) -> Result<(), String> {
+    audio::delete_pending_recordings(
+        &paths::app_data_dir(&app)?,
+        keep_path.as_deref().map(std::path::Path::new),
+    )
+    .map_err(Into::into)
+}
+
+/// Reports the disk used by kept audio and by untranscribed recordings other
+/// than `keep_path` — the recording the current session still holds.
+///
+/// # Errors
+///
+/// Returns an error if the directories cannot be read.
+#[tauri::command]
+pub async fn history_storage_stats(
+    app: AppHandle,
+    keep_path: Option<String>,
+) -> Result<StorageStats, String> {
+    audio::storage_stats(
+        &paths::app_data_dir(&app)?,
+        keep_path.as_deref().map(std::path::Path::new),
+    )
+    .map_err(Into::into)
 }
 
 /// Renames a history entry's file name.

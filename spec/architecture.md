@@ -21,7 +21,7 @@ Source: `src-tauri/src/lib.rs` / `src-tauri/tauri.conf.json` / `src-tauri/capabi
 | `download.rs` | 共通ダウンロードヘルパー (ストリーミング + 100ms スロットルの進捗コールバック) | — |
 | `paths.rs` | app data ディレクトリ解決 + UTF-8 パス変換 | — |
 
-ドメインモジュールは `commands.rs` / `types.rs` / `error.rs` / `mod.rs` の共通構成。全コマンドは `lib.rs` の `invoke_handler` に登録する (現在 55 コマンド)。
+ドメインモジュールは `commands.rs` / `types.rs` / `error.rs` / `mod.rs` の共通構成。全コマンドは `lib.rs` の `invoke_handler` に登録する (現在 49 コマンド)。
 
 **共有状態** (`lib.rs` の `.manage()`):
 - `std::sync::Mutex<RecordingManager>` — 録音セッション
@@ -58,7 +58,8 @@ macOS: `~/Library/Application Support/com.whisper-tauri.desktop/`
 models/            # Whisper モデル (ggml-*.bin) + VAD モデル (ggml-silero-v5.1.2.bin)
 text-models/       # LLM GGUF モデル
 bin/               # ffmpeg (+ .ffmpeg-version) / llama-server (+ llama-server.version)
-recordings/        # 録音 WAV ({uuid}.wav)
+recordings/        # 未処理の録音 WAV ({uuid}.wav)
+audio/             # 履歴に紐付いた録音音声 ({history_id}.wav)
 history.db         # 履歴 SQLite
 settings.json      # tauri-plugin-store (設定)
 mirrors.json       # ダウンロード元の差し替え (任意・手編集)

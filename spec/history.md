@@ -60,6 +60,17 @@ CREATE INDEX idx_ai_content_history ON ai_content(history_id);
 
 `history_list` / `history_search` は `limit` + `offset` を受け取る (`entries.rs::push_paging`)。FE (`createHistory.ts`) は 50 件ずつ取得し、満杯のページが返ったときだけ「さらに読み込む」を出す。ページ間で行が重複・欠落しないよう、`sort_clause` は常に `id` を最終ソートキーに付ける (`created_at` は秒精度で同値があり得る)。
 
+## 録音音声 (`audio.rs`)
+
+マイク録音の WAV は、文字起こしが履歴に保存された時点で `recordings/` から `{app_data}/audio/{history_id}.wav` へ rename で移動し、履歴と一緒に残す。ファイル由来の履歴は音声を持たない。
+
+- パスは履歴 ID から導出し、DB には参照を持たない。ID はファイル名になるため **UUID として検証してから**結合する (パス区切りや `..` を持てない)
+- `HistoryEntry.hasAudio` は `history_get` がディスクを見て埋める (DB 層は常に `false`)。一覧 (`HistoryMeta`) は持たない
+- 履歴の削除 (`history_delete` / `history_delete_all`) は音声ファイルも削除する。行の削除後なのでファイル削除はベストエフォート (失敗はログのみ — エラーを返すと FE が消えた行を表示し続ける)
+- `history_attach_recording` は移動元が `recordings/` 直下であることを canonicalize して検証する (`RecordingManager::cleanup` と同じ理由)
+- 移動に失敗しても文字起こしは保存済み。WAV は未処理の録音として残り、FE (`createTranscriptionJob`) がエラーを表示する
+- 設定画面の「データ管理」(`DataManagement.tsx` / `createStorage.ts`): 音声の件数と容量 (`history_storage_stats`)、全音声の削除、未処理の録音の件数と削除 (セッションが保持中の 1 件は件数にも削除にも含めない)、全履歴の削除
+
 ## コマンド一覧
 
-`history_save` / `history_list` (フィルタ + ソート) / `history_get` / `history_delete` / `history_delete_all` / `history_search` / `history_rename` / `history_save_ai_content` / `history_get_ai_content` / `history_get_all_ai_content`
+`history_save` / `history_list` (フィルタ + ソート) / `history_get` / `history_delete` / `history_delete_all` / `history_search` / `history_rename` / `history_save_ai_content` / `history_get_ai_content` / `history_get_all_ai_content` / `history_attach_recording` / `history_delete_audio` / `history_delete_all_audio` / `history_delete_pending_recordings` / `history_storage_stats`

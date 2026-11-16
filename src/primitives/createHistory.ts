@@ -200,6 +200,21 @@ export function createHistory() {
     }
   }
 
+  /** Deletes an entry's recording audio, keeping the entry itself. */
+  async function deleteAudio(id: string): Promise<boolean> {
+    try {
+      await invoke("history_delete_audio", { id });
+      const current = selectedEntry();
+      if (current?.id === id) {
+        setSelectedEntry({ ...current, hasAudio: false });
+      }
+      return true;
+    } catch (e) {
+      setError(parseError(e));
+      return false;
+    }
+  }
+
   function toggleSelect(id: string): void {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -297,6 +312,7 @@ export function createHistory() {
     deleteEntries,
     deleteAllEntries,
     renameEntry,
+    deleteAudio,
     toggleSelect,
     selectAll,
     clearSelection,

@@ -219,6 +219,8 @@ pub(crate) fn get_entry(db_path: &Path, id: &str) -> Result<HistoryEntry, Histor
         text,
         segments,
         vad_enabled,
+        // Filled in from disk by the command layer.
+        has_audio: false,
     })
 }
 
