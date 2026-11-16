@@ -248,6 +248,9 @@ export interface Dictionary {
     defaultDevice: string;
     startRecording: string;
     stopRecording: string;
+    pauseRecording: string;
+    resumeRecording: string;
+    paused: string;
     recording: string;
     noDevices: string;
     discardRecording: string;

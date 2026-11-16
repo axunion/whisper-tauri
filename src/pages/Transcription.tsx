@@ -284,6 +284,9 @@ export default function Transcription() {
                         devices={recording.devices()}
                         selectedDevice={recording.selectedDevice()}
                         isRecording={recording.isRecording()}
+                        isPaused={recording.isPaused()}
+                        onPauseRecording={() => recording.pauseRecording()}
+                        onResumeRecording={() => recording.resumeRecording()}
                         level={recording.level()}
                         duration={recording.duration()}
                         tempFilePath={recording.tempFilePath()}

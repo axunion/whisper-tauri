@@ -12,6 +12,8 @@ const {
   setSelectedDevice,
   isRecording,
   setIsRecording,
+  isPaused,
+  setIsPaused,
   level,
   setLevel,
   tempFilePath,
@@ -26,6 +28,7 @@ const {
     null,
   );
   const [isRecording, setIsRecording] = createSignal(false);
+  const [isPaused, setIsPaused] = createSignal(false);
   const [level, setLevel] = createSignal<RecordingLevel | null>(null);
   const [tempFilePath, setTempFilePath] = createSignal<string | null>(null);
   const [duration, setDuration] = createSignal(0);
@@ -38,6 +41,8 @@ const {
     setSelectedDevice,
     isRecording,
     setIsRecording,
+    isPaused,
+    setIsPaused,
     level,
     setLevel,
     tempFilePath,
@@ -87,9 +92,33 @@ async function startRecording(): Promise<void> {
       deviceId: selectedDevice()?.id ?? null,
     });
     setIsRecording(true);
+    setIsPaused(false);
+    // The clock counts recorded time, so it stands still while paused.
     durationTimer = setInterval(() => {
-      setDuration((d) => d + 100);
+      if (!isPaused()) setDuration((d) => d + 100);
     }, 100);
+  } catch (e) {
+    setError(parseError(e));
+  }
+}
+
+/** Pauses the recording; audio while paused is not kept. */
+async function pauseRecording(): Promise<void> {
+  if (!isRecording() || isPaused()) return;
+  try {
+    await invoke("pause_recording");
+    setIsPaused(true);
+    setLevel(null);
+  } catch (e) {
+    setError(parseError(e));
+  }
+}
+
+async function resumeRecording(): Promise<void> {
+  if (!isRecording() || !isPaused()) return;
+  try {
+    await invoke("resume_recording");
+    setIsPaused(false);
   } catch (e) {
     setError(parseError(e));
   }
@@ -107,12 +136,14 @@ async function stopRecording(): Promise<RecordingStopResult | null> {
   try {
     const result = await invoke<RecordingStopResult>("stop_recording");
     setIsRecording(false);
+    setIsPaused(false);
     setTempFilePath(result.tempFilePath);
     setDuration(result.durationMs);
     setLevel(null);
     return result;
   } catch (e) {
     setIsRecording(false);
+    setIsPaused(false);
     setError(parseError(e));
     return null;
   } finally {
@@ -144,6 +175,7 @@ const recordingInstance = {
   devices,
   selectedDevice,
   isRecording,
+  isPaused,
   level,
   tempFilePath,
   duration,
@@ -151,6 +183,8 @@ const recordingInstance = {
   loadDevices,
   selectDevice,
   startRecording,
+  pauseRecording,
+  resumeRecording,
   stopRecording,
   cleanup,
   release,
@@ -166,6 +200,7 @@ export function _resetRecordingForTesting(): void {
   setDevices([]);
   setSelectedDevice(null);
   setIsRecording(false);
+  setIsPaused(false);
   setLevel(null);
   setTempFilePath(null);
   setDuration(0);

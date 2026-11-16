@@ -37,6 +37,28 @@ pub async fn start_recording(
     manager.start(device_id, app).map_err(Into::into)
 }
 
+/// Pauses the current recording; audio captured while paused is discarded.
+///
+/// # Errors
+///
+/// Returns an error string if no recording is in progress.
+#[tauri::command]
+pub async fn pause_recording(state: State<'_, Mutex<RecordingManager>>) -> Result<(), String> {
+    let manager = state.lock().map_err(|e| format!("Lock error: {e}"))?;
+    manager.set_paused(true).map_err(Into::into)
+}
+
+/// Resumes a paused recording.
+///
+/// # Errors
+///
+/// Returns an error string if no recording is in progress.
+#[tauri::command]
+pub async fn resume_recording(state: State<'_, Mutex<RecordingManager>>) -> Result<(), String> {
+    let manager = state.lock().map_err(|e| format!("Lock error: {e}"))?;
+    manager.set_paused(false).map_err(Into::into)
+}
+
 /// Stops the current recording and returns the result.
 ///
 /// The recorded audio is saved as a 16 kHz mono WAV file in the

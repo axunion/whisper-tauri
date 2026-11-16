@@ -423,6 +423,72 @@ describe("createRecording", () => {
     });
   });
 
+  describe("pause and resume", () => {
+    it("should stop the clock while paused and run it again after resuming", async () => {
+      vi.useFakeTimers();
+      vi.mocked(invoke).mockResolvedValue(undefined);
+      try {
+        const recording = createRecording();
+        await recording.startRecording();
+        await vi.advanceTimersByTimeAsync(500);
+        expect(recording.duration()).toBe(500);
+
+        await recording.pauseRecording();
+        expect(invoke).toHaveBeenLastCalledWith("pause_recording");
+        expect(recording.isPaused()).toBe(true);
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(recording.duration()).toBe(500);
+
+        await recording.resumeRecording();
+        expect(invoke).toHaveBeenLastCalledWith("resume_recording");
+        expect(recording.isPaused()).toBe(false);
+        await vi.advanceTimersByTimeAsync(300);
+        expect(recording.duration()).toBe(800);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("should do nothing when there is no recording to pause", async () => {
+      vi.mocked(invoke).mockClear();
+      const recording = createRecording();
+
+      await recording.pauseRecording();
+      await recording.resumeRecording();
+
+      expect(invoke).not.toHaveBeenCalled();
+      expect(recording.isPaused()).toBe(false);
+    });
+
+    it("should clear the paused state when the recording stops", async () => {
+      vi.mocked(invoke).mockResolvedValue(undefined);
+      const recording = createRecording();
+      await recording.startRecording();
+      await recording.pauseRecording();
+
+      vi.mocked(invoke).mockResolvedValueOnce({
+        tempFilePath: "/recordings/a.wav",
+        durationMs: 1000,
+        sampleCount: 16000,
+      });
+      await recording.stopRecording();
+
+      expect(recording.isPaused()).toBe(false);
+    });
+
+    it("should stay recording and report the error when pausing fails", async () => {
+      vi.mocked(invoke).mockResolvedValueOnce(undefined);
+      const recording = createRecording();
+      await recording.startRecording();
+
+      vi.mocked(invoke).mockRejectedValueOnce("Not recording");
+      await recording.pauseRecording();
+
+      expect(recording.isPaused()).toBe(false);
+      expect(recording.error()).not.toBeNull();
+    });
+  });
+
   describe("release", () => {
     it("should clear tempFilePath without invoking cleanup_recording", async () => {
       vi.mocked(invoke)

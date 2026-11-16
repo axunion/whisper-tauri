@@ -1,6 +1,13 @@
 import { save } from "@tauri-apps/plugin-dialog";
 import { copyFile } from "@tauri-apps/plugin-fs";
-import { FiDisc, FiDownload, FiMic, FiSquare, FiTrash2 } from "solid-icons/fi";
+import {
+  FiDisc,
+  FiDownload,
+  FiMic,
+  FiPause,
+  FiSquare,
+  FiTrash2,
+} from "solid-icons/fi";
 import type { Component } from "solid-js";
 import { createMemo, Show } from "solid-js";
 import { Button } from "~/components/ui/Button";
@@ -14,6 +21,7 @@ import {
 import { useI18n } from "~/i18n";
 import { formatDurationColon } from "~/lib/format";
 import { toast } from "~/lib/toast";
+import { cn } from "~/lib/utils";
 import type { AudioDevice, RecordingLevel } from "~/types";
 import { AudioLevelMeter } from "./AudioLevelMeter";
 
@@ -21,12 +29,15 @@ interface RecordingPanelProps {
   devices: AudioDevice[];
   selectedDevice: AudioDevice | null;
   isRecording: boolean;
+  isPaused: boolean;
   level: RecordingLevel | null;
   duration: number;
   tempFilePath: string | null;
   disabled?: boolean;
   onSelectDevice: (device: AudioDevice) => void;
   onStartRecording: () => void;
+  onPauseRecording: () => void;
+  onResumeRecording: () => void;
   onStopRecording: () => void;
   onDiscard: () => void;
 }
@@ -138,14 +149,42 @@ const RecordingPanel: Component<RecordingPanelProps> = (props) => {
               </button>
             }
           >
-            <button
-              type="button"
-              class="flex size-16 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-lg transition-all hover:scale-105 hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              onClick={props.onStopRecording}
-              aria-label={t("recording.stopRecording")}
-            >
-              <FiSquare class="size-6" />
-            </button>
+            <div class="flex items-center gap-4">
+              <button
+                type="button"
+                class="flex size-16 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-lg transition-all hover:scale-105 hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                onClick={props.onStopRecording}
+                aria-label={t("recording.stopRecording")}
+              >
+                <FiSquare class="size-6" />
+              </button>
+              <button
+                type="button"
+                class="flex size-11 items-center justify-center rounded-full border bg-background text-foreground shadow-sm transition-all hover:scale-105 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                onClick={() =>
+                  props.isPaused
+                    ? props.onResumeRecording()
+                    : props.onPauseRecording()
+                }
+                aria-label={
+                  props.isPaused
+                    ? t("recording.resumeRecording")
+                    : t("recording.pauseRecording")
+                }
+                title={
+                  props.isPaused
+                    ? t("recording.resumeRecording")
+                    : t("recording.pauseRecording")
+                }
+              >
+                <Show
+                  when={props.isPaused}
+                  fallback={<FiPause class="size-5" aria-hidden="true" />}
+                >
+                  <FiMic class="size-5" aria-hidden="true" />
+                </Show>
+              </button>
+            </div>
           </Show>
 
           {/* Status label - below the button */}
@@ -163,11 +202,18 @@ const RecordingPanel: Component<RecordingPanelProps> = (props) => {
               class="mt-3 flex items-center gap-2 text-sm"
             >
               <FiDisc
-                class="size-4 animate-pulse text-red-500"
+                class={cn(
+                  "size-4",
+                  props.isPaused
+                    ? "text-muted-foreground"
+                    : "animate-pulse text-red-500",
+                )}
                 aria-hidden="true"
               />
               <span class="text-muted-foreground">
-                {t("recording.recording")}
+                {props.isPaused
+                  ? t("recording.paused")
+                  : t("recording.recording")}
               </span>
               <span class="font-mono tabular-nums" aria-hidden="true">
                 {formatDurationColon(props.duration)}

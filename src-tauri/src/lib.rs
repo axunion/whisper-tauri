@@ -123,6 +123,8 @@ pub fn run() {
             history::commands::history_storage_stats,
             recording::commands::list_audio_devices,
             recording::commands::start_recording,
+            recording::commands::pause_recording,
+            recording::commands::resume_recording,
             recording::commands::stop_recording,
             recording::commands::cleanup_recording,
             text_processing::commands::text_processing_list_models,
