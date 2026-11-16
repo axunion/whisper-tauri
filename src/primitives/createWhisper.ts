@@ -244,10 +244,18 @@ async function selectFile(fileInfo: FileInfo): Promise<void> {
 async function startTranscription(overrideAudioPath?: string): Promise<void> {
   const currentFile = file();
   const currentModel = selectedModel();
-  const modelPath = currentModel?.path;
-  // A model only has a path once downloaded.
-  if (!currentFile || !modelPath) return;
+  if (!currentFile || !currentModel) return;
   if (isProcessing()) return;
+  const modelPath = currentModel.path;
+  // A model only has a path once downloaded. Reported, and the previous
+  // result cleared, so the caller cannot mistake it for this run's.
+  if (!modelPath) {
+    batch(() => {
+      setResult(null);
+      setError(parseError(`Model not found: ${currentModel.id}`));
+    });
+    return;
+  }
 
   cancelRequested = false;
   batch(() => {

@@ -94,6 +94,23 @@ describe("createStorage", () => {
     });
   });
 
+  it("sends a null keepPath when no recording is held", async () => {
+    vi.mocked(invoke)
+      .mockResolvedValueOnce(undefined) // delete
+      .mockResolvedValueOnce(stats());
+
+    await createRoot(async (dispose) => {
+      const storage = createStorage();
+
+      await storage.deletePendingRecordings();
+
+      expect(invoke).toHaveBeenCalledWith("history_delete_pending_recordings", {
+        keepPath: null,
+      });
+      dispose();
+    });
+  });
+
   it("reports a failed delete and leaves the stats untouched", async () => {
     vi.mocked(invoke).mockResolvedValueOnce(stats());
 

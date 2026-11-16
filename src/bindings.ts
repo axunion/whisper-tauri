@@ -643,7 +643,8 @@ export type HistoryFilter = HistoryFilter_Serialize | HistoryFilter_Deserialize;
 export type HistoryFilter_Deserialize = {
 	/**
 	 *  Inclusive lower bound, as a suffix-less UTC timestamp matching
-	 *  `created_at` (e.g. "2026-01-01T15:00:00")
+	 *  `created_at` (e.g. "2026-01-01T15:00:00"). Compared lexicographically
+	 *  in SQLite, so the format has to match `created_at` exactly.
 	 */
 	dateFrom?: string | null,
 	/**  Exclusive upper bound, same format as `date_from` */
@@ -662,7 +663,8 @@ export type HistoryFilter_Deserialize = {
 export type HistoryFilter_Serialize = {
 	/**
 	 *  Inclusive lower bound, as a suffix-less UTC timestamp matching
-	 *  `created_at` (e.g. "2026-01-01T15:00:00")
+	 *  `created_at` (e.g. "2026-01-01T15:00:00"). Compared lexicographically
+	 *  in SQLite, so the format has to match `created_at` exactly.
 	 */
 	dateFrom?: string,
 	/**  Exclusive upper bound, same format as `date_from` */
@@ -1073,7 +1075,7 @@ export type StorageStats = {
  *  paragraph that summarises the whole transcription, while `keyPoints` is a
  *  bullet-style list of sub-topics. Arrays may be empty when the
  *  transcription does not yield that kind of content (e.g. a monologue with
- *  no action items).
+ *  no action items); the UI hides sections backed by an empty array or string.
  */
 export type StructuredSummary = StructuredSummary_Serialize | StructuredSummary_Deserialize;
 
@@ -1084,7 +1086,7 @@ export type StructuredSummary = StructuredSummary_Serialize | StructuredSummary_
  *  paragraph that summarises the whole transcription, while `keyPoints` is a
  *  bullet-style list of sub-topics. Arrays may be empty when the
  *  transcription does not yield that kind of content (e.g. a monologue with
- *  no action items).
+ *  no action items); the UI hides sections backed by an empty array or string.
  */
 export type StructuredSummary_Deserialize = {
 	/**  Single-line title. */
@@ -1106,7 +1108,7 @@ export type StructuredSummary_Deserialize = {
  *  paragraph that summarises the whole transcription, while `keyPoints` is a
  *  bullet-style list of sub-topics. Arrays may be empty when the
  *  transcription does not yield that kind of content (e.g. a monologue with
- *  no action items).
+ *  no action items); the UI hides sections backed by an empty array or string.
  */
 export type StructuredSummary_Serialize = {
 	/**  Single-line title. */

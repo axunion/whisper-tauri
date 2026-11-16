@@ -167,7 +167,8 @@ pub struct HistorySaveParams {
 #[serde(rename_all = "camelCase")]
 pub struct HistoryFilter {
     /// Inclusive lower bound, as a suffix-less UTC timestamp matching
-    /// `created_at` (e.g. "2026-01-01T15:00:00")
+    /// `created_at` (e.g. "2026-01-01T15:00:00"). Compared lexicographically
+    /// in SQLite, so the format has to match `created_at` exactly.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date_from: Option<String>,
     /// Exclusive upper bound, same format as `date_from`

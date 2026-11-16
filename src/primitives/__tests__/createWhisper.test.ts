@@ -432,6 +432,27 @@ describe("createWhisper", () => {
       });
     });
 
+    it("should report an error instead of transcribing when the selected model is not downloaded", async () => {
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        const notDownloaded = mockModel({ downloaded: false });
+        delete notDownloaded.path;
+        whisper.selectModel(notDownloaded);
+        whisper.setFile(mockFile);
+
+        await whisper.startTranscription();
+
+        expect(invoke).not.toHaveBeenCalledWith(
+          "transcribe_audio",
+          expect.anything(),
+        );
+        expect(whisper.isProcessing()).toBe(false);
+        expect(whisper.result()).toBeNull();
+        expect(whisper.error()?.code).toBe("MODEL_NOT_FOUND");
+        dispose();
+      });
+    });
+
     it("should invoke transcribe_audio and set result", async () => {
       const vadPath = "/models/ggml-silero-v5.1.2.bin";
       vi.mocked(invoke)

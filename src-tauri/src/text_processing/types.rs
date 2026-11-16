@@ -51,7 +51,7 @@ pub(crate) struct InferenceProgress {
 }
 
 /// OpenAI-compatible chat message.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ChatMessage {
     /// Message role (system, user, assistant)
@@ -81,7 +81,7 @@ pub struct ActionItem {
 /// paragraph that summarises the whole transcription, while `keyPoints` is a
 /// bullet-style list of sub-topics. Arrays may be empty when the
 /// transcription does not yield that kind of content (e.g. a monologue with
-/// no action items).
+/// no action items); the UI hides sections backed by an empty array or string.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct StructuredSummary {
