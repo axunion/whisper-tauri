@@ -92,6 +92,7 @@ export const en: Dictionary = {
     deleteConfirmation:
       "{count} entries will be permanently deleted. This action cannot be undone.",
     deletedToast: "History deleted",
+    deleteEntry: "Delete this entry",
     searchPlaceholder: "Search by keyword",
     searchNoResults: "No search results found.",
     clearSearch: "Clear Search",

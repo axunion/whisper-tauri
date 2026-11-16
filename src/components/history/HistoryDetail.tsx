@@ -24,6 +24,9 @@ import type { HistoryEntry, TranscriptionResult } from "~/types";
 interface HistoryDetailProps {
   entry: HistoryEntry;
   onRename?: (id: string, newFileName: string) => void;
+  onDelete: (id: string) => void | Promise<void>;
+  /** False while deleting the entry would interrupt running work. */
+  canDelete: boolean;
   onDeleteAudio: (id: string) => void | Promise<void>;
   onEditSegment: (id: string, index: number, text: string) => Promise<boolean>;
   onRetranscribe: (entry: HistoryEntry) => void;
@@ -220,6 +223,31 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
           >
             <FiX class="size-3.5" aria-hidden="true" />
           </button>
+        </Show>
+        <Show when={!title.isEditing()}>
+          <ConfirmDialog
+            title={t("history.deleteEntry")}
+            description={t("history.deleteConfirmation", { count: 1 })}
+            confirmLabel={
+              <>
+                <FiTrash2 />
+                {t("common.delete")}
+              </>
+            }
+            onConfirm={() => props.onDelete(props.entry.id)}
+          >
+            {(openDialog) => (
+              <button
+                type="button"
+                class="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 disabled:pointer-events-none group-hover/title:opacity-100"
+                aria-label={t("history.deleteEntry")}
+                disabled={!props.canDelete}
+                onClick={openDialog}
+              >
+                <FiTrash2 class="size-3.5" aria-hidden="true" />
+              </button>
+            )}
+          </ConfirmDialog>
         </Show>
       </div>
       {/* ResultViewer with metadata integrated into toolbar */}

@@ -32,6 +32,8 @@ describe("HistoryDetail segment edits", () => {
       <HistoryDetail
         entry={baseEntry}
         onDeleteAudio={() => {}}
+        onDelete={() => {}}
+        canDelete
         onEditSegment={onEditSegment}
         onRetranscribe={() => {}}
         canRetranscribe
@@ -56,6 +58,8 @@ describe("HistoryDetail audio", () => {
       <HistoryDetail
         entry={baseEntry}
         onDeleteAudio={() => {}}
+        onDelete={() => {}}
+        canDelete
         onEditSegment={() => Promise.resolve(true)}
         onRetranscribe={() => {}}
         canRetranscribe
@@ -74,6 +78,8 @@ describe("HistoryDetail audio", () => {
       <HistoryDetail
         entry={withAudio}
         onDeleteAudio={() => {}}
+        onDelete={() => {}}
+        canDelete
         onEditSegment={() => Promise.resolve(true)}
         onRetranscribe={() => {}}
         canRetranscribe
@@ -100,6 +106,8 @@ describe("HistoryDetail audio", () => {
       <HistoryDetail
         entry={withAudio}
         onDeleteAudio={() => {}}
+        onDelete={() => {}}
+        canDelete
         onEditSegment={() => Promise.resolve(true)}
         onRetranscribe={onRetranscribe}
         canRetranscribe
@@ -117,6 +125,8 @@ describe("HistoryDetail audio", () => {
       <HistoryDetail
         entry={withAudio}
         onDeleteAudio={() => {}}
+        onDelete={() => {}}
+        canDelete
         onEditSegment={() => Promise.resolve(true)}
         onRetranscribe={() => {}}
         canRetranscribe={false}
@@ -125,6 +135,45 @@ describe("HistoryDetail audio", () => {
 
     expect(
       screen.getByRole("button", { name: retranscribeLabel }),
+    ).toBeDisabled();
+  });
+
+  it("deletes the entry only after the confirmation", async () => {
+    const onDelete = vi.fn();
+    renderWithRouter(() => (
+      <HistoryDetail
+        entry={withAudio}
+        onDeleteAudio={() => {}}
+        onDelete={onDelete}
+        canDelete
+        onEditSegment={() => Promise.resolve(true)}
+        onRetranscribe={() => {}}
+        canRetranscribe
+      />
+    ));
+
+    fireEvent.click(screen.getByRole("button", { name: "この履歴を削除" }));
+    expect(onDelete).not.toHaveBeenCalled();
+
+    fireEvent.click(await screen.findByRole("button", { name: "削除" }));
+    expect(onDelete).toHaveBeenCalledWith(withAudio.id);
+  });
+
+  it("disables deleting while it would interrupt running work", () => {
+    renderWithRouter(() => (
+      <HistoryDetail
+        entry={withAudio}
+        onDeleteAudio={() => {}}
+        onDelete={() => {}}
+        canDelete={false}
+        onEditSegment={() => Promise.resolve(true)}
+        onRetranscribe={() => {}}
+        canRetranscribe
+      />
+    ));
+
+    expect(
+      screen.getByRole("button", { name: "この履歴を削除" }),
     ).toBeDisabled();
   });
 });

@@ -1,4 +1,4 @@
-import { useNavigate } from "@solidjs/router";
+import { useLocation, useNavigate } from "@solidjs/router";
 import { FiCheck, FiCheckSquare, FiX } from "solid-icons/fi";
 import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
@@ -62,7 +62,12 @@ export default function History() {
     }
   }
 
+  const location = useLocation<{ entryId?: string }>();
+
   onMount(() => {
+    // Arriving from a dashboard row opens that entry straight away.
+    const entryId = location.state?.entryId;
+    if (entryId) void history.getEntry(entryId);
     history.loadEntries();
     document.addEventListener("keydown", handleKeyDown);
   });
@@ -206,6 +211,17 @@ export default function History() {
                     <HistoryDetail
                       entry={entry()}
                       onRename={history.renameEntry}
+                      canDelete={currentOp() === null}
+                      onDelete={async (id) => {
+                        if (await history.deleteEntries([id])) {
+                          toast.success(t("history.deletedToast"));
+                          history.clearSelectedEntry();
+                          return;
+                        }
+                        // The error panel is behind the open sheet.
+                        const err = history.error();
+                        if (err) toast.error(t(err.messageKey));
+                      }}
                       onEditSegment={async (id, index, text) => {
                         const saved = await history.updateSegment(
                           id,

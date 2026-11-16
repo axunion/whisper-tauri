@@ -86,6 +86,7 @@ export interface Dictionary {
     deleteSelected: string;
     deleteConfirmation: string;
     deletedToast: string;
+    deleteEntry: string;
     searchPlaceholder: string;
     searchNoResults: string;
     clearSearch: string;
