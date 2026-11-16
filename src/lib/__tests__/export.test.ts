@@ -4,6 +4,9 @@ import {
   exportResult,
   formatTimestamp,
   getExtension,
+  toFileStem,
+  toJSON,
+  toMarkdown,
   toSRT,
   toTXT,
   toVTT,
@@ -76,15 +79,21 @@ describe("toVTT", () => {
 
 describe("exportResult", () => {
   it("should export as TXT", () => {
-    expect(exportResult(sampleResult, "txt")).toBe(toTXT(sampleResult));
+    expect(exportResult(sampleResult, "txt", "Title")).toBe(
+      toTXT(sampleResult),
+    );
   });
 
   it("should export as SRT", () => {
-    expect(exportResult(sampleResult, "srt")).toBe(toSRT(sampleResult));
+    expect(exportResult(sampleResult, "srt", "Title")).toBe(
+      toSRT(sampleResult),
+    );
   });
 
   it("should export as VTT", () => {
-    expect(exportResult(sampleResult, "vtt")).toBe(toVTT(sampleResult));
+    expect(exportResult(sampleResult, "vtt", "Title")).toBe(
+      toVTT(sampleResult),
+    );
   });
 });
 
@@ -93,5 +102,49 @@ describe("getExtension", () => {
     expect(getExtension("txt")).toBe(".txt");
     expect(getExtension("srt")).toBe(".srt");
     expect(getExtension("vtt")).toBe(".vtt");
+  });
+});
+
+describe("toMarkdown", () => {
+  it("should put the title in a heading and a timestamp before each segment", () => {
+    expect(toMarkdown(sampleResult, "Weekly sync")).toBe(
+      "# Weekly sync\n\n**[0:00]** Hello world.\n\n**[0:02]** This is a test.\n",
+    );
+  });
+});
+
+describe("toJSON", () => {
+  it("should serialize the transcription with trimmed segment text", () => {
+    expect(JSON.parse(toJSON(sampleResult, "Weekly sync"))).toEqual({
+      title: "Weekly sync",
+      language: "en",
+      durationMs: 5000,
+      text: "Hello world. This is a test.",
+      segments: [
+        { startMs: 0, endMs: 2500, text: "Hello world." },
+        { startMs: 2500, endMs: 5000, text: "This is a test." },
+      ],
+    });
+  });
+});
+
+describe("toFileStem", () => {
+  it("should drop a trailing audio extension", () => {
+    expect(toFileStem("meeting.mp3")).toBe("meeting");
+    expect(toFileStem("Interview.WAV")).toBe("Interview");
+  });
+
+  it("should keep dots that are not an audio extension", () => {
+    expect(toFileStem("v1.2 release notes")).toBe("v1.2 release notes");
+  });
+
+  it("should replace characters a file system rejects", () => {
+    expect(toFileStem("録音 2026-11-15 14:30")).toBe("録音 2026-11-15 14_30");
+    expect(toFileStem("a/b\\c?")).toBe("a_b_c_");
+  });
+
+  it("should fall back when nothing usable is left", () => {
+    expect(toFileStem("   ")).toBe("transcription");
+    expect(toFileStem(".mp3")).toBe(".mp3");
   });
 });

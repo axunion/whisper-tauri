@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/Tabs";
 import type { DictionaryKey } from "~/i18n";
 import { useI18n } from "~/i18n";
 import type { ExportFormat } from "~/lib/export";
-import { exportResult, getExtension } from "~/lib/export";
+import { exportResult, getExtension, toFileStem } from "~/lib/export";
 import { formatSummaryAsText, formatTimeline } from "~/lib/format";
 import { buildNotionPagePayload, type NotionMetaContext } from "~/lib/notion";
 import { toast } from "~/lib/toast";
@@ -196,7 +196,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
             title: t("dialog.saveCleanTextTitle"),
             filter: t("dialog.txtFilter"),
             ext: "txt",
-            defaultPath: "transcription-cleaned.txt",
+            defaultPath: `${toFileStem(props.fileNameText)}-cleaned.txt`,
             content: cleaned,
           };
         },
@@ -219,7 +219,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
             title: t("dialog.saveSummaryTitle"),
             filter: t("dialog.mdFilter"),
             ext: "md",
-            defaultPath: "transcription-summary.md",
+            defaultPath: `${toFileStem(props.fileNameText)}-summary.md`,
             content: formatSummaryAsText(summary),
           };
         },
@@ -258,8 +258,8 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
       title: t("dialog.saveTranscriptionTitle"),
       filter: t(`dialog.${fmt}Filter`),
       ext: fmt,
-      defaultPath: `transcription${getExtension(fmt)}`,
-      content: exportResult(props.result, fmt),
+      defaultPath: `${toFileStem(props.fileNameText)}${getExtension(fmt)}`,
+      content: exportResult(props.result, fmt, props.fileNameText),
     });
   }
 

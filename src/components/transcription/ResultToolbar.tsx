@@ -3,6 +3,8 @@ import {
   FiAlignLeft,
   FiArrowLeft,
   FiCheck,
+  FiClock,
+  FiCode,
   FiCopy,
   FiDownload,
   FiFileText,
@@ -36,8 +38,10 @@ const FORMAT_OPTIONS: {
   icon: IconTypes;
 }[] = [
   { value: "txt", labelKey: "result.exportTxt", icon: FiFileText },
+  { value: "md", labelKey: "result.exportMd", icon: FiClock },
   { value: "srt", labelKey: "result.exportSrt", icon: FiFilm },
   { value: "vtt", labelKey: "result.exportVtt", icon: FiGlobe },
+  { value: "json", labelKey: "result.exportJson", icon: FiCode },
 ];
 
 interface ResultToolbarProps {

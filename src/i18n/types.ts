@@ -205,6 +205,8 @@ export interface Dictionary {
     exportTxt: string;
     exportSrt: string;
     exportVtt: string;
+    exportMd: string;
+    exportJson: string;
     textTab: string;
     timelineTab: string;
     editSegment: string;
@@ -265,6 +267,7 @@ export interface Dictionary {
     srtFilter: string;
     vttFilter: string;
     mdFilter: string;
+    jsonFilter: string;
     openAudioTitle: string;
     saveWavTitle: string;
     saveTranscriptionTitle: string;
