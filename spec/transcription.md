@@ -57,7 +57,7 @@ hound で読み込み、Int (ビット深度対応) / Float 両対応 → ステ
 ## 推論 (`process.rs::transcribe`)
 
 - `SamplingStrategy::Greedy { best_of: 5 }`、スレッド数 = `min(論理コア, 8)`
-- 言語はオプション指定 (未指定なら whisper の自動判定に委ねる)
+- 言語はオプション指定 (未指定なら whisper の自動判定に委ねる)。UI は whisper.cpp の言語表にある 100 言語すべてを選べる (`src/lib/languages.ts`)。言語名は `Intl.DisplayNames` で UI ロケールに合わせて生成し、辞書には持たない
 - 進捗: `set_progress_callback_safe` から `whisper:progress` を emit
 - キャンセル: グローバル `TASK_MANAGER` (`Lazy<TaskManager>`、task_id → `CancellationToken` の map)。`cancel_transcription` がトークンを立て、abort コールバックが検知する
 - **abort コールバックは `Box<dyn FnMut() -> bool>` に事前ボックス化して渡す** — whisper-rs の FFI 型不一致 UB の回避 (`.claude/rules/workarounds.md`)

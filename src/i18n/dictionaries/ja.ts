@@ -56,13 +56,6 @@ export const ja: Dictionary = {
     noModelsWarning:
       "モデルがありません。設定画面からダウンロードしてください。",
     languageAuto: "自動検出",
-    languageJa: "日本語",
-    languageEn: "英語",
-    languageZh: "中国語",
-    languageKo: "韓国語",
-    languageFr: "フランス語",
-    languageDe: "ドイツ語",
-    languageEs: "スペイン語",
     selectAudioFile: "クリックまたはドロップして音声ファイルを選択",
     changeFile: "ファイルを変更",
     clearFile: "ファイルの選択を解除",

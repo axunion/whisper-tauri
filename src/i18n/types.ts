@@ -53,13 +53,6 @@ export interface Dictionary {
     languageLabel: string;
     noModelsWarning: string;
     languageAuto: string;
-    languageJa: string;
-    languageEn: string;
-    languageZh: string;
-    languageKo: string;
-    languageFr: string;
-    languageDe: string;
-    languageEs: string;
     selectAudioFile: string;
     changeFile: string;
     clearFile: string;
