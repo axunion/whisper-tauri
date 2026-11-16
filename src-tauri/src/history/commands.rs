@@ -43,6 +43,7 @@ fn get_db_path(app: &AppHandle) -> Result<PathBuf, String> {
 ///
 /// Returns an error if the database cannot be accessed or the entry cannot be saved.
 #[tauri::command]
+#[specta::specta]
 pub async fn history_save(app: AppHandle, params: HistorySaveParams) -> Result<String, String> {
     let db_path = get_db_path(&app)?;
     db::save_entry(&db_path, &params).map_err(Into::into)
@@ -54,6 +55,7 @@ pub async fn history_save(app: AppHandle, params: HistorySaveParams) -> Result<S
 ///
 /// Returns an error if the database cannot be accessed.
 #[tauri::command]
+#[specta::specta]
 pub async fn history_list(
     app: AppHandle,
     filter: HistoryFilter,
@@ -68,6 +70,7 @@ pub async fn history_list(
 ///
 /// Returns an error if the entry is not found or the database cannot be accessed.
 #[tauri::command]
+#[specta::specta]
 pub async fn history_get(app: AppHandle, id: String) -> Result<HistoryEntry, String> {
     let db_path = get_db_path(&app)?;
     let mut entry = db::get_entry(&db_path, &id)?;
@@ -83,6 +86,7 @@ pub async fn history_get(app: AppHandle, id: String) -> Result<HistoryEntry, Str
 ///
 /// Returns an error if the database cannot be accessed.
 #[tauri::command]
+#[specta::specta]
 pub async fn history_delete(app: AppHandle, ids: Vec<String>) -> Result<u64, String> {
     let db_path = get_db_path(&app)?;
     let deleted = db::delete_entries(&db_path, &ids)?;
@@ -105,6 +109,7 @@ pub async fn history_delete(app: AppHandle, ids: Vec<String>) -> Result<u64, Str
 ///
 /// Returns an error if the database cannot be accessed.
 #[tauri::command]
+#[specta::specta]
 pub async fn history_delete_all(app: AppHandle) -> Result<u64, String> {
     let db_path = get_db_path(&app)?;
     let deleted = db::delete_all_entries(&db_path)?;
@@ -122,6 +127,7 @@ pub async fn history_delete_all(app: AppHandle) -> Result<u64, String> {
 /// Returns an error if `recording_path` is outside the recordings directory
 /// or the file cannot be moved.
 #[tauri::command]
+#[specta::specta]
 pub async fn history_attach_recording(
     app: AppHandle,
     id: String,
@@ -138,6 +144,7 @@ pub async fn history_attach_recording(
 ///
 /// Returns an error if the source entry has no audio or the copy fails.
 #[tauri::command]
+#[specta::specta]
 pub async fn history_copy_audio(
     app: AppHandle,
     from_id: String,
@@ -152,6 +159,7 @@ pub async fn history_copy_audio(
 ///
 /// Returns an error if the file cannot be deleted.
 #[tauri::command]
+#[specta::specta]
 pub async fn history_delete_audio(app: AppHandle, id: String) -> Result<(), String> {
     audio::delete_audio(&paths::app_data_dir(&app)?, &id).map_err(Into::into)
 }
@@ -162,6 +170,7 @@ pub async fn history_delete_audio(app: AppHandle, id: String) -> Result<(), Stri
 ///
 /// Returns an error if a file cannot be deleted.
 #[tauri::command]
+#[specta::specta]
 pub async fn history_delete_all_audio(app: AppHandle) -> Result<(), String> {
     audio::delete_all_audio(&paths::app_data_dir(&app)?).map_err(Into::into)
 }
@@ -173,6 +182,7 @@ pub async fn history_delete_all_audio(app: AppHandle) -> Result<(), String> {
 ///
 /// Returns an error if a file cannot be deleted.
 #[tauri::command]
+#[specta::specta]
 pub async fn history_delete_pending_recordings(
     app: AppHandle,
     keep_path: Option<String>,
@@ -191,6 +201,7 @@ pub async fn history_delete_pending_recordings(
 ///
 /// Returns an error if the directories cannot be read.
 #[tauri::command]
+#[specta::specta]
 pub async fn history_storage_stats(
     app: AppHandle,
     keep_path: Option<String>,
@@ -208,6 +219,7 @@ pub async fn history_storage_stats(
 ///
 /// Returns an error if the entry is not found or the database cannot be accessed.
 #[tauri::command]
+#[specta::specta]
 pub async fn history_rename(app: AppHandle, id: String, file_name: String) -> Result<(), String> {
     let db_path = get_db_path(&app)?;
     db::rename_entry(&db_path, &id, &file_name).map_err(Into::into)
@@ -221,6 +233,7 @@ pub async fn history_rename(app: AppHandle, id: String, file_name: String) -> Re
 /// Returns an error if the entry or segment does not exist or the database
 /// cannot be accessed.
 #[tauri::command]
+#[specta::specta]
 pub async fn history_update_segment(
     app: AppHandle,
     id: String,
@@ -237,6 +250,7 @@ pub async fn history_update_segment(
 ///
 /// Returns an error if the database cannot be accessed or the search fails.
 #[tauri::command]
+#[specta::specta]
 pub async fn history_search(
     app: AppHandle,
     params: HistorySearchParams,
@@ -252,6 +266,7 @@ pub async fn history_search(
 ///
 /// Returns an error if the database cannot be accessed or the content cannot be saved.
 #[tauri::command]
+#[specta::specta]
 pub async fn history_save_ai_content(
     app: AppHandle,
     params: AiContentSaveParams,
@@ -266,6 +281,7 @@ pub async fn history_save_ai_content(
 ///
 /// Returns an error if the database cannot be accessed.
 #[tauri::command]
+#[specta::specta]
 pub async fn history_get_ai_content(
     app: AppHandle,
     history_id: String,
@@ -281,6 +297,7 @@ pub async fn history_get_ai_content(
 ///
 /// Returns an error if the database cannot be accessed.
 #[tauri::command]
+#[specta::specta]
 pub async fn history_get_all_ai_content(
     app: AppHandle,
     history_id: String,

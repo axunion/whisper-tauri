@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Result of an audio file conversion.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ConversionResult {
     /// Path to the converted WAV file
@@ -11,7 +11,7 @@ pub struct ConversionResult {
 }
 
 /// `FFmpeg` download progress event payload.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct FfmpegDownloadProgress {
     /// Downloaded bytes

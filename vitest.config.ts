@@ -3,7 +3,22 @@ import { defineConfig } from "vitest/config";
 import solid from "vite-plugin-solid";
 
 export default defineConfig({
-  plugins: [solid()],
+  plugins: [
+    solid(),
+    {
+      name: "bindings-invoke",
+      enforce: "pre",
+      resolveId(source, importer) {
+        if (
+          source === "@tauri-apps/api/core" &&
+          importer?.endsWith("/src/bindings.ts")
+        ) {
+          return path.resolve(__dirname, "./src/test/bindingsInvoke.ts");
+        }
+        return null;
+      },
+    },
+  ],
   test: {
     environment: "jsdom",
     globals: true,

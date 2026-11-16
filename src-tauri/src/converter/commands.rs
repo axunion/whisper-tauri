@@ -50,6 +50,7 @@ fn validate_input_file(path: &Path) -> Result<(), ConverterError> {
 ///
 /// Returns an error if the app data directory cannot be resolved.
 #[tauri::command]
+#[specta::specta]
 pub async fn check_ffmpeg_bundled(app: AppHandle) -> Result<bool, String> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let bundled_path = downloader::get_ffmpeg_path(&app_data_dir);
@@ -65,6 +66,7 @@ pub async fn check_ffmpeg_bundled(app: AppHandle) -> Result<bool, String> {
 ///
 /// Returns an error if the app data directory cannot be resolved.
 #[tauri::command]
+#[specta::specta]
 pub async fn check_ffmpeg_needs_update(app: AppHandle) -> Result<bool, String> {
     let app_data_dir = paths::app_data_dir(&app)?;
     Ok(downloader::ffmpeg_needs_update(&app_data_dir))
@@ -77,6 +79,7 @@ pub async fn check_ffmpeg_needs_update(app: AppHandle) -> Result<bool, String> {
 /// Returns an error if the app data directory cannot be resolved or
 /// the file cannot be deleted.
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_ffmpeg(app: AppHandle) -> Result<(), String> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let bundled_path = downloader::get_ffmpeg_path(&app_data_dir);
@@ -99,6 +102,7 @@ pub async fn delete_ffmpeg(app: AppHandle) -> Result<(), String> {
 ///
 /// Returns an error if the download fails.
 #[tauri::command]
+#[specta::specta]
 pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
     let app_data_dir = paths::app_data_dir(&app)?;
 
@@ -134,6 +138,7 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
 ///
 /// Returns an error if the duration cannot be determined by either method.
 #[tauri::command]
+#[specta::specta]
 pub async fn get_audio_duration(app: AppHandle, file_path: String) -> Result<u64, String> {
     let input_path = PathBuf::from(&file_path);
     validate_input_file(&input_path)?;
@@ -167,6 +172,7 @@ pub async fn get_audio_duration(app: AppHandle, file_path: String) -> Result<u64
 /// Returns an error if ffmpeg is not available, the format is unsupported,
 /// or the conversion fails.
 #[tauri::command]
+#[specta::specta]
 pub async fn convert_audio_file(
     app: AppHandle,
     input_path: String,
@@ -230,6 +236,7 @@ pub async fn convert_audio_file(
 ///
 /// Returns an error if the file cannot be deleted.
 #[tauri::command]
+#[specta::specta]
 pub async fn cleanup_converted_file(file_path: String) -> Result<(), String> {
     let path = std::path::Path::new(&file_path);
     let temp_dir = std::env::temp_dir();

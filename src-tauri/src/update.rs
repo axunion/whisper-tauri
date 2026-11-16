@@ -43,6 +43,7 @@ fn parse_tag_name(body: &Value) -> Result<String, UpdateError> {
 /// Returns an error string when the request fails (offline, timeout,
 /// non-2xx status) or the response has no usable `tag_name`.
 #[tauri::command]
+#[specta::specta]
 pub async fn check_latest_version() -> Result<String, String> {
     let client = reqwest::Client::builder()
         // GitHub API rejects requests without a User-Agent (403)

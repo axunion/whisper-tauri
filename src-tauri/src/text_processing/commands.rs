@@ -20,6 +20,7 @@ use super::types::{StructuredSummary, TextDownloadProgress, TextModelInfo};
 ///
 /// Returns an error string if the operation fails.
 #[tauri::command]
+#[specta::specta]
 pub async fn text_processing_list_models(app: AppHandle) -> Result<Vec<TextModelInfo>, String> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let mut model_list = models::get_model_list();
@@ -42,6 +43,7 @@ pub async fn text_processing_list_models(app: AppHandle) -> Result<Vec<TextModel
 ///
 /// Returns an error string if the operation fails.
 #[tauri::command]
+#[specta::specta]
 pub async fn text_processing_download_model(
     app: AppHandle,
     model_id: String,
@@ -106,6 +108,7 @@ pub async fn text_processing_download_model(
 /// Returns [`TextProcessingError::ModelNotFound`] if `model_id` is unknown,
 /// or an IO error if removal fails.
 #[tauri::command]
+#[specta::specta]
 pub async fn text_processing_delete_model(app: AppHandle, model_id: String) -> Result<(), String> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let path = models::known_model_path(&app_data_dir, &model_id)
@@ -123,6 +126,7 @@ pub async fn text_processing_delete_model(app: AppHandle, model_id: String) -> R
 ///
 /// Returns an error string if the operation fails.
 #[tauri::command]
+#[specta::specta]
 pub async fn text_processing_download_server(app: AppHandle) -> Result<String, String> {
     let app_data_dir = paths::app_data_dir(&app)?;
 
@@ -177,6 +181,7 @@ pub async fn text_processing_download_server(app: AppHandle) -> Result<String, S
 ///
 /// Returns an error string if the operation fails.
 #[tauri::command]
+#[specta::specta]
 pub async fn text_processing_delete_server(app: AppHandle) -> Result<(), String> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let bin_dir = app_data_dir.join("bin");
@@ -208,6 +213,7 @@ pub async fn text_processing_delete_server(app: AppHandle) -> Result<(), String>
 ///
 /// Returns an error string if the operation fails.
 #[tauri::command]
+#[specta::specta]
 pub async fn text_processing_check_server(app: AppHandle) -> Result<bool, String> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let exists = models::llama_server_path(&app_data_dir).exists()
@@ -221,6 +227,7 @@ pub async fn text_processing_check_server(app: AppHandle) -> Result<bool, String
 ///
 /// Returns an error string if the operation fails.
 #[tauri::command]
+#[specta::specta]
 pub async fn text_processing_chat(
     app: AppHandle,
     manager: State<'_, tokio::sync::Mutex<LlamaServerManager>>,
@@ -261,6 +268,7 @@ pub async fn text_processing_chat(
 /// Returns an error string if the operation fails or the model returns JSON
 /// that does not match the schema.
 #[tauri::command]
+#[specta::specta]
 pub async fn text_processing_summarize(
     app: AppHandle,
     manager: State<'_, tokio::sync::Mutex<LlamaServerManager>>,
@@ -337,6 +345,7 @@ pub async fn text_processing_summarize(
 ///
 /// Returns an error string if the operation fails.
 #[tauri::command]
+#[specta::specta]
 pub async fn text_processing_cancel(task_id: String) -> Result<bool, String> {
     Ok(inference::INFERENCE_TASK_MANAGER.cancel_task(&task_id))
 }
@@ -347,6 +356,7 @@ pub async fn text_processing_cancel(task_id: String) -> Result<bool, String> {
 ///
 /// Returns an error string if the operation fails.
 #[tauri::command]
+#[specta::specta]
 pub async fn text_processing_generate_title(
     app: AppHandle,
     manager: State<'_, tokio::sync::Mutex<LlamaServerManager>>,
@@ -395,6 +405,7 @@ pub async fn text_processing_generate_title(
 ///
 /// Returns an error string if the operation fails.
 #[tauri::command]
+#[specta::specta]
 pub async fn text_processing_clean_text(
     app: AppHandle,
     manager: State<'_, tokio::sync::Mutex<LlamaServerManager>>,

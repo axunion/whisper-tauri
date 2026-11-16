@@ -30,6 +30,7 @@ fn read_settings(app: &AppHandle) -> Result<NotionSettings, NotionError> {
 ///
 /// Returns an error string if the settings store cannot be read.
 #[tauri::command]
+#[specta::specta]
 pub async fn notion_get_settings(app: AppHandle) -> Result<NotionSettings, String> {
     read_settings(&app).map_err(Into::into)
 }
@@ -40,6 +41,7 @@ pub async fn notion_get_settings(app: AppHandle) -> Result<NotionSettings, Strin
 ///
 /// Returns an error string if the settings store cannot be written.
 #[tauri::command]
+#[specta::specta]
 pub async fn notion_set_settings(app: AppHandle, settings: NotionSettings) -> Result<(), String> {
     set_or_delete_strings(
         &app,
@@ -66,6 +68,7 @@ pub async fn notion_set_settings(app: AppHandle, settings: NotionSettings) -> Re
 /// Returns an error string if the HTTP request fails, the database lacks a
 /// title property, or the response cannot be parsed.
 #[tauri::command]
+#[specta::specta]
 pub async fn notion_test_connection(
     app: AppHandle,
     token: String,
@@ -84,6 +87,7 @@ pub async fn notion_test_connection(
 /// Returns an error string when Notion is not configured, the HTTP request
 /// fails, the API returns a non-2xx status, or the response cannot be parsed.
 #[tauri::command]
+#[specta::specta]
 pub async fn notion_create_page(
     app: AppHandle,
     payload: NotionPagePayload,

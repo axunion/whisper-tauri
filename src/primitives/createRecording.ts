@@ -1,6 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { createRoot, createSignal } from "solid-js";
+import { commands } from "~/bindings";
 import { parseError } from "~/lib/errors";
 import type { AudioDevice, RecordingLevel, RecordingStopResult } from "~/types";
 import type { AppError } from "~/types/errors";
@@ -68,7 +68,7 @@ let isStopping = false;
 
 async function loadDevices(): Promise<void> {
   try {
-    const result = await invoke<AudioDevice[]>("list_audio_devices");
+    const result = await commands.listAudioDevices();
     setDevices(result);
     if (!selectedDevice()) {
       const defaultDevice = result.find((d) => d.isDefault) ?? result[0];
@@ -91,9 +91,7 @@ async function startRecording(): Promise<void> {
   setLevel(null);
 
   try {
-    await invoke("start_recording", {
-      deviceId: selectedDevice()?.id ?? null,
-    });
+    await commands.startRecording(selectedDevice()?.id ?? null);
     setIsRecording(true);
     setIsPaused(false);
     // The clock counts recorded time, so it stands still while paused.
@@ -109,7 +107,7 @@ async function startRecording(): Promise<void> {
 async function pauseRecording(): Promise<void> {
   if (!isRecording() || isPaused() || isStopping) return;
   try {
-    await invoke("pause_recording");
+    await commands.pauseRecording();
     setIsPaused(true);
     setLevel(null);
   } catch (e) {
@@ -120,7 +118,7 @@ async function pauseRecording(): Promise<void> {
 async function resumeRecording(): Promise<void> {
   if (!isRecording() || !isPaused() || isStopping) return;
   try {
-    await invoke("resume_recording");
+    await commands.resumeRecording();
     setIsPaused(false);
   } catch (e) {
     setError(parseError(e));
@@ -137,7 +135,7 @@ async function stopRecording(): Promise<RecordingStopResult | null> {
   }
 
   try {
-    const result = await invoke<RecordingStopResult>("stop_recording");
+    const result = await commands.stopRecording();
     setIsRecording(false);
     setIsPaused(false);
     setTempFilePath(result.tempFilePath);
@@ -158,7 +156,7 @@ async function cleanup(): Promise<void> {
   const path = tempFilePath();
   if (!path) return;
   try {
-    await invoke("cleanup_recording", { path });
+    await commands.cleanupRecording(path);
     setTempFilePath(null);
   } catch (e) {
     setError(parseError(e));

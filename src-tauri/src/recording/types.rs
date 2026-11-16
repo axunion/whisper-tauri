@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// An available audio input device.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AudioDevice {
     /// Unique device identifier.
@@ -13,7 +13,7 @@ pub struct AudioDevice {
 }
 
 /// Real-time audio level information emitted during recording.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct RecordingLevel {
     /// RMS level (0.0 - 1.0).
@@ -23,7 +23,7 @@ pub struct RecordingLevel {
 }
 
 /// Result returned when recording is stopped.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct RecordingStopResult {
     /// Path to the temporary WAV file.

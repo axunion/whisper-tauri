@@ -45,6 +45,7 @@ fn model_exists(app_data_dir: &Path, model_id: &str) -> Result<bool, WhisperErro
 ///
 /// Returns an error if the app data directory cannot be resolved.
 #[tauri::command]
+#[specta::specta]
 pub async fn get_available_models(app: AppHandle) -> Result<Vec<ModelInfo>, String> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let mut model_list = models::get_model_list_with_speed_factors();
@@ -68,6 +69,7 @@ pub async fn get_available_models(app: AppHandle) -> Result<Vec<ModelInfo>, Stri
 /// Returns an error if the model ID is invalid or the app data directory
 /// cannot be resolved.
 #[tauri::command]
+#[specta::specta]
 pub async fn check_model_exists(app: AppHandle, model_id: String) -> Result<bool, String> {
     let app_data_dir = paths::app_data_dir(&app)?;
     model_exists(&app_data_dir, &model_id).map_err(Into::into)
@@ -83,6 +85,7 @@ pub async fn check_model_exists(app: AppHandle, model_id: String) -> Result<bool
 /// Returns an error if the model ID is invalid, the download fails, or
 /// the file cannot be written.
 #[tauri::command]
+#[specta::specta]
 pub async fn download_model(app: AppHandle, model_id: String) -> Result<String, String> {
     if !models::is_valid_model_id(&model_id) {
         return Err(WhisperError::ModelNotFound(model_id).into());
@@ -148,6 +151,7 @@ pub async fn download_model(app: AppHandle, model_id: String) -> Result<String, 
 ///
 /// Returns an error if the model ID is invalid or the file cannot be deleted.
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_model(app: AppHandle, model_id: String) -> Result<(), String> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let path = model_path(&app_data_dir, &model_id)?;
@@ -173,6 +177,7 @@ fn vad_model_path(app_data_dir: &Path) -> PathBuf {
 /// Returns an error if the app data directory cannot be resolved or the
 /// download fails.
 #[tauri::command]
+#[specta::specta]
 pub async fn ensure_vad_model(app: AppHandle) -> Result<String, String> {
     let app_data_dir = paths::app_data_dir(&app)?;
     let path = vad_model_path(&app_data_dir);
@@ -208,6 +213,7 @@ pub async fn ensure_vad_model(app: AppHandle) -> Result<String, String> {
 /// Returns an error if the audio file cannot be read, the model cannot
 /// be loaded, or the transcription fails.
 #[tauri::command]
+#[specta::specta]
 pub async fn transcribe_audio(
     app: AppHandle,
     audio_path: String,
@@ -281,6 +287,7 @@ impl Drop for TaskGuard {
 /// This command does not produce errors but returns `false` if the
 /// task ID was not found.
 #[tauri::command]
+#[specta::specta]
 pub async fn cancel_transcription(task_id: String) -> Result<bool, String> {
     Ok(process::TASK_MANAGER.cancel_task(&task_id))
 }

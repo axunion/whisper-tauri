@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Sort order for history listing.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum HistorySortBy {
     #[default]
@@ -11,7 +11,7 @@ pub enum HistorySortBy {
 }
 
 /// Sort direction (ascending or descending).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum SortOrder {
     Asc,
@@ -23,7 +23,7 @@ pub enum SortOrder {
 ///
 /// Persisted per entry so the UI never has to infer it from the (user-editable)
 /// file name.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum HistorySource {
     /// Captured with the in-app recorder.
@@ -55,7 +55,7 @@ impl HistorySource {
 }
 
 /// A segment of transcribed text with timing information (for history storage).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct HistorySegment {
     /// Start time in milliseconds
@@ -67,7 +67,7 @@ pub struct HistorySegment {
 }
 
 /// Metadata for a history entry (used in list views, without full text/segments).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct HistoryMeta {
     /// Unique identifier
@@ -90,7 +90,7 @@ pub struct HistoryMeta {
 }
 
 /// Full history entry including text and segments.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct HistoryEntry {
     /// Unique identifier
@@ -115,7 +115,7 @@ pub struct HistoryEntry {
 }
 
 /// What a segment edit changed, for a view to apply without reloading.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SegmentUpdate {
     /// The entry's full text, rebuilt from its segments
@@ -127,7 +127,7 @@ pub struct SegmentUpdate {
 }
 
 /// Disk used by recording audio.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct StorageStats {
     /// Number of audio files kept for history entries
@@ -141,7 +141,7 @@ pub struct StorageStats {
 }
 
 /// Parameters for saving a new history entry.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct HistorySaveParams {
     /// Original file name
@@ -163,7 +163,7 @@ pub struct HistorySaveParams {
 }
 
 /// Filter for listing history entries.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct HistoryFilter {
     /// Inclusive lower bound, as a suffix-less UTC timestamp matching
@@ -188,7 +188,7 @@ pub struct HistoryFilter {
 }
 
 /// Parameters for full-text search of history entries.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct HistorySearchParams {
     /// Search query (space-separated keywords for AND search)
@@ -215,7 +215,7 @@ pub struct HistorySearchParams {
 }
 
 /// AI-generated content associated with a history entry.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AiContent {
     pub id: String,
@@ -229,7 +229,7 @@ pub struct AiContent {
 }
 
 /// Parameters for saving AI-generated content.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AiContentSaveParams {
     pub history_id: String,

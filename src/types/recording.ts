@@ -1,16 +1,6 @@
-export interface AudioDevice {
-  id: string;
-  name: string;
-  isDefault: boolean;
-}
+export type { AudioDevice, RecordingStopResult } from "~/bindings";
 
 export interface RecordingLevel {
   level: number;
   peakLevel: number;
-}
-
-export interface RecordingStopResult {
-  tempFilePath: string;
-  durationMs: number;
-  sampleCount: number;
 }

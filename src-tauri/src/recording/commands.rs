@@ -13,6 +13,7 @@ use super::types::{AudioDevice, RecordingStopResult};
 ///
 /// Returns an error string if device enumeration fails.
 #[tauri::command]
+#[specta::specta]
 pub async fn list_audio_devices(
     _state: State<'_, Mutex<RecordingManager>>,
 ) -> Result<Vec<AudioDevice>, String> {
@@ -28,6 +29,7 @@ pub async fn list_audio_devices(
 /// Returns an error string if a recording is already in progress,
 /// the device cannot be found, or the stream cannot be created.
 #[tauri::command]
+#[specta::specta]
 pub async fn start_recording(
     app: AppHandle,
     state: State<'_, Mutex<RecordingManager>>,
@@ -43,6 +45,7 @@ pub async fn start_recording(
 ///
 /// Returns an error string if no recording is in progress.
 #[tauri::command]
+#[specta::specta]
 pub async fn pause_recording(state: State<'_, Mutex<RecordingManager>>) -> Result<(), String> {
     let manager = state.lock().map_err(|e| format!("Lock error: {e}"))?;
     manager.set_paused(true).map_err(Into::into)
@@ -54,6 +57,7 @@ pub async fn pause_recording(state: State<'_, Mutex<RecordingManager>>) -> Resul
 ///
 /// Returns an error string if no recording is in progress.
 #[tauri::command]
+#[specta::specta]
 pub async fn resume_recording(state: State<'_, Mutex<RecordingManager>>) -> Result<(), String> {
     let manager = state.lock().map_err(|e| format!("Lock error: {e}"))?;
     manager.set_paused(false).map_err(Into::into)
@@ -69,6 +73,7 @@ pub async fn resume_recording(state: State<'_, Mutex<RecordingManager>>) -> Resu
 /// Returns an error string if no recording is in progress or the
 /// WAV file cannot be written.
 #[tauri::command]
+#[specta::specta]
 pub async fn stop_recording(
     app: AppHandle,
     state: State<'_, Mutex<RecordingManager>>,
@@ -85,6 +90,7 @@ pub async fn stop_recording(
 /// Returns an error string if the path is outside the recordings directory
 /// or the file cannot be deleted.
 #[tauri::command]
+#[specta::specta]
 pub async fn cleanup_recording(app: AppHandle, path: String) -> Result<(), String> {
     let app_data_dir = paths::app_data_dir(&app)?;
     RecordingManager::cleanup(&app_data_dir, std::path::Path::new(&path)).map_err(Into::into)

@@ -54,42 +54,16 @@ fn build_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::
     Ok(menu)
 }
 
-/// Run the Tauri application.
+/// The IPC surface: every command the frontend can call.
 ///
-/// # Panics
-///
-/// Panics if the Tauri application fails to initialize.
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-#[allow(clippy::expect_used)]
-pub fn run() {
-    let builder = tauri::Builder::default();
-
-    #[cfg(target_os = "macos")]
-    let builder = builder.menu(build_menu).on_menu_event(|app, event| {
-        if event.id() == QUIT_MENU_ID {
-            match app.get_webview_window("main") {
-                Some(window) => {
-                    let _ = window.close();
-                }
-                None => app.exit(0),
-            }
-        }
-    });
-
-    builder
-        .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_store::Builder::default().build())
-        .plugin(tauri_plugin_clipboard_manager::init())
-        .plugin(tauri_plugin_notification::init())
-        .manage(std::sync::Mutex::new(
-            recording::capture::RecordingManager::new(),
-        ))
-        .manage(tokio::sync::Mutex::new(
-            text_processing::server::LlamaServerManager::new(),
-        ))
-        .invoke_handler(tauri::generate_handler![
+/// `src/bindings.ts` is generated from this by the `bindings_are_up_to_date`
+/// test, so the frontend's types cannot drift from the Rust signatures.
+fn ipc_builder() -> tauri_specta::Builder<tauri::Wry> {
+    tauri_specta::Builder::<tauri::Wry>::new()
+        // Durations, sizes and counts stay far below 2^53.
+        .dangerously_cast_bigints_to_number()
+        .disable_serde_phases()
+        .commands(tauri_specta::collect_commands![
             whisper::commands::get_available_models,
             whisper::commands::check_model_exists,
             whisper::commands::download_model,
@@ -144,6 +118,44 @@ pub fn run() {
             notion::commands::notion_create_page,
             update::check_latest_version,
         ])
+}
+
+/// Run the Tauri application.
+///
+/// # Panics
+///
+/// Panics if the Tauri application fails to initialize.
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+#[allow(clippy::expect_used)]
+pub fn run() {
+    let builder = tauri::Builder::default();
+
+    #[cfg(target_os = "macos")]
+    let builder = builder.menu(build_menu).on_menu_event(|app, event| {
+        if event.id() == QUIT_MENU_ID {
+            match app.get_webview_window("main") {
+                Some(window) => {
+                    let _ = window.close();
+                }
+                None => app.exit(0),
+            }
+        }
+    });
+
+    builder
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_store::Builder::default().build())
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_notification::init())
+        .manage(std::sync::Mutex::new(
+            recording::capture::RecordingManager::new(),
+        ))
+        .manage(tokio::sync::Mutex::new(
+            text_processing::server::LlamaServerManager::new(),
+        ))
+        .invoke_handler(ipc_builder().invoke_handler())
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app_handle, event| {
@@ -160,4 +172,27 @@ pub fn run() {
                 }
             }
         });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ipc_builder;
+
+    /// Regenerates `src/bindings.ts` when it is stale and fails, so a changed
+    /// command or type cannot be committed without its regenerated bindings.
+    #[test]
+    fn bindings_are_up_to_date() {
+        let committed = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../src/bindings.ts");
+        let dir = tempfile::TempDir::new().unwrap();
+        let fresh = dir.path().join("bindings.ts");
+        ipc_builder()
+            .export(specta_typescript::Typescript::default(), &fresh)
+            .expect("export bindings");
+
+        let generated = std::fs::read_to_string(&fresh).unwrap();
+        if std::fs::read_to_string(&committed).ok().as_deref() != Some(generated.as_str()) {
+            std::fs::write(&committed, generated).unwrap();
+            panic!("src/bindings.ts was out of date and has been regenerated; commit it");
+        }
+    }
 }

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Whisper model information.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelInfo {
     /// Model identifier (e.g., "small", "large-v3-turbo")
@@ -28,7 +28,7 @@ pub struct ModelInfo {
 }
 
 /// A segment of transcribed text with timing information.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct TranscriptionSegment {
     /// Start time in milliseconds
@@ -40,7 +40,7 @@ pub struct TranscriptionSegment {
 }
 
 /// Transcription result with full text and segments.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct TranscriptionResult {
     /// Task identifier
@@ -56,7 +56,7 @@ pub struct TranscriptionResult {
 }
 
 /// Transcription progress update.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct TranscriptionProgress {
     /// Task identifier
@@ -68,7 +68,7 @@ pub struct TranscriptionProgress {
 }
 
 /// Model download progress.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadProgress {
     /// Model identifier being downloaded

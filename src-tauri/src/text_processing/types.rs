@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Text processing model information.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct TextModelInfo {
     /// Model identifier (e.g., "gemma-4-e2b", "qwen3.5-4b")
@@ -22,7 +22,7 @@ pub struct TextModelInfo {
 }
 
 /// Text model download progress.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct TextDownloadProgress {
     /// Model identifier being downloaded
@@ -36,7 +36,7 @@ pub(crate) struct TextDownloadProgress {
 }
 
 /// Inference progress update (streaming tokens).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct InferenceProgress {
     /// Task identifier
@@ -50,7 +50,7 @@ pub(crate) struct InferenceProgress {
 }
 
 /// OpenAI-compatible chat message.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ChatMessage {
     /// Message role (system, user, assistant)
@@ -64,7 +64,7 @@ pub(crate) struct ChatMessage {
 /// Assignee inference is intentionally not supported — speaker identification
 /// is unreliable from transcripts alone. Only the task itself and an optional
 /// due date / timeframe are captured.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ActionItem {
     /// The task itself.
@@ -81,7 +81,7 @@ pub struct ActionItem {
 /// bullet-style list of sub-topics. Arrays may be empty when the
 /// transcription does not yield that kind of content (e.g. a monologue with
 /// no action items).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct StructuredSummary {
     /// Single-line title.
