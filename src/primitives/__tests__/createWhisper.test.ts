@@ -432,12 +432,12 @@ describe("createWhisper", () => {
       });
     });
 
-    it("should report an error instead of transcribing when the selected model is not downloaded", async () => {
+    it("should report an error instead of transcribing when the selected model has no file", async () => {
       await createRoot(async (dispose) => {
         const whisper = createWhisper();
-        const notDownloaded = mockModel({ downloaded: false });
-        delete notDownloaded.path;
-        whisper.selectModel(notDownloaded);
+        const withoutFile = mockModel();
+        delete withoutFile.path;
+        whisper.selectModel(withoutFile);
         whisper.setFile(mockFile);
 
         await whisper.startTranscription();
