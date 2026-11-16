@@ -49,6 +49,7 @@ export default function Transcription() {
 
   const location = useLocation<{
     filePath?: string;
+    filePaths?: string[];
     tab?: string;
     retranscribe?: AudioSource;
   }>();
@@ -110,6 +111,9 @@ export default function Transcription() {
       (state) => {
         if (state?.filePath) {
           void job.addFiles([state.filePath]);
+        }
+        if (state?.filePaths) {
+          void job.addFiles(state.filePaths);
         }
         if (state?.retranscribe) {
           void job.prepareRetranscription(state.retranscribe);

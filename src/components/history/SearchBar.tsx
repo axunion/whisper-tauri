@@ -1,6 +1,7 @@
 import { FiSearch, FiX } from "solid-icons/fi";
 import type { Component } from "solid-js";
 import { createSignal, Show } from "solid-js";
+import { HISTORY_SEARCH_ID } from "~/components/layout/Shortcuts";
 import { useI18n } from "~/i18n";
 
 interface SearchBarProps {
@@ -39,6 +40,7 @@ const SearchBar: Component<SearchBarProps> = (props) => {
       <FiSearch class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
       <input
         ref={inputRef}
+        id={HISTORY_SEARCH_ID}
         type="text"
         class="h-9 w-full rounded-md border border-input bg-background pl-9 pr-9 text-sm placeholder:text-muted-foreground"
         placeholder={t("history.searchPlaceholder")}

@@ -33,8 +33,6 @@ const {
   setIsDownloading,
   language,
   setLanguage,
-  vadEnabledOverride,
-  setVadEnabledOverride,
   error,
   setError,
   currentTaskId,
@@ -58,9 +56,6 @@ const {
   const [isProcessing, setIsProcessing] = createSignal(false);
   const [isDownloading, setIsDownloading] = createSignal(false);
   const [language, setLanguage] = createSignal<string | null>(null);
-  const [vadEnabledOverride, setVadEnabledOverride] = createSignal<
-    boolean | null
-  >(null);
   const [error, setError] = createSignal<AppError | null>(null);
 
   // Internal state for cancellation
@@ -95,8 +90,6 @@ const {
     setIsDownloading,
     language,
     setLanguage,
-    vadEnabledOverride,
-    setVadEnabledOverride,
     error,
     setError,
     currentTaskId,
@@ -129,11 +122,12 @@ listen<DownloadProgress>("model:download-progress", (event) => {
 }).catch(console.error);
 
 function vadEnabled(): boolean {
-  return vadEnabledOverride() ?? createSettings().vadEnabled();
+  return createSettings().vadEnabled();
 }
 
+/** Persisted like the model and language chosen next to it. */
 function setVadEnabled(enabled: boolean): void {
-  setVadEnabledOverride(enabled);
+  void createSettings().update({ vadEnabled: enabled });
 }
 
 function autoSelectModel(): void {
@@ -371,7 +365,6 @@ export function _resetWhisperForTesting(): void {
   setIsProcessing(false);
   setIsDownloading(false);
   setLanguage(null);
-  setVadEnabledOverride(null);
   setError(null);
   setCurrentTaskId(null);
   setProcessingMs(null);

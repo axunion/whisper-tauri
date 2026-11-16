@@ -9,6 +9,7 @@ import type {
   TranscriptionProgress,
   TranscriptionResult,
 } from "../../types";
+import { _resetSettingsForTesting, createSettings } from "../createSettings";
 import { _resetWhisperForTesting, createWhisper } from "../createWhisper";
 
 const mockModel = (overrides?: Partial<ModelInfo>): ModelInfo => ({
@@ -43,6 +44,7 @@ const mockResult: TranscriptionResult = {
 describe("createWhisper", () => {
   beforeEach(() => {
     _resetWhisperForTesting();
+    _resetSettingsForTesting();
     vi.mocked(invoke).mockReset();
   });
 
@@ -537,7 +539,7 @@ describe("createWhisper", () => {
   });
 
   describe("vadEnabled", () => {
-    it("should default to settings value (true) when no override set", () => {
+    it("should default to the settings value", () => {
       createRoot((dispose) => {
         const whisper = createWhisper();
         expect(whisper.vadEnabled()).toBe(true);
@@ -545,18 +547,19 @@ describe("createWhisper", () => {
       });
     });
 
-    it("should reflect explicit override", () => {
+    it("should write the choice to the settings", () => {
       createRoot((dispose) => {
         const whisper = createWhisper();
         whisper.setVadEnabled(false);
         expect(whisper.vadEnabled()).toBe(false);
+        expect(createSettings().vadEnabled()).toBe(false);
         whisper.setVadEnabled(true);
-        expect(whisper.vadEnabled()).toBe(true);
+        expect(createSettings().vadEnabled()).toBe(true);
         dispose();
       });
     });
 
-    it("should skip ensure_vad_model when override is false", async () => {
+    it("should skip ensure_vad_model when VAD is off", async () => {
       vi.mocked(invoke).mockResolvedValue(mockResult);
 
       await createRoot(async (dispose) => {

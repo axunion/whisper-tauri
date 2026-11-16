@@ -87,6 +87,11 @@ mirrors.json       # ダウンロード元の差し替え (任意・手編集)
 - アセットプロトコル (`tauri.conf.json` の `assetProtocol`、Cargo の `protocol-asset` feature): 録音音声の再生用に有効化。scope は `$APPDATA/audio/*` のみで、CSP の `media-src` も `asset:` / `http://asset.localhost` に限る。アセットプロトコルの静的 scope はこのディレクトリだけ (ダイアログで選んだファイルは dialog プラグインが実行時に scope へ追加する)
 - Rust は `unsafe_code = "forbid"`、clippy `pedantic` + `unwrap_used` / `expect_used` 警告
 
+## ショートカットと画面内リンク
+
+- `src/components/layout/Shortcuts.tsx`: Cmd/Ctrl+O (音声ファイルを選んで文字起こし画面へ)、Cmd/Ctrl+F (履歴検索にフォーカス)、Cmd/Ctrl+, (設定)
+- 設定画面へのリンクは `navigate("/settings", { state: { section } })` で該当セクションに着地する (`Settings.tsx::SettingsSection`、要素 id でスクロール)。未セットアップのバナー、AI 未設定ダイアログ、Notion 設定導線が使う
+
 ## 実行中の表示と完了通知
 
 - サイドバーの `TranscriptionIndicator` が、変換中・推論中の進捗を全ページで表示する (クリックで `/transcription`)

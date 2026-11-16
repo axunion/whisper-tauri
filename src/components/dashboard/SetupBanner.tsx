@@ -38,10 +38,22 @@ export function SetupBanner() {
     ffmpeg.isBundled() &&
     textProcessing.isReady();
   const visible = () => probed() && !allReady();
+  // Where the banner leads: the first thing still to set up.
+  const firstMissing = () =>
+    !whisper.hasDownloadedModel()
+      ? "settings-models"
+      : !ffmpeg.isBundled()
+        ? "settings-ffmpeg"
+        : "settings-ai";
 
   return (
     <Show when={visible()}>
-      <CardButton class="text-left" onClick={() => navigate("/settings")}>
+      <CardButton
+        class="text-left"
+        onClick={() =>
+          navigate("/settings", { state: { section: firstMissing() } })
+        }
+      >
         <CardContent class="flex items-center gap-4 p-4">
           <div class="flex flex-1 items-center gap-3">
             <Show when={!whisper.hasDownloadedModel()}>

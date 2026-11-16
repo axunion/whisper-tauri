@@ -1,3 +1,4 @@
+import { useLocation } from "@solidjs/router";
 import { FiMusic, FiSettings } from "solid-icons/fi";
 import { onMount } from "solid-js";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
@@ -28,6 +29,13 @@ import type { AppSettings } from "~/types";
 
 type OptionItem = { value: string; label: string };
 
+/** Sections of this page a link can land on, by element id. */
+export type SettingsSection =
+  | "settings-models"
+  | "settings-ai"
+  | "settings-ffmpeg"
+  | "settings-notion";
+
 export default function Settings() {
   const { t, setLocale } = useI18n();
   const settings = createSettings();
@@ -44,9 +52,14 @@ export default function Settings() {
     { value: "system", label: t("settings.themeSystem") },
   ];
 
+  const location = useLocation<{ section?: SettingsSection }>();
+
   onMount(() => {
     settings.load();
     whisper.loadModels();
+    // A link that names a section lands on it instead of the top of the page.
+    const section = location.state?.section;
+    if (section) document.getElementById(section)?.scrollIntoView();
   });
 
   function findOption(options: OptionItem[], value: string): OptionItem | null {
@@ -131,7 +144,7 @@ export default function Settings() {
       </Card>
 
       {/* Whisper Model Management */}
-      <Card>
+      <Card id="settings-models">
         <CardHeader>
           <CardTitleWithIcon
             icon={() => <FiMusic class="size-4" />}
@@ -155,13 +168,19 @@ export default function Settings() {
       </Card>
 
       {/* Text Model Management */}
-      <TextModelManager />
+      <div id="settings-ai">
+        <TextModelManager />
+      </div>
 
       {/* FFmpeg */}
-      <FfmpegManager />
+      <div id="settings-ffmpeg">
+        <FfmpegManager />
+      </div>
 
       {/* Notion Integration */}
-      <NotionIntegration />
+      <div id="settings-notion">
+        <NotionIntegration />
+      </div>
 
       <DataManagement />
 

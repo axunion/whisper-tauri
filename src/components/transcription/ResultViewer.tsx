@@ -381,7 +381,9 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         onShareToNotion={() => {
           void handleShareToNotion();
         }}
-        onOpenNotionSetup={() => navigate("/settings")}
+        onOpenNotionSetup={() =>
+          navigate("/settings", { state: { section: "settings-notion" } })
+        }
         isProcessing={session.isProcessing()}
         isGeneratingTitle={session.isGeneratingTitle()}
         isNotionConnected={notion.isConfigured()}
@@ -476,7 +478,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         onPrereqOpenChange={actions.setShowPrereqDialog}
         onGoToSettings={() => {
           actions.setShowPrereqDialog(false);
-          navigate("/settings");
+          navigate("/settings", { state: { section: "settings-ai" } });
         }}
         showOverwrite={() => actions.pendingAction() !== null}
         onOverwriteOpenChange={(open) => {

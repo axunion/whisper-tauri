@@ -10,6 +10,7 @@ import { createSettings } from "~/primitives/createSettings";
 import { applyTheme } from "~/primitives/createTheme";
 import { AppSidebar } from "./AppSidebar";
 import { CloseGuard } from "./CloseGuard";
+import { Shortcuts } from "./Shortcuts";
 
 async function showWindow(): Promise<void> {
   try {
@@ -62,6 +63,7 @@ export function AppLayout(props: RouteSectionProps) {
           when={!settings.onboardingCompleted()}
           fallback={
             <SidebarProvider>
+              <Shortcuts />
               <AppSidebar />
               <main
                 ref={mainRef}

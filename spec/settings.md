@@ -21,6 +21,8 @@ Source: `src-tauri/src/settings.rs` / `src-tauri/src/update.rs` / `src/primitive
 | `vadEnabled` | `boolean` | `true` |
 | `notifyOnComplete` | `boolean` | `true` |
 
+`vadEnabled` は設定画面と文字起こし画面のチェックボックスの両方が同じ値を読み書きする (文字起こし画面の変更も永続化される)。
+
 `whisperModelId` / `textModelId` は選択したモデルの永続化に使う。選択時に書き込み、モデル一覧の初回ロード時に復元する (`createWhisper.ts::autoSelectModel` / `createTextProcessing.ts::fetchModels`)。保存された ID のモデルが未ダウンロードの場合、Whisper はダウンロード済みの先頭にフォールバックし、LLM は未選択のままになる。
 
 ### 2. バックエンドのフラットキー (文字列)

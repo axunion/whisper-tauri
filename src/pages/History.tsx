@@ -11,6 +11,7 @@ import {
   SearchBar,
   SortToggleGroup,
 } from "~/components/history";
+import { HISTORY_SEARCH_ID } from "~/components/layout/Shortcuts";
 import { Button } from "~/components/ui/Button";
 import { Sheet, SheetContent, SheetTitle } from "~/components/ui/Sheet";
 import { useI18n } from "~/i18n";
@@ -62,12 +63,18 @@ export default function History() {
     }
   }
 
-  const location = useLocation<{ entryId?: string }>();
+  const location = useLocation<{
+    entryId?: string;
+    focusSearch?: boolean;
+  }>();
 
   onMount(() => {
     // Arriving from a dashboard row opens that entry straight away.
     const entryId = location.state?.entryId;
     if (entryId) void history.getEntry(entryId);
+    if (location.state?.focusSearch) {
+      document.getElementById(HISTORY_SEARCH_ID)?.focus();
+    }
     history.loadEntries();
     document.addEventListener("keydown", handleKeyDown);
   });
