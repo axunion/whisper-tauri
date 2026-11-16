@@ -114,6 +114,18 @@ pub struct HistoryEntry {
     pub audio_path: Option<String>,
 }
 
+/// What a segment edit changed, for a view to apply without reloading.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SegmentUpdate {
+    /// The entry's full text, rebuilt from its segments
+    pub text: String,
+    /// The edited segment's stored text (keeps its leading whitespace)
+    pub segment_text: String,
+    /// The entry's list preview
+    pub text_preview: String,
+}
+
 /// Disk used by recording audio.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]

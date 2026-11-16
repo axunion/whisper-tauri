@@ -225,6 +225,9 @@ export const ja: Dictionary = {
     exportVtt: "Web字幕形式 (VTT)",
     textTab: "テキスト",
     timelineTab: "タイムライン",
+    editSegment: "この行を編集",
+    staleAfterEdit:
+      "文字起こしを編集したため、この内容は編集前のものです。再生成すると反映されます。",
     summaryTab: "要約",
     cleanTextTab: "整文",
     shareMenu: "共有",

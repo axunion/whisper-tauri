@@ -16,6 +16,7 @@ export type {
   HistorySegment,
   HistorySortBy,
   HistorySource,
+  SegmentUpdate,
   SortOrder,
   StorageStats,
 } from "./history";

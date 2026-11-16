@@ -21,7 +21,7 @@ Source: `src-tauri/src/lib.rs` / `src-tauri/tauri.conf.json` / `src-tauri/capabi
 | `download.rs` | 共通ダウンロードヘルパー (ストリーミング + 100ms スロットルの進捗コールバック) | — |
 | `paths.rs` | app data ディレクトリ解決 + UTF-8 パス変換 | — |
 
-ドメインモジュールは `commands.rs` / `types.rs` / `error.rs` / `mod.rs` の共通構成。全コマンドは `lib.rs` の `invoke_handler` に登録する (現在 50 コマンド)。
+ドメインモジュールは `commands.rs` / `types.rs` / `error.rs` / `mod.rs` の共通構成。全コマンドは `lib.rs` の `invoke_handler` に登録する (現在 51 コマンド)。
 
 **共有状態** (`lib.rs` の `.manage()`):
 - `std::sync::Mutex<RecordingManager>` — 録音セッション

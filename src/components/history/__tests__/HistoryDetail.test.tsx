@@ -25,12 +25,38 @@ const withAudio: HistoryEntry = {
 const retranscribeLabel = "この音声をもう一度文字起こし";
 const deleteAudioLabel = "音声を削除";
 
+describe("HistoryDetail segment edits", () => {
+  it("forwards the entry id, segment index and corrected text to onEditSegment", () => {
+    const onEditSegment = vi.fn(() => Promise.resolve(true));
+    renderWithRouter(() => (
+      <HistoryDetail
+        entry={baseEntry}
+        onDeleteAudio={() => {}}
+        onEditSegment={onEditSegment}
+        onRetranscribe={() => {}}
+        canRetranscribe
+      />
+    ));
+
+    const timelineTab = screen.getByRole("tab", { name: "タイムライン" });
+    fireEvent.mouseDown(timelineTab);
+    fireEvent.click(timelineTab);
+    fireEvent.click(screen.getByRole("button", { name: "この行を編集" }));
+    const input = screen.getByRole("textbox");
+    fireEvent.input(input, { target: { value: "こんばんは" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(onEditSegment).toHaveBeenCalledWith("history-1", 0, "こんばんは");
+  });
+});
+
 describe("HistoryDetail audio", () => {
   it("shows no player or audio actions when the entry has no kept audio", () => {
     const { container } = renderWithRouter(() => (
       <HistoryDetail
         entry={baseEntry}
         onDeleteAudio={() => {}}
+        onEditSegment={() => Promise.resolve(true)}
         onRetranscribe={() => {}}
         canRetranscribe
       />
@@ -48,6 +74,7 @@ describe("HistoryDetail audio", () => {
       <HistoryDetail
         entry={withAudio}
         onDeleteAudio={() => {}}
+        onEditSegment={() => Promise.resolve(true)}
         onRetranscribe={() => {}}
         canRetranscribe
       />
@@ -73,6 +100,7 @@ describe("HistoryDetail audio", () => {
       <HistoryDetail
         entry={withAudio}
         onDeleteAudio={() => {}}
+        onEditSegment={() => Promise.resolve(true)}
         onRetranscribe={onRetranscribe}
         canRetranscribe
       />
@@ -89,6 +117,7 @@ describe("HistoryDetail audio", () => {
       <HistoryDetail
         entry={withAudio}
         onDeleteAudio={() => {}}
+        onEditSegment={() => Promise.resolve(true)}
         onRetranscribe={() => {}}
         canRetranscribe={false}
       />

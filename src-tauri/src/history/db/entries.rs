@@ -5,7 +5,7 @@ use super::super::error::HistoryError;
 use super::super::search;
 use super::super::types::{
     HistoryEntry, HistoryFilter, HistoryMeta, HistorySaveParams, HistorySegment, HistorySortBy,
-    SortOrder,
+    SegmentUpdate, SortOrder,
 };
 use super::compression::{compress_text, decompress_text};
 use super::rows::{meta_from_row, meta_row_mapper, stored_preview};
@@ -299,6 +299,82 @@ pub(crate) fn rename_entry(
         return Err(HistoryError::NotFound(id.to_string()));
     }
     Ok(())
+}
+
+/// Replaces the text of one segment and returns what changed with it.
+///
+/// The full text is rebuilt from the segments, the way a transcription
+/// produces it, so the text, the timed segments, the list preview and the
+/// search index keep describing the same words. The segment's leading
+/// whitespace is kept: it is what separates it from the previous segment in
+/// the joined text.
+///
+/// # Errors
+///
+/// Returns `HistoryError::NotFound` if the entry or the segment does not
+/// exist, or another `HistoryError` if the database or compression fails.
+pub(crate) fn update_segment(
+    db_path: &Path,
+    id: &str,
+    index: usize,
+    new_text: &str,
+) -> Result<SegmentUpdate, HistoryError> {
+    let conn = super::open_connection(db_path)?;
+    let tx = conn.unchecked_transaction()?;
+
+    let segments_compressed: Vec<u8> = tx
+        .query_row(
+            "SELECT segments_compressed FROM history WHERE id = ?1",
+            rusqlite::params![id],
+            |row| row.get(0),
+        )
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => HistoryError::NotFound(id.to_string()),
+            other => other.into(),
+        })?;
+    let mut segments: Vec<HistorySegment> =
+        serde_json::from_str(&decompress_text(&segments_compressed)?)
+            .map_err(|e| HistoryError::Serialization(e.to_string()))?;
+
+    let segment = segments
+        .get_mut(index)
+        .ok_or_else(|| HistoryError::NotFound(format!("{id} segment {index}")))?;
+    let leading: String = segment
+        .text
+        .chars()
+        .take_while(|c| c.is_whitespace())
+        .collect();
+    segment.text = format!("{leading}{}", new_text.trim());
+    let segment_text = segment.text.clone();
+
+    let text = segments
+        .iter()
+        .map(|s| s.text.as_str())
+        .collect::<String>()
+        .trim()
+        .to_string();
+    let segments_json =
+        serde_json::to_string(&segments).map_err(|e| HistoryError::Serialization(e.to_string()))?;
+
+    let text_preview = stored_preview(&text);
+    tx.execute(
+        "UPDATE history SET text_compressed = ?2, segments_compressed = ?3, text_preview = ?4 WHERE id = ?1",
+        rusqlite::params![
+            id,
+            compress_text(&text)?,
+            compress_text(&segments_json)?,
+            &text_preview,
+        ],
+    )?;
+    search::delete_entry_index(&tx, id)?;
+    search::index_entry(&tx, id, &text)?;
+    tx.commit()?;
+
+    Ok(SegmentUpdate {
+        text,
+        segment_text,
+        text_preview,
+    })
 }
 
 #[cfg(test)]
@@ -846,5 +922,139 @@ mod tests {
         assert_eq!(entries[0].id, "a");
         assert_eq!(entries[1].id, "b");
         assert_eq!(entries[2].id, "c");
+    }
+
+    fn search_ids(path: &Path, query: &str) -> Vec<String> {
+        let conn = Connection::open(path).expect("open");
+        search::search_entries(
+            &conn,
+            &HistorySearchParams {
+                query: query.to_string(),
+                ..Default::default()
+            },
+        )
+        .expect("search")
+        .into_iter()
+        .map(|e| e.id)
+        .collect()
+    }
+
+    #[test]
+    fn update_segment_rewrites_text_segments_preview_and_search_together() {
+        let (_dir, path) = setup_db();
+        let mut params = sample_params();
+        params.segments[0].text = "This is a tset".to_string();
+        params.segments[1].text = " transcription.".to_string();
+        params.text = "This is a tset transcription.".to_string();
+        let id = save_entry(&path, &params).expect("save");
+
+        let text = update_segment(&path, &id, 0, "This is a test")
+            .expect("update")
+            .text;
+
+        assert_eq!(text, "This is a test transcription.");
+        let entry = get_entry(&path, &id).expect("get");
+        assert_eq!(entry.text, "This is a test transcription.");
+        assert_eq!(entry.segments[0].text, "This is a test");
+        assert_eq!(entry.segments[1].text, " transcription.");
+        assert_eq!((entry.segments[0].start, entry.segments[0].end), (0, 3000));
+        let listed = list_entries(&path, &HistoryFilter::default()).expect("list");
+        assert_eq!(listed[0].text_preview, "This is a test transcription.");
+        assert_eq!(search_ids(&path, "test"), std::slice::from_ref(&id));
+        assert_eq!(search_ids(&path, "tset").len(), 0);
+    }
+
+    #[test]
+    fn update_segment_keeps_the_whitespace_that_separates_it_from_the_previous_one() {
+        let (_dir, path) = setup_db();
+        let mut params = sample_params();
+        params.segments[1].text = " transcription.".to_string();
+        let id = save_entry(&path, &params).expect("save");
+
+        let text = update_segment(&path, &id, 1, "  recording.  ")
+            .expect("update")
+            .text;
+
+        assert_eq!(text, "This is a test recording.");
+    }
+
+    #[test]
+    fn update_segment_rejects_a_missing_entry_or_segment() {
+        let (_dir, path) = setup_db();
+        let id = save_entry(&path, &sample_params()).expect("save");
+
+        assert!(matches!(
+            update_segment(&path, "no-such-id", 0, "x"),
+            Err(HistoryError::NotFound(_))
+        ));
+        assert!(matches!(
+            update_segment(&path, &id, 2, "x"),
+            Err(HistoryError::NotFound(_))
+        ));
+        assert_eq!(
+            get_entry(&path, &id).expect("get").text,
+            sample_params().text
+        );
+    }
+
+    #[test]
+    fn update_segment_trims_the_full_text_when_the_first_segment_has_leading_space() {
+        let (_dir, path) = setup_db();
+        let mut params = sample_params();
+        params.segments[0].text = "  This is a test".to_string();
+        params.segments[1].text = " transcription.".to_string();
+        let id = save_entry(&path, &params).expect("save");
+
+        let text = update_segment(&path, &id, 0, "  hello")
+            .expect("update")
+            .text;
+
+        assert_eq!(text, "hello transcription.");
+        let entry = get_entry(&path, &id).expect("get");
+        assert_eq!(entry.text, "hello transcription.");
+        assert_eq!(entry.segments[0].text, "  hello");
+    }
+
+    #[test]
+    fn update_segment_rejects_any_index_on_an_entry_without_segments() {
+        let (_dir, path) = setup_db();
+        let mut params = sample_params();
+        params.segments.clear();
+        let id = save_entry(&path, &params).expect("save");
+
+        assert!(matches!(
+            update_segment(&path, &id, 0, "x"),
+            Err(HistoryError::NotFound(_))
+        ));
+    }
+
+    #[test]
+    fn consecutive_segment_edits_of_different_segments_both_persist() {
+        let (_dir, path) = setup_db();
+        let mut params = sample_params();
+        params.segments[1].text = " transcription.".to_string();
+        let id = save_entry(&path, &params).expect("save");
+
+        update_segment(&path, &id, 0, "First").expect("first edit");
+        update_segment(&path, &id, 1, "second.").expect("second edit");
+
+        let entry = get_entry(&path, &id).expect("get");
+        assert_eq!(entry.text, "First second.");
+        assert_eq!(entry.segments[0].text, "First");
+        assert_eq!(entry.segments[1].text, " second.");
+        assert_eq!(search_ids(&path, "First"), std::slice::from_ref(&id));
+    }
+
+    #[test]
+    fn update_segment_keeps_the_ai_content_of_the_entry() {
+        let (_dir, path) = setup_db();
+        let id = save_entry(&path, &sample_params()).expect("save");
+        save_ai_content(&path, &sample_ai_params(&id)).expect("save ai content");
+
+        update_segment(&path, &id, 0, "changed").expect("update");
+
+        let content = get_all_ai_content(&path, &id).expect("get ai content");
+        assert_eq!(content.len(), 1);
+        assert_eq!(content[0].text, "Summary text");
     }
 }

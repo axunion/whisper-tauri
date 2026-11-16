@@ -25,6 +25,7 @@ interface HistoryDetailProps {
   entry: HistoryEntry;
   onRename?: (id: string, newFileName: string) => void;
   onDeleteAudio: (id: string) => void | Promise<void>;
+  onEditSegment: (id: string, index: number, text: string) => Promise<boolean>;
   onRetranscribe: (entry: HistoryEntry) => void;
   /** False while leaving for a re-transcription would interrupt running work. */
   canRetranscribe: boolean;
@@ -232,6 +233,9 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
           onGeneratingTitleChange={setIsGeneratingTitle}
           onProcessingChange={props.onProcessingChange}
           audio={audio()}
+          onEditSegment={(index, text) =>
+            props.onEditSegment(props.entry.id, index, text)
+          }
           notionMeta={{
             createdAt: props.entry.createdAt,
             modelId: props.entry.modelId,

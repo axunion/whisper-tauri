@@ -206,6 +206,17 @@ export default function History() {
                     <HistoryDetail
                       entry={entry()}
                       onRename={history.renameEntry}
+                      onEditSegment={async (id, index, text) => {
+                        const saved = await history.updateSegment(
+                          id,
+                          index,
+                          text,
+                        );
+                        // The error panel is behind the open sheet.
+                        const err = history.error();
+                        if (!saved && err) toast.error(t(err.messageKey));
+                        return saved;
+                      }}
                       canRetranscribe={currentOp() === null && !job.isRunning()}
                       onRetranscribe={(entry) => {
                         const path = entry.audioPath;

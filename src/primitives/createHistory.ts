@@ -6,6 +6,7 @@ import type {
   HistoryFilter,
   HistoryMeta,
   HistorySearchParams,
+  SegmentUpdate,
 } from "~/types";
 import type { AppError } from "~/types/errors";
 
@@ -200,6 +201,40 @@ export function createHistory() {
     }
   }
 
+  /** Replaces the text of one segment of an entry. */
+  async function updateSegment(
+    id: string,
+    index: number,
+    text: string,
+  ): Promise<boolean> {
+    try {
+      const update = await invoke<SegmentUpdate>("history_update_segment", {
+        id,
+        index,
+        text,
+      });
+      const current = selectedEntry();
+      if (current?.id === id) {
+        setSelectedEntry({
+          ...current,
+          text: update.text,
+          segments: current.segments.map((segment, i) =>
+            i === index ? { ...segment, text: update.segmentText } : segment,
+          ),
+        });
+      }
+      setEntries((prev) =>
+        prev.map((e) =>
+          e.id === id ? { ...e, textPreview: update.textPreview } : e,
+        ),
+      );
+      return true;
+    } catch (e) {
+      setError(parseError(e));
+      return false;
+    }
+  }
+
   /** Deletes an entry's recording audio, keeping the entry itself. */
   async function deleteAudio(id: string): Promise<boolean> {
     try {
@@ -312,6 +347,7 @@ export function createHistory() {
     deleteEntries,
     deleteAllEntries,
     renameEntry,
+    updateSegment,
     deleteAudio,
     toggleSelect,
     selectAll,

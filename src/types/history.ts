@@ -65,6 +65,18 @@ export interface HistoryEntry {
 }
 
 /**
+ * What a segment edit changed, for a view to apply without reloading.
+ */
+export interface SegmentUpdate {
+  /** The entry's full text, rebuilt from its segments */
+  text: string;
+  /** The edited segment's stored text (keeps its leading whitespace) */
+  segmentText: string;
+  /** The entry's list preview */
+  textPreview: string;
+}
+
+/**
  * Disk used by recording audio.
  */
 export interface StorageStats {

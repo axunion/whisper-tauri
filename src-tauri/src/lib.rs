@@ -111,6 +111,7 @@ pub fn run() {
             history::commands::history_delete_all,
             history::commands::history_search,
             history::commands::history_rename,
+            history::commands::history_update_segment,
             history::commands::history_save_ai_content,
             history::commands::history_get_ai_content,
             history::commands::history_get_all_ai_content,

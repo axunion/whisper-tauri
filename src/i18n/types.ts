@@ -206,6 +206,8 @@ export interface Dictionary {
     exportVtt: string;
     textTab: string;
     timelineTab: string;
+    editSegment: string;
+    staleAfterEdit: string;
     summaryTab: string;
     cleanTextTab: string;
     shareMenu: string;

@@ -4,7 +4,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { Component, JSX } from "solid-js";
-import { createEffect, createSignal, onMount, Show } from "solid-js";
+import { createEffect, createSignal, on, onMount, Show } from "solid-js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/Tabs";
 import type { DictionaryKey } from "~/i18n";
 import { useI18n } from "~/i18n";
@@ -49,6 +49,13 @@ interface ResultViewerProps {
    * `actions` are controls shown next to the player.
    */
   audio?: { src: string; actions?: JSX.Element } | undefined;
+  /**
+   * When set, timeline segments can be corrected in place. Resolves to
+   * whether the correction was saved.
+   */
+  onEditSegment?:
+    | ((index: number, text: string) => Promise<boolean>)
+    | undefined;
 }
 
 const ResultViewer: Component<ResultViewerProps> = (props) => {
@@ -78,6 +85,11 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
     // A refused or failed play shows in the player's own controls.
     audioRef.play().catch(() => {});
   }
+
+  // Set when a segment is corrected: the summary and cleaned text were made
+  // from the transcript as it was, and say so until they are regenerated.
+  const [summaryStale, setSummaryStale] = createSignal(false);
+  const [cleanTextStale, setCleanTextStale] = createSignal(false);
 
   const tp = createTextProcessing();
   const session = createAiSession(() => props.historyId);
@@ -118,6 +130,17 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
   createEffect(() => {
     props.onProcessingChange?.(session.currentOperation(), session.cancel);
   });
+
+  // Cleared by a new result, not by a new attempt: a regeneration that fails
+  // or is cancelled leaves the old, still outdated, content on screen.
+  createEffect(
+    on(session.summaryResult, () => setSummaryStale(false), { defer: true }),
+  );
+  createEffect(
+    on(session.cleanTextResult, () => setCleanTextStale(false), {
+      defer: true,
+    }),
+  );
 
   type SaveOptions = {
     title: string;
@@ -408,6 +431,16 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
             segments={props.result.segments}
             positionMs={props.audio ? positionMs() : undefined}
             onSeek={props.audio ? seek : undefined}
+            onEdit={
+              props.onEditSegment &&
+              ((index, text) => {
+                void props.onEditSegment?.(index, text).then((saved) => {
+                  if (!saved) return;
+                  setSummaryStale(session.summaryResult() !== null);
+                  setCleanTextStale(session.cleanTextResult() !== null);
+                });
+              })
+            }
           />
         </TabsContent>
         <Show when={cleanTextTabVisible()}>
@@ -419,6 +452,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
                 session.currentOperation() === "cleanText"
               }
               onCancel={() => session.cancel()}
+              stale={cleanTextStale()}
             />
           </TabsContent>
         </Show>
@@ -431,6 +465,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
                 session.currentOperation() === "summary"
               }
               onCancel={() => session.cancel()}
+              stale={summaryStale()}
             />
           </TabsContent>
         </Show>

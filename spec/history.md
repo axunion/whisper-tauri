@@ -60,6 +60,15 @@ CREATE INDEX idx_ai_content_history ON ai_content(history_id);
 
 `history_list` / `history_search` は `limit` + `offset` を受け取る (`entries.rs::push_paging`)。FE (`createHistory.ts`) は 50 件ずつ取得し、満杯のページが返ったときだけ「さらに読み込む」を出す。ページ間で行が重複・欠落しないよう、`sort_clause` は常に `id` を最終ソートキーに付ける (`created_at` は秒精度で同値があり得る)。
 
+## セグメントの編集 (`entries.rs::update_segment`)
+
+誤認識の修正はセグメント単位 (履歴詳細のタイムライン → `history_update_segment`)。全文テキストはセグメントの連結で作り直す (whisper が全文を作るのと同じ方法) ので、全文・タイムライン・SRT/VTT・一覧プレビュー・検索インデックスが常に同じ内容を指す。更新は 1 トランザクション。
+
+- セグメント先頭の空白は保持する (連結したときに前のセグメントとの区切りになるため)
+- `history_update_segment` は変更後の全文・セグメント本文・一覧プレビューを返し (`SegmentUpdate`)、FE は再読み込みなしで詳細と一覧に反映する
+- 編集できるのは履歴詳細のみ。文字起こし直後の結果画面は対象外 (表示元が履歴ではなく実行結果のため)
+- 要約・整形は作り直さない。編集後は該当タブに「編集前の内容」である旨を表示し、再生成で解消する (この表示はセッション限りで、保存はしない)
+
 ## 録音音声 (`audio.rs`)
 
 マイク録音の WAV は、文字起こしが履歴に保存された時点で `recordings/` から `{app_data}/audio/{history_id}.wav` へ rename で移動し、履歴と一緒に残す。ファイル由来の履歴は音声を持たない。
@@ -75,4 +84,4 @@ CREATE INDEX idx_ai_content_history ON ai_content(history_id);
 
 ## コマンド一覧
 
-`history_save` / `history_list` (フィルタ + ソート) / `history_get` / `history_delete` / `history_delete_all` / `history_search` / `history_rename` / `history_save_ai_content` / `history_get_ai_content` / `history_get_all_ai_content` / `history_attach_recording` / `history_copy_audio` / `history_delete_audio` / `history_delete_all_audio` / `history_delete_pending_recordings` / `history_storage_stats`
+`history_save` / `history_list` (フィルタ + ソート) / `history_get` / `history_delete` / `history_delete_all` / `history_search` / `history_rename` / `history_update_segment` / `history_save_ai_content` / `history_get_ai_content` / `history_get_all_ai_content` / `history_attach_recording` / `history_copy_audio` / `history_delete_audio` / `history_delete_all_audio` / `history_delete_pending_recordings` / `history_storage_stats`

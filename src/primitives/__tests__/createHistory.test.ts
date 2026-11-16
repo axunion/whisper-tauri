@@ -817,6 +817,55 @@ describe("createHistory", () => {
     });
   });
 
+  describe("updateSegment", () => {
+    it("should apply the edit and the rebuilt full text to the open entry", async () => {
+      await createRoot(async (dispose) => {
+        const history = createHistory();
+        vi.mocked(invoke).mockResolvedValueOnce(mockEntry);
+        await history.getEntry("entry-1");
+
+        vi.mocked(invoke).mockResolvedValueOnce({
+          text: "This is a text transcription.",
+          segmentText: " This is a text",
+          textPreview: "This is a text transcription.",
+        });
+        const ok = await history.updateSegment("entry-1", 0, "This is a text");
+
+        expect(ok).toBe(true);
+        expect(invoke).toHaveBeenLastCalledWith("history_update_segment", {
+          id: "entry-1",
+          index: 0,
+          text: "This is a text",
+        });
+        expect(history.selectedEntry()?.text).toBe(
+          "This is a text transcription.",
+        );
+        // The stored segment text, not the typed one.
+        expect(history.selectedEntry()?.segments.map((s) => s.text)).toEqual([
+          " This is a text",
+          "transcription.",
+        ]);
+        dispose();
+      });
+    });
+
+    it("should leave the entry untouched and report the error on failure", async () => {
+      await createRoot(async (dispose) => {
+        const history = createHistory();
+        vi.mocked(invoke).mockResolvedValueOnce(mockEntry);
+        await history.getEntry("entry-1");
+
+        vi.mocked(invoke).mockRejectedValueOnce("Database error: locked");
+        const ok = await history.updateSegment("entry-1", 0, "changed");
+
+        expect(ok).toBe(false);
+        expect(history.selectedEntry()).toEqual(mockEntry);
+        expect(history.error()).not.toBeNull();
+        dispose();
+      });
+    });
+  });
+
   describe("deleteAudio", () => {
     it("should clear the audio flag on the open entry", async () => {
       await createRoot(async (dispose) => {

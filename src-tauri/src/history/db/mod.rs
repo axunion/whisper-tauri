@@ -14,7 +14,7 @@ pub(crate) use ai_content::{get_ai_content, get_all_ai_content, save_ai_content}
 pub(crate) use compression::decompress_text;
 pub(crate) use entries::{
     delete_all_entries, delete_entries, get_entry, list_entries, push_paging, rename_entry,
-    save_entry, sort_clause,
+    save_entry, sort_clause, update_segment,
 };
 pub(crate) use rows::{meta_from_row_matching, meta_row_mapper};
 

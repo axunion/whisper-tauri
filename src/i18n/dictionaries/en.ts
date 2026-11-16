@@ -225,6 +225,9 @@ export const en: Dictionary = {
     exportVtt: "Web Subtitles (VTT)",
     textTab: "Text",
     timelineTab: "Timeline",
+    editSegment: "Edit this line",
+    staleAfterEdit:
+      "The transcript was edited after this was generated. Generate it again to reflect the changes.",
     summaryTab: "Summary",
     cleanTextTab: "Rewrite",
     shareMenu: "Share",

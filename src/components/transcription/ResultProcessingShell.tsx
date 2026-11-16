@@ -9,6 +9,8 @@ interface ResultProcessingShellProps {
   processingLabel: string;
   onCancel: () => void;
   hasResult: boolean;
+  /** Shown above the result when it no longer matches its source. */
+  staleNotice?: string | undefined;
   children: JSX.Element;
 }
 
@@ -55,6 +57,11 @@ const ResultProcessingShell: Component<ResultProcessingShellProps> = (
       </Show>
 
       <Show when={props.hasResult && !props.isProcessing}>
+        <Show when={props.staleNotice}>
+          {(notice) => (
+            <p class="mb-3 text-xs text-muted-foreground">{notice()}</p>
+          )}
+        </Show>
         {props.children}
       </Show>
     </div>

@@ -8,6 +8,8 @@ interface ResultSummaryTabProps {
   summaryResult: StructuredSummary | null;
   isProcessing: boolean;
   onCancel: () => void;
+  /** True when the transcript was edited after this was generated. */
+  stale: boolean;
 }
 
 function Section(props: { title: string; children: JSX.Element }): JSX.Element {
@@ -58,6 +60,7 @@ const ResultSummaryTab: Component<ResultSummaryTabProps> = (props) => {
       isProcessing={props.isProcessing}
       processingLabel={t("textProcessing.summarizing")}
       onCancel={props.onCancel}
+      staleNotice={props.stale ? t("result.staleAfterEdit") : undefined}
       hasResult={summary() !== null}
     >
       <Show

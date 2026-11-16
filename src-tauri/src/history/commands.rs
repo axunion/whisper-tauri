@@ -9,7 +9,7 @@ use super::db;
 use super::error::HistoryError;
 use super::types::{
     AiContent, AiContentSaveParams, HistoryEntry, HistoryFilter, HistoryMeta, HistorySaveParams,
-    HistorySearchParams, StorageStats,
+    HistorySearchParams, SegmentUpdate, StorageStats,
 };
 
 /// Returns the database path, initializing the database on first use.
@@ -211,6 +211,24 @@ pub async fn history_storage_stats(
 pub async fn history_rename(app: AppHandle, id: String, file_name: String) -> Result<(), String> {
     let db_path = get_db_path(&app)?;
     db::rename_entry(&db_path, &id, &file_name).map_err(Into::into)
+}
+
+/// Replaces the text of segment `index` of entry `id` and returns what
+/// changed with it.
+///
+/// # Errors
+///
+/// Returns an error if the entry or segment does not exist or the database
+/// cannot be accessed.
+#[tauri::command]
+pub async fn history_update_segment(
+    app: AppHandle,
+    id: String,
+    index: usize,
+    text: String,
+) -> Result<SegmentUpdate, String> {
+    let db_path = get_db_path(&app)?;
+    db::update_segment(&db_path, &id, index, &text).map_err(Into::into)
 }
 
 /// Searches history entries using full-text search.

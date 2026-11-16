@@ -6,6 +6,8 @@ interface ResultCleanTextTabProps {
   cleanTextResult: string | null;
   isProcessing: boolean;
   onCancel: () => void;
+  /** True when the transcript was edited after this was generated. */
+  stale: boolean;
 }
 
 const ResultCleanTextTab: Component<ResultCleanTextTabProps> = (props) => {
@@ -16,6 +18,7 @@ const ResultCleanTextTab: Component<ResultCleanTextTabProps> = (props) => {
       isProcessing={props.isProcessing}
       processingLabel={t("textProcessing.cleaningText")}
       onCancel={props.onCancel}
+      staleNotice={props.stale ? t("result.staleAfterEdit") : undefined}
       hasResult={props.cleanTextResult !== null}
     >
       <div class="whitespace-pre-wrap text-sm leading-relaxed text-foreground/85">
