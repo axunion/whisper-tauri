@@ -155,6 +155,10 @@ fn migrate_v1_baseline(conn: &Connection) -> Result<(), HistoryError> {
 
 /// Version 2: stores each entry's list preview in `history.text_preview`, so
 /// listing no longer decompresses every transcript to show its first line.
+///
+/// A transcript that cannot be decompressed keeps the empty default preview:
+/// failing here would abort the migration on every launch and lock the whole
+/// history for the sake of one bad row.
 fn migrate_v2_text_preview(conn: &Connection) -> Result<(), HistoryError> {
     conn.execute_batch("ALTER TABLE history ADD COLUMN text_preview TEXT NOT NULL DEFAULT ''")?;
 
@@ -163,7 +167,9 @@ fn migrate_v2_text_preview(conn: &Connection) -> Result<(), HistoryError> {
         .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
         .collect::<Result<_, _>>()?;
     for (id, text_compressed) in entries {
-        let text = decompress_text(&text_compressed)?;
+        let Ok(text) = decompress_text(&text_compressed) else {
+            continue;
+        };
         conn.execute(
             "UPDATE history SET text_preview = ?1 WHERE id = ?2",
             rusqlite::params![rows::stored_preview(&text), id],
@@ -371,6 +377,50 @@ mod tests {
     }
 
     #[test]
+    fn init_db_survives_an_undecodable_transcript_while_backfilling_previews() {
+        let dir = tempfile::TempDir::new().expect("create temp dir");
+        let path = dir.path().join("history.db");
+
+        let conn = open_connection(&path).expect("open");
+        migrate_v1_baseline(&conn).expect("baseline");
+        conn.pragma_update(None, "user_version", 1)
+            .expect("mark v1");
+        for (id, text_compressed) in [
+            ("broken", b"not a compressed transcript".to_vec()),
+            (
+                "fine",
+                compression::compress_text("無事な本文").expect("compress"),
+            ),
+        ] {
+            conn.execute(
+                "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed)
+                 VALUES (?1, '2026-01-01T00:00:00', 'a.wav', 'ja', 'small', 1000, ?2, ?3)",
+                rusqlite::params![
+                    id,
+                    text_compressed,
+                    compression::compress_text("[]").expect("compress"),
+                ],
+            )
+            .expect("insert v1 row");
+        }
+        drop(conn);
+
+        init_db(&path).expect("one bad row must not block the migration");
+
+        let entries =
+            list_entries(&path, &crate::history::types::HistoryFilter::default()).expect("list");
+        let preview = |id: &str| {
+            entries
+                .iter()
+                .find(|e| e.id == id)
+                .map(|e| e.text_preview.clone())
+                .expect("entry listed")
+        };
+        assert_eq!(preview("broken"), "");
+        assert_eq!(preview("fine"), "無事な本文");
+    }
+
+    #[test]
     fn init_db_migrates_pre_versioning_database_with_rows_and_fts() {
         let dir = tempfile::TempDir::new().expect("create temp dir");
         let path = dir.path().join("history.db");
@@ -439,16 +489,21 @@ mod tests {
         migrate_v1_baseline(&conn).expect("baseline");
         conn.pragma_update(None, "user_version", 1)
             .expect("mark v1");
-        // Not gzip, so the v2 backfill cannot decompress it.
         conn.execute(
             "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed)
-             VALUES ('corrupt', '2026-01-01T00:00:00', 'a.wav', 'ja', 'small', 1000, ?1, ?2)",
+             VALUES ('row', '2026-01-01T00:00:00', 'a.wav', 'ja', 'small', 1000, ?1, ?2)",
             rusqlite::params![
-                b"not gzip".to_vec(),
+                compression::compress_text("本文").expect("compress"),
                 compression::compress_text("[]").expect("compress"),
             ],
         )
-        .expect("insert corrupt row");
+        .expect("insert row");
+        // Fails the v2 backfill's UPDATE after its ALTER TABLE already ran.
+        conn.execute_batch(
+            "CREATE TRIGGER block_update BEFORE UPDATE ON history
+             BEGIN SELECT RAISE(ABORT, 'blocked'); END;",
+        )
+        .expect("create trigger");
         drop(conn);
 
         assert!(init_db(&path).is_err());
