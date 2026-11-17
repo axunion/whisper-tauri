@@ -15,6 +15,7 @@ vi.mock("@tauri-apps/api/app", () => ({
 // Mock @tauri-apps/api/core
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
+  convertFileSrc: vi.fn((path: string) => `asset://localhost/${path}`),
 }));
 
 // Mock @tauri-apps/api/event
@@ -23,10 +24,43 @@ vi.mock("@tauri-apps/api/event", () => ({
   emit: vi.fn(() => Promise.resolve()),
 }));
 
+// Mock @tauri-apps/api/window
+vi.mock("@tauri-apps/api/window", () => {
+  const currentWindow = {
+    show: vi.fn(() => Promise.resolve()),
+    isFocused: vi.fn(() => Promise.resolve(true)),
+    center: vi.fn(() => Promise.resolve()),
+    setSize: vi.fn(() => Promise.resolve()),
+    setMinSize: vi.fn(() => Promise.resolve()),
+    onCloseRequested: vi.fn(() => Promise.resolve(() => {})),
+  };
+  return {
+    getCurrentWindow: () => currentWindow,
+    // biome-ignore lint/complexity/useArrowFunction: regular function required for `new` constructor mock
+    LogicalSize: vi.fn().mockImplementation(function () {
+      return {};
+    }),
+  };
+});
+
+// Mock @tauri-apps/api/webview
+vi.mock("@tauri-apps/api/webview", () => {
+  const currentWebview = {
+    onDragDropEvent: vi.fn(() => Promise.resolve(() => {})),
+  };
+  return { getCurrentWebview: () => currentWebview };
+});
+
+// Mock @tauri-apps/plugin-notification
+vi.mock("@tauri-apps/plugin-notification", () => ({
+  sendNotification: vi.fn(),
+}));
+
 // Mock @tauri-apps/plugin-dialog
 vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: vi.fn(),
   save: vi.fn(),
+  confirm: vi.fn(),
 }));
 
 // Mock @tauri-apps/plugin-fs

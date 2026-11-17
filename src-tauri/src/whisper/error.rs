@@ -1,3 +1,5 @@
+use crate::ipc_error::{ErrorCode, IpcError};
+
 /// Errors that can occur during whisper operations.
 #[derive(Debug, thiserror::Error)]
 pub enum WhisperError {
@@ -48,9 +50,20 @@ impl From<crate::download::DownloadError> for WhisperError {
     }
 }
 
-impl From<WhisperError> for String {
+impl From<WhisperError> for IpcError {
     fn from(err: WhisperError) -> Self {
-        err.to_string()
+        let code = match &err {
+            WhisperError::ModelNotFound(_) => ErrorCode::ModelNotFound,
+            WhisperError::DownloadFailed(_) => ErrorCode::ModelDownloadError,
+            WhisperError::Io(_) | WhisperError::FileReadError(_) => ErrorCode::FileReadError,
+            WhisperError::Http(_) => ErrorCode::NetworkError,
+            WhisperError::FileNotFound(_) => ErrorCode::FileNotFound,
+            WhisperError::UnsupportedFormat(_) => ErrorCode::UnsupportedFormat,
+            WhisperError::ModelLoadError(_) => ErrorCode::ModelLoadError,
+            WhisperError::TranscriptionError(_) => ErrorCode::TranscriptionError,
+            WhisperError::Cancelled => ErrorCode::Cancelled,
+        };
+        Self::new(code, err.to_string())
     }
 }
 
@@ -118,9 +131,11 @@ mod tests {
     }
 
     #[test]
-    fn error_converts_to_string() {
+    fn error_classifies_for_ipc() {
         let err = WhisperError::Cancelled;
-        let s: String = err.into();
-        assert_eq!(s, "Transcription cancelled");
+        assert_eq!(
+            IpcError::from(err),
+            IpcError::new(ErrorCode::Cancelled, "Transcription cancelled")
+        );
     }
 }

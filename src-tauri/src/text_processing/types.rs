@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Text processing model information.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct TextModelInfo {
     /// Model identifier (e.g., "gemma-4-e2b", "qwen3.5-4b")
@@ -22,8 +22,9 @@ pub struct TextModelInfo {
 }
 
 /// Text model download progress.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type, tauri_specta::Event)]
 #[serde(rename_all = "camelCase")]
+#[tauri_specta(event_name = "text-processing:download-progress")]
 pub(crate) struct TextDownloadProgress {
     /// Model identifier being downloaded
     pub model_id: String,
@@ -32,12 +33,14 @@ pub(crate) struct TextDownloadProgress {
     /// Total bytes
     pub total_bytes: u64,
     /// Progress percentage (0-100)
+    #[specta(type = specta_typescript::Number)]
     pub progress: f64,
 }
 
 /// Inference progress update (streaming tokens).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type, tauri_specta::Event)]
 #[serde(rename_all = "camelCase")]
+#[tauri_specta(event_name = "text-processing:inference-progress")]
 pub(crate) struct InferenceProgress {
     /// Task identifier
     pub task_id: String,
@@ -64,7 +67,7 @@ pub(crate) struct ChatMessage {
 /// Assignee inference is intentionally not supported — speaker identification
 /// is unreliable from transcripts alone. Only the task itself and an optional
 /// due date / timeframe are captured.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ActionItem {
     /// The task itself.
@@ -80,8 +83,8 @@ pub struct ActionItem {
 /// paragraph that summarises the whole transcription, while `keyPoints` is a
 /// bullet-style list of sub-topics. Arrays may be empty when the
 /// transcription does not yield that kind of content (e.g. a monologue with
-/// no action items).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+/// no action items); the UI hides sections backed by an empty array or string.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct StructuredSummary {
     /// Single-line title.

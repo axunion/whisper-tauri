@@ -1,3 +1,5 @@
+use crate::ipc_error::{ErrorCode, IpcError};
+
 /// Errors that can occur during history operations.
 #[derive(Debug, thiserror::Error)]
 pub enum HistoryError {
@@ -28,9 +30,16 @@ impl From<rusqlite::Error> for HistoryError {
     }
 }
 
-impl From<HistoryError> for String {
+impl From<HistoryError> for IpcError {
     fn from(err: HistoryError) -> Self {
-        err.to_string()
+        let code = match &err {
+            HistoryError::Database(_)
+            | HistoryError::Compression(_)
+            | HistoryError::Serialization(_) => ErrorCode::UnknownError,
+            HistoryError::NotFound(_) => ErrorCode::FileNotFound,
+            HistoryError::Io(_) => ErrorCode::FileReadError,
+        };
+        Self::new(code, err.to_string())
     }
 }
 
@@ -70,9 +79,11 @@ mod tests {
     }
 
     #[test]
-    fn error_converts_to_string() {
+    fn error_classifies_for_ipc() {
         let err = HistoryError::Database("connection failed".to_string());
-        let s: String = err.into();
-        assert_eq!(s, "Database error: connection failed");
+        assert_eq!(
+            IpcError::from(err),
+            IpcError::new(ErrorCode::UnknownError, "Database error: connection failed")
+        );
     }
 }

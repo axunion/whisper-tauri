@@ -16,9 +16,11 @@
     "store:default",
     "clipboard-manager:default",
     "clipboard-manager:allow-write-text",
+    "notification:default",
     "core:window:allow-set-size",
     "core:window:allow-set-min-size",
     "core:window:allow-center",
-    "core:window:allow-show"
+    "core:window:allow-show",
+    "core:window:allow-destroy"
   ]
 }

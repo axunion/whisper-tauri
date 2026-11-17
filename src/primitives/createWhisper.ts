@@ -1,6 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { batch, createRoot, createSignal } from "solid-js";
+import { commands, events } from "~/bindings";
 import { parseError } from "~/lib/errors";
 import { sumDownloadedBytes } from "~/lib/format";
 import { createSettings } from "~/primitives/createSettings";
@@ -11,7 +10,7 @@ import type {
   TranscriptionProgress,
   TranscriptionResult,
 } from "~/types";
-import type { AppError } from "~/types/errors";
+import { type AppError, ErrorCode } from "~/types/errors";
 
 // Module-level singleton state — all consumers share the same signals.
 const {
@@ -33,8 +32,6 @@ const {
   setIsDownloading,
   language,
   setLanguage,
-  vadEnabledOverride,
-  setVadEnabledOverride,
   error,
   setError,
   currentTaskId,
@@ -58,9 +55,6 @@ const {
   const [isProcessing, setIsProcessing] = createSignal(false);
   const [isDownloading, setIsDownloading] = createSignal(false);
   const [language, setLanguage] = createSignal<string | null>(null);
-  const [vadEnabledOverride, setVadEnabledOverride] = createSignal<
-    boolean | null
-  >(null);
   const [error, setError] = createSignal<AppError | null>(null);
 
   // Internal state for cancellation
@@ -95,8 +89,6 @@ const {
     setIsDownloading,
     language,
     setLanguage,
-    vadEnabledOverride,
-    setVadEnabledOverride,
     error,
     setError,
     currentTaskId,
@@ -113,27 +105,30 @@ const {
 // honoured by the first progress event, which is what carries the id.
 let cancelRequested = false;
 
-listen<TranscriptionProgress>("whisper:progress", (event) => {
-  setProgress(event.payload);
-  setCurrentTaskId(event.payload.taskId);
-  if (cancelRequested) {
-    cancelRequested = false;
-    invoke("cancel_transcription", { taskId: event.payload.taskId }).catch(
-      console.error,
-    );
-  }
-}).catch(console.error);
+events.whisperProgress
+  .listen((event) => {
+    setProgress(event.payload);
+    setCurrentTaskId(event.payload.taskId);
+    if (cancelRequested) {
+      cancelRequested = false;
+      commands.cancelTranscription(event.payload.taskId).catch(console.error);
+    }
+  })
+  .catch(console.error);
 
-listen<DownloadProgress>("model:download-progress", (event) => {
-  setDownloadProgress(event.payload);
-}).catch(console.error);
+events.modelDownloadProgress
+  .listen((event) => {
+    setDownloadProgress(event.payload);
+  })
+  .catch(console.error);
 
 function vadEnabled(): boolean {
-  return vadEnabledOverride() ?? createSettings().vadEnabled();
+  return createSettings().vadEnabled();
 }
 
+/** Persisted like the model and language chosen next to it. */
 function setVadEnabled(enabled: boolean): void {
-  setVadEnabledOverride(enabled);
+  void createSettings().update({ vadEnabled: enabled });
 }
 
 function autoSelectModel(): void {
@@ -163,7 +158,7 @@ let loadModelsPromise: Promise<void> | null = null;
 /** Unguarded refresh — used after mutations that change what is on disk. */
 async function fetchModels(): Promise<void> {
   try {
-    const res = await invoke<ModelInfo[]>("get_available_models");
+    const res = await commands.getAvailableModels();
     setModels(res);
     autoSelectModel();
     modelsLoaded = true;
@@ -199,7 +194,7 @@ async function downloadModel(modelId: string): Promise<boolean> {
   if (isDownloading()) return false;
   setIsDownloading(true);
   try {
-    await invoke("download_model", { modelId });
+    await commands.downloadModel(modelId);
     await fetchModels();
     return true;
   } catch (e) {
@@ -212,7 +207,7 @@ async function downloadModel(modelId: string): Promise<boolean> {
 
 async function deleteModel(modelId: string): Promise<boolean> {
   try {
-    await invoke("delete_model", { modelId });
+    await commands.deleteModel(modelId);
     const wasSelected = selectedModel()?.id === modelId;
     if (wasSelected) {
       setSelectedModel(null);
@@ -238,7 +233,7 @@ async function selectFile(fileInfo: FileInfo): Promise<void> {
   // Fetch duration asynchronously — non-critical, UI works without it
   const filePath = fileInfo.path;
   try {
-    const duration = await invoke<number>("get_audio_duration", { filePath });
+    const duration = await commands.getAudioDuration(filePath);
     // Only update if the file hasn't changed while we were fetching
     const current = file();
     if (current?.path === filePath) {
@@ -254,6 +249,21 @@ async function startTranscription(overrideAudioPath?: string): Promise<void> {
   const currentModel = selectedModel();
   if (!currentFile || !currentModel) return;
   if (isProcessing()) return;
+  const modelPath = currentModel.path;
+  // A model only has a path once downloaded. Reported, and the previous
+  // result cleared, so the caller cannot mistake it for this run's.
+  if (!modelPath) {
+    batch(() => {
+      setResult(null);
+      setError(
+        parseError({
+          code: ErrorCode.MODEL_NOT_FOUND,
+          message: `Model not found: ${currentModel.id}`,
+        }),
+      );
+    });
+    return;
+  }
 
   cancelRequested = false;
   batch(() => {
@@ -269,17 +279,14 @@ async function startTranscription(overrideAudioPath?: string): Promise<void> {
   try {
     let vadModelPath: string | null = null;
     if (vadEnabled()) {
-      vadModelPath = await invoke<string>("ensure_vad_model");
+      vadModelPath = await commands.ensureVadModel();
     }
 
-    const transcriptionResult = await invoke<TranscriptionResult>(
-      "transcribe_audio",
-      {
-        audioPath: overrideAudioPath ?? currentFile.path,
-        modelPath: currentModel.path,
-        language: language(),
-        vadModelPath,
-      },
+    const transcriptionResult = await commands.transcribeAudio(
+      overrideAudioPath ?? currentFile.path,
+      modelPath,
+      language(),
+      vadModelPath,
     );
     batch(() => {
       setResult(transcriptionResult);
@@ -300,13 +307,19 @@ async function cancelTranscription(): Promise<void> {
     cancelRequested = isProcessing();
     return;
   }
-  await invoke("cancel_transcription", { taskId });
+  await commands.cancelTranscription(taskId);
 }
 
 function reset(): void {
   setFile(null);
   setResult(null);
   setError(null);
+}
+
+/** Drops the last run's result and progress but keeps the selected file. */
+function clearRun(): void {
+  setResult(null);
+  setProgress(null);
 }
 
 function clearError(): void {
@@ -343,6 +356,7 @@ const whisperInstance = {
   startTranscription,
   cancelTranscription,
   reset,
+  clearRun,
   clearError,
 };
 
@@ -364,7 +378,6 @@ export function _resetWhisperForTesting(): void {
   setIsProcessing(false);
   setIsDownloading(false);
   setLanguage(null);
-  setVadEnabledOverride(null);
   setError(null);
   setCurrentTaskId(null);
   setProcessingMs(null);

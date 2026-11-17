@@ -1,3 +1,4 @@
+import type { ErrorCode as GeneratedErrorCode } from "~/bindings";
 import type { DictionaryKey } from "~/i18n/types";
 
 export const ErrorCategory = {
@@ -23,9 +24,10 @@ export const ErrorCode = {
   NETWORK_ERROR: "NETWORK_ERROR",
   CANCELLED: "CANCELLED",
   UNKNOWN_ERROR: "UNKNOWN_ERROR",
-} as const;
+} as const satisfies { [Code in GeneratedErrorCode as Code]: Code };
 
-export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
+/** The backend's error codes; the object above names each one. */
+export type ErrorCode = GeneratedErrorCode;
 
 export interface AppError {
   code: ErrorCode;

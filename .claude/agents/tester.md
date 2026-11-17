@@ -47,10 +47,12 @@ them in parallel.
    - `src-tauri/src/whisper/`
    - `src-tauri/src/history/db/`
    - `src-tauri/src/notion/`
-   - the IPC sync points — `src/types/` against `src-tauri/src/*/types.rs`,
-     `src/lib/errors.ts`'s `PREFIX_MAP` against `src-tauri/src/*/error.rs` (there is
-     already a `src/lib/__tests__/errorPrefixSync.test.ts` guarding this one), and
-     `src-tauri/capabilities/default.json` against every `@tauri-apps/plugin-*` call.
+   - the IPC sync points — `src-tauri/capabilities/default.json` against every
+     `@tauri-apps/plugin-*` call, and `src/bindings.ts` against the Rust commands,
+     events and types (the `bindings_are_up_to_date` test in `src-tauri/src/lib.rs`
+     regenerates the file and fails when it was stale: run `cargo test` twice and
+     report a changed `src/bindings.ts` rather than treating the first failure as a
+     flake).
 
 Rust tests live in `#[cfg(test)]` modules in the file under test; frontend tests live in
 a sibling `__tests__/` directory. Follow whichever applies rather than introducing a new

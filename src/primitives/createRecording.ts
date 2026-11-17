@@ -1,6 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { createRoot, createSignal } from "solid-js";
+import { commands, events } from "~/bindings";
 import { parseError } from "~/lib/errors";
 import type { AudioDevice, RecordingLevel, RecordingStopResult } from "~/types";
 import type { AppError } from "~/types/errors";
@@ -12,6 +11,8 @@ const {
   setSelectedDevice,
   isRecording,
   setIsRecording,
+  isPaused,
+  setIsPaused,
   level,
   setLevel,
   tempFilePath,
@@ -26,6 +27,7 @@ const {
     null,
   );
   const [isRecording, setIsRecording] = createSignal(false);
+  const [isPaused, setIsPaused] = createSignal(false);
   const [level, setLevel] = createSignal<RecordingLevel | null>(null);
   const [tempFilePath, setTempFilePath] = createSignal<string | null>(null);
   const [duration, setDuration] = createSignal(0);
@@ -38,6 +40,8 @@ const {
     setSelectedDevice,
     isRecording,
     setIsRecording,
+    isPaused,
+    setIsPaused,
     level,
     setLevel,
     tempFilePath,
@@ -49,9 +53,14 @@ const {
   };
 });
 
-listen<RecordingLevel>("recording:level", (event) => {
-  setLevel(event.payload);
-}).catch(console.error);
+events.recordingLevel
+  .listen((event) => {
+    // An event already in flight when the recording was paused would leave the
+    // meter frozen on its last level.
+    if (isPaused()) return;
+    setLevel(event.payload);
+  })
+  .catch(console.error);
 
 let durationTimer: ReturnType<typeof setInterval> | undefined;
 // Guards the window between a stop request and the backend finishing the WAV,
@@ -60,7 +69,7 @@ let isStopping = false;
 
 async function loadDevices(): Promise<void> {
   try {
-    const result = await invoke<AudioDevice[]>("list_audio_devices");
+    const result = await commands.listAudioDevices();
     setDevices(result);
     if (!selectedDevice()) {
       const defaultDevice = result.find((d) => d.isDefault) ?? result[0];
@@ -83,13 +92,35 @@ async function startRecording(): Promise<void> {
   setLevel(null);
 
   try {
-    await invoke("start_recording", {
-      deviceId: selectedDevice()?.id ?? null,
-    });
+    await commands.startRecording(selectedDevice()?.id ?? null);
     setIsRecording(true);
+    setIsPaused(false);
+    // The clock counts recorded time, so it stands still while paused.
     durationTimer = setInterval(() => {
-      setDuration((d) => d + 100);
+      if (!isPaused()) setDuration((d) => d + 100);
     }, 100);
+  } catch (e) {
+    setError(parseError(e));
+  }
+}
+
+/** Pauses the recording; audio while paused is not kept. */
+async function pauseRecording(): Promise<void> {
+  if (!isRecording() || isPaused() || isStopping) return;
+  try {
+    await commands.pauseRecording();
+    setIsPaused(true);
+    setLevel(null);
+  } catch (e) {
+    setError(parseError(e));
+  }
+}
+
+async function resumeRecording(): Promise<void> {
+  if (!isRecording() || !isPaused() || isStopping) return;
+  try {
+    await commands.resumeRecording();
+    setIsPaused(false);
   } catch (e) {
     setError(parseError(e));
   }
@@ -105,14 +136,16 @@ async function stopRecording(): Promise<RecordingStopResult | null> {
   }
 
   try {
-    const result = await invoke<RecordingStopResult>("stop_recording");
+    const result = await commands.stopRecording();
     setIsRecording(false);
+    setIsPaused(false);
     setTempFilePath(result.tempFilePath);
     setDuration(result.durationMs);
     setLevel(null);
     return result;
   } catch (e) {
     setIsRecording(false);
+    setIsPaused(false);
     setError(parseError(e));
     return null;
   } finally {
@@ -124,11 +157,16 @@ async function cleanup(): Promise<void> {
   const path = tempFilePath();
   if (!path) return;
   try {
-    await invoke("cleanup_recording", { path });
+    await commands.cleanupRecording(path);
     setTempFilePath(null);
   } catch (e) {
     setError(parseError(e));
   }
+}
+
+/** Lets go of the recording without deleting it — its file now lives elsewhere. */
+function release(): void {
+  setTempFilePath(null);
 }
 
 function clearError(): void {
@@ -139,6 +177,7 @@ const recordingInstance = {
   devices,
   selectedDevice,
   isRecording,
+  isPaused,
   level,
   tempFilePath,
   duration,
@@ -146,8 +185,11 @@ const recordingInstance = {
   loadDevices,
   selectDevice,
   startRecording,
+  pauseRecording,
+  resumeRecording,
   stopRecording,
   cleanup,
+  release,
   clearError,
 };
 
@@ -160,6 +202,7 @@ export function _resetRecordingForTesting(): void {
   setDevices([]);
   setSelectedDevice(null);
   setIsRecording(false);
+  setIsPaused(false);
   setLevel(null);
   setTempFilePath(null);
   setDuration(0);

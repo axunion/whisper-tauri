@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { createRoot, createSignal } from "solid-js";
+import { commands } from "~/bindings";
 import { parseError } from "~/lib/errors";
 import type { NotionDatabaseInfo, NotionSettings } from "~/types";
 import type { AppError } from "~/types/errors";
@@ -34,7 +34,7 @@ async function load(): Promise<void> {
   if (loadPromise) return loadPromise;
   loadPromise = (async () => {
     try {
-      const fetched = await invoke<NotionSettings>("notion_get_settings");
+      const fetched = await commands.notionGetSettings();
       setSettings({ ...DEFAULT_NOTION_SETTINGS, ...fetched });
       setIsLoaded(true);
     } catch (e) {
@@ -51,7 +51,7 @@ async function update(partial: Partial<NotionSettings>): Promise<boolean> {
   const merged: NotionSettings = { ...settings(), ...partial };
   setSettings(merged);
   try {
-    await invoke("notion_set_settings", { settings: merged });
+    await commands.notionSetSettings(merged);
     return true;
   } catch (e) {
     setError(parseError(e));
@@ -63,10 +63,7 @@ async function testConnection(
   token: string,
   databaseId: string,
 ): Promise<NotionDatabaseInfo> {
-  const info = await invoke<NotionDatabaseInfo>("notion_test_connection", {
-    token,
-    databaseId,
-  });
+  const info = await commands.notionTestConnection(token, databaseId);
   setSettings({ ...settings(), titleProperty: info.titleProperty });
   return info;
 }

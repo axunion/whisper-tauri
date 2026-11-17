@@ -1,3 +1,4 @@
+use crate::ipc_error::{ErrorCode, IpcError};
 use std::path::{Path, PathBuf};
 
 use tauri::{AppHandle, Manager};
@@ -14,9 +15,12 @@ pub enum PathError {
     InvalidEncoding,
 }
 
-impl From<PathError> for String {
+impl From<PathError> for IpcError {
     fn from(err: PathError) -> Self {
-        err.to_string()
+        let code = match &err {
+            PathError::Resolve(_) | PathError::InvalidEncoding => ErrorCode::FileReadError,
+        };
+        Self::new(code, err.to_string())
     }
 }
 
@@ -59,10 +63,12 @@ mod tests {
     }
 
     #[test]
-    fn path_error_converts_to_string() {
+    fn path_error_classifies_for_ipc() {
         let err = PathError::Resolve("missing".to_string());
-        let s: String = err.into();
-        assert_eq!(s, "Path error: missing");
+        assert_eq!(
+            IpcError::from(err),
+            IpcError::new(ErrorCode::FileReadError, "Path error: missing")
+        );
     }
 
     #[test]

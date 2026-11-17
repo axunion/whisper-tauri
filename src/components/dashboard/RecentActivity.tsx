@@ -1,4 +1,4 @@
-import { A } from "@solidjs/router";
+import { A, useNavigate } from "@solidjs/router";
 import { FiChevronRight, FiClock } from "solid-icons/fi";
 import { For, onMount, Show } from "solid-js";
 import { Button } from "~/components/ui/Button";
@@ -9,6 +9,7 @@ import { createHistory } from "~/primitives/createHistory";
 
 export function RecentActivity() {
   const { t, locale } = useI18n();
+  const navigate = useNavigate();
   const history = createHistory();
 
   onMount(() => {
@@ -29,7 +30,13 @@ export function RecentActivity() {
           <div class="divide-y divide-border/50">
             <For each={history.entries()}>
               {(entry) => (
-                <div class="flex items-center gap-3 py-2 text-sm">
+                <button
+                  type="button"
+                  class="flex w-full cursor-pointer items-center gap-3 rounded-md px-1 py-2 text-left text-sm transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() =>
+                    navigate("/history", { state: { entryId: entry.id } })
+                  }
+                >
                   <div class="flex shrink-0 flex-col items-start text-[11px] text-muted-foreground">
                     <span>{formatDateShort(entry.createdAt, locale())}</span>
                     <span class="inline-flex items-center gap-0.5">
@@ -43,7 +50,7 @@ export function RecentActivity() {
                       {entry.textPreview}
                     </div>
                   </div>
-                </div>
+                </button>
               )}
             </For>
           </div>

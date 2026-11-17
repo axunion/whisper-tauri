@@ -23,7 +23,7 @@ making permanent, ask rather than deciding unilaterally.
 
 ## Hard Constraints
 
-- **Type sync**: TypeScript types (`src/types/`) and Rust types (`src-tauri/src/*/types.rs`) must stay in sync. `#[serde(rename_all = "camelCase")]` converts Rust `snake_case` fields to `camelCase` at the IPC boundary.
+- **Generated IPC bindings**: `src/bindings.ts` is generated from the Rust commands, events and types by tauri-specta — never edit it by hand. After changing a command signature, an event, or a type that crosses IPC, run `cargo test` in `src-tauri/` (the `bindings_are_up_to_date` test rewrites the file and fails once) and commit the regenerated file. A new command needs `#[specta::specta]` and an entry in `lib.rs::ipc_builder`; a type crossing IPC derives `specta::Type`. Call the backend through `commands.*` / `events.*`, not `invoke()` / `listen()`. `#[serde(rename_all = "camelCase")]` converts Rust `snake_case` fields to `camelCase` at the IPC boundary.
 - **Rust visibility**: no `pub` on items unused outside their module; prefer `pub(crate)` when an item crosses module boundaries but not the crate boundary.
 - **Doc trees**: `docs/` is the public tree (English); `spec/` is internal dev documentation (Japanese).
 

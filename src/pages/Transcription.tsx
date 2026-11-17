@@ -1,10 +1,14 @@
 import { useLocation } from "@solidjs/router";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { FiX } from "solid-icons/fi";
 import {
   createEffect,
   createMemo,
   createSignal,
+  For,
   Match,
   on,
+  onCleanup,
   onMount,
   Show,
   Switch,
@@ -21,33 +25,34 @@ import { Card, CardContent } from "~/components/ui/Card";
 import { Progress } from "~/components/ui/Progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/Tabs";
 import { useI18n } from "~/i18n";
-import { extractFilename } from "~/lib/constants";
+import { AUDIO_EXTENSIONS } from "~/lib/constants";
 import { combineErrorProviders } from "~/lib/errors";
-import { toast } from "~/lib/toast";
+import { formatLocalDateTime } from "~/lib/format";
 import { cn } from "~/lib/utils";
-import { createFileConverter } from "~/primitives/createFileConverter";
 import { createHistory } from "~/primitives/createHistory";
 import { createRecording } from "~/primitives/createRecording";
 import { createSettings } from "~/primitives/createSettings";
+import {
+  type AudioSource,
+  createTranscriptionJob,
+} from "~/primitives/createTranscriptionJob";
 import { createWhisper } from "~/primitives/createWhisper";
-import type { HistorySource } from "~/types";
-
-// Module-level, like the whisper state they describe: a run keeps going when
-// the user leaves the page, and the page that mounts on return must still learn
-// which history entry and converted file belong to the result it shows.
-const [convertedPath, setConvertedPath] = createSignal<string | null>(null);
-const [historyId, setHistoryId] = createSignal<string | null>(null);
 
 export default function Transcription() {
   const { t } = useI18n();
 
   const whisper = createWhisper();
-  const converter = createFileConverter();
+  const job = createTranscriptionJob();
   const history = createHistory();
   const recording = createRecording();
   const settings = createSettings();
 
-  const location = useLocation<{ filePath?: string; tab?: string }>();
+  const location = useLocation<{
+    filePath?: string;
+    filePaths?: string[];
+    tab?: string;
+    retranscribe?: AudioSource;
+  }>();
 
   const [activeTab, setActiveTab] = createSignal("file");
 
@@ -60,6 +65,36 @@ export default function Transcription() {
       recording.loadDevices();
     }
   }
+
+  const [isDragging, setIsDragging] = createSignal(false);
+
+  onMount(() => {
+    const unlisten = getCurrentWebview().onDragDropEvent(({ payload }) => {
+      if (payload.type === "over") return;
+      setIsDragging(payload.type === "enter");
+      // Only while choosing input or running: on the result view a drop would
+      // replace a result the user has not finished with, saved or not.
+      if (
+        payload.type !== "drop" ||
+        recording.isRecording() ||
+        job.phase() === "done"
+      ) {
+        return;
+      }
+
+      const audioPaths = payload.paths.filter((path) =>
+        AUDIO_EXTENSIONS.includes(
+          path.slice(path.lastIndexOf(".") + 1).toLowerCase(),
+        ),
+      );
+      if (audioPaths.length === 0) return;
+      activateTab("file");
+      void job.addFiles(audioPaths);
+    });
+    onCleanup(() => {
+      void unlisten.then((stop) => stop());
+    });
+  });
 
   onMount(async () => {
     whisper.loadModels();
@@ -75,8 +110,14 @@ export default function Transcription() {
       () => location.state,
       (state) => {
         if (state?.filePath) {
-          const path = state.filePath;
-          whisper.selectFile({ path, name: extractFilename(path), size: 0 });
+          void job.addFiles([state.filePath]);
+        }
+        if (state?.filePaths) {
+          activateTab("file");
+          void job.addFiles(state.filePaths);
+        }
+        if (state?.retranscribe) {
+          void job.prepareRetranscription(state.retranscribe);
         }
         if (state?.tab === "record") {
           activateTab("record");
@@ -84,12 +125,6 @@ export default function Transcription() {
       },
     ),
   );
-
-  const needsConversion = () => {
-    const f = whisper.file();
-    if (!f) return false;
-    return !f.name.toLowerCase().endsWith(".wav");
-  };
 
   const downloadedModels = createMemo(() =>
     whisper.models().filter((m) => m.downloaded),
@@ -115,117 +150,45 @@ export default function Transcription() {
     });
   });
 
-  const canStartFile = () =>
-    whisper.file() !== null &&
-    whisper.selectedModel() !== null &&
-    !whisper.isProcessing() &&
-    !converter.isConverting();
+  // `history` is here for a failed rename of the result's entry.
+  const errors = combineErrorProviders([whisper, job, recording, history]);
 
-  const canStartRecording = () =>
-    recording.tempFilePath() !== null &&
-    whisper.selectedModel() !== null &&
-    !whisper.isProcessing();
+  const completedMessage = () => t("transcription.completedToast");
 
-  const errors = combineErrorProviders([whisper, converter, recording]);
+  function handleStartFile() {
+    history.clearError();
+    return job.startFile({
+      completedMessage: completedMessage(),
+      batchCompletedMessage: (count) =>
+        t("transcription.batchCompletedToast", { count }),
+    });
+  }
+
+  function handleStartRecording() {
+    history.clearError();
+    return job.startRecording({
+      // Dated so recordings stay distinguishable in the history list.
+      name: `${t("recording.title")} ${formatLocalDateTime(new Date())}`,
+      completedMessage: completedMessage(),
+    });
+  }
 
   const retryHandler = () => {
-    if (activeTab() === "file") {
-      return canStartFile() ? handleStartFile : undefined;
+    // Retry re-runs the transcription, which fixes none of a failed history
+    // save, a failed audio attach or a failed rename.
+    if (job.saveFailed() || job.attachFailed() || history.error()) {
+      return undefined;
     }
-    return canStartRecording() ? handleStartRecording : undefined;
+    if (activeTab() === "file") {
+      return job.canStartFile() ? handleStartFile : undefined;
+    }
+    return job.canStartRecording() ? handleStartRecording : undefined;
   };
 
-  async function handleStartFile() {
-    const currentFile = whisper.file();
-    if (!currentFile || !canStartFile()) return;
-
-    // Drop the previous run's id up front: the result view mounts as soon as
-    // the result arrives, before the new entry is saved, so a stale id would
-    // load the previous transcription's AI content and persist this run's
-    // summary onto the previous history entry.
-    setHistoryId(null);
-
-    const prevConverted = convertedPath();
-    if (prevConverted) {
-      await converter.cleanup(prevConverted);
-      setConvertedPath(null);
-    }
-
-    if (needsConversion()) {
-      const result = await converter.convert(currentFile.path);
-      if (!result) return;
-
-      setConvertedPath(result.outputPath);
-      await whisper.startTranscription(result.outputPath);
-    } else {
-      await whisper.startTranscription();
-    }
-
-    await saveToHistory(currentFile.name, "file");
-  }
-
-  async function handleStartRecording() {
-    const tempPath = recording.tempFilePath();
-    if (!tempPath || !canStartRecording()) return;
-
-    setHistoryId(null);
-
-    whisper.setFile({ path: tempPath, name: t("recording.title"), size: 0 });
-    await whisper.startTranscription(tempPath);
-
-    await saveToHistory(t("recording.title"), "recording");
-
-    // Only discard the recording once it has actually been transcribed. On
-    // cancel or failure the WAV is the user's only copy — deleting it here
-    // would make "Save as WAV" unreachable and lose the audio for good.
-    if (whisper.result()) {
-      await recording.cleanup();
-    }
-  }
-
-  async function saveToHistory(fileName: string, source: HistorySource) {
-    const transcriptionResult = whisper.result();
-    const currentModel = whisper.selectedModel();
-    if (transcriptionResult && currentModel) {
-      toast.success(t("transcription.completedToast"));
-      const id = await history.saveEntry({
-        fileName,
-        language: transcriptionResult.language,
-        modelId: currentModel.id,
-        duration: transcriptionResult.duration,
-        text: transcriptionResult.text,
-        segments: transcriptionResult.segments,
-        vadEnabled: whisper.vadEnabled(),
-        source,
-      });
-      if (id) setHistoryId(id);
-    }
-  }
-
-  async function handleDiscardRecording() {
-    await recording.cleanup();
-    setHistoryId(null);
-    whisper.reset();
-  }
-
-  async function handleReset() {
-    const prev = convertedPath();
-    if (prev) {
-      await converter.cleanup(prev);
-      setConvertedPath(null);
-    }
-    setHistoryId(null);
-    whisper.reset();
-  }
-
-  const viewState = createMemo(
-    (): "input" | "converting" | "processing" | "result" => {
-      if (whisper.result()) return "result";
-      if (whisper.isProcessing()) return "processing";
-      if (converter.isConverting()) return "converting";
-      return "input";
-    },
-  );
+  const viewState = createMemo(() => {
+    const phase = job.phase();
+    return phase === "done" ? "result" : phase === "idle" ? "input" : phase;
+  });
 
   return (
     <div
@@ -275,16 +238,45 @@ export default function Transcription() {
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="file" class="flex-1">
-                    <div class="flex h-full flex-col justify-center">
-                      <FileSelector
-                        file={whisper.file()}
-                        estimateLabel={estimateLabel()}
-                        onFileSelect={(file) => whisper.selectFile(file)}
-                        onFileClear={() => whisper.setFile(null)}
-                        disabled={
-                          whisper.isProcessing() || converter.isConverting()
-                        }
-                      />
+                    <div class="flex h-full flex-col gap-2">
+                      <div class="flex min-h-0 flex-1 flex-col justify-center">
+                        <FileSelector
+                          file={whisper.file()}
+                          estimateLabel={estimateLabel()}
+                          onFileSelect={(file) => whisper.selectFile(file)}
+                          onFilesAdd={(paths) => void job.addFiles(paths)}
+                          onFileClear={() => void job.clearSelectedFile()}
+                          disabled={job.phase() !== "idle"}
+                          dragging={isDragging()}
+                        />
+                      </div>
+                      <Show when={job.queue().length > 0}>
+                        <ul
+                          class="max-h-20 shrink-0 space-y-0.5 overflow-y-auto rounded-lg bg-muted/40 px-3 py-1.5"
+                          aria-label={t("transcription.queuedFiles")}
+                        >
+                          <For each={job.queue()}>
+                            {(file) => (
+                              <li class="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span class="min-w-0 flex-1 truncate">
+                                  {file.name}
+                                </span>
+                                <button
+                                  type="button"
+                                  class="shrink-0 rounded-sm p-1 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                  aria-label={t(
+                                    "transcription.removeQueuedFile",
+                                    { name: file.name },
+                                  )}
+                                  onClick={() => job.removeQueued(file.path)}
+                                >
+                                  <FiX class="size-3" aria-hidden="true" />
+                                </button>
+                              </li>
+                            )}
+                          </For>
+                        </ul>
+                      </Show>
                     </div>
                   </TabsContent>
                   <TabsContent value="record" class="flex-1">
@@ -293,6 +285,9 @@ export default function Transcription() {
                         devices={recording.devices()}
                         selectedDevice={recording.selectedDevice()}
                         isRecording={recording.isRecording()}
+                        isPaused={recording.isPaused()}
+                        onPauseRecording={() => recording.pauseRecording()}
+                        onResumeRecording={() => recording.resumeRecording()}
                         level={recording.level()}
                         duration={recording.duration()}
                         tempFilePath={recording.tempFilePath()}
@@ -300,7 +295,7 @@ export default function Transcription() {
                         onSelectDevice={(d) => recording.selectDevice(d)}
                         onStartRecording={() => recording.startRecording()}
                         onStopRecording={() => recording.stopRecording()}
-                        onDiscard={handleDiscardRecording}
+                        onDiscard={job.discardRecording}
                       />
                     </div>
                   </TabsContent>
@@ -320,8 +315,8 @@ export default function Transcription() {
                       vadEnabled={whisper.vadEnabled()}
                       canStart={
                         activeTab() === "file"
-                          ? canStartFile()
-                          : canStartRecording()
+                          ? job.canStartFile()
+                          : job.canStartRecording()
                       }
                       onSelectModel={(model) => whisper.selectModel(model)}
                       onLanguageChange={(lang) => {
@@ -365,11 +360,25 @@ export default function Transcription() {
                     </p>
                   )}
                 </Show>
-                <TranscriptionProgress
-                  progress={whisper.progress()}
-                  estimatedTotalSec={estimatedTotalSec()}
-                  onCancel={() => whisper.cancelTranscription()}
-                />
+                <Show when={job.batch()}>
+                  {(batch) => (
+                    <p class="text-center text-xs text-muted-foreground">
+                      {t("transcription.batchProgress", batch())}
+                    </p>
+                  )}
+                </Show>
+                {/* Keyed per file: the progress view anchors its elapsed-time
+                    clock on the first progress event it sees, which must not
+                    carry over from the previous file of a run. */}
+                <Show when={job.batch()?.index ?? 1} keyed>
+                  {(_index) => (
+                    <TranscriptionProgress
+                      progress={whisper.progress()}
+                      estimatedTotalSec={estimatedTotalSec()}
+                      onCancel={() => whisper.cancelTranscription()}
+                    />
+                  )}
+                </Show>
               </div>
             </Match>
 
@@ -379,8 +388,8 @@ export default function Transcription() {
                   <TranscriptionResult
                     result={result()}
                     fileName={whisper.file()?.name ?? ""}
-                    historyId={historyId()}
-                    onClose={handleReset}
+                    historyId={job.historyId()}
+                    onClose={job.reset}
                     onRename={(id, name) => history.renameEntry(id, name)}
                     notionMeta={{
                       createdAt: whisper.transcribedAt() ?? undefined,

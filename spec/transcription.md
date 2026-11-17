@@ -12,6 +12,15 @@ Source: `src-tauri/src/whisper/` / `src-tauri/src/converter/`
                                           whisper: WAV ロード → (VAD 前処理) → 推論
 ```
 
+## 入力と実行 (FE: `createTranscriptionJob`)
+
+- ファイルは複数選べる (ダイアログの複数選択、またはウィンドウへのドラッグ&ドロップ — `getCurrentWebview().onDragDropEvent`、拡張子で絞り込み)。1 件目が「選択中のファイル」、残りがキューに並ぶ
+- 「文字起こし開始」は選択中のファイルから順に、キューが空になるまで 1 件ずつ処理し、それぞれを履歴に保存する。実行中に追加したファイルも同じ実行に加わる
+- 失敗またはキャンセルしたファイルで実行は止まり、残りはキューに残る。履歴保存や音声コピーの失敗で止まった場合は結果画面にエラーが出て、結果を閉じると残りが入力画面に戻る (`reset` はキューを消さず、次の 1 件を選択中にする)
+- 完了の通知は実行全体で 1 回、履歴に保存できた件数について出す。全件成功で複数件なら入力画面に戻す (結果はすべて履歴にある)。1 件だけならその結果を表示する
+- 録音や保存済み音声の再文字起こしが選択を引き継ぐときは、選択中だったファイルをキューの先頭に戻す
+- ドロップは入力画面と実行中のみ受け付ける (結果画面では、見ている結果を置き換えないよう無視する)
+
 ## 変換 (converter)
 
 - `convert_audio_file`: ffmpeg で `-ar 16000 -ac 1 -sample_fmt s16 -y` の WAV に変換。出力はシステム一時ディレクトリで、`cleanup_converted_file` は一時ディレクトリ内のパスしか削除しない (安全ガード)
@@ -48,7 +57,7 @@ hound で読み込み、Int (ビット深度対応) / Float 両対応 → ステ
 ## 推論 (`process.rs::transcribe`)
 
 - `SamplingStrategy::Greedy { best_of: 5 }`、スレッド数 = `min(論理コア, 8)`
-- 言語はオプション指定 (未指定なら whisper の自動判定に委ねる)
+- 言語はオプション指定 (未指定なら whisper の自動判定に委ねる)。UI は whisper.cpp の言語表にある 100 言語すべてを選べる (`src/lib/languages.ts`)。言語名は `Intl.DisplayNames` で UI ロケールに合わせて生成し、辞書には持たない
 - 進捗: `set_progress_callback_safe` から `whisper:progress` を emit
 - キャンセル: グローバル `TASK_MANAGER` (`Lazy<TaskManager>`、task_id → `CancellationToken` の map)。`cancel_transcription` がトークンを立て、abort コールバックが検知する
 - **abort コールバックは `Box<dyn FnMut() -> bool>` に事前ボックス化して渡す** — whisper-rs の FFI 型不一致 UB の回避 (`.claude/rules/workarounds.md`)

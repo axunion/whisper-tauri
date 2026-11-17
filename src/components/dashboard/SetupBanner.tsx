@@ -5,6 +5,7 @@ import type { JSX } from "solid-js";
 import { createSignal, onMount, Show } from "solid-js";
 import { CardButton, CardContent } from "~/components/ui/Card";
 import { useI18n } from "~/i18n";
+import { settingsLink } from "~/lib/constants";
 import { createFfmpegDownloader } from "~/primitives/createFfmpegDownloader";
 import { createTextProcessing } from "~/primitives/createTextProcessing";
 import { createWhisper } from "~/primitives/createWhisper";
@@ -38,10 +39,22 @@ export function SetupBanner() {
     ffmpeg.isBundled() &&
     textProcessing.isReady();
   const visible = () => probed() && !allReady();
+  // Where the banner leads: the first thing still to set up.
+  const firstMissing = () =>
+    !whisper.hasDownloadedModel()
+      ? "settings-models"
+      : !ffmpeg.isBundled()
+        ? "settings-ffmpeg"
+        : "settings-ai";
 
   return (
     <Show when={visible()}>
-      <CardButton class="text-left" onClick={() => navigate("/settings")}>
+      <CardButton
+        class="text-left"
+        onClick={() =>
+          navigate("/settings", { state: settingsLink(firstMissing()) })
+        }
+      >
         <CardContent class="flex items-center gap-4 p-4">
           <div class="flex flex-1 items-center gap-3">
             <Show when={!whisper.hasDownloadedModel()}>

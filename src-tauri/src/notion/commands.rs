@@ -1,3 +1,4 @@
+use crate::ipc_error::IpcError;
 use tauri::AppHandle;
 
 use super::client;
@@ -28,9 +29,10 @@ fn read_settings(app: &AppHandle) -> Result<NotionSettings, NotionError> {
 ///
 /// # Errors
 ///
-/// Returns an error string if the settings store cannot be read.
+/// Returns an error if the settings store cannot be read.
 #[tauri::command]
-pub async fn notion_get_settings(app: AppHandle) -> Result<NotionSettings, String> {
+#[specta::specta]
+pub async fn notion_get_settings(app: AppHandle) -> Result<NotionSettings, IpcError> {
     read_settings(&app).map_err(Into::into)
 }
 
@@ -38,9 +40,10 @@ pub async fn notion_get_settings(app: AppHandle) -> Result<NotionSettings, Strin
 ///
 /// # Errors
 ///
-/// Returns an error string if the settings store cannot be written.
+/// Returns an error if the settings store cannot be written.
 #[tauri::command]
-pub async fn notion_set_settings(app: AppHandle, settings: NotionSettings) -> Result<(), String> {
+#[specta::specta]
+pub async fn notion_set_settings(app: AppHandle, settings: NotionSettings) -> Result<(), IpcError> {
     set_or_delete_strings(
         &app,
         &[
@@ -53,7 +56,7 @@ pub async fn notion_set_settings(app: AppHandle, settings: NotionSettings) -> Re
             (KEY_TITLE_PROPERTY, settings.title_property),
         ],
     )
-    .map_err(|e| e.to_string())
+    .map_err(Into::into)
 }
 
 /// Verifies the API token and database ID and discovers the title property.
@@ -63,17 +66,17 @@ pub async fn notion_set_settings(app: AppHandle, settings: NotionSettings) -> Re
 ///
 /// # Errors
 ///
-/// Returns an error string if the HTTP request fails, the database lacks a
+/// Returns an error if the HTTP request fails, the database lacks a
 /// title property, or the response cannot be parsed.
 #[tauri::command]
+#[specta::specta]
 pub async fn notion_test_connection(
     app: AppHandle,
     token: String,
     database_id: String,
-) -> Result<NotionDatabaseInfo, String> {
+) -> Result<NotionDatabaseInfo, IpcError> {
     let info = client::fetch_database(&token, &database_id).await?;
-    set_or_delete_string(&app, KEY_TITLE_PROPERTY, Some(info.title_property.clone()))
-        .map_err(|e| e.to_string())?;
+    set_or_delete_string(&app, KEY_TITLE_PROPERTY, Some(info.title_property.clone()))?;
     Ok(info)
 }
 
@@ -81,23 +84,18 @@ pub async fn notion_test_connection(
 ///
 /// # Errors
 ///
-/// Returns an error string when Notion is not configured, the HTTP request
+/// Returns an error when Notion is not configured, the HTTP request
 /// fails, the API returns a non-2xx status, or the response cannot be parsed.
 #[tauri::command]
+#[specta::specta]
 pub async fn notion_create_page(
     app: AppHandle,
     payload: NotionPagePayload,
-) -> Result<NotionPageRef, String> {
-    let settings = read_settings(&app).map_err(Into::<String>::into)?;
-    let token = settings
-        .token
-        .ok_or_else(|| NotionError::NotConfigured.to_string())?;
-    let database_id = settings
-        .database_id
-        .ok_or_else(|| NotionError::NotConfigured.to_string())?;
-    let title_property = settings
-        .title_property
-        .ok_or_else(|| NotionError::NotConfigured.to_string())?;
+) -> Result<NotionPageRef, IpcError> {
+    let settings = read_settings(&app)?;
+    let token = settings.token.ok_or(NotionError::NotConfigured)?;
+    let database_id = settings.database_id.ok_or(NotionError::NotConfigured)?;
+    let title_property = settings.title_property.ok_or(NotionError::NotConfigured)?;
     let page_ref = client::create_page(&token, &database_id, &title_property, &payload).await?;
     Ok(page_ref)
 }

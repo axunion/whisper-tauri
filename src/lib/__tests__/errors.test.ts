@@ -75,160 +75,79 @@ describe("isRecoverable", () => {
 });
 
 describe("parseError", () => {
-  it("should parse 'File not found:' prefix to FILE_NOT_FOUND", () => {
-    const result = parseError("File not found: /path/to/file.wav");
+  it("keeps the code from an IpcError rejection and exposes its message as details", () => {
+    const result = parseError({
+      code: "FILE_NOT_FOUND",
+      message: "File not found: /path/to/file.wav",
+    });
     expect(result.code).toBe(ErrorCode.FILE_NOT_FOUND);
     expect(result.details).toBe("File not found: /path/to/file.wav");
   });
 
-  it("should parse 'File read error:' prefix to FILE_READ_ERROR", () => {
-    const result = parseError("File read error: corrupt data");
-    expect(result.code).toBe(ErrorCode.FILE_READ_ERROR);
-    expect(result.details).toBe("File read error: corrupt data");
+  it("sets category, messageKey and recoverable from the IpcError code", () => {
+    const result = parseError({
+      code: "MODEL_LOAD_ERROR",
+      message: "Model load error: invalid format",
+    });
+    expect(result.category).toBe("model");
+    expect(result.messageKey).toBe("errors.modelLoadError");
+    expect(result.recoverable).toBe(false);
   });
 
-  it("should parse 'IO error:' prefix to FILE_READ_ERROR", () => {
-    const result = parseError("IO error: permission denied");
-    expect(result.code).toBe(ErrorCode.FILE_READ_ERROR);
-    expect(result.details).toBe("IO error: permission denied");
-  });
-
-  it("should parse 'Unsupported format:' prefix to UNSUPPORTED_FORMAT", () => {
-    const result = parseError("Unsupported format: mp3");
-    expect(result.code).toBe(ErrorCode.UNSUPPORTED_FORMAT);
-    expect(result.details).toBe("Unsupported format: mp3");
-  });
-
-  it("should parse 'Model not found:' prefix to MODEL_NOT_FOUND", () => {
-    const result = parseError("Model not found: nonexistent");
-    expect(result.code).toBe(ErrorCode.MODEL_NOT_FOUND);
-    expect(result.details).toBe("Model not found: nonexistent");
-  });
-
-  it("should parse 'Model load error:' prefix to MODEL_LOAD_ERROR", () => {
-    const result = parseError("Model load error: invalid format");
-    expect(result.code).toBe(ErrorCode.MODEL_LOAD_ERROR);
-    expect(result.details).toBe("Model load error: invalid format");
-  });
-
-  it("should parse 'Download failed:' prefix to MODEL_DOWNLOAD_ERROR", () => {
-    const result = parseError("Download failed: timeout");
-    expect(result.code).toBe(ErrorCode.MODEL_DOWNLOAD_ERROR);
-    expect(result.details).toBe("Download failed: timeout");
-  });
-
-  it("should parse 'Transcription error:' prefix to TRANSCRIPTION_ERROR", () => {
-    const result = parseError("Transcription error: decode failed");
-    expect(result.code).toBe(ErrorCode.TRANSCRIPTION_ERROR);
-    expect(result.details).toBe("Transcription error: decode failed");
-  });
-
-  it("should parse 'Conversion failed:' prefix to TRANSCRIPTION_ERROR", () => {
-    const result = parseError("Conversion failed: exit code 1");
-    expect(result.code).toBe(ErrorCode.TRANSCRIPTION_ERROR);
-    expect(result.details).toBe("Conversion failed: exit code 1");
-  });
-
-  it("should parse 'HTTP error:' prefix to NETWORK_ERROR", () => {
-    const result = parseError("HTTP error: 500");
-    expect(result.code).toBe(ErrorCode.NETWORK_ERROR);
-    expect(result.details).toBe("HTTP error: 500");
-  });
-
-  it("should parse 'Invalid response from GitHub API' to NETWORK_ERROR", () => {
-    const result = parseError("Invalid response from GitHub API");
-    expect(result.code).toBe(ErrorCode.NETWORK_ERROR);
-    expect(result.details).toBe("Invalid response from GitHub API");
-  });
-
-  it("should parse 'FFmpeg not found:' prefix to FILE_NOT_FOUND", () => {
-    const result = parseError("FFmpeg not found: not installed");
-    expect(result.code).toBe(ErrorCode.FILE_NOT_FOUND);
-    expect(result.details).toBe("FFmpeg not found: not installed");
-  });
-
-  it("should parse 'Transcription cancelled' to CANCELLED", () => {
-    const result = parseError("Transcription cancelled");
+  it("marks a CANCELLED IpcError as non-recoverable", () => {
+    const result = parseError({
+      code: "CANCELLED",
+      message: "Transcription cancelled",
+    });
     expect(result.code).toBe(ErrorCode.CANCELLED);
-    expect(result.details).toBe("Transcription cancelled");
+    expect(result.category).toBe("cancelled");
+    expect(result.recoverable).toBe(false);
   });
 
-  it("should parse 'Path error:' prefix to FILE_READ_ERROR", () => {
-    const result = parseError("Path error: Invalid path encoding");
-    expect(result.code).toBe(ErrorCode.FILE_READ_ERROR);
-    expect(result.details).toBe("Path error: Invalid path encoding");
-  });
-
-  it("should parse 'WAV error:' prefix to FILE_READ_ERROR", () => {
-    const result = parseError("WAV error: unsupported sample format");
-    expect(result.code).toBe(ErrorCode.FILE_READ_ERROR);
-    expect(result.details).toBe("WAV error: unsupported sample format");
-  });
-
-  it("should parse 'Database has no title property' to NETWORK_ERROR", () => {
-    const result = parseError("Database has no title property");
+  it("omits details when the IpcError message is empty", () => {
+    const result = parseError({ code: "NETWORK_ERROR", message: "" });
     expect(result.code).toBe(ErrorCode.NETWORK_ERROR);
+    expect(result).not.toHaveProperty("details");
   });
 
-  it("should parse recording errors to UNKNOWN_ERROR keeping details", () => {
-    const result = parseError("Device not found: Built-in Microphone");
+  it("maps a plain string to UNKNOWN_ERROR and keeps the text as details", () => {
+    const result = parseError("File not found: /path/to/file.wav");
     expect(result.code).toBe(ErrorCode.UNKNOWN_ERROR);
-    expect(result.details).toBe("Device not found: Built-in Microphone");
+    expect(result.details).toBe("File not found: /path/to/file.wav");
   });
 
-  it("should parse Error object using its message", () => {
+  it("maps an Error to UNKNOWN_ERROR and keeps its message as details", () => {
     const result = parseError(new Error("Model not found: test-model"));
-    expect(result.code).toBe(ErrorCode.MODEL_NOT_FOUND);
+    expect(result.code).toBe(ErrorCode.UNKNOWN_ERROR);
     expect(result.details).toBe("Model not found: test-model");
   });
 
-  it("should parse unknown type to UNKNOWN_ERROR", () => {
+  it("maps an unrecognised numeric value to UNKNOWN_ERROR", () => {
     const result = parseError(42);
     expect(result.code).toBe(ErrorCode.UNKNOWN_ERROR);
     expect(result.details).toBe("42");
   });
 
-  it("should parse null/undefined to UNKNOWN_ERROR", () => {
-    const result = parseError(null);
+  it("maps null and undefined to UNKNOWN_ERROR without details", () => {
+    expect(parseError(null).code).toBe(ErrorCode.UNKNOWN_ERROR);
+    expect(parseError(null)).not.toHaveProperty("details");
+    expect(parseError(undefined).code).toBe(ErrorCode.UNKNOWN_ERROR);
+    expect(parseError(undefined)).not.toHaveProperty("details");
+  });
+
+  it("maps an arbitrary object without a code to UNKNOWN_ERROR", () => {
+    const result = parseError({ message: "something", extra: true });
     expect(result.code).toBe(ErrorCode.UNKNOWN_ERROR);
   });
 
-  it("should parse unrecognized string to UNKNOWN_ERROR", () => {
-    const result = parseError("Something went wrong");
+  it("maps an object with an unrecognised code to UNKNOWN_ERROR", () => {
+    const result = parseError({ code: "NOT_A_REAL_CODE", message: "boom" });
     expect(result.code).toBe(ErrorCode.UNKNOWN_ERROR);
-    expect(result.details).toBe("Something went wrong");
   });
 
-  it("should include correct category and recoverable fields", () => {
-    const result = parseError("Model load error: invalid");
-    expect(result.category).toBe("model");
-    expect(result.recoverable).toBe(false);
-  });
-
-  it("should set messageKey for the error code", () => {
-    const result = parseError("File not found: /path/to/file.wav");
-    expect(result.messageKey).toBe("errors.fileNotFound");
-  });
-});
-
-describe("PREFIX_MAP coverage", () => {
-  it("each non-fallback ErrorCode is reachable via at least one prefix", () => {
-    const REPRESENTATIVE_PREFIXES: [ErrorCode, string][] = [
-      [ErrorCode.FILE_NOT_FOUND, "File not found: /test.wav"],
-      [ErrorCode.FILE_READ_ERROR, "File read error: corrupt"],
-      [ErrorCode.UNSUPPORTED_FORMAT, "Unsupported format: mp3"],
-      [ErrorCode.MODEL_NOT_FOUND, "Model not found: test-model"],
-      [ErrorCode.MODEL_LOAD_ERROR, "Model load error: invalid"],
-      [ErrorCode.MODEL_DOWNLOAD_ERROR, "Download failed: timeout"],
-      [ErrorCode.TRANSCRIPTION_ERROR, "Transcription error: decode failed"],
-      [ErrorCode.NETWORK_ERROR, "HTTP error: 404"],
-      [ErrorCode.CANCELLED, "Transcription cancelled"],
-    ];
-    for (const [expectedCode, message] of REPRESENTATIVE_PREFIXES) {
-      expect(
-        parseError(message).code,
-        `"${message}" should parse to ${expectedCode}`,
-      ).toBe(expectedCode);
-    }
+  it("does not classify a string by its prefix", () => {
+    const result = parseError("Transcription cancelled");
+    expect(result.code).toBe(ErrorCode.UNKNOWN_ERROR);
+    expect(result.details).toBe("Transcription cancelled");
   });
 });

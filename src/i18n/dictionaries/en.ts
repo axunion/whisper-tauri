@@ -17,7 +17,18 @@ export const en: Dictionary = {
     downloadingServer: "Downloading llama-server",
     helpHintLabel: "Show term description",
     editTitle: "Edit Title",
+    transcribing: "Transcribing...",
     notifications: "Notifications",
+  },
+  closeGuard: {
+    title: "Quit?",
+    recording:
+      "A recording is in progress. Quitting will discard it. Quit anyway?",
+    processing:
+      "A transcription is running. Quitting will stop it. Quit anyway?",
+    unsavedRecording:
+      "A recording has not been transcribed yet. Quitting will discard it. Quit anyway?",
+    quit: "Quit",
   },
   nav: {
     dashboard: "Dashboard",
@@ -45,18 +56,17 @@ export const en: Dictionary = {
     languageLabel: "Audio Language",
     noModelsWarning: "No models available. Please download one from Settings.",
     languageAuto: "Auto-detect",
-    languageJa: "Japanese",
-    languageEn: "English",
-    languageZh: "Chinese",
-    languageKo: "Korean",
-    languageFr: "French",
-    languageDe: "German",
-    languageEs: "Spanish",
-    selectAudioFile: "Click to select an audio file",
+    selectAudioFile: "Click or drop audio files here",
     changeFile: "Change File",
     clearFile: "Clear Selected File",
     supportedFormats: "WAV, MP3, M4A, FLAC, OGG, AAC, MP4, MOV, etc.",
     completedToast: "Transcription completed",
+    batchCompletedToast:
+      "{count} transcriptions completed. Find them in History",
+    batchProgress: "File {index} of {total}",
+    addFiles: "Add Files",
+    queuedFiles: "Files to process next",
+    removeQueuedFile: "Remove {name}",
     estimatedTime: "~{minutes} min",
     remainingTime: "~{minutes} min remaining",
     almostDone: "Almost done",
@@ -65,10 +75,21 @@ export const en: Dictionary = {
   history: {
     detail: "Detail",
     noEntries: "No history entries found.",
+    loadMore: "Load more",
+    retranscribe: "Transcribe this audio again",
+    deleteAudio: "Delete audio",
+    deleteAudioConfirmation:
+      "Delete the recording audio of this entry? The transcription is kept. This cannot be undone.",
+    audioDeletedToast: "Audio deleted",
     deleteSelected: "Delete Selected",
     deleteConfirmation:
       "{count} entries will be permanently deleted. This action cannot be undone.",
     deletedToast: "History deleted",
+    deleteEntry: "Delete this entry",
+    deleteEntryConfirmation:
+      "This entry will be permanently deleted. This action cannot be undone.",
+    inUseByTranscription:
+      "An entry being transcribed again is selected, so nothing was deleted",
     searchPlaceholder: "Search by keyword",
     searchNoResults: "No search results found.",
     clearSearch: "Clear Search",
@@ -95,6 +116,24 @@ export const en: Dictionary = {
     processingCancelledToast: "Processing cancelled",
   },
   settings: {
+    dataManagement: "Data",
+    audioStorage: "Recording audio",
+    pendingRecordings: "Untranscribed recordings",
+    storageUsage: "{count} · {size}",
+    deleteAllAudio: "Delete all audio",
+    deleteAllAudioConfirmation:
+      "Delete all recording audio kept in history? The transcriptions are kept. This cannot be undone.",
+    allAudioDeletedToast: "All audio deleted",
+    deletePendingRecordings: "Delete untranscribed recordings",
+    deletePendingRecordingsConfirmation:
+      "Delete the recordings that were never transcribed? This cannot be undone.",
+    pendingRecordingsDeletedToast: "Untranscribed recordings deleted",
+    deleteAllHistory: "Delete all history",
+    deleteAllHistoryDescription:
+      "Deletes every transcription, AI-generated text and recording audio",
+    deleteAllHistoryConfirmation:
+      "Delete all history, including AI-generated text and recording audio? This cannot be undone.",
+    allHistoryDeletedToast: "All history deleted",
     general: "General Settings",
     language: "Language",
     languageDescription: "App display language",
@@ -122,6 +161,9 @@ export const en: Dictionary = {
     update: "Update",
     vadEnabled: "VAD",
     vadDescription: "Skip silent sections to speed up transcription.",
+    notifyOnComplete: "Notify when done",
+    notifyOnCompleteDescription:
+      "Show a notification when a transcription finishes while the app is in the background.",
     appUpdate: "App Updates",
     appUpdateCurrentVersion: "Current version: {version}",
     appUpdateCheck: "Check Now",
@@ -179,8 +221,13 @@ export const en: Dictionary = {
     exportTxt: "Plain Text",
     exportSrt: "Subtitles (SRT)",
     exportVtt: "Web Subtitles (VTT)",
+    exportMd: "With Timestamps (Markdown)",
+    exportJson: "Data (JSON)",
     textTab: "Text",
     timelineTab: "Timeline",
+    editSegment: "Edit this line",
+    staleAfterEdit:
+      "The transcript was edited after this was generated. Generate it again to reflect the changes.",
     summaryTab: "Summary",
     cleanTextTab: "Rewrite",
     shareMenu: "Share",
@@ -224,6 +271,9 @@ export const en: Dictionary = {
     defaultDevice: "Default",
     startRecording: "Start Recording",
     stopRecording: "Stop Recording",
+    pauseRecording: "Pause Recording",
+    resumeRecording: "Resume Recording",
+    paused: "Paused",
     recording: "Recording...",
     noDevices: "No input devices found",
     discardRecording: "Discard Recording",
@@ -238,6 +288,7 @@ export const en: Dictionary = {
     srtFilter: "SRT Subtitles",
     vttFilter: "VTT Subtitles",
     mdFilter: "Markdown",
+    jsonFilter: "JSON",
     openAudioTitle: "Select an Audio File",
     saveWavTitle: "Save Recording",
     saveTranscriptionTitle: "Save Transcription",

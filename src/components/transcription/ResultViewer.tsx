@@ -4,12 +4,13 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { Component, JSX } from "solid-js";
-import { createEffect, createSignal, onMount, Show } from "solid-js";
+import { createEffect, createSignal, on, onMount, Show } from "solid-js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/Tabs";
 import type { DictionaryKey } from "~/i18n";
 import { useI18n } from "~/i18n";
+import { settingsLink } from "~/lib/constants";
 import type { ExportFormat } from "~/lib/export";
-import { exportResult, getExtension } from "~/lib/export";
+import { exportResult, getExtension, toFileStem } from "~/lib/export";
 import { formatSummaryAsText, formatTimeline } from "~/lib/format";
 import { buildNotionPagePayload, type NotionMetaContext } from "~/lib/notion";
 import { toast } from "~/lib/toast";
@@ -44,6 +45,18 @@ interface ResultViewerProps {
   // the payload helper. History-detail callers omit `processingMs` because
   // the timing is not persisted to history yet.
   notionMeta?: NotionMetaContext | undefined;
+  /**
+   * The recording behind the result. `src` is a URL the webview can load;
+   * `actions` are controls shown next to the player.
+   */
+  audio?: { src: string; actions?: JSX.Element } | undefined;
+  /**
+   * When set, timeline segments can be corrected in place. Resolves to
+   * whether the correction was saved.
+   */
+  onEditSegment?:
+    | ((index: number, text: string) => Promise<boolean>)
+    | undefined;
 }
 
 const ResultViewer: Component<ResultViewerProps> = (props) => {
@@ -62,6 +75,23 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
   const [failedShareTab, setFailedShareTab] = createSignal<ResultTab | null>(
     null,
   );
+  // Playback position in ms; undefined until the audio first reports one, so
+  // no timeline segment is highlighted before the user plays anything.
+  const [positionMs, setPositionMs] = createSignal<number | undefined>();
+  let audioRef: HTMLAudioElement | undefined;
+
+  function seek(ms: number): void {
+    if (!audioRef) return;
+    audioRef.currentTime = ms / 1000;
+    // A refused or failed play shows in the player's own controls.
+    audioRef.play().catch(() => {});
+  }
+
+  // Set when a segment is corrected: the summary and cleaned text were made
+  // from the transcript as it was, and say so until they are regenerated.
+  const [summaryStale, setSummaryStale] = createSignal(false);
+  const [cleanTextStale, setCleanTextStale] = createSignal(false);
+
   const tp = createTextProcessing();
   const session = createAiSession(() => props.historyId);
   const notion = createNotionSettings();
@@ -101,6 +131,17 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
   createEffect(() => {
     props.onProcessingChange?.(session.currentOperation(), session.cancel);
   });
+
+  // Cleared by a new result, not by a new attempt: a regeneration that fails
+  // or is cancelled leaves the old, still outdated, content on screen.
+  createEffect(
+    on(session.summaryResult, () => setSummaryStale(false), { defer: true }),
+  );
+  createEffect(
+    on(session.cleanTextResult, () => setCleanTextStale(false), {
+      defer: true,
+    }),
+  );
 
   type SaveOptions = {
     title: string;
@@ -156,7 +197,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
             title: t("dialog.saveCleanTextTitle"),
             filter: t("dialog.txtFilter"),
             ext: "txt",
-            defaultPath: "transcription-cleaned.txt",
+            defaultPath: `${toFileStem(props.fileNameText)}-cleaned.txt`,
             content: cleaned,
           };
         },
@@ -179,7 +220,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
             title: t("dialog.saveSummaryTitle"),
             filter: t("dialog.mdFilter"),
             ext: "md",
-            defaultPath: "transcription-summary.md",
+            defaultPath: `${toFileStem(props.fileNameText)}-summary.md`,
             content: formatSummaryAsText(summary),
           };
         },
@@ -218,8 +259,8 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
       title: t("dialog.saveTranscriptionTitle"),
       filter: t(`dialog.${fmt}Filter`),
       ext: fmt,
-      defaultPath: `transcription${getExtension(fmt)}`,
-      content: exportResult(props.result, fmt),
+      defaultPath: `${toFileStem(props.fileNameText)}${getExtension(fmt)}`,
+      content: exportResult(props.result, fmt, props.fileNameText),
     });
   }
 
@@ -341,13 +382,33 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         onShareToNotion={() => {
           void handleShareToNotion();
         }}
-        onOpenNotionSetup={() => navigate("/settings")}
+        onOpenNotionSetup={() =>
+          navigate("/settings", { state: settingsLink("settings-notion") })
+        }
         isProcessing={session.isProcessing()}
         isGeneratingTitle={session.isGeneratingTitle()}
         isNotionConnected={notion.isConfigured()}
         isSharingToNotion={isSharingNotion()}
         canSave={canSave()}
       />
+      <Show when={props.audio}>
+        {(audio) => (
+          <div class="flex items-center gap-3">
+            {/* biome-ignore lint/a11y/useMediaCaption: the transcript shown below is the caption */}
+            <audio
+              ref={audioRef}
+              class="h-9 min-w-0 flex-1"
+              controls
+              preload="metadata"
+              src={audio().src}
+              onTimeUpdate={(e) =>
+                setPositionMs(e.currentTarget.currentTime * 1000)
+              }
+            />
+            {audio().actions}
+          </div>
+        )}
+      </Show>
       <Tabs
         value={activeTab()}
         onChange={(value) => setActiveTab(value as ResultTab)}
@@ -369,7 +430,21 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
           <ResultTextTab text={props.result.text} />
         </TabsContent>
         <TabsContent value="timeline" class="mt-3 min-h-0 flex-1">
-          <ResultTimelineTab segments={props.result.segments} />
+          <ResultTimelineTab
+            segments={props.result.segments}
+            positionMs={props.audio ? positionMs() : undefined}
+            onSeek={props.audio ? seek : undefined}
+            onEdit={
+              props.onEditSegment &&
+              ((index, text) => {
+                void props.onEditSegment?.(index, text).then((saved) => {
+                  if (!saved) return;
+                  setSummaryStale(session.summaryResult() !== null);
+                  setCleanTextStale(session.cleanTextResult() !== null);
+                });
+              })
+            }
+          />
         </TabsContent>
         <Show when={cleanTextTabVisible()}>
           <TabsContent value="cleanText" class="mt-3 min-h-0 flex-1">
@@ -380,6 +455,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
                 session.currentOperation() === "cleanText"
               }
               onCancel={() => session.cancel()}
+              stale={cleanTextStale()}
             />
           </TabsContent>
         </Show>
@@ -392,6 +468,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
                 session.currentOperation() === "summary"
               }
               onCancel={() => session.cancel()}
+              stale={summaryStale()}
             />
           </TabsContent>
         </Show>
@@ -402,7 +479,7 @@ const ResultViewer: Component<ResultViewerProps> = (props) => {
         onPrereqOpenChange={actions.setShowPrereqDialog}
         onGoToSettings={() => {
           actions.setShowPrereqDialog(false);
-          navigate("/settings");
+          navigate("/settings", { state: settingsLink("settings-ai") });
         }}
         showOverwrite={() => actions.pendingAction() !== null}
         onOverwriteOpenChange={(open) => {

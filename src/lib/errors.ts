@@ -1,3 +1,4 @@
+import type { IpcError } from "~/bindings";
 import type { DictionaryKey } from "~/i18n/types";
 import {
   type AppError,
@@ -25,46 +26,6 @@ const NON_RECOVERABLE: ReadonlySet<ErrorCodeType> = new Set([
   ErrorCode.CANCELLED,
 ]);
 
-// Exported for the Rust-sync test (errorPrefixSync.test.ts), which needs to
-// distinguish intentional UNKNOWN_ERROR mappings from missing entries.
-export const PREFIX_MAP: readonly [string, ErrorCodeType][] = [
-  ["File not found:", ErrorCode.FILE_NOT_FOUND],
-  ["File read error:", ErrorCode.FILE_READ_ERROR],
-  ["IO error:", ErrorCode.FILE_READ_ERROR],
-  ["Unsupported format:", ErrorCode.UNSUPPORTED_FORMAT],
-  ["Model not found:", ErrorCode.MODEL_NOT_FOUND],
-  ["Model load error:", ErrorCode.MODEL_LOAD_ERROR],
-  ["Download failed:", ErrorCode.MODEL_DOWNLOAD_ERROR],
-  ["Transcription error:", ErrorCode.TRANSCRIPTION_ERROR],
-  ["Conversion failed:", ErrorCode.TRANSCRIPTION_ERROR],
-  ["HTTP error:", ErrorCode.NETWORK_ERROR],
-  ["Notion API error", ErrorCode.NETWORK_ERROR],
-  ["Invalid response from Notion API", ErrorCode.NETWORK_ERROR],
-  ["Invalid response from GitHub API", ErrorCode.NETWORK_ERROR],
-  ["Server start failed:", ErrorCode.NETWORK_ERROR],
-  ["Server not running", ErrorCode.NETWORK_ERROR],
-  ["Inference error:", ErrorCode.INFERENCE_ERROR],
-  ["Inference cancelled", ErrorCode.CANCELLED],
-  ["FFmpeg not found:", ErrorCode.FILE_NOT_FOUND],
-  ["Transcription cancelled", ErrorCode.CANCELLED],
-  ["Database error:", ErrorCode.UNKNOWN_ERROR],
-  ["History not found:", ErrorCode.FILE_NOT_FOUND],
-  ["Compression error:", ErrorCode.UNKNOWN_ERROR],
-  ["Path error:", ErrorCode.FILE_READ_ERROR],
-  ["WAV error:", ErrorCode.FILE_READ_ERROR],
-  ["Database has no title property", ErrorCode.NETWORK_ERROR],
-  // No dedicated ErrorCode fits these yet; mapped explicitly so the details
-  // still surface and the Rust-sync test can tell intent from drift.
-  ["Device not found:", ErrorCode.UNKNOWN_ERROR],
-  ["Device error:", ErrorCode.UNKNOWN_ERROR],
-  ["Already recording", ErrorCode.UNKNOWN_ERROR],
-  ["Not recording", ErrorCode.UNKNOWN_ERROR],
-  ["Notion is not configured", ErrorCode.UNKNOWN_ERROR],
-  ["Settings error:", ErrorCode.UNKNOWN_ERROR],
-  ["Store error:", ErrorCode.UNKNOWN_ERROR],
-  ["Serialization error:", ErrorCode.UNKNOWN_ERROR],
-];
-
 const MESSAGE_KEY_MAP: Record<ErrorCodeType, DictionaryKey> = {
   [ErrorCode.FILE_NOT_FOUND]: "errors.fileNotFound",
   [ErrorCode.FILE_READ_ERROR]: "errors.fileReadError",
@@ -85,15 +46,6 @@ export function getErrorCategory(code: ErrorCodeType): ErrorCategory {
 
 export function isRecoverable(code: ErrorCodeType): boolean {
   return !NON_RECOVERABLE.has(code);
-}
-
-function matchErrorCode(message: string): ErrorCodeType {
-  for (const [prefix, code] of PREFIX_MAP) {
-    if (message.startsWith(prefix)) {
-      return code;
-    }
-  }
-  return ErrorCode.UNKNOWN_ERROR;
 }
 
 export interface ErrorProvider {
@@ -127,10 +79,33 @@ export function combineErrorProviders(
   };
 }
 
+function isIpcError(error: unknown): error is IpcError {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    Object.keys(CATEGORY_MAP).includes(error.code) &&
+    "message" in error &&
+    typeof error.message === "string"
+  );
+}
+
+/**
+ * Turns whatever a failed call rejected with into an `AppError`.
+ *
+ * Commands reject with the backend's `IpcError`, which carries its own code.
+ * Anything else — Tauri's own string rejections (a denied permission, an
+ * unknown command), a JS `Error` — has no classification.
+ */
 export function parseError(error: unknown): AppError {
+  let code: ErrorCodeType = ErrorCode.UNKNOWN_ERROR;
   let message: string;
 
-  if (typeof error === "string") {
+  if (isIpcError(error)) {
+    code = error.code;
+    message = error.message;
+  } else if (typeof error === "string") {
     message = error;
   } else if (error instanceof Error) {
     message = error.message;
@@ -140,7 +115,6 @@ export function parseError(error: unknown): AppError {
     message = String(error);
   }
 
-  const code = matchErrorCode(message);
   const result: AppError = {
     code,
     category: getErrorCategory(code),

@@ -4,6 +4,7 @@ import {
   formatBytes,
   formatDate,
   formatDateShort,
+  formatLocalDateTime,
   formatSummaryAsText,
   formatTimeline,
 } from "../format";
@@ -159,5 +160,16 @@ describe("formatTimeline", () => {
   it("trims whitespace from segment text", () => {
     const out = formatTimeline([seg(0, "  padded  ")]);
     expect(out).toBe("[0:00] padded");
+  });
+});
+
+describe("formatLocalDateTime", () => {
+  it("formats local time as zero-padded YYYY-MM-DD HH:mm", () => {
+    expect(formatLocalDateTime(new Date(2026, 0, 5, 9, 3))).toBe(
+      "2026-01-05 09:03",
+    );
+    expect(formatLocalDateTime(new Date(2026, 10, 15, 14, 30))).toBe(
+      "2026-11-15 14:30",
+    );
   });
 });

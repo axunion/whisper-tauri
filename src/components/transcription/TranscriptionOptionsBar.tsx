@@ -1,5 +1,5 @@
 import { FiPlay } from "solid-icons/fi";
-import { Show } from "solid-js";
+import { createMemo, Show } from "solid-js";
 import { Button } from "~/components/ui/Button";
 import { Checkbox } from "~/components/ui/Checkbox";
 import {
@@ -10,12 +10,8 @@ import {
   SelectValue,
 } from "~/components/ui/Select";
 import { useI18n } from "~/i18n";
+import { type LanguageOption, whisperLanguageOptions } from "~/lib/languages";
 import type { ModelInfo } from "~/types";
-
-interface LanguageOption {
-  value: string;
-  label: string;
-}
 
 interface TranscriptionOptionsBarProps {
   downloadedModels: ModelInfo[];
@@ -30,18 +26,12 @@ interface TranscriptionOptionsBarProps {
 }
 
 export function TranscriptionOptionsBar(props: TranscriptionOptionsBarProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
-  const languageOptions: LanguageOption[] = [
+  const languageOptions = createMemo<LanguageOption[]>(() => [
     { value: "auto", label: t("transcription.languageAuto") },
-    { value: "ja", label: t("transcription.languageJa") },
-    { value: "en", label: t("transcription.languageEn") },
-    { value: "zh", label: t("transcription.languageZh") },
-    { value: "ko", label: t("transcription.languageKo") },
-    { value: "fr", label: t("transcription.languageFr") },
-    { value: "de", label: t("transcription.languageDe") },
-    { value: "es", label: t("transcription.languageEs") },
-  ];
+    ...whisperLanguageOptions(locale()),
+  ]);
 
   return (
     <div class="mt-6 border-t border-border/30 pt-5">
@@ -93,14 +83,14 @@ export function TranscriptionOptionsBar(props: TranscriptionOptionsBarProps) {
             </span>
             <Select<LanguageOption>
               multiple={false}
-              options={languageOptions}
+              options={languageOptions()}
               optionValue="value"
               optionTextValue="label"
               value={
-                languageOptions.find(
+                languageOptions().find(
                   (o) => o.value === (props.language ?? "auto"),
                 ) ??
-                languageOptions[0] ??
+                languageOptions()[0] ??
                 null
               }
               onChange={(value) => {

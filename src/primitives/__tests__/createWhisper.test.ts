@@ -9,6 +9,7 @@ import type {
   TranscriptionProgress,
   TranscriptionResult,
 } from "../../types";
+import { _resetSettingsForTesting, createSettings } from "../createSettings";
 import { _resetWhisperForTesting, createWhisper } from "../createWhisper";
 
 const mockModel = (overrides?: Partial<ModelInfo>): ModelInfo => ({
@@ -43,6 +44,7 @@ const mockResult: TranscriptionResult = {
 describe("createWhisper", () => {
   beforeEach(() => {
     _resetWhisperForTesting();
+    _resetSettingsForTesting();
     vi.mocked(invoke).mockReset();
   });
 
@@ -430,6 +432,27 @@ describe("createWhisper", () => {
       });
     });
 
+    it("should report an error instead of transcribing when the selected model has no file", async () => {
+      await createRoot(async (dispose) => {
+        const whisper = createWhisper();
+        const withoutFile = mockModel();
+        delete withoutFile.path;
+        whisper.selectModel(withoutFile);
+        whisper.setFile(mockFile);
+
+        await whisper.startTranscription();
+
+        expect(invoke).not.toHaveBeenCalledWith(
+          "transcribe_audio",
+          expect.anything(),
+        );
+        expect(whisper.isProcessing()).toBe(false);
+        expect(whisper.result()).toBeNull();
+        expect(whisper.error()?.code).toBe("MODEL_NOT_FOUND");
+        dispose();
+      });
+    });
+
     it("should invoke transcribe_audio and set result", async () => {
       const vadPath = "/models/ggml-silero-v5.1.2.bin";
       vi.mocked(invoke)
@@ -537,7 +560,7 @@ describe("createWhisper", () => {
   });
 
   describe("vadEnabled", () => {
-    it("should default to settings value (true) when no override set", () => {
+    it("should default to the settings value", () => {
       createRoot((dispose) => {
         const whisper = createWhisper();
         expect(whisper.vadEnabled()).toBe(true);
@@ -545,18 +568,19 @@ describe("createWhisper", () => {
       });
     });
 
-    it("should reflect explicit override", () => {
+    it("should write the choice to the settings", () => {
       createRoot((dispose) => {
         const whisper = createWhisper();
         whisper.setVadEnabled(false);
         expect(whisper.vadEnabled()).toBe(false);
+        expect(createSettings().vadEnabled()).toBe(false);
         whisper.setVadEnabled(true);
-        expect(whisper.vadEnabled()).toBe(true);
+        expect(createSettings().vadEnabled()).toBe(true);
         dispose();
       });
     });
 
-    it("should skip ensure_vad_model when override is false", async () => {
+    it("should skip ensure_vad_model when VAD is off", async () => {
       vi.mocked(invoke).mockResolvedValue(mockResult);
 
       await createRoot(async (dispose) => {

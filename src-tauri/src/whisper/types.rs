@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Whisper model information.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelInfo {
     /// Model identifier (e.g., "small", "large-v3-turbo")
@@ -19,8 +19,10 @@ pub struct ModelInfo {
     /// Whether the model is bundled with the app
     pub bundled: bool,
     /// Estimated seconds to process 1 minute of audio (lower bound)
+    #[specta(type = specta_typescript::Number)]
     pub speed_seconds_per_minute_low: f64,
     /// Estimated seconds to process 1 minute of audio (upper bound)
+    #[specta(type = specta_typescript::Number)]
     pub speed_seconds_per_minute_high: f64,
     /// Path to the model file (if downloaded)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -28,7 +30,7 @@ pub struct ModelInfo {
 }
 
 /// A segment of transcribed text with timing information.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct TranscriptionSegment {
     /// Start time in milliseconds
@@ -40,7 +42,7 @@ pub struct TranscriptionSegment {
 }
 
 /// Transcription result with full text and segments.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct TranscriptionResult {
     /// Task identifier
@@ -56,20 +58,23 @@ pub struct TranscriptionResult {
 }
 
 /// Transcription progress update.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type, tauri_specta::Event)]
 #[serde(rename_all = "camelCase")]
+#[tauri_specta(event_name = "whisper:progress")]
 pub struct TranscriptionProgress {
     /// Task identifier
     pub task_id: String,
     /// Progress percentage (0-100)
+    #[specta(type = specta_typescript::Number)]
     pub progress: f64,
     /// Elapsed time in milliseconds
     pub elapsed_ms: u64,
 }
 
 /// Model download progress.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type, tauri_specta::Event)]
 #[serde(rename_all = "camelCase")]
+#[tauri_specta(event_name = "model:download-progress")]
 pub struct DownloadProgress {
     /// Model identifier being downloaded
     pub model_id: String,
@@ -78,6 +83,7 @@ pub struct DownloadProgress {
     /// Total bytes
     pub total_bytes: u64,
     /// Progress percentage (0-100)
+    #[specta(type = specta_typescript::Number)]
     pub progress: f64,
 }
 

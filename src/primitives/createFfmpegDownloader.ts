@@ -1,6 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { createRoot, createSignal } from "solid-js";
+import { commands, events } from "~/bindings";
 import { parseError } from "~/lib/errors";
 import type { FfmpegDownloadProgress } from "~/types";
 import type { AppError } from "~/types/errors";
@@ -40,9 +39,11 @@ const {
 });
 
 // Event listener at module level — persists for the app lifetime.
-listen<FfmpegDownloadProgress>("ffmpeg:download-progress", (event) => {
-  setDownloadProgress(event.payload);
-}).catch(console.error);
+events.ffmpegDownloadProgress
+  .listen((event) => {
+    setDownloadProgress(event.payload);
+  })
+  .catch(console.error);
 
 // Load-once guard for the on-disk status probe. `statusChecked` flips only on
 // success and the in-flight promise is released either way, so a transient IPC
@@ -53,8 +54,8 @@ let checkStatusPromise: Promise<void> | null = null;
 async function fetchStatus(): Promise<void> {
   try {
     const [bundled, update] = await Promise.all([
-      invoke<boolean>("check_ffmpeg_bundled"),
-      invoke<boolean>("check_ffmpeg_needs_update"),
+      commands.checkFfmpegBundled(),
+      commands.checkFfmpegNeedsUpdate(),
     ]);
     setIsBundled(bundled);
     setNeedsUpdate(update);
@@ -78,7 +79,7 @@ async function download(): Promise<boolean> {
   setIsDownloading(true);
   setError(null);
   try {
-    await invoke<string>("download_ffmpeg");
+    await commands.downloadFfmpeg();
     setIsBundled(true);
     setNeedsUpdate(false);
     return true;
@@ -92,7 +93,7 @@ async function download(): Promise<boolean> {
 
 async function deleteBundled(): Promise<boolean> {
   try {
-    await invoke("delete_ffmpeg");
+    await commands.deleteFfmpeg();
     setIsBundled(false);
     setNeedsUpdate(false);
     return true;

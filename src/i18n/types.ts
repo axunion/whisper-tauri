@@ -17,7 +17,15 @@ export interface Dictionary {
     downloadingServer: string;
     helpHintLabel: string;
     editTitle: string;
+    transcribing: string;
     notifications: string;
+  };
+  closeGuard: {
+    title: string;
+    recording: string;
+    processing: string;
+    unsavedRecording: string;
+    quit: string;
   };
   nav: {
     dashboard: string;
@@ -45,18 +53,16 @@ export interface Dictionary {
     languageLabel: string;
     noModelsWarning: string;
     languageAuto: string;
-    languageJa: string;
-    languageEn: string;
-    languageZh: string;
-    languageKo: string;
-    languageFr: string;
-    languageDe: string;
-    languageEs: string;
     selectAudioFile: string;
     changeFile: string;
     clearFile: string;
     supportedFormats: string;
     completedToast: string;
+    batchCompletedToast: string;
+    batchProgress: string;
+    addFiles: string;
+    queuedFiles: string;
+    removeQueuedFile: string;
     estimatedTime: string;
     remainingTime: string;
     almostDone: string;
@@ -65,9 +71,17 @@ export interface Dictionary {
   history: {
     detail: string;
     noEntries: string;
+    loadMore: string;
+    retranscribe: string;
+    deleteAudio: string;
+    deleteAudioConfirmation: string;
+    audioDeletedToast: string;
     deleteSelected: string;
     deleteConfirmation: string;
     deletedToast: string;
+    deleteEntry: string;
+    deleteEntryConfirmation: string;
+    inUseByTranscription: string;
     searchPlaceholder: string;
     searchNoResults: string;
     clearSearch: string;
@@ -93,6 +107,20 @@ export interface Dictionary {
   };
   settings: {
     general: string;
+    dataManagement: string;
+    audioStorage: string;
+    pendingRecordings: string;
+    storageUsage: string;
+    deleteAllAudio: string;
+    deleteAllAudioConfirmation: string;
+    allAudioDeletedToast: string;
+    deletePendingRecordings: string;
+    deletePendingRecordingsConfirmation: string;
+    pendingRecordingsDeletedToast: string;
+    deleteAllHistory: string;
+    deleteAllHistoryDescription: string;
+    deleteAllHistoryConfirmation: string;
+    allHistoryDeletedToast: string;
     language: string;
     languageDescription: string;
     languageJa: string;
@@ -117,6 +145,8 @@ export interface Dictionary {
     update: string;
     vadEnabled: string;
     vadDescription: string;
+    notifyOnComplete: string;
+    notifyOnCompleteDescription: string;
     appUpdate: string;
     appUpdateCurrentVersion: string;
     appUpdateCheck: string;
@@ -170,8 +200,12 @@ export interface Dictionary {
     exportTxt: string;
     exportSrt: string;
     exportVtt: string;
+    exportMd: string;
+    exportJson: string;
     textTab: string;
     timelineTab: string;
+    editSegment: string;
+    staleAfterEdit: string;
     summaryTab: string;
     cleanTextTab: string;
     shareMenu: string;
@@ -214,6 +248,9 @@ export interface Dictionary {
     defaultDevice: string;
     startRecording: string;
     stopRecording: string;
+    pauseRecording: string;
+    resumeRecording: string;
+    paused: string;
     recording: string;
     noDevices: string;
     discardRecording: string;
@@ -228,6 +265,7 @@ export interface Dictionary {
     srtFilter: string;
     vttFilter: string;
     mdFilter: string;
+    jsonFilter: string;
     openAudioTitle: string;
     saveWavTitle: string;
     saveTranscriptionTitle: string;

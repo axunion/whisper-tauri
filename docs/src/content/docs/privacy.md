@@ -28,6 +28,8 @@ The complete list. Each connection is either a one-time download you trigger, or
 
 After the initial downloads, transcription, recording, AI text processing, and history all work fully offline.
 
+Microphone recordings are stored only in the app's data directory on your device, alongside the history entry they belong to. They are never uploaded, and you can delete them per entry or all at once under **Settings → Data**.
+
 For advanced setups, model download sources can be overridden (for example, to point at an internal mirror) by hand-editing `mirrors.json` in the app's data directory, so even the model download traffic can be kept inside your own network. The two downloads the app makes executable and runs — FFmpeg and `llama-server` — are restricted to their pinned release hosts over HTTPS and cannot be redirected to an arbitrary mirror.
 
 ## The Notion integration

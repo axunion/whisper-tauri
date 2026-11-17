@@ -47,7 +47,7 @@ hardest). Each has a recorded incident behind it:
 | `src-tauri/src/whisper/` | whisper-rs 0.16 FFI UB and the standalone VAD path — see `.claude/rules/workarounds.md`; "simplifying" either one regresses it |
 | `src-tauri/src/history/db/` | stored UTC timestamps read back as local time |
 | `src-tauri/src/notion/` | token leaking into logs, error strings, or IPC payloads |
-| IPC sync points | `src/types/` ↔ `src-tauri/src/*/types.rs`, `errors.ts::PREFIX_MAP` ↔ `*/error.rs`, `capabilities/default.json` ↔ every `@tauri-apps/plugin-*` call — every one of these fails **silently at runtime**, not at build time |
+| IPC sync points | `capabilities/default.json` ↔ every `@tauri-apps/plugin-*` call fails **silently at runtime**. Command, event and error types are generated into `src/bindings.ts` and checked at build time, but a stale `bindings.ts` (a Rust IPC change committed without regenerating) only fails in `cargo test`, not at build time |
 
 **Visual verification is a separate axis from the tiers above**, keyed to whether the
 change touches rendered UI at all rather than to how risky it is: a tier-2 CSS tweak may

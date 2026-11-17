@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Sort order for history listing.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum HistorySortBy {
     #[default]
@@ -11,7 +11,7 @@ pub enum HistorySortBy {
 }
 
 /// Sort direction (ascending or descending).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum SortOrder {
     Asc,
@@ -23,7 +23,7 @@ pub enum SortOrder {
 ///
 /// Persisted per entry so the UI never has to infer it from the (user-editable)
 /// file name.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum HistorySource {
     /// Captured with the in-app recorder.
@@ -55,7 +55,7 @@ impl HistorySource {
 }
 
 /// A segment of transcribed text with timing information (for history storage).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct HistorySegment {
     /// Start time in milliseconds
@@ -67,7 +67,7 @@ pub struct HistorySegment {
 }
 
 /// Metadata for a history entry (used in list views, without full text/segments).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct HistoryMeta {
     /// Unique identifier
@@ -90,7 +90,7 @@ pub struct HistoryMeta {
 }
 
 /// Full history entry including text and segments.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct HistoryEntry {
     /// Unique identifier
@@ -110,10 +110,38 @@ pub struct HistoryEntry {
     /// Segments with timing information
     pub segments: Vec<HistorySegment>,
     pub vad_enabled: Option<bool>,
+    /// Path of the entry's recording audio, if it is kept on disk
+    pub audio_path: Option<String>,
+}
+
+/// What a segment edit changed, for a view to apply without reloading.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SegmentUpdate {
+    /// The entry's full text, rebuilt from its segments
+    pub text: String,
+    /// The edited segment's stored text (keeps its leading whitespace)
+    pub segment_text: String,
+    /// The entry's list preview
+    pub text_preview: String,
+}
+
+/// Disk used by recording audio.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageStats {
+    /// Number of audio files kept for history entries
+    pub audio_count: u64,
+    /// Total size of that audio in bytes
+    pub audio_bytes: u64,
+    /// Number of recordings not yet transcribed
+    pub pending_recording_count: u64,
+    /// Total size of those recordings in bytes
+    pub pending_recording_bytes: u64,
 }
 
 /// Parameters for saving a new history entry.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct HistorySaveParams {
     /// Original file name
@@ -135,11 +163,12 @@ pub struct HistorySaveParams {
 }
 
 /// Filter for listing history entries.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct HistoryFilter {
     /// Inclusive lower bound, as a suffix-less UTC timestamp matching
-    /// `created_at` (e.g. "2026-01-01T15:00:00")
+    /// `created_at` (e.g. "2026-01-01T15:00:00"). Compared lexicographically
+    /// in SQLite, so the format has to match `created_at` exactly.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date_from: Option<String>,
     /// Exclusive upper bound, same format as `date_from`
@@ -148,6 +177,9 @@ pub struct HistoryFilter {
     /// Maximum number of entries to return
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
+    /// Number of leading entries to skip, for paging
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offset: Option<u32>,
     /// Sort by field
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sort_by: Option<HistorySortBy>,
@@ -157,7 +189,7 @@ pub struct HistoryFilter {
 }
 
 /// Parameters for full-text search of history entries.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct HistorySearchParams {
     /// Search query (space-separated keywords for AND search)
@@ -172,6 +204,9 @@ pub struct HistorySearchParams {
     /// Maximum number of entries to return
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
+    /// Number of leading entries to skip, for paging
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offset: Option<u32>,
     /// Sort by field
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sort_by: Option<HistorySortBy>,
@@ -181,7 +216,7 @@ pub struct HistorySearchParams {
 }
 
 /// AI-generated content associated with a history entry.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AiContent {
     pub id: String,
@@ -195,7 +230,7 @@ pub struct AiContent {
 }
 
 /// Parameters for saving AI-generated content.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AiContentSaveParams {
     pub history_id: String,
@@ -261,8 +296,10 @@ mod tests {
                 text: "Hello world".to_string(),
             }],
             vad_enabled: Some(false),
+            audio_path: None,
         };
         let json = serde_json::to_string(&entry).expect("Failed to serialize");
+        assert!(json.contains("\"audioPath\":null"));
         assert!(json.contains("\"segments\":["));
         assert!(json.contains("\"text\":\"Hello world\""));
         assert!(json.contains("\"vadEnabled\":false"));
@@ -361,5 +398,58 @@ mod tests {
         };
         let json = serde_json::to_string(&filter).expect("serialize");
         assert!(json.contains("\"sortBy\":\"duration\""));
+    }
+
+    #[test]
+    fn history_filter_offset_round_trips() {
+        let filter = HistoryFilter {
+            limit: Some(50),
+            offset: Some(100),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&filter).expect("serialize");
+        assert!(json.contains("\"offset\":100"));
+
+        let back: HistoryFilter = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back.offset, Some(100));
+        assert_eq!(back.limit, Some(50));
+    }
+
+    #[test]
+    fn history_filter_omits_unset_offset() {
+        let json = serde_json::to_string(&HistoryFilter::default()).expect("serialize");
+        assert!(!json.contains("offset"));
+    }
+
+    #[test]
+    fn history_search_params_accept_offset_from_ipc() {
+        let json = r#"{"query":"会議","limit":50,"offset":50}"#;
+        let params: HistorySearchParams = serde_json::from_str(json).expect("deserialize");
+        assert_eq!(params.offset, Some(50));
+        assert_eq!(params.limit, Some(50));
+    }
+
+    #[test]
+    fn history_search_params_omit_unset_offset() {
+        let params = HistorySearchParams {
+            query: "会議".to_string(),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&params).expect("serialize");
+        assert!(!json.contains("offset"));
+    }
+
+    #[test]
+    fn storage_stats_serializes_to_camel_case() {
+        let stats = StorageStats {
+            audio_count: 2,
+            audio_bytes: 1024,
+            pending_recording_count: 1,
+            pending_recording_bytes: 512,
+        };
+        assert_eq!(
+            serde_json::to_string(&stats).expect("Failed to serialize"),
+            r#"{"audioCount":2,"audioBytes":1024,"pendingRecordingCount":1,"pendingRecordingBytes":512}"#
+        );
     }
 }

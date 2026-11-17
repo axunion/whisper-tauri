@@ -51,6 +51,7 @@ const whisperModelId = () => settings().whisperModelId;
 const textModelId = () => settings().textModelId;
 const onboardingCompleted = () => settings().onboardingCompleted;
 const vadEnabled = () => settings().vadEnabled;
+const notifyOnComplete = () => settings().notifyOnComplete;
 
 async function completeOnboarding(): Promise<void> {
   await update({ onboardingCompleted: true });
@@ -66,6 +67,7 @@ const settingsInstance = {
   textModelId,
   onboardingCompleted,
   vadEnabled,
+  notifyOnComplete,
   load,
   update,
   completeOnboarding,

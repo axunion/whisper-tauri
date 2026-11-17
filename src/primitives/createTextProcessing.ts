@@ -1,6 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { batch, createRoot, createSignal } from "solid-js";
+import { commands, events } from "~/bindings";
 import { parseError } from "~/lib/errors";
 import { sumDownloadedBytes } from "~/lib/format";
 import { createSettings } from "~/primitives/createSettings";
@@ -83,13 +82,17 @@ const {
 });
 
 // Event listeners at module level — persist for the app lifetime.
-listen<TextDownloadProgress>("text-processing:download-progress", (event) => {
-  setDownloadProgress(event.payload);
-}).catch(console.error);
+events.textProcessingDownloadProgress
+  .listen((event) => {
+    setDownloadProgress(event.payload);
+  })
+  .catch(console.error);
 
-listen<InferenceProgress>("text-processing:inference-progress", (event) => {
-  setInferenceProgress(event.payload);
-}).catch(console.error);
+events.textProcessingInferenceProgress
+  .listen((event) => {
+    setInferenceProgress(event.payload);
+  })
+  .catch(console.error);
 
 // Load-once guards for the model list and the server probe. Each flag flips
 // only on success and the in-flight promise is released either way, so a
@@ -102,7 +105,7 @@ let checkServerPromise: Promise<void> | null = null;
 /** Unguarded refresh — used after mutations that change what is on disk. */
 async function fetchModels(): Promise<void> {
   try {
-    const result = await invoke<TextModelInfo[]>("text_processing_list_models");
+    const result = await commands.textProcessingListModels();
     setModels(result);
     // Restore selection from settings if not yet set
     if (!selectedModelId()) {
@@ -176,7 +179,7 @@ async function downloadModel(modelId: string): Promise<boolean> {
   return runDownload(modelId, startPhase, async () => {
     // Phase 1: download the llama-server binary if not yet available
     if (!serverAvailable()) {
-      await invoke("text_processing_download_server");
+      await commands.textProcessingDownloadServer();
       setServerAvailable(true);
       batch(() => {
         setDownloadPhase("model");
@@ -184,14 +187,14 @@ async function downloadModel(modelId: string): Promise<boolean> {
       });
     }
     // Phase 2: download the model
-    await invoke("text_processing_download_model", { modelId });
+    await commands.textProcessingDownloadModel(modelId);
     await fetchModels();
   });
 }
 
 async function deleteModel(modelId: string): Promise<boolean> {
   try {
-    await invoke("text_processing_delete_model", { modelId });
+    await commands.textProcessingDeleteModel(modelId);
     const wasSelected = selectedModelId() === modelId;
     if (wasSelected) {
       setSelectedModelId(null);
@@ -214,14 +217,14 @@ async function deleteModel(modelId: string): Promise<boolean> {
 
 async function downloadServer(): Promise<boolean> {
   return runDownload(null, "server", async () => {
-    await invoke("text_processing_download_server");
+    await commands.textProcessingDownloadServer();
     setServerAvailable(true);
   });
 }
 
 async function deleteServer(): Promise<boolean> {
   try {
-    await invoke("text_processing_delete_server");
+    await commands.textProcessingDeleteServer();
     setServerAvailable(false);
     return true;
   } catch (e) {
@@ -232,7 +235,7 @@ async function deleteServer(): Promise<boolean> {
 
 async function fetchServerAvailability(): Promise<void> {
   try {
-    const exists = await invoke<boolean>("text_processing_check_server");
+    const exists = await commands.textProcessingCheckServer();
     setServerAvailable(exists);
     serverChecked = true;
   } catch (e) {
@@ -255,10 +258,10 @@ async function chat(text: string, modelId?: string): Promise<string | null> {
   setChatResult(null);
   setInferenceProgress(null);
   try {
-    const result = await invoke<string>("text_processing_chat", {
+    const result = await commands.textProcessingChat(
       text,
-      modelId: effectiveModelId(modelId),
-    });
+      effectiveModelId(modelId) ?? null,
+    );
     setChatResult(result);
     return result;
   } catch (e) {
@@ -276,16 +279,16 @@ async function generateTitle(
   // Title generation doesn't use isProcessing to avoid blocking other
   // operations. Errors propagate so the caller (createAiSession) can set
   // its session error and surface a toast.
-  return invoke<string>("text_processing_generate_title", {
+  return commands.textProcessingGenerateTitle(
     text,
-    modelId: effectiveModelId(modelId),
-  });
+    effectiveModelId(modelId) ?? null,
+  );
 }
 
 async function cancel(): Promise<void> {
   const progress = inferenceProgress();
   if (progress) {
-    await invoke("text_processing_cancel", { taskId: progress.taskId });
+    await commands.textProcessingCancel(progress.taskId);
   }
 }
 

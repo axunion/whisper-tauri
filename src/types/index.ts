@@ -16,7 +16,9 @@ export type {
   HistorySegment,
   HistorySortBy,
   HistorySource,
+  SegmentUpdate,
   SortOrder,
+  StorageStats,
 } from "./history";
 export type {
   NotionActionItem,
@@ -33,7 +35,7 @@ export type {
   RecordingLevel,
   RecordingStopResult,
 } from "./recording";
-export type { AppSettings } from "./settings";
+export type { AppSettings, SettingsSection } from "./settings";
 export { DEFAULT_SETTINGS } from "./settings";
 export type {
   ActionItem,

@@ -407,6 +407,6 @@ mod tests {
 
     #[test]
     fn llama_server_version_is_not_empty() {
-        assert!(!LLAMA_SERVER_VERSION.is_empty());
+        assert_ne!(LLAMA_SERVER_VERSION, "");
     }
 }

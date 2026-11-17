@@ -44,10 +44,12 @@ conversation, which made the change, to address.
      UTC, not as local time.
    - `src-tauri/src/notion/` — the token must never reach logs, error strings, or IPC
      payloads.
-   - The IPC sync points: `src/types/` against `src-tauri/src/*/types.rs`,
-     `src/lib/errors.ts`'s `PREFIX_MAP` against `src-tauri/src/*/error.rs`, and
-     `src-tauri/capabilities/default.json` against every `@tauri-apps/plugin-*` call. A
-     gap in any of these fails silently at runtime rather than at build time.
+   - The IPC sync points: `src-tauri/capabilities/default.json` against every
+     `@tauri-apps/plugin-*` call — a gap fails silently at runtime rather than at build
+     time. Command, event and error types are generated into `src/bindings.ts`; check
+     that a Rust IPC change comes with the regenerated file, and that each error
+     variant's `ErrorCode` in its `From<...> for IpcError` is the one the user should
+     see.
 
 ## Output
 

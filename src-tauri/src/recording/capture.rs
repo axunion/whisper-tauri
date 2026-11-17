@@ -5,7 +5,8 @@ use std::thread::JoinHandle;
 use std::time::Instant;
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
+use tauri_specta::Event;
 
 use super::error::RecordingError;
 use super::sleep_guard::SleepGuard;
@@ -19,7 +20,7 @@ const WHISPER_SAMPLE_RATE: u32 = 16_000;
 const LEVEL_EMIT_INTERVAL_MS: u128 = 50;
 
 /// Returns the directory recordings are written to.
-fn recordings_dir(app_data_dir: &Path) -> std::path::PathBuf {
+pub(crate) fn recordings_dir(app_data_dir: &Path) -> std::path::PathBuf {
     app_data_dir.join("recordings")
 }
 
@@ -32,6 +33,8 @@ pub struct RecordingManager {
     samples: Arc<Mutex<Vec<f32>>>,
     sample_rate: Arc<AtomicU32>,
     stop_flag: Arc<AtomicBool>,
+    /// While set, the stream keeps running but its audio is discarded.
+    paused: Arc<AtomicBool>,
     thread_handle: Mutex<Option<JoinHandle<()>>>,
     sleep_guard: Mutex<Option<SleepGuard>>,
 }
@@ -45,6 +48,7 @@ impl RecordingManager {
             samples: Arc::new(Mutex::new(Vec::new())),
             sample_rate: Arc::new(AtomicU32::new(0)),
             stop_flag: Arc::new(AtomicBool::new(false)),
+            paused: Arc::new(AtomicBool::new(false)),
             thread_handle: Mutex::new(None),
             sleep_guard: Mutex::new(None),
         }
@@ -102,6 +106,7 @@ impl RecordingManager {
 
         // Reset state
         self.stop_flag.store(false, Ordering::Release);
+        self.paused.store(false, Ordering::Release);
         if let Ok(mut samples) = self.samples.lock() {
             samples.clear();
         }
@@ -109,6 +114,7 @@ impl RecordingManager {
         let samples = Arc::clone(&self.samples);
         let sample_rate = Arc::clone(&self.sample_rate);
         let stop_flag = Arc::clone(&self.stop_flag);
+        let paused = Arc::clone(&self.paused);
         let is_recording = Arc::clone(&self.is_recording);
 
         // Device resolution and stream creation happen on the capture thread
@@ -123,6 +129,7 @@ impl RecordingManager {
                 &samples,
                 &sample_rate,
                 &stop_flag,
+                &paused,
                 &app,
                 &ready_tx,
             ) {
@@ -159,6 +166,24 @@ impl RecordingManager {
             *thread = Some(handle);
         }
 
+        Ok(())
+    }
+
+    /// Pauses or resumes the current recording.
+    ///
+    /// The input stream keeps running and its audio is discarded while paused:
+    /// pausing the stream itself is not supported by every device backend,
+    /// and reopening one on resume can fail or pick a different configuration.
+    /// The recording simply has no audio for the paused span.
+    ///
+    /// # Errors
+    ///
+    /// Returns `RecordingError::NotRecording` if no recording is in progress.
+    pub fn set_paused(&self, paused: bool) -> Result<(), RecordingError> {
+        if !self.is_recording.load(Ordering::Acquire) {
+            return Err(RecordingError::NotRecording);
+        }
+        self.paused.store(paused, Ordering::Release);
         Ok(())
     }
 
@@ -297,6 +322,7 @@ fn run_capture_thread(
     samples: &Arc<Mutex<Vec<f32>>>,
     sample_rate: &Arc<AtomicU32>,
     stop_flag: &Arc<AtomicBool>,
+    paused: &Arc<AtomicBool>,
     app: &AppHandle,
     ready_tx: &std::sync::mpsc::Sender<Result<(), RecordingError>>,
 ) -> Result<(), RecordingError> {
@@ -329,10 +355,12 @@ fn run_capture_thread(
 
     let channels = config.channels();
 
-    // Build the data callback
-    let samples_clone = Arc::clone(samples);
-    let app_clone = app.clone();
-    let last_emit = Arc::new(Mutex::new(Instant::now()));
+    let sink = CaptureSink {
+        samples: Arc::clone(samples),
+        paused: Arc::clone(paused),
+        last_emit: Arc::new(Mutex::new(Instant::now())),
+        app: app.clone(),
+    };
 
     let err_callback = |err: cpal::StreamError| {
         eprintln!("Recording stream error: {err}");
@@ -340,14 +368,12 @@ fn run_capture_thread(
 
     let stream = match config.sample_format() {
         cpal::SampleFormat::F32 => {
-            let samples_cb = Arc::clone(&samples_clone);
-            let last_emit_cb = Arc::clone(&last_emit);
-            let app_cb = app_clone.clone();
+            let sink = sink.clone();
             device
                 .build_input_stream(
                     &config.into(),
                     move |data: &[f32], _: &cpal::InputCallbackInfo| {
-                        process_samples_f32(data, channels, &samples_cb, &last_emit_cb, &app_cb);
+                        process_samples_f32(data, channels, &sink);
                     },
                     err_callback,
                     None,
@@ -355,14 +381,12 @@ fn run_capture_thread(
                 .map_err(|e| RecordingError::DeviceError(e.to_string()))?
         }
         cpal::SampleFormat::I16 => {
-            let samples_cb = Arc::clone(&samples_clone);
-            let last_emit_cb = Arc::clone(&last_emit);
-            let app_cb = app_clone.clone();
+            let sink = sink.clone();
             device
                 .build_input_stream(
                     &config.into(),
                     move |data: &[i16], _: &cpal::InputCallbackInfo| {
-                        process_samples_i16(data, channels, &samples_cb, &last_emit_cb, &app_cb);
+                        process_samples_i16(data, channels, &sink);
                     },
                     err_callback,
                     None,
@@ -370,14 +394,12 @@ fn run_capture_thread(
                 .map_err(|e| RecordingError::DeviceError(e.to_string()))?
         }
         cpal::SampleFormat::U16 => {
-            let samples_cb = Arc::clone(&samples_clone);
-            let last_emit_cb = Arc::clone(&last_emit);
-            let app_cb = app_clone.clone();
+            let sink = sink.clone();
             device
                 .build_input_stream(
                     &config.into(),
                     move |data: &[u16], _: &cpal::InputCallbackInfo| {
-                        process_samples_u16(data, channels, &samples_cb, &last_emit_cb, &app_cb);
+                        process_samples_u16(data, channels, &sink);
                     },
                     err_callback,
                     None,
@@ -449,63 +471,52 @@ fn select_input_config(
     Ok(best.with_max_sample_rate())
 }
 
-/// Stores mono samples and emits level if needed.
-fn store_and_emit(
-    mono: &[f32],
-    samples: &Arc<Mutex<Vec<f32>>>,
-    last_emit: &Arc<Mutex<Instant>>,
-    app: &AppHandle,
-) {
-    if let Ok(mut buf) = samples.lock() {
+/// Where the stream callback delivers captured audio.
+#[derive(Clone)]
+struct CaptureSink {
+    samples: Arc<Mutex<Vec<f32>>>,
+    paused: Arc<AtomicBool>,
+    last_emit: Arc<Mutex<Instant>>,
+    app: AppHandle,
+}
+
+/// Stores mono samples and emits level if needed; drops them while paused.
+fn store_and_emit(mono: &[f32], sink: &CaptureSink) {
+    if sink.paused.load(Ordering::Acquire) {
+        return;
+    }
+    if let Ok(mut buf) = sink.samples.lock() {
         buf.extend_from_slice(mono);
     }
-    emit_level_if_needed(mono, last_emit, app);
+    emit_level_if_needed(mono, &sink.last_emit, &sink.app);
 }
 
 /// Processes f32 audio samples from the cpal callback.
-fn process_samples_f32(
-    data: &[f32],
-    channels: u16,
-    samples: &Arc<Mutex<Vec<f32>>>,
-    last_emit: &Arc<Mutex<Instant>>,
-    app: &AppHandle,
-) {
+fn process_samples_f32(data: &[f32], channels: u16, sink: &CaptureSink) {
     let mono = to_mono_f32(data, channels);
-    store_and_emit(&mono, samples, last_emit, app);
+    store_and_emit(&mono, sink);
 }
 
 /// Processes i16 audio samples from the cpal callback.
-fn process_samples_i16(
-    data: &[i16],
-    channels: u16,
-    samples: &Arc<Mutex<Vec<f32>>>,
-    last_emit: &Arc<Mutex<Instant>>,
-    app: &AppHandle,
-) {
+fn process_samples_i16(data: &[i16], channels: u16, sink: &CaptureSink) {
     #[allow(clippy::cast_precision_loss)]
     let float_data: Vec<f32> = data
         .iter()
         .map(|&s| f32::from(s) / f32::from(i16::MAX))
         .collect();
     let mono = to_mono_f32(&float_data, channels);
-    store_and_emit(&mono, samples, last_emit, app);
+    store_and_emit(&mono, sink);
 }
 
 /// Processes u16 audio samples from the cpal callback.
 #[allow(clippy::cast_precision_loss)]
-fn process_samples_u16(
-    data: &[u16],
-    channels: u16,
-    samples: &Arc<Mutex<Vec<f32>>>,
-    last_emit: &Arc<Mutex<Instant>>,
-    app: &AppHandle,
-) {
+fn process_samples_u16(data: &[u16], channels: u16, sink: &CaptureSink) {
     let float_data: Vec<f32> = data
         .iter()
         .map(|&s| (f32::from(s) / f32::from(u16::MAX)) * 2.0 - 1.0)
         .collect();
     let mono = to_mono_f32(&float_data, channels);
-    store_and_emit(&mono, samples, last_emit, app);
+    store_and_emit(&mono, sink);
 }
 
 /// Converts interleaved multi-channel f32 audio to mono by averaging channels.
@@ -544,13 +555,11 @@ fn emit_level_if_needed(samples: &[f32], last_emit: &Arc<Mutex<Instant>>, app: &
 
     if should_emit {
         let (rms, peak) = compute_levels(samples);
-        let _ = app.emit(
-            "recording:level",
-            RecordingLevel {
-                level: rms,
-                peak_level: peak,
-            },
-        );
+        let _ = RecordingLevel {
+            level: rms,
+            peak_level: peak,
+        }
+        .emit(app);
     }
 }
 
@@ -639,6 +648,26 @@ mod tests {
         // We accept both Ok (possibly empty) and Err (no audio subsystem)
         // The important thing is it doesn't panic
         let _ = result;
+    }
+
+    #[test]
+    fn set_paused_requires_a_recording_in_progress() {
+        let manager = RecordingManager::new();
+        assert!(matches!(
+            manager.set_paused(true),
+            Err(RecordingError::NotRecording)
+        ));
+    }
+
+    #[test]
+    fn set_paused_toggles_while_recording() {
+        let manager = RecordingManager::new();
+        manager.is_recording.store(true, Ordering::Release);
+
+        manager.set_paused(true).expect("pause");
+        assert!(manager.paused.load(Ordering::Acquire));
+        manager.set_paused(false).expect("resume");
+        assert!(!manager.paused.load(Ordering::Acquire));
     }
 
     #[test]

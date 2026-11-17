@@ -38,21 +38,17 @@ pub(crate) fn is_extracted_artifact(filename: &str) -> bool {
     is_shared_library(filename)
 }
 
-fn dl_err<E: std::fmt::Display>(e: E) -> String {
-    TextProcessingError::DownloadFailed(e.to_string()).to_string()
+fn dl_err<E: std::fmt::Display>(e: E) -> TextProcessingError {
+    TextProcessingError::DownloadFailed(e.to_string())
 }
 
-fn io_err(e: std::io::Error) -> String {
-    TextProcessingError::Io(e).to_string()
-}
-
-fn write_file(reader: &mut impl Read, out_path: &Path) -> Result<(), String> {
+fn write_file(reader: &mut impl Read, out_path: &Path) -> Result<(), TextProcessingError> {
     // Unlink first so an update gets a new inode: macOS caches the code
     // signature per inode and kills a binary rewritten in place, and a running
     // server keeps its old file instead of having it truncated under it.
     let _ = std::fs::remove_file(out_path);
-    let mut out_file = std::fs::File::create(out_path).map_err(io_err)?;
-    std::io::copy(reader, &mut out_file).map_err(io_err)?;
+    let mut out_file = std::fs::File::create(out_path)?;
+    std::io::copy(reader, &mut out_file)?;
     Ok(())
 }
 
@@ -63,7 +59,10 @@ fn write_file(reader: &mut impl Read, out_path: &Path) -> Result<(), String> {
 /// # Errors
 ///
 /// Returns an error string if the archive cannot be read or the binary is missing.
-pub(crate) fn extract_from_tar_gz(archive_path: &Path, bin_dir: &Path) -> Result<(), String> {
+pub(crate) fn extract_from_tar_gz(
+    archive_path: &Path,
+    bin_dir: &Path,
+) -> Result<(), TextProcessingError> {
     let file = std::fs::File::open(archive_path).map_err(dl_err)?;
     let decoder = flate2::read::GzDecoder::new(file);
     let mut archive = tar::Archive::new(decoder);
@@ -118,7 +117,10 @@ pub(crate) fn extract_from_tar_gz(archive_path: &Path, bin_dir: &Path) -> Result
 /// # Errors
 ///
 /// Returns an error string if the archive cannot be read or the binary is missing.
-pub(crate) fn extract_from_zip(archive_path: &Path, bin_dir: &Path) -> Result<(), String> {
+pub(crate) fn extract_from_zip(
+    archive_path: &Path,
+    bin_dir: &Path,
+) -> Result<(), TextProcessingError> {
     let file = std::fs::File::open(archive_path).map_err(dl_err)?;
     let mut archive = zip::ZipArchive::new(file).map_err(dl_err)?;
 
@@ -156,7 +158,10 @@ pub(crate) fn extract_from_zip(archive_path: &Path, bin_dir: &Path) -> Result<()
     }
 }
 
-fn create_symlinks(symlinks: &[(String, PathBuf)], bin_dir: &Path) -> Result<(), String> {
+fn create_symlinks(
+    symlinks: &[(String, PathBuf)],
+    bin_dir: &Path,
+) -> Result<(), TextProcessingError> {
     // A link's target can itself be a link listed later in the archive
     // (`libx.dylib` -> `libx.0.dylib` -> `libx.0.0.1.dylib`), so keep passing
     // over the pending links until a pass resolves none of them.
@@ -176,11 +181,11 @@ fn create_symlinks(symlinks: &[(String, PathBuf)], bin_dir: &Path) -> Result<(),
             let _ = std::fs::remove_file(link_path);
             #[cfg(unix)]
             {
-                std::os::unix::fs::symlink(&target_path, link_path).map_err(io_err)?;
+                std::os::unix::fs::symlink(&target_path, link_path)?;
             }
             #[cfg(not(unix))]
             {
-                std::fs::copy(&target_path, link_path).map_err(io_err)?;
+                std::fs::copy(&target_path, link_path)?;
             }
         }
         if unresolved.is_empty() || unresolved.len() == pending_before {

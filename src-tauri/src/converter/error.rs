@@ -1,3 +1,5 @@
+use crate::ipc_error::{ErrorCode, IpcError};
+
 /// Errors that can occur during audio conversion operations.
 #[derive(Debug, thiserror::Error)]
 pub enum ConverterError {
@@ -36,9 +38,19 @@ impl From<crate::download::DownloadError> for ConverterError {
     }
 }
 
-impl From<ConverterError> for String {
+impl From<ConverterError> for IpcError {
     fn from(err: ConverterError) -> Self {
-        err.to_string()
+        let code = match &err {
+            ConverterError::FfmpegNotFound(_) | ConverterError::FileNotFound(_) => {
+                ErrorCode::FileNotFound
+            }
+            ConverterError::ConversionFailed(_) => ErrorCode::TranscriptionError,
+            ConverterError::UnsupportedFormat(_) => ErrorCode::UnsupportedFormat,
+            ConverterError::DownloadFailed(_) => ErrorCode::ModelDownloadError,
+            ConverterError::Io(_) => ErrorCode::FileReadError,
+            ConverterError::Http(_) => ErrorCode::NetworkError,
+        };
+        Self::new(code, err.to_string())
     }
 }
 
@@ -77,9 +89,11 @@ mod tests {
     }
 
     #[test]
-    fn error_converts_to_string() {
+    fn error_classifies_for_ipc() {
         let err = ConverterError::FfmpegNotFound("missing".to_string());
-        let s: String = err.into();
-        assert_eq!(s, "FFmpeg not found: missing");
+        assert_eq!(
+            IpcError::from(err),
+            IpcError::new(ErrorCode::FileNotFound, "FFmpeg not found: missing")
+        );
     }
 }

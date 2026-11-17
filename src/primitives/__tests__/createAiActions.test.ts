@@ -1,5 +1,6 @@
 import { createRoot, createSignal } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { IpcError } from "~/bindings";
 import { parseError } from "~/lib/errors";
 import { toast } from "~/lib/toast";
 import type { StructuredSummary, TextModelInfo } from "~/types";
@@ -42,13 +43,13 @@ const summaryFixture: StructuredSummary = {
  */
 function makeFailingSession(
   operation: "summarize" | "cleanText" | "generateTitle",
-  rustError: string,
+  rejection: IpcError,
 ): AiSession {
   const [error, setError] = createSignal<AppError | null>(null);
   return makeSession({
     error,
     [operation]: vi.fn(async () => {
-      setError(parseError(rustError));
+      setError(parseError(rejection));
       return null;
     }),
   });
@@ -249,10 +250,10 @@ describe("createAiActions", () => {
   describe("error surfacing", () => {
     it("should toast the mapped message when summarize fails", async () => {
       await createRoot(async (dispose) => {
-        const session = makeFailingSession(
-          "summarize",
-          "Inference error: boom",
-        );
+        const session = makeFailingSession("summarize", {
+          code: "INFERENCE_ERROR",
+          message: "Inference error: boom",
+        });
         const actions = createAiActions(makeOptions({ session }));
         // Let the effect's initial tracking run flush before triggering.
         await flushPromises();
@@ -268,10 +269,10 @@ describe("createAiActions", () => {
 
     it("should toast the mapped message when clean text fails", async () => {
       await createRoot(async (dispose) => {
-        const session = makeFailingSession(
-          "cleanText",
-          "Inference error: boom",
-        );
+        const session = makeFailingSession("cleanText", {
+          code: "INFERENCE_ERROR",
+          message: "Inference error: boom",
+        });
         const actions = createAiActions(makeOptions({ session }));
         // Let the effect's initial tracking run flush before triggering.
         await flushPromises();
@@ -286,7 +287,10 @@ describe("createAiActions", () => {
 
     it("should stay silent when the failure is a user cancellation", async () => {
       await createRoot(async (dispose) => {
-        const session = makeFailingSession("summarize", "Inference cancelled");
+        const session = makeFailingSession("summarize", {
+          code: "CANCELLED",
+          message: "Inference cancelled",
+        });
         const actions = createAiActions(makeOptions({ session }));
         // Let the effect's initial tracking run flush before triggering.
         await flushPromises();
@@ -302,10 +306,10 @@ describe("createAiActions", () => {
 
     it("should toast the mapped message when title generation fails", async () => {
       await createRoot(async (dispose) => {
-        const session = makeFailingSession(
-          "generateTitle",
-          "Inference error: boom",
-        );
+        const session = makeFailingSession("generateTitle", {
+          code: "INFERENCE_ERROR",
+          message: "Inference error: boom",
+        });
         const actions = createAiActions(makeOptions({ session }));
         // Let the effect's initial tracking run flush before triggering.
         await flushPromises();

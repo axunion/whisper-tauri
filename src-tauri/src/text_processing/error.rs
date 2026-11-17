@@ -1,3 +1,5 @@
+use crate::ipc_error::{ErrorCode, IpcError};
+
 /// Errors that can occur during text processing operations.
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum TextProcessingError {
@@ -40,9 +42,19 @@ impl From<crate::download::DownloadError> for TextProcessingError {
     }
 }
 
-impl From<TextProcessingError> for String {
+impl From<TextProcessingError> for IpcError {
     fn from(err: TextProcessingError) -> Self {
-        err.to_string()
+        let code = match &err {
+            TextProcessingError::ModelNotFound(_) => ErrorCode::ModelNotFound,
+            TextProcessingError::DownloadFailed(_) => ErrorCode::ModelDownloadError,
+            TextProcessingError::ServerStartFailed(_)
+            | TextProcessingError::ServerNotRunning
+            | TextProcessingError::Http(_) => ErrorCode::NetworkError,
+            TextProcessingError::InferenceError(_) => ErrorCode::InferenceError,
+            TextProcessingError::Cancelled => ErrorCode::Cancelled,
+            TextProcessingError::Io(_) => ErrorCode::FileReadError,
+        };
+        Self::new(code, err.to_string())
     }
 }
 
@@ -87,9 +99,11 @@ mod tests {
     }
 
     #[test]
-    fn error_converts_to_string() {
+    fn error_classifies_for_ipc() {
         let err = TextProcessingError::Cancelled;
-        let s: String = err.into();
-        assert_eq!(s, "Inference cancelled");
+        assert_eq!(
+            IpcError::from(err),
+            IpcError::new(ErrorCode::Cancelled, "Inference cancelled")
+        );
     }
 }

@@ -17,7 +17,17 @@ export const ja: Dictionary = {
     downloadingServer: "llama-serverをダウンロード中",
     helpHintLabel: "用語の説明を表示",
     editTitle: "タイトルを編集",
+    transcribing: "文字起こし中...",
     notifications: "通知",
+  },
+  closeGuard: {
+    title: "終了の確認",
+    recording: "録音中です。終了すると録音は失われます。終了しますか？",
+    processing:
+      "文字起こし中です。終了すると処理は中断されます。終了しますか？",
+    unsavedRecording:
+      "まだ文字起こししていない録音があります。終了すると録音は失われます。終了しますか？",
+    quit: "終了する",
   },
   nav: {
     dashboard: "ダッシュボード",
@@ -46,18 +56,17 @@ export const ja: Dictionary = {
     noModelsWarning:
       "モデルがありません。設定画面からダウンロードしてください。",
     languageAuto: "自動検出",
-    languageJa: "日本語",
-    languageEn: "英語",
-    languageZh: "中国語",
-    languageKo: "韓国語",
-    languageFr: "フランス語",
-    languageDe: "ドイツ語",
-    languageEs: "スペイン語",
-    selectAudioFile: "クリックして音声ファイルを選択",
+    selectAudioFile: "クリックまたはドロップして音声ファイルを選択",
     changeFile: "ファイルを変更",
     clearFile: "ファイルの選択を解除",
     supportedFormats: "WAV, MP3, M4A, FLAC, OGG, AAC, MP4, MOV など",
     completedToast: "文字起こしが完了しました",
+    batchCompletedToast:
+      "{count}件の文字起こしが完了しました。履歴で確認できます",
+    batchProgress: "{index} / {total} 件目",
+    addFiles: "ファイルを追加",
+    queuedFiles: "続けて処理するファイル",
+    removeQueuedFile: "{name} を取り消す",
     estimatedTime: "約{minutes}分",
     remainingTime: "残り約{minutes}分",
     almostDone: "まもなく完了",
@@ -66,10 +75,21 @@ export const ja: Dictionary = {
   history: {
     detail: "詳細",
     noEntries: "履歴が見つかりません。",
+    loadMore: "さらに読み込む",
+    retranscribe: "この音声をもう一度文字起こし",
+    deleteAudio: "音声を削除",
+    deleteAudioConfirmation:
+      "この履歴の録音音声を削除しますか？文字起こしの内容は残ります。この操作は取り消せません。",
+    audioDeletedToast: "音声を削除しました",
     deleteSelected: "選択した履歴を削除",
     deleteConfirmation:
       "{count} 件の履歴が完全に削除されます。この操作は取り消せません。",
     deletedToast: "履歴を削除しました",
+    deleteEntry: "この履歴を削除",
+    deleteEntryConfirmation:
+      "この履歴が完全に削除されます。この操作は取り消せません。",
+    inUseByTranscription:
+      "再文字起こしに使用中の履歴が含まれているため、削除できません",
     searchPlaceholder: "キーワードで検索",
     searchNoResults: "検索結果が見つかりません。",
     clearSearch: "検索をクリア",
@@ -96,6 +116,24 @@ export const ja: Dictionary = {
     processingCancelledToast: "処理を中断しました",
   },
   settings: {
+    dataManagement: "データ管理",
+    audioStorage: "録音音声",
+    pendingRecordings: "未処理の録音",
+    storageUsage: "{count}件・{size}",
+    deleteAllAudio: "すべての音声を削除",
+    deleteAllAudioConfirmation:
+      "履歴に保存されている録音音声をすべて削除しますか？文字起こしの内容は残ります。この操作は取り消せません。",
+    allAudioDeletedToast: "すべての音声を削除しました",
+    deletePendingRecordings: "未処理の録音を削除",
+    deletePendingRecordingsConfirmation:
+      "文字起こしされないまま残っている録音を削除しますか？この操作は取り消せません。",
+    pendingRecordingsDeletedToast: "未処理の録音を削除しました",
+    deleteAllHistory: "すべての履歴を削除",
+    deleteAllHistoryDescription:
+      "文字起こし・AI 生成テキスト・録音音声をすべて削除します",
+    deleteAllHistoryConfirmation:
+      "すべての履歴を、AI 生成テキストと録音音声を含めて削除しますか？この操作は取り消せません。",
+    allHistoryDeletedToast: "すべての履歴を削除しました",
     general: "一般設定",
     language: "言語",
     languageDescription: "アプリの表示言語",
@@ -123,6 +161,9 @@ export const ja: Dictionary = {
     update: "更新",
     vadEnabled: "VAD",
     vadDescription: "無音をスキップして文字起こしを高速化します。",
+    notifyOnComplete: "完了を通知",
+    notifyOnCompleteDescription:
+      "アプリが前面にないときに、文字起こしの完了を通知で知らせます。",
     appUpdate: "アプリの更新",
     appUpdateCurrentVersion: "現在のバージョン: {version}",
     appUpdateCheck: "更新を確認",
@@ -180,8 +221,13 @@ export const ja: Dictionary = {
     exportTxt: "テキスト形式",
     exportSrt: "字幕形式 (SRT)",
     exportVtt: "Web字幕形式 (VTT)",
+    exportMd: "タイムスタンプ付き (Markdown)",
+    exportJson: "データ形式 (JSON)",
     textTab: "テキスト",
     timelineTab: "タイムライン",
+    editSegment: "この行を編集",
+    staleAfterEdit:
+      "文字起こしを編集したため、この内容は編集前のものです。再生成すると反映されます。",
     summaryTab: "要約",
     cleanTextTab: "整文",
     shareMenu: "共有",
@@ -225,6 +271,9 @@ export const ja: Dictionary = {
     defaultDevice: "デフォルト",
     startRecording: "録音開始",
     stopRecording: "録音停止",
+    pauseRecording: "録音を一時停止",
+    resumeRecording: "録音を再開",
+    paused: "一時停止中",
     recording: "録音中...",
     noDevices: "入力デバイスが見つかりません",
     discardRecording: "録音を破棄",
@@ -239,6 +288,7 @@ export const ja: Dictionary = {
     srtFilter: "SRT 字幕",
     vttFilter: "VTT 字幕",
     mdFilter: "Markdown",
+    jsonFilter: "JSON",
     openAudioTitle: "音声ファイルを選択",
     saveWavTitle: "録音を保存",
     saveTranscriptionTitle: "文字起こしを保存",

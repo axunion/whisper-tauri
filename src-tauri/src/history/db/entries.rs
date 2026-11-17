@@ -5,13 +5,17 @@ use super::super::error::HistoryError;
 use super::super::search;
 use super::super::types::{
     HistoryEntry, HistoryFilter, HistoryMeta, HistorySaveParams, HistorySegment, HistorySortBy,
-    SortOrder,
+    SegmentUpdate, SortOrder,
 };
 use super::compression::{compress_text, decompress_text};
-use super::rows::{meta_from_row, meta_row_mapper};
+use super::rows::{meta_from_row, meta_row_mapper, stored_preview};
 use super::time::chrono_now;
 
 /// Builds an ORDER BY clause based on the sort option and direction.
+///
+/// `id` is always the final key: entries can share a `created_at` second (or a
+/// duration or name), and paging needs a total order to neither repeat nor skip
+/// rows between pages.
 #[must_use]
 pub(crate) fn sort_clause(
     sort_by: Option<&HistorySortBy>,
@@ -23,16 +27,39 @@ pub(crate) fn sort_clause(
         Some(SortOrder::Desc) | None => "DESC",
     };
     match sort_by {
-        Some(HistorySortBy::Duration) => format!("ORDER BY {prefix}duration {dir}"),
+        Some(HistorySortBy::Duration) => {
+            format!("ORDER BY {prefix}duration {dir}, {prefix}id")
+        }
         Some(HistorySortBy::FileName) => {
             let file_dir = match sort_order {
                 Some(SortOrder::Desc) => "DESC",
                 Some(SortOrder::Asc) | None => "ASC",
             };
-            format!("ORDER BY {prefix}file_name COLLATE NOCASE {file_dir}")
+            format!("ORDER BY {prefix}file_name COLLATE NOCASE {file_dir}, {prefix}id")
         }
-        Some(HistorySortBy::Date) | None => format!("ORDER BY {prefix}created_at {dir}"),
+        Some(HistorySortBy::Date) | None => {
+            format!("ORDER BY {prefix}created_at {dir}, {prefix}id")
+        }
     }
+}
+
+/// Appends a bound `LIMIT … OFFSET …` to a listing query.
+///
+/// `SQLite` only accepts `OFFSET` after a `LIMIT`, so an offset without a
+/// limit binds `-1` (unbounded) as the limit.
+pub(crate) fn push_paging(
+    sql: &mut String,
+    params: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
+    limit: Option<u32>,
+    offset: Option<u32>,
+) {
+    if limit.is_none() && offset.is_none() {
+        return;
+    }
+    let n = params.len();
+    write!(sql, " LIMIT ?{} OFFSET ?{}", n + 1, n + 2).ok();
+    params.push(Box::new(limit.map_or(-1, i64::from)));
+    params.push(Box::new(i64::from(offset.unwrap_or(0))));
 }
 
 /// Saves a new history entry and returns its ID.
@@ -57,8 +84,8 @@ pub(crate) fn save_entry(
     let tx = conn.unchecked_transaction()?;
 
     tx.execute(
-        "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed, vad_enabled, source)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+        "INSERT INTO history (id, created_at, file_name, language, model_id, duration, text_compressed, segments_compressed, vad_enabled, source, text_preview)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
         rusqlite::params![
             id,
             created_at,
@@ -70,6 +97,7 @@ pub(crate) fn save_entry(
             segments_compressed,
             params.vad_enabled,
             params.source.as_str(),
+            stored_preview(&params.text),
         ],
     )?;
 
@@ -92,7 +120,7 @@ pub(crate) fn list_entries(
     let conn = super::open_connection(db_path)?;
 
     let mut sql =
-        String::from("SELECT id, created_at, file_name, language, model_id, duration, text_compressed, vad_enabled, source FROM history");
+        String::from("SELECT id, created_at, file_name, language, model_id, duration, text_preview, vad_enabled, source FROM history");
     let mut conditions = Vec::new();
     let mut params_vec: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
 
@@ -115,9 +143,7 @@ pub(crate) fn list_entries(
         sort_clause(filter.sort_by.as_ref(), filter.sort_order.as_ref(), "")
     )
     .ok();
-    if let Some(limit) = filter.limit {
-        write!(sql, " LIMIT {limit}").ok();
-    }
+    push_paging(&mut sql, &mut params_vec, filter.limit, filter.offset);
 
     let params_refs: Vec<&dyn rusqlite::types::ToSql> =
         params_vec.iter().map(AsRef::as_ref).collect();
@@ -128,7 +154,7 @@ pub(crate) fn list_entries(
 
     let mut entries = Vec::new();
     for row in rows {
-        entries.push(meta_from_row(row?)?);
+        entries.push(meta_from_row(row?));
     }
 
     Ok(entries)
@@ -193,6 +219,8 @@ pub(crate) fn get_entry(db_path: &Path, id: &str) -> Result<HistoryEntry, Histor
         text,
         segments,
         vad_enabled,
+        // Filled in from disk by the command layer.
+        audio_path: None,
     })
 }
 
@@ -273,6 +301,82 @@ pub(crate) fn rename_entry(
     Ok(())
 }
 
+/// Replaces the text of one segment and returns what changed with it.
+///
+/// The full text is rebuilt from the segments, the way a transcription
+/// produces it, so the text, the timed segments, the list preview and the
+/// search index keep describing the same words. The segment's leading
+/// whitespace is kept: it is what separates it from the previous segment in
+/// the joined text.
+///
+/// # Errors
+///
+/// Returns `HistoryError::NotFound` if the entry or the segment does not
+/// exist, or another `HistoryError` if the database or compression fails.
+pub(crate) fn update_segment(
+    db_path: &Path,
+    id: &str,
+    index: usize,
+    new_text: &str,
+) -> Result<SegmentUpdate, HistoryError> {
+    let conn = super::open_connection(db_path)?;
+    let tx = conn.unchecked_transaction()?;
+
+    let segments_compressed: Vec<u8> = tx
+        .query_row(
+            "SELECT segments_compressed FROM history WHERE id = ?1",
+            rusqlite::params![id],
+            |row| row.get(0),
+        )
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => HistoryError::NotFound(id.to_string()),
+            other => other.into(),
+        })?;
+    let mut segments: Vec<HistorySegment> =
+        serde_json::from_str(&decompress_text(&segments_compressed)?)
+            .map_err(|e| HistoryError::Serialization(e.to_string()))?;
+
+    let segment = segments
+        .get_mut(index)
+        .ok_or_else(|| HistoryError::NotFound(format!("{id} segment {index}")))?;
+    let leading: String = segment
+        .text
+        .chars()
+        .take_while(|c| c.is_whitespace())
+        .collect();
+    segment.text = format!("{leading}{}", new_text.trim());
+    let segment_text = segment.text.clone();
+
+    let text = segments
+        .iter()
+        .map(|s| s.text.as_str())
+        .collect::<String>()
+        .trim()
+        .to_string();
+    let segments_json =
+        serde_json::to_string(&segments).map_err(|e| HistoryError::Serialization(e.to_string()))?;
+
+    let text_preview = stored_preview(&text);
+    tx.execute(
+        "UPDATE history SET text_compressed = ?2, segments_compressed = ?3, text_preview = ?4 WHERE id = ?1",
+        rusqlite::params![
+            id,
+            compress_text(&text)?,
+            compress_text(&segments_json)?,
+            &text_preview,
+        ],
+    )?;
+    search::delete_entry_index(&tx, id)?;
+    search::index_entry(&tx, id, &text)?;
+    tx.commit()?;
+
+    Ok(SegmentUpdate {
+        text,
+        segment_text,
+        text_preview,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use rusqlite::Connection;
@@ -288,7 +392,7 @@ mod tests {
         let params = sample_params();
 
         let id = save_entry(&path, &params).expect("Failed to save");
-        assert!(!id.is_empty());
+        assert_ne!(id, "");
 
         let entries = list_entries(&path, &HistoryFilter::default()).expect("Failed to list");
         assert_eq!(entries.len(), 1);
@@ -297,6 +401,18 @@ mod tests {
         assert_eq!(entries[0].language, "ja");
         assert_eq!(entries[0].model_id, "large-v3-turbo");
         assert_eq!(entries[0].duration, 60000);
+    }
+
+    #[test]
+    fn save_entry_stores_the_preview_that_list_returns() {
+        let (_dir, path) = setup_db();
+        let mut params = sample_params();
+        params.text = "あ".repeat(250);
+
+        save_entry(&path, &params).expect("Failed to save");
+
+        let entries = list_entries(&path, &HistoryFilter::default()).expect("Failed to list");
+        assert_eq!(entries[0].text_preview, format!("{}...", "あ".repeat(100)));
     }
 
     #[test]
@@ -437,7 +553,7 @@ mod tests {
         assert_eq!(deleted, 2);
 
         let remaining = list_entries(&path, &HistoryFilter::default()).expect("Failed to list");
-        assert!(remaining.is_empty());
+        assert_eq!(remaining.len(), 0);
     }
 
     #[test]
@@ -565,6 +681,7 @@ mod tests {
                 date_from: None,
                 date_to: None,
                 limit: None,
+                offset: None,
                 sort_by: None,
                 sort_order: None,
             },
@@ -590,12 +707,13 @@ mod tests {
                 date_from: None,
                 date_to: None,
                 limit: None,
+                offset: None,
                 sort_by: None,
                 sort_order: None,
             },
         )
         .expect("search");
-        assert!(results.is_empty());
+        assert_eq!(results.len(), 0);
     }
 
     #[test]
@@ -615,12 +733,69 @@ mod tests {
                 date_from: None,
                 date_to: None,
                 limit: None,
+                offset: None,
                 sort_by: None,
                 sort_order: None,
             },
         )
         .expect("search");
-        assert!(results.is_empty());
+        assert_eq!(results.len(), 0);
+    }
+
+    #[test]
+    fn sort_clause_ends_with_id_for_every_sort_mode() {
+        assert_eq!(sort_clause(None, None, ""), "ORDER BY created_at DESC, id");
+        assert_eq!(
+            sort_clause(Some(&HistorySortBy::Date), Some(&SortOrder::Asc), ""),
+            "ORDER BY created_at ASC, id"
+        );
+        assert_eq!(
+            sort_clause(Some(&HistorySortBy::Duration), None, ""),
+            "ORDER BY duration DESC, id"
+        );
+        assert_eq!(
+            sort_clause(Some(&HistorySortBy::Duration), Some(&SortOrder::Asc), ""),
+            "ORDER BY duration ASC, id"
+        );
+        assert_eq!(
+            sort_clause(Some(&HistorySortBy::FileName), None, ""),
+            "ORDER BY file_name COLLATE NOCASE ASC, id"
+        );
+        assert_eq!(
+            sort_clause(Some(&HistorySortBy::FileName), Some(&SortOrder::Desc), ""),
+            "ORDER BY file_name COLLATE NOCASE DESC, id"
+        );
+        assert_eq!(
+            sort_clause(Some(&HistorySortBy::Date), Some(&SortOrder::Asc), "h."),
+            "ORDER BY h.created_at ASC, h.id"
+        );
+    }
+
+    #[test]
+    fn list_entries_pages_without_overlap_or_gaps() {
+        let (_dir, path) = setup_db();
+        for _ in 0..5 {
+            save_entry(&path, &sample_params()).expect("save");
+        }
+
+        let page = |limit: Option<u32>, offset: u32| {
+            let filter = HistoryFilter {
+                limit,
+                offset: Some(offset),
+                ..Default::default()
+            };
+            list_entries(&path, &filter).expect("list")
+        };
+        let mut seen: Vec<String> = Vec::new();
+        for offset in [0, 2, 4] {
+            seen.extend(page(Some(2), offset).into_iter().map(|e| e.id));
+        }
+        seen.sort();
+        seen.dedup();
+        assert_eq!(seen.len(), 5);
+        assert_eq!(page(Some(2), 6).len(), 0);
+        // An offset with no limit still skips rows.
+        assert_eq!(page(None, 3).len(), 2);
     }
 
     #[test]
@@ -747,5 +922,139 @@ mod tests {
         assert_eq!(entries[0].id, "a");
         assert_eq!(entries[1].id, "b");
         assert_eq!(entries[2].id, "c");
+    }
+
+    fn search_ids(path: &Path, query: &str) -> Vec<String> {
+        let conn = Connection::open(path).expect("open");
+        search::search_entries(
+            &conn,
+            &HistorySearchParams {
+                query: query.to_string(),
+                ..Default::default()
+            },
+        )
+        .expect("search")
+        .into_iter()
+        .map(|e| e.id)
+        .collect()
+    }
+
+    #[test]
+    fn update_segment_rewrites_text_segments_preview_and_search_together() {
+        let (_dir, path) = setup_db();
+        let mut params = sample_params();
+        params.segments[0].text = "This is a tset".to_string();
+        params.segments[1].text = " transcription.".to_string();
+        params.text = "This is a tset transcription.".to_string();
+        let id = save_entry(&path, &params).expect("save");
+
+        let text = update_segment(&path, &id, 0, "This is a test")
+            .expect("update")
+            .text;
+
+        assert_eq!(text, "This is a test transcription.");
+        let entry = get_entry(&path, &id).expect("get");
+        assert_eq!(entry.text, "This is a test transcription.");
+        assert_eq!(entry.segments[0].text, "This is a test");
+        assert_eq!(entry.segments[1].text, " transcription.");
+        assert_eq!((entry.segments[0].start, entry.segments[0].end), (0, 3000));
+        let listed = list_entries(&path, &HistoryFilter::default()).expect("list");
+        assert_eq!(listed[0].text_preview, "This is a test transcription.");
+        assert_eq!(search_ids(&path, "test"), std::slice::from_ref(&id));
+        assert_eq!(search_ids(&path, "tset").len(), 0);
+    }
+
+    #[test]
+    fn update_segment_keeps_the_whitespace_that_separates_it_from_the_previous_one() {
+        let (_dir, path) = setup_db();
+        let mut params = sample_params();
+        params.segments[1].text = " transcription.".to_string();
+        let id = save_entry(&path, &params).expect("save");
+
+        let text = update_segment(&path, &id, 1, "  recording.  ")
+            .expect("update")
+            .text;
+
+        assert_eq!(text, "This is a test recording.");
+    }
+
+    #[test]
+    fn update_segment_rejects_a_missing_entry_or_segment() {
+        let (_dir, path) = setup_db();
+        let id = save_entry(&path, &sample_params()).expect("save");
+
+        assert!(matches!(
+            update_segment(&path, "no-such-id", 0, "x"),
+            Err(HistoryError::NotFound(_))
+        ));
+        assert!(matches!(
+            update_segment(&path, &id, 2, "x"),
+            Err(HistoryError::NotFound(_))
+        ));
+        assert_eq!(
+            get_entry(&path, &id).expect("get").text,
+            sample_params().text
+        );
+    }
+
+    #[test]
+    fn update_segment_trims_the_full_text_when_the_first_segment_has_leading_space() {
+        let (_dir, path) = setup_db();
+        let mut params = sample_params();
+        params.segments[0].text = "  This is a test".to_string();
+        params.segments[1].text = " transcription.".to_string();
+        let id = save_entry(&path, &params).expect("save");
+
+        let text = update_segment(&path, &id, 0, "  hello")
+            .expect("update")
+            .text;
+
+        assert_eq!(text, "hello transcription.");
+        let entry = get_entry(&path, &id).expect("get");
+        assert_eq!(entry.text, "hello transcription.");
+        assert_eq!(entry.segments[0].text, "  hello");
+    }
+
+    #[test]
+    fn update_segment_rejects_any_index_on_an_entry_without_segments() {
+        let (_dir, path) = setup_db();
+        let mut params = sample_params();
+        params.segments.clear();
+        let id = save_entry(&path, &params).expect("save");
+
+        assert!(matches!(
+            update_segment(&path, &id, 0, "x"),
+            Err(HistoryError::NotFound(_))
+        ));
+    }
+
+    #[test]
+    fn consecutive_segment_edits_of_different_segments_both_persist() {
+        let (_dir, path) = setup_db();
+        let mut params = sample_params();
+        params.segments[1].text = " transcription.".to_string();
+        let id = save_entry(&path, &params).expect("save");
+
+        update_segment(&path, &id, 0, "First").expect("first edit");
+        update_segment(&path, &id, 1, "second.").expect("second edit");
+
+        let entry = get_entry(&path, &id).expect("get");
+        assert_eq!(entry.text, "First second.");
+        assert_eq!(entry.segments[0].text, "First");
+        assert_eq!(entry.segments[1].text, " second.");
+        assert_eq!(search_ids(&path, "First"), std::slice::from_ref(&id));
+    }
+
+    #[test]
+    fn update_segment_keeps_the_ai_content_of_the_entry() {
+        let (_dir, path) = setup_db();
+        let id = save_entry(&path, &sample_params()).expect("save");
+        save_ai_content(&path, &sample_ai_params(&id)).expect("save ai content");
+
+        update_segment(&path, &id, 0, "changed").expect("update");
+
+        let content = get_all_ai_content(&path, &id).expect("get ai content");
+        assert_eq!(content.len(), 1);
+        assert_eq!(content[0].text, "Summary text");
     }
 }

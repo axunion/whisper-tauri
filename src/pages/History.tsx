@@ -1,3 +1,4 @@
+import { useLocation, useNavigate } from "@solidjs/router";
 import { FiCheck, FiCheckSquare, FiX } from "solid-icons/fi";
 import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { ErrorDisplay } from "~/components/ErrorDisplay";
@@ -14,13 +15,17 @@ import { Button } from "~/components/ui/Button";
 import { Sheet, SheetContent, SheetTitle } from "~/components/ui/Sheet";
 import { useI18n } from "~/i18n";
 import { runWithToast } from "~/lib/actionToast";
+import { HISTORY_SEARCH_ID } from "~/lib/constants";
 import { toast } from "~/lib/toast";
 import type { AiOperation } from "~/primitives/createAiSession";
 import { createHistory } from "~/primitives/createHistory";
+import { createTranscriptionJob } from "~/primitives/createTranscriptionJob";
 import type { HistorySortBy, SortOrder } from "~/types";
 
 export default function History() {
   const { t } = useI18n();
+  const navigate = useNavigate();
+  const job = createTranscriptionJob();
   const history = createHistory();
   const [selectionMode, setSelectionMode] = createSignal(false);
   const [currentOp, setCurrentOp] = createSignal<AiOperation>(null);
@@ -58,7 +63,18 @@ export default function History() {
     }
   }
 
+  const location = useLocation<{
+    entryId?: string;
+    focusSearch?: boolean;
+  }>();
+
   onMount(() => {
+    // Arriving from a dashboard row opens that entry straight away.
+    const entryId = location.state?.entryId;
+    if (entryId) void history.getEntry(entryId);
+    if (location.state?.focusSearch) {
+      document.getElementById(HISTORY_SEARCH_ID)?.focus();
+    }
     history.loadEntries();
     document.addEventListener("keydown", handleKeyDown);
   });
@@ -83,6 +99,11 @@ export default function History() {
 
   async function handleDeleteSelected(): Promise<void> {
     const ids = [...history.selectedIds()];
+    const inUse = job.audioSourceId();
+    if (inUse !== null && ids.includes(inUse)) {
+      toast.info(t("history.inUseByTranscription"));
+      return;
+    }
     if (ids.length > 0) {
       await runWithToast({
         action: () => history.deleteEntries(ids),
@@ -96,8 +117,8 @@ export default function History() {
     }
   }
 
-  const shouldHideList = () =>
-    history.isQueryTooShort() || history.queryPending();
+  const highlightKeywords = () =>
+    history.isSearching() ? history.searchQuery().split(/\s+/) : [];
 
   return (
     <>
@@ -142,7 +163,7 @@ export default function History() {
         </div>
 
         {/* List */}
-        <Show when={!shouldHideList()}>
+        <Show when={history.hasLoaded() && !history.queryPending()}>
           <Show
             when={!history.isSearching() || history.entries().length > 0}
             fallback={
@@ -155,10 +176,23 @@ export default function History() {
               entries={history.entries()}
               selectedIds={history.selectedIds()}
               selectionMode={selectionMode()}
+              highlightKeywords={highlightKeywords()}
               onToggleSelect={(id) => history.toggleSelect(id)}
               onViewEntry={(id) => history.getEntry(id)}
               onEnterSelectionMode={enterSelectionMode}
             />
+            <Show when={history.hasMore()}>
+              <div class="flex justify-center pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={history.isLoading()}
+                  onClick={() => void history.loadMore()}
+                >
+                  {t("history.loadMore")}
+                </Button>
+              </div>
+            </Show>
           </Show>
         </Show>
 
@@ -189,6 +223,53 @@ export default function History() {
                     <HistoryDetail
                       entry={entry()}
                       onRename={history.renameEntry}
+                      canDelete={
+                        currentOp() === null &&
+                        job.audioSourceId() !== entry().id
+                      }
+                      onDelete={async (id) => {
+                        if (await history.deleteEntries([id])) {
+                          toast.success(t("history.deletedToast"));
+                          history.clearSelectedEntry();
+                          return;
+                        }
+                        // The error panel is behind the open sheet.
+                        const err = history.error();
+                        if (err) toast.error(t(err.messageKey));
+                      }}
+                      onEditSegment={async (id, index, text) => {
+                        const saved = await history.updateSegment(
+                          id,
+                          index,
+                          text,
+                        );
+                        // The error panel is behind the open sheet.
+                        const err = history.error();
+                        if (!saved && err) toast.error(t(err.messageKey));
+                        return saved;
+                      }}
+                      canRetranscribe={currentOp() === null && !job.isRunning()}
+                      onRetranscribe={(entry) => {
+                        const path = entry.audioPath;
+                        if (!path) return;
+                        navigate("/transcription", {
+                          state: {
+                            retranscribe: {
+                              id: entry.id,
+                              path,
+                              name: entry.fileName,
+                            },
+                          },
+                        });
+                      }}
+                      onDeleteAudio={(id) =>
+                        runWithToast({
+                          action: () => history.deleteAudio(id),
+                          successKey: "history.audioDeletedToast",
+                          error: history.error,
+                          t,
+                        })
+                      }
                       onProcessingChange={(op, cancel) => {
                         setCurrentOp(op);
                         setCancelFn(() => cancel);

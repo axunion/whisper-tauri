@@ -1,15 +1,20 @@
+import { convertFileSrc } from "@tauri-apps/api/core";
 import {
   FiCalendar,
   FiCheck,
   FiClock,
   FiEdit2,
   FiMusic,
+  FiRefreshCw,
+  FiTrash2,
   FiX,
 } from "solid-icons/fi";
 import type { Component } from "solid-js";
-import { createSignal, Show } from "solid-js";
+import { createMemo, createSignal, Show } from "solid-js";
 import { VadBadge } from "~/components/history/VadBadge";
 import { ResultViewer } from "~/components/transcription/ResultViewer";
+import { Button } from "~/components/ui/Button";
+import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { useI18n } from "~/i18n";
 import { formatDate, formatDuration } from "~/lib/format";
 import type { AiOperation } from "~/primitives/createAiSession";
@@ -19,6 +24,17 @@ import type { HistoryEntry, TranscriptionResult } from "~/types";
 interface HistoryDetailProps {
   entry: HistoryEntry;
   onRename?: (id: string, newFileName: string) => void;
+  onDelete: (id: string) => void | Promise<void>;
+  /**
+   * False while deleting the entry or its audio would break running work: an
+   * AI operation on it, or a re-transcription reading its audio.
+   */
+  canDelete: boolean;
+  onDeleteAudio: (id: string) => void | Promise<void>;
+  onEditSegment: (id: string, index: number, text: string) => Promise<boolean>;
+  onRetranscribe: (entry: HistoryEntry) => void;
+  /** False while leaving for a re-transcription would interrupt running work. */
+  canRetranscribe: boolean;
   onProcessingChange?: (
     operation: AiOperation,
     cancel: () => Promise<void>,
@@ -65,6 +81,57 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
   }
 
   const result = () => toTranscriptionResult(props.entry);
+
+  const audioActions = () => (
+    <div class="flex shrink-0 items-center gap-1">
+      <Button
+        variant="ghost"
+        size="icon"
+        class="size-8"
+        aria-label={t("history.retranscribe")}
+        title={t("history.retranscribe")}
+        disabled={!props.canRetranscribe}
+        onClick={() => props.onRetranscribe(props.entry)}
+      >
+        <FiRefreshCw class="size-4" aria-hidden="true" />
+      </Button>
+      <ConfirmDialog
+        title={t("history.deleteAudio")}
+        description={t("history.deleteAudioConfirmation")}
+        confirmLabel={
+          <>
+            <FiTrash2 />
+            {t("common.delete")}
+          </>
+        }
+        onConfirm={() => props.onDeleteAudio(props.entry.id)}
+      >
+        {(openDialog) => (
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-8 hover:text-destructive"
+            aria-label={t("history.deleteAudio")}
+            title={t("history.deleteAudio")}
+            disabled={!props.canDelete}
+            onClick={openDialog}
+          >
+            <FiTrash2 class="size-4" aria-hidden="true" />
+          </Button>
+        )}
+      </ConfirmDialog>
+    </div>
+  );
+
+  // Derived through a path-only memo: a rename replaces the entry object, and
+  // handing the player a new `src` — even an equal one — restarts playback.
+  const audioPath = createMemo(() => props.entry.audioPath);
+  const audio = createMemo(() => {
+    const path = audioPath();
+    return path
+      ? { src: convertFileSrc(path), actions: audioActions() }
+      : undefined;
+  });
 
   const metadataJSX = () => (
     <span class="inline-flex items-center gap-3 text-xs text-muted-foreground">
@@ -161,6 +228,32 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
             <FiX class="size-3.5" aria-hidden="true" />
           </button>
         </Show>
+        <Show when={!title.isEditing()}>
+          <ConfirmDialog
+            title={t("history.deleteEntry")}
+            description={t("history.deleteEntryConfirmation")}
+            confirmLabel={
+              <>
+                <FiTrash2 />
+                {t("common.delete")}
+              </>
+            }
+            onConfirm={() => props.onDelete(props.entry.id)}
+          >
+            {(openDialog) => (
+              <button
+                type="button"
+                class="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 disabled:pointer-events-none group-hover/title:opacity-100 group-hover/title:disabled:opacity-40"
+                aria-label={t("history.deleteEntry")}
+                title={t("history.deleteEntry")}
+                disabled={!props.canDelete}
+                onClick={openDialog}
+              >
+                <FiTrash2 class="size-3.5" aria-hidden="true" />
+              </button>
+            )}
+          </ConfirmDialog>
+        </Show>
       </div>
       {/* ResultViewer with metadata integrated into toolbar */}
       <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -172,6 +265,10 @@ const HistoryDetail: Component<HistoryDetailProps> = (props) => {
           onTitleGenerated={(title) => startSuggestion(title)}
           onGeneratingTitleChange={setIsGeneratingTitle}
           onProcessingChange={props.onProcessingChange}
+          audio={audio()}
+          onEditSegment={(index, text) =>
+            props.onEditSegment(props.entry.id, index, text)
+          }
           notionMeta={{
             createdAt: props.entry.createdAt,
             modelId: props.entry.modelId,
