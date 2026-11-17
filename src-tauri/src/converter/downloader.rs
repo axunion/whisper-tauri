@@ -577,8 +577,8 @@ mod tests {
         assert_ne!(FFMPEG_MACOS_VERSION, "");
         #[cfg(not(target_os = "macos"))]
         {
-            assert!(!FFMPEG_BTBN_TAG.is_empty());
-            assert!(!FFMPEG_BTBN_BUILD_ID.is_empty());
+            assert_ne!(FFMPEG_BTBN_TAG, "");
+            assert_ne!(FFMPEG_BTBN_BUILD_ID, "");
         }
     }
 
